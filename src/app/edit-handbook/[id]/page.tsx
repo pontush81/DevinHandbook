@@ -376,7 +376,7 @@ export default function EditHandbookPage({
                           </h3>
                           <FileUploader
                             handbookId={handbook.id}
-                            sectionId={selectedSectionId}
+                            sectionId={selectedSectionId || undefined}
                             onUploadComplete={handleFileUpload}
                           />
                         </div>

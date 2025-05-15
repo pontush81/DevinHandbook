@@ -3,6 +3,23 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
+interface Section {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  handbook_id: string;
+  pages: Page[];
+}
+
+interface Page {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+  section_id: string;
+}
+
 export const revalidate = 180; // 3 minutes
 
 export async function generateStaticParams() {
@@ -35,7 +52,7 @@ export default async function HandbookPage({
           <div className="md:col-span-1">
             <nav className="space-y-1 sticky top-8">
               <h2 className="font-medium mb-4">Innehåll</h2>
-              {handbook.sections.map((section) => (
+              {handbook.sections.map((section: Section) => (
                 <a
                   key={section.id}
                   href={`#section-${section.id}`}
@@ -49,13 +66,13 @@ export default async function HandbookPage({
           
           {/* Content */}
           <div className="md:col-span-3 space-y-12">
-            {handbook.sections.map((section) => (
+            {handbook.sections.map((section: Section) => (
               <section key={section.id} id={`section-${section.id}`} className="space-y-6">
                 <h2 className="text-2xl font-semibold">{section.title}</h2>
                 <p className="text-gray-500">{section.description}</p>
                 
                 <div className="space-y-8">
-                  {section.pages.map((page) => (
+                  {section.pages.map((page: Page) => (
                     <div key={page.id} className="space-y-2">
                       <h3 className="text-xl font-medium">{page.title}</h3>
                       <div className="prose prose-sm max-w-none">
