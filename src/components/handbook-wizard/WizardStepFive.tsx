@@ -1,23 +1,55 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 
 export function WizardStepFive() {
   const { name, subdomain, template } = useHandbookStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const handbookData = {
+    name,
+    subdomain,
+    template: {
+      ...template,
+      sections: template.sections
+        .filter(section => section.isActive)
+        .sort((a, b) => a.order - b.order)
+    }
+  };
   
   React.useEffect(() => {
-    console.log("Complete handbook data:", {
-      name,
-      subdomain,
-      template: {
-        ...template,
-        sections: template.sections
-          .filter(section => section.isActive)
-          .sort((a, b) => a.order - b.order)
+    console.log("Complete handbook data:", handbookData);
+  }, [handbookData]);
+  
+  const handleCheckout = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ handbookData }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.sessionUrl) {
+        throw new Error('Failed to create checkout session');
       }
-    });
-  }, [name, subdomain, template]);
+      
+      window.location.href = data.sessionUrl;
+    } catch (err: any) {
+      console.error('Error creating checkout session:', err);
+      setError('Det gick inte att skapa betalsessionen. Försök igen senare.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -49,11 +81,14 @@ export function WizardStepFive() {
           </div>
         </div>
         
+        {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-md text-sm">{error}</div>}
+        
         <button 
-          className="w-full mt-6 bg-black text-white py-3 px-4 rounded-md hover:bg-gray-800"
-          onClick={() => alert("Stripe Checkout skulle ha startats här!")}
+          className="w-full mt-6 bg-black text-white py-3 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleCheckout}
+          disabled={isLoading}
         >
-          Gå vidare till betalning
+          {isLoading ? 'Förbereder betalning...' : 'Gå vidare till betalning'}
         </button>
         
         <p className="text-xs text-gray-500 mt-4 text-center">

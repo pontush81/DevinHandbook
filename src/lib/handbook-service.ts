@@ -1,0 +1,119 @@
+import { getServiceSupabase } from '@/lib/supabase';
+import { HandbookTemplate, Section, Page } from '@/lib/templates/handbook-template';
+
+export async function createHandbookWithSectionsAndPages(
+  name: string,
+  subdomain: string,
+  template: HandbookTemplate
+) {
+  const supabase = getServiceSupabase();
+  
+  const { data: handbook, error: handbookError } = await supabase
+    .from('handbooks')
+    .insert({
+      name,
+      subdomain,
+      published: true,
+    })
+    .select()
+    .single();
+
+  if (handbookError) {
+    console.error('Error creating handbook:', handbookError);
+    throw handbookError;
+  }
+
+  const activeSections = template.sections
+    .filter(section => section.isActive)
+    .sort((a, b) => a.order - b.order);
+
+  for (const section of activeSections) {
+    const { data: createdSection, error: sectionError } = await supabase
+      .from('sections')
+      .insert({
+        title: section.title,
+        description: section.description,
+        order: section.order,
+        handbook_id: handbook.id,
+      })
+      .select()
+      .single();
+
+    if (sectionError) {
+      console.error('Error creating section:', sectionError);
+      continue;
+    }
+
+    for (const page of section.pages) {
+      const { error: pageError } = await supabase
+        .from('pages')
+        .insert({
+          title: page.title,
+          content: page.content,
+          order: page.order,
+          section_id: createdSection.id,
+        });
+
+      if (pageError) {
+        console.error('Error creating page:', pageError);
+      }
+    }
+  }
+
+  return handbook.id;
+}
+
+export async function getHandbookBySubdomain(subdomain: string) {
+  const supabase = getServiceSupabase();
+  
+  const { data: handbook, error: handbookError } = await supabase
+    .from('handbooks')
+    .select('*')
+    .eq('subdomain', subdomain)
+    .single();
+
+  if (handbookError) {
+    console.error('Error fetching handbook:', handbookError);
+    return null;
+  }
+
+  const { data: sections, error: sectionsError } = await supabase
+    .from('sections')
+    .select('*')
+    .eq('handbook_id', handbook.id)
+    .order('order');
+
+  if (sectionsError) {
+    console.error('Error fetching sections:', sectionsError);
+    return { ...handbook, sections: [] };
+  }
+
+  interface SectionWithPages {
+    id: string;
+    title: string;
+    description: string;
+    order: number;
+    handbook_id: string;
+    created_at: string;
+    pages: any[];
+  }
+  
+  const sectionsWithPages: SectionWithPages[] = [];
+  
+  for (const section of sections) {
+    const { data: pages, error: pagesError } = await supabase
+      .from('pages')
+      .select('*')
+      .eq('section_id', section.id)
+      .order('order');
+
+    if (pagesError) {
+      console.error('Error fetching pages:', pagesError);
+      sectionsWithPages.push({ ...section, pages: [] });
+    } else {
+      sectionsWithPages.push({ ...section, pages: pages || [] });
+    }
+  }
+
+  return { ...handbook, sections: sectionsWithPages };
+}
