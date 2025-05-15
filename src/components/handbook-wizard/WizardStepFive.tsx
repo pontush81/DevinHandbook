@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 
 export function WizardStepFive() {
@@ -8,7 +8,7 @@ export function WizardStepFive() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const handbookData = {
+  const handbookData = useMemo(() => ({
     name,
     subdomain,
     template: {
@@ -17,9 +17,9 @@ export function WizardStepFive() {
         .filter(section => section.isActive)
         .sort((a, b) => a.order - b.order)
     }
-  };
+  }), [name, subdomain, template]);
   
-  React.useEffect(() => {
+  useEffect(() => {
     console.log("Complete handbook data:", handbookData);
   }, [handbookData]);
   

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -70,9 +70,9 @@ export default function EditHandbookPage({
     if (user) {
       fetchHandbookData();
     }
-  }, [user, params.id]);
+  }, [user, params.id, fetchHandbookData]);
 
-  const fetchHandbookData = async () => {
+  const fetchHandbookData = useCallback(async () => {
     try {
       setIsLoadingData(true);
       
