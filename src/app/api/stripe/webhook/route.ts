@@ -36,24 +36,28 @@ export async function POST(req: NextRequest) {
 }
 
 async function createHandbookInSupabase(name: string, subdomain: string, customerId: string) {
-  const supabase = getServiceSupabase();
-  
   try {
-    const { data: handbook, error: handbookError } = await supabase
-      .from('handbooks')
-      .insert({
-        name,
-        subdomain,
-        published: true,
-      })
-      .select()
-      .single();
-
-    if (handbookError) throw handbookError;
+    const defaultTemplate = {
+      sections: [
+        {
+          id: "welcome",
+          title: "Välkommen till föreningen",
+          description: "Information om föreningen och området",
+          order: 0,
+          isActive: true,
+          pages: [
+            {
+              id: "welcome-page",
+              title: "Välkommen",
+              content: "# Välkommen till föreningen\n\nHär hittar du all information du behöver som boende.",
+              order: 0
+            }
+          ]
+        }
+      ]
+    };
     
-    
-    
-    return handbook.id;
+    return await createHandbookWithSectionsAndPages(name, subdomain, defaultTemplate);
   } catch (error) {
     console.error('Error creating handbook in Supabase:', error);
     throw error;

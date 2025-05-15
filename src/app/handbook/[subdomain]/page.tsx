@@ -3,6 +3,12 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
+export const revalidate = 180; // 3 minutes
+
+export async function generateStaticParams() {
+  return [];
+}
+
 export default async function HandbookPage({
   params,
 }: {

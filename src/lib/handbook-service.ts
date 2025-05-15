@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { HandbookTemplate, Section, Page } from '@/lib/templates/handbook-template';
+import { revalidatePath } from 'next/cache';
 
 export async function createHandbookWithSectionsAndPages(
   name: string,
@@ -116,4 +117,38 @@ export async function getHandbookBySubdomain(subdomain: string) {
   }
 
   return { ...handbook, sections: sectionsWithPages };
+}
+
+export async function revalidateHandbook(subdomain: string) {
+  try {
+    revalidatePath(`/handbook/${subdomain}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error revalidating handbook:', error);
+    return { success: false, error };
+  }
+}
+
+export async function toggleHandbookPublished(id: string, published: boolean) {
+  const supabase = getServiceSupabase();
+  
+  try {
+    const { data, error } = await supabase
+      .from('handbooks')
+      .update({ published })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (data.subdomain) {
+      await revalidateHandbook(data.subdomain);
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error toggling handbook published status:', error);
+    return { success: false, error };
+  }
 }
