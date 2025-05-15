@@ -45,8 +45,8 @@ export function SignUpForm() {
           "Registrering lyckades! Kontrollera din e-post för att bekräfta ditt konto."
         );
       }
-    } catch (err: any) {
-      setError(err.message || "Ett fel uppstod vid registrering");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ett fel uppstod vid registrering");
     } finally {
       setIsLoading(false);
     }

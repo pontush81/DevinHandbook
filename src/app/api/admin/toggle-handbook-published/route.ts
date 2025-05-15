@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
 
 async function toggleHandbookPublished(id: string, published: boolean) {
   try {
-    const { createClient } = require('@supabase/supabase-js');
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
     
@@ -23,7 +23,7 @@ async function toggleHandbookPublished(id: string, published: boolean) {
     }
     
     return { success: true, data };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error toggling handbook published status:', error);
     return { success: false, error };
   }
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
     
     return NextResponse.json({ success: true, data: result.data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error toggling handbook published status:', error);
     return NextResponse.json(
       { error: 'Failed to toggle handbook published status' },

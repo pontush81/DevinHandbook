@@ -1,5 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { HandbookTemplate, Section, Page } from '@/lib/templates/handbook-template';
+import { HandbookTemplate } from '@/lib/templates/handbook-template';
 import { revalidatePath } from 'next/cache';
 
 export async function createHandbookWithSectionsAndPages(
@@ -96,7 +96,13 @@ export async function getHandbookBySubdomain(subdomain: string) {
     order: number;
     handbook_id: string;
     created_at: string;
-    pages: any[];
+    pages: {
+      id: string;
+      title: string;
+      content: string;
+      order: number;
+      section_id: string;
+    }[];
   }
   
   const sectionsWithPages: SectionWithPages[] = [];

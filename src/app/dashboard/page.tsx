@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -27,13 +27,7 @@ export default function DashboardPage() {
     }
   }, [user, isLoading, router]);
 
-  useEffect(() => {
-    if (user) {
-      fetchHandbooks();
-    }
-  }, [user]);
-
-  const fetchHandbooks = async () => {
+  const fetchHandbooks = useCallback(async () => {
     try {
       setIsLoadingHandbooks(true);
       
@@ -46,13 +40,19 @@ export default function DashboardPage() {
       if (error) throw error;
       
       setHandbooks(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching handbooks:", err);
       setError("Kunde inte hämta handböcker. Försök igen senare.");
     } finally {
       setIsLoadingHandbooks(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchHandbooks();
+    }
+  }, [user, fetchHandbooks]);
 
   if (isLoading) {
     return (

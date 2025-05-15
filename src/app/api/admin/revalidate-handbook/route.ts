@@ -5,7 +5,7 @@ async function revalidateHandbook(subdomain: string) {
   try {
     revalidatePath(`/handbook/${subdomain}`);
     return { success: true };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error revalidating handbook:', error);
     return { success: false, error };
   }
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
     
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error revalidating handbook:', error);
     return NextResponse.json(
       { error: 'Failed to revalidate handbook' },

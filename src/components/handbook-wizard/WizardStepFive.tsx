@@ -43,7 +43,7 @@ export function WizardStepFive() {
       }
       
       window.location.href = data.sessionUrl;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating checkout session:', err);
       setError('Det gick inte att skapa betalsessionen. Försök igen senare.');
     } finally {

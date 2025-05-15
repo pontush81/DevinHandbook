@@ -27,16 +27,16 @@ export function FileUploader({ handbookId, sectionId, onUploadComplete }: FileUp
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${handbookId}/${fileName}`;
       
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('handbook_files')
         .upload(filePath, file);
       
       if (uploadError) throw uploadError;
       
       onUploadComplete(filePath, file.name);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error uploading file:', err);
-      setError(err.message || 'Failed to upload file');
+      setError(err instanceof Error ? err.message : 'Failed to upload file');
     } finally {
       setIsUploading(false);
     }

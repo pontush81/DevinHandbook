@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function SuccessPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  // const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   

@@ -74,7 +74,7 @@ export default function AdminDashboardPage() {
       } else {
         setUsers(usersData || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching data:", err);
       setError("Kunde inte hämta data. Kontrollera att du har admin-behörighet.");
     } finally {
@@ -97,9 +97,9 @@ export default function AdminDashboardPage() {
       if (error) throw new Error(error);
       
       fetchData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error setting user as admin:", err);
-      setError(err.message || "Kunde inte uppdatera användarroll");
+      setError(err instanceof Error ? err.message : "Kunde inte uppdatera användarroll");
     }
   };
   
@@ -124,9 +124,9 @@ export default function AdminDashboardPage() {
       
       setError(`Cache för ${subdomain}.handbok.org har uppdaterats`);
       setTimeout(() => setError(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error revalidating handbook:", err);
-      setError(err.message || "Kunde inte uppdatera cache");
+      setError(err instanceof Error ? err.message : "Kunde inte uppdatera cache");
     } finally {
       setIsProcessing(null);
     }
@@ -152,9 +152,9 @@ export default function AdminDashboardPage() {
       }
       
       fetchData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error toggling handbook published status:", err);
-      setError(err.message || "Kunde inte ändra publiceringstatus");
+      setError(err instanceof Error ? err.message : "Kunde inte ändra publiceringstatus");
     } finally {
       setIsProcessing(null);
     }

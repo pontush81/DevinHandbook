@@ -135,7 +135,7 @@ export default function EditHandbookPage({
       if (documentsError) throw documentsError;
       
       setDocuments(documentsData || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching handbook data:", err);
       setError("Kunde inte hämta handboksdata. Försök igen senare.");
     } finally {
@@ -174,7 +174,7 @@ export default function EditHandbookPage({
       setTimeout(() => {
         setSuccessMessage(null);
       }, 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error saving page:", err);
       setError("Kunde inte spara sidan. Försök igen senare.");
     } finally {
@@ -216,7 +216,7 @@ export default function EditHandbookPage({
       const fileUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/handbook_files/${filePath}`;
       const markdownLink = `[${fileName}](${fileUrl})`;
       setEditingContent((prev) => prev + "\n\n" + markdownLink);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error saving document:", err);
       setError("Kunde inte spara dokumentet. Försök igen senare.");
     }

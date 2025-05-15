@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { constructEventFromPayload } from '@/lib/stripe';
-import { getServiceSupabase } from '@/lib/supabase';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -24,18 +23,18 @@ export async function POST(req: NextRequest) {
       const { subdomain, handbookName } = session.metadata || {};
       
       if (subdomain && handbookName) {
-        await createHandbookInSupabase(handbookName, subdomain, session.customer as string);
+        await createHandbookInSupabase(handbookName, subdomain);
       }
     }
 
     return NextResponse.json({ received: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error handling webhook:', error);
     return NextResponse.json({ error: 'Webhook handler failed.' }, { status: 500 });
   }
 }
 
-async function createHandbookInSupabase(name: string, subdomain: string, customerId: string) {
+async function createHandbookInSupabase(name: string, subdomain: string) {
   try {
     const defaultTemplate = {
       sections: [
@@ -58,7 +57,7 @@ async function createHandbookInSupabase(name: string, subdomain: string, custome
     };
     
     return await createHandbookWithSectionsAndPages(name, subdomain, defaultTemplate);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error creating handbook in Supabase:', error);
     throw error;
   }

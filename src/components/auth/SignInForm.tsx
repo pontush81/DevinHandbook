@@ -26,8 +26,8 @@ export function SignInForm() {
       } else {
         router.push("/dashboard");
       }
-    } catch (err: any) {
-      setError(err.message || "Ett fel uppstod vid inloggning");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ett fel uppstod vid inloggning");
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { defaultHandbookTemplate, HandbookTemplate, Section, Page } from '../templates/handbook-template';
+import { defaultHandbookTemplate, HandbookTemplate } from '../templates/handbook-template';
 
 export interface HandbookState {
   name: string;

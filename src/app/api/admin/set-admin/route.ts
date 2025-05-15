@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
     
     return NextResponse.json({ success: true, data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error setting user as admin:', error);
     return NextResponse.json(
       { error: 'Failed to set user as admin' },

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     
     const supabase = getServiceSupabase();
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     }));
     
     return NextResponse.json({ data: users });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
       { error: 'Failed to fetch users' },

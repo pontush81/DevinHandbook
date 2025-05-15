@@ -20,11 +20,11 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{
     error: Error | null;
-    data: any;
+    data: { user: null } | null;
   }>;
   updatePassword: (password: string) => Promise<{
     error: Error | null;
-    data: any;
+    data: { user: unknown } | null;
   }>;
   hasRole: (role: string) => boolean;
 };
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       redirectTo: `${window.location.origin}/reset-password`,
     });
 
-    return { data, error };
+    return { data: { user: null }, error };
   };
 
   const updatePassword = async (password: string) => {
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
     });
 
-    return { data, error };
+    return { data: { user: data.user }, error };
   };
 
   const hasRole = (role: string): boolean => {

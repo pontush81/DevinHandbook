@@ -28,8 +28,8 @@ export default function ResetPasswordPage() {
         );
         setEmail("");
       }
-    } catch (err: any) {
-      setError(err.message || "Ett fel uppstod vid återställning av lösenord");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ett fel uppstod vid återställning av lösenord");
     } finally {
       setIsLoading(false);
     }
