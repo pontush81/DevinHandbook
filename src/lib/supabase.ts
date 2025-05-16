@@ -1,17 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Ensure SUPABASE_URL has https:// prefix
+const ensureHttpsPrefix = (url: string) => {
+  return url.startsWith('http://') || url.startsWith('https://')
+    ? url
+    : `https://${url}`;
+};
+
+const supabaseUrl = ensureHttpsPrefix(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
+
 export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  supabaseUrl,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
 export const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  supabaseUrl,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 export const getServiceSupabase = () => supabaseAdmin;
-
 export type Database = {
   public: {
     Tables: {
