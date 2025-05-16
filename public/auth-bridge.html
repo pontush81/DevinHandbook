@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handbok Auth Bridge</title>
+  <script>
+    (function() {
+      try {
+        // Lyssna efter meddelanden från huvuddomänen
+        window.addEventListener('message', function(event) {
+          // Validera källan
+          if (event.origin !== 'https://handbok.org') {
+            console.error('Unauthorized message source:', event.origin);
+            return;
+          }
+
+          const data = event.data;
+          if (data && data.type === 'AUTH_DATA') {
+            console.log('Received auth data from main domain');
+            
+            // Spara token i localStorage
+            if (data.token) {
+              localStorage.setItem('supabase.auth.token', data.token);
+            }
+            
+            // Spara användardata i localStorage
+            if (data.user) {
+              localStorage.setItem('supabase.auth.user', JSON.stringify(data.user));
+            }
+            
+            // Spara session i localStorage
+            if (data.session) {
+              localStorage.setItem('supabase.auth.session', JSON.stringify(data.session));
+            }
+            
+            // Bekräfta mottagen data till huvuddomänen
+            event.source.postMessage({
+              type: 'AUTH_CONFIRMATION',
+              status: 'success'
+            }, event.origin);
+            
+            // Omdirigera till föregående sida eller startsidan efter 1s
+            setTimeout(function() {
+              const returnUrl = localStorage.getItem('auth_return_url') || '/';
+              localStorage.removeItem('auth_return_url');
+              window.location.href = returnUrl;
+            }, 1000);
+          }
+        });
+        
+        // Skicka en signal till huvuddomänen när sidan är laddad
+        window.onload = function() {
+          try {
+            // Kontrollera om det finns en parent (vid inbäddning)
+            if (window.opener) {
+              window.opener.postMessage({
+                type: 'AUTH_BRIDGE_READY'
+              }, 'https://handbok.org');
+            } else if (window.parent && window.parent !== window) {
+              window.parent.postMessage({
+                type: 'AUTH_BRIDGE_READY'
+              }, 'https://handbok.org');
+            } else {
+              // Om ingen opener/parent finns, förmodligen direkt besök
+              console.log('Direct visit to auth bridge');
+              
+              // Kontrollera om vi har tokens att skicka till huvuddomänen
+              const token = localStorage.getItem('supabase.auth.token');
+              const user = localStorage.getItem('supabase.auth.user');
+              if (token && user) {
+                // Om vi har auth-data, skicka en ping till huvuddomänen
+                fetch('https://handbok.org/api/auth/ping', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    type: 'SUBDOMAIN_AUTH',
+                    token: token,
+                    user: user
+                  })
+                }).catch(e => console.error('Auth ping failed:', e));
+              }
+            }
+          } catch (e) {
+            console.error('Auth bridge comms error:', e);
+          }
+        };
+        
+        console.log('Auth bridge initialized');
+      } catch (e) {
+        console.error('Auth bridge error:', e);
+      }
+    })();
+  </script>
+</head>
+<body style="background-color: #f9f9f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; text-align: center; padding: 20px;">
+  <div style="max-width: 500px; margin: 50px auto; padding: 30px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h1 style="margin-top: 0; color: #333;">Autentisering pågår</h1>
+    <p style="margin-bottom: 30px;">Vi synkroniserar din inloggning mellan domäner...</p>
+    <div style="width: 40px; height: 40px; margin: 0 auto; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+  </div>
+  
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html> 
