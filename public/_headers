@@ -1,0 +1,25 @@
+# Headers för hela siten
+/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: X-Requested-With, Content-Type, Accept, Authorization
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+
+# Headers för statiska resurser
+/_next/static/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Cache-Control: public, max-age=31536000, immutable
+
+# Headers för filer i public-mappen
+/static/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Cache-Control: public, max-age=31536000, immutable
+
+# Headers för font-filer 
+/_next/static/media/*.woff2
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Cache-Control: public, max-age=31536000, immutable 

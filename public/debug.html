@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CORS Debug</title>
+  <style>
+    body {
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    button {
+      background: #0070f3;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .test-result {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>CORS Debugging Tool</h1>
+  
+  <div id="status">
+    <p>Current status: Checking environment...</p>
+  </div>
+  
+  <div>
+    <button id="testApi">Test API Proxy</button>
+    <button id="testJson">Test JSON Loading</button>
+    <button id="testCss">Test CSS Loading</button>
+    <button id="applyDirectFix">Apply Direct Fix</button>
+  </div>
+  
+  <div id="results"></div>
+  
+  <script>
+    // Utility functions
+    function addResult(title, content, isSuccess = true) {
+      const resultElement = document.createElement('div');
+      resultElement.className = 'test-result';
+      
+      const titleElement = document.createElement('h3');
+      titleElement.className = isSuccess ? 'success' : 'error';
+      titleElement.textContent = title;
+      
+      const contentElement = document.createElement('pre');
+      contentElement.textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+      
+      resultElement.appendChild(titleElement);
+      resultElement.appendChild(contentElement);
+      
+      document.getElementById('results').prepend(resultElement);
+    }
+    
+    // Environment detection
+    const host = window.location.hostname;
+    const isSubdomain = host !== 'handbok.org' && host.endsWith('.handbok.org');
+    const isWww = host === 'www.handbok.org';
+    
+    document.getElementById('status').innerHTML = `
+      <p><strong>Current environment:</strong></p>
+      <ul>
+        <li>Host: ${host}</li>
+        <li>Is Subdomain: ${isSubdomain}</li>
+        <li>Is WWW: ${isWww}</li>
+        <li>Origin: ${window.location.origin}</li>
+        <li>Protocol: ${window.location.protocol}</li>
+      </ul>
+    `;
+    
+    // Test API Proxy
+    document.getElementById('testApi').addEventListener('click', function() {
+      const proxyUrl = `${window.location.origin}/api/resources?path=/_next/static/css/bb2534fb94d47e9a.css`;
+      
+      fetch(proxyUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+          }
+          return response.text();
+        })
+        .then(data => {
+          addResult('API Proxy Test Successful', `
+            Fetched CSS via proxy successfully!
+            Size: ${data.length} bytes
+            URL: ${proxyUrl}
+          `);
+        })
+        .catch(error => {
+          addResult('API Proxy Test Failed', `
+            Error: ${error.message}
+            URL: ${proxyUrl}
+            
+            Proxy endpoint might not be deployed yet or is not functioning correctly.
+          `, false);
+        });
+    });
+    
+    // Test JSON Loading
+    document.getElementById('testJson').addEventListener('click', function() {
+      fetch('/cors-status.json')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          addResult('JSON Test Successful', data);
+        })
+        .catch(error => {
+          addResult('JSON Test Failed', `Error: ${error.message}`, false);
+        });
+    });
+    
+    // Test CSS Loading
+    document.getElementById('testCss').addEventListener('click', function() {
+      // Create a test element
+      const testLink = document.createElement('link');
+      testLink.rel = 'stylesheet';
+      testLink.type = 'text/css';
+      
+      // Add a test handler
+      const resultPromise = new Promise((resolve, reject) => {
+        testLink.onload = () => resolve('CSS loaded successfully!');
+        testLink.onerror = () => reject(new Error('Failed to load CSS'));
+        
+        // Try loading via our proxy
+        testLink.href = `${window.location.origin}/api/resources?path=/_next/static/css/bb2534fb94d47e9a.css`;
+        document.head.appendChild(testLink);
+        
+        // Set a timeout
+        setTimeout(() => reject(new Error('CSS load timeout')), 5000);
+      });
+      
+      resultPromise
+        .then(message => {
+          addResult('CSS Test Successful', message);
+        })
+        .catch(error => {
+          addResult('CSS Test Failed', `Error: ${error.message}`, false);
+        });
+    });
+    
+    // Apply direct fix
+    document.getElementById('applyDirectFix').addEventListener('click', function() {
+      try {
+        // Override fetch to redirect static resources to our proxy
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+          if (typeof url === 'string') {
+            // For direct handbok.org URLs, convert to use our proxy
+            if (url.startsWith('https://handbok.org/')) {
+              const path = url.replace('https://handbok.org', '');
+              const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(path)}`;
+              
+              console.log('[CORS-Fix] Redirecting external fetch:', url, '→', proxyUrl);
+              url = proxyUrl;
+            }
+            // For relative URLs that match static resources
+            else if (url.startsWith('/') && 
+                    (url.includes('/_next/') || 
+                    url.endsWith('.js') || 
+                    url.endsWith('.css') || 
+                    url.endsWith('.woff') || 
+                    url.endsWith('.woff2'))) {
+              
+              const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(url)}`;
+              console.log('[CORS-Fix] Redirecting local fetch:', url, '→', proxyUrl);
+              url = proxyUrl;
+            }
+          }
+          return originalFetch.apply(this, [url, options]);
+        };
+        
+        // Find and fix all current script tags
+        document.querySelectorAll('script[src], link[rel="stylesheet"]').forEach(function(el) {
+          const src = el.getAttribute('src') || el.getAttribute('href');
+          if (src && src.includes('handbok.org')) {
+            const path = src.replace(/https:\/\/handbok\.org/, '');
+            const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(path)}`;
+            
+            console.log('[CORS-Fix] Fixing direct URL:', src, '→', proxyUrl);
+            
+            if (el.tagName.toLowerCase() === 'script') {
+              el.setAttribute('src', proxyUrl);
+            } else {
+              el.setAttribute('href', proxyUrl);
+            }
+          }
+        });
+        
+        // Set up a MutationObserver to catch new additions
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                  if (node.tagName === 'SCRIPT' || node.tagName === 'LINK') {
+                    const src = node.getAttribute('src') || node.getAttribute('href');
+                    if (src && src.includes('handbok.org')) {
+                      const path = src.replace(/https:\/\/handbok\.org/, '');
+                      const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(path)}`;
+                      
+                      console.log('[CORS-Fix] Fixing new node:', src, '→', proxyUrl);
+                      
+                      if (node.tagName === 'SCRIPT') {
+                        node.setAttribute('src', proxyUrl);
+                      } else {
+                        node.setAttribute('href', proxyUrl);
+                      }
+                    }
+                  }
+                }
+              });
+            }
+          });
+        });
+        
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+        
+        addResult('Direct Fix Applied', `
+          - Overridden fetch to redirect through proxy
+          - Fixed existing script/link tags
+          - Set up MutationObserver for new elements
+          
+          Now try loading the main site again in a new tab. The CORS errors should be fixed.
+        `);
+        
+        // Add a button to navigate home
+        const homeButton = document.createElement('button');
+        homeButton.textContent = 'Try Home Page';
+        homeButton.addEventListener('click', function() {
+          window.open('/', '_blank');
+        });
+        document.getElementById('results').prepend(homeButton);
+        
+      } catch (error) {
+        addResult('Direct Fix Failed', `Error: ${error.message}`, false);
+      }
+    });
+  </script>
+</body>
+</html> 

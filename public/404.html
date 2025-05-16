@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sidan kunde inte hittas | Handbok</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    p {
+      color: #555;
+      margin-bottom: 2rem;
+    }
+    a {
+      color: #0070f3;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .btn {
+      display: inline-block;
+      background: #0070f3;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin-top: 20px;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #0060df;
+      text-decoration: none;
+    }
+    .error-code {
+      font-family: monospace;
+      background: #f5f5f5;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+  </style>
+  <script>
+    // CORS Fix script
+    (function() {
+      try {
+        const host = window.location.hostname;
+        
+        // Check if we're on a relevant domain
+        if (host === 'handbok.org' || 
+            host === 'www.handbok.org' || 
+            host.endsWith('.handbok.org')) {
+          
+          console.log('[CORS-Fix] Running fix script on 404 page:', host);
+          
+          // If this is not the main domain, redirect static resources to our proxy
+          if (host !== 'handbok.org') {
+            // Add an event listener for when the user attempts to navigate back to the site
+            const homeBtn = document.createElement('button');
+            homeBtn.textContent = 'Go to Homepage with CORS Fix';
+            homeBtn.className = 'btn';
+            homeBtn.onclick = function() {
+              // Store a flag in sessionStorage
+              sessionStorage.setItem('cors_fix_applied', 'true');
+              window.location.href = '/';
+            };
+            
+            // Add explanation about the potential CORS issue
+            // We'll add this to the DOM after it loads
+            document.addEventListener('DOMContentLoaded', function() {
+              const container = document.querySelector('.container');
+              if (container) {
+                const corsInfo = document.createElement('div');
+                corsInfo.innerHTML = `
+                  <h2>Having trouble accessing resources?</h2>
+                  <p>This could be due to CORS issues. Use the button below to apply a fix:</p>
+                `;
+                container.appendChild(corsInfo);
+                container.appendChild(homeBtn);
+              }
+            });
+            
+            // If the page is already loaded, append directly
+            if (document.readyState === 'interactive' || document.readyState === 'complete') {
+              const container = document.querySelector('.container');
+              if (container) {
+                const corsInfo = document.createElement('div');
+                corsInfo.innerHTML = `
+                  <h2>Having trouble accessing resources?</h2>
+                  <p>This could be due to CORS issues. Use the button below to apply a fix:</p>
+                `;
+                container.appendChild(corsInfo);
+                container.appendChild(homeBtn);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[CORS-Fix] Error in 404 page fix script:', e);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>404 - Sidan kunde inte hittas</h1>
+    <p>Vi kan tyvärr inte hitta sidan du letar efter. Den kan ha flyttats eller tagits bort.</p>
+    <p class="error-code">Felkod: 404 Not Found</p>
+    <p>
+      <a href="/" class="btn">Gå till startsidan</a>
+      <a href="/cors-test.html" class="btn">CORS Diagnos</a>
+    </p>
+  </div>
+</body>
+</html> 
