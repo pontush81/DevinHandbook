@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
   return (
@@ -14,17 +13,13 @@ export default function NotFound() {
         <div className="border-t border-b border-gray-200 py-8 my-8">
           <p className="text-md text-gray-500 mb-4">Felkod: 404 Not Found</p>
           
-          <div className="space-y-4">
-            <Link href="/" className="inline-block">
-              <Button size="lg">
-                Gå till startsidan
-              </Button>
+          <div className="flex flex-wrap justify-center gap-4 mt-6">
+            <Link href="/" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white shadow hover:bg-blue-700 h-10 px-6 py-3">
+              Gå till startsidan
             </Link>
             
-            <Link href="/debug.html" className="inline-block ml-4">
-              <Button variant="outline" size="lg">
-                CORS Diagnos
-              </Button>
+            <Link href="/debug.html" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-100 hover:text-gray-800 h-10 px-6 py-3">
+              CORS Diagnos
             </Link>
           </div>
         </div>
