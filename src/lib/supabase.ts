@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Ensure SUPABASE_URL has https:// prefix
 const ensureHttpsPrefix = (url: string) => {
@@ -8,18 +8,40 @@ const ensureHttpsPrefix = (url: string) => {
 };
 
 const supabaseUrl = ensureHttpsPrefix(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export const supabase = createClient(
   supabaseUrl,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  supabaseAnonKey
 );
 
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+let supabaseAdminClient: SupabaseClient | null = null;
+try {
+  if (typeof window === 'undefined' && supabaseServiceRoleKey) {
+    supabaseAdminClient = createClient(
+      supabaseUrl,
+      supabaseServiceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+  }
+} catch (error) {
+  console.error('Error creating Supabase admin client:', error);
+}
 
-export const getServiceSupabase = () => supabaseAdmin;
+export const supabaseAdmin = supabaseAdminClient || supabase;
+
+export const getServiceSupabase = () => {
+  if (!supabaseAdminClient) {
+    console.warn('Service role key not available, using anonymous client instead');
+  }
+  return supabaseAdminClient || supabase;
+};
 export type Database = {
   public: {
     Tables: {
