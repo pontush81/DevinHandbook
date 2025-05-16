@@ -141,7 +141,7 @@ export default function EditHandbookPage({
     } finally {
       setIsLoadingData(false);
     }
-  };
+  }, [params.id, router, user?.id]);
 
   const handleSavePage = async () => {
     if (!selectedPageId) return;
