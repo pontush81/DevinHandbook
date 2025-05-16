@@ -1,8 +1,31 @@
 {
-  "status": "ok",
-  "version": "1.0",
-  "cors_enabled": true,
-  "timestamp": "2023-05-16T14:30:00Z",
-  "proxy_available": true,
-  "description": "Använd denna fil för att testa om statiskt innehåll kan laddas"
+  "status": "available",
+  "message": "CORS diagnostic endpoint is working",
+  "timestamp": "2023-05-23T12:00:00Z",
+  "environment": {
+    "version": "1.0.0",
+    "mode": "production"
+  },
+  "cors": {
+    "enabled": true,
+    "allowOrigin": "*",
+    "allowMethods": "GET, POST, OPTIONS"
+  },
+  "staticResourcesStatus": {
+    "proxyEnabled": true,
+    "inlineEnabled": true,
+    "fallbackFontsEnabled": true
+  },
+  "fixes": [
+    "middleware CORS headers",
+    "assetPrefix configuration",
+    "static-resource-fix.js",
+    "API resources proxy",
+    "improved error handling",
+    "fallback font loading"
+  ],
+  "debugTools": [
+    "/debug.html",
+    "?debug=1 URL parameter"
+  ]
 } 

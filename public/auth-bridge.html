@@ -3,111 +3,161 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Handbok Auth Bridge</title>
-  <script>
-    (function() {
-      try {
-        // Lyssna efter meddelanden från huvuddomänen
-        window.addEventListener('message', function(event) {
-          // Validera källan
-          if (event.origin !== 'https://handbok.org') {
-            console.error('Unauthorized message source:', event.origin);
-            return;
-          }
-
-          const data = event.data;
-          if (data && data.type === 'AUTH_DATA') {
-            console.log('Received auth data from main domain');
-            
-            // Spara token i localStorage
-            if (data.token) {
-              localStorage.setItem('supabase.auth.token', data.token);
-            }
-            
-            // Spara användardata i localStorage
-            if (data.user) {
-              localStorage.setItem('supabase.auth.user', JSON.stringify(data.user));
-            }
-            
-            // Spara session i localStorage
-            if (data.session) {
-              localStorage.setItem('supabase.auth.session', JSON.stringify(data.session));
-            }
-            
-            // Bekräfta mottagen data till huvuddomänen
-            event.source.postMessage({
-              type: 'AUTH_CONFIRMATION',
-              status: 'success'
-            }, event.origin);
-            
-            // Omdirigera till föregående sida eller startsidan efter 1s
-            setTimeout(function() {
-              const returnUrl = localStorage.getItem('auth_return_url') || '/';
-              localStorage.removeItem('auth_return_url');
-              window.location.href = returnUrl;
-            }, 1000);
-          }
-        });
-        
-        // Skicka en signal till huvuddomänen när sidan är laddad
-        window.onload = function() {
-          try {
-            // Kontrollera om det finns en parent (vid inbäddning)
-            if (window.opener) {
-              window.opener.postMessage({
-                type: 'AUTH_BRIDGE_READY'
-              }, 'https://handbok.org');
-            } else if (window.parent && window.parent !== window) {
-              window.parent.postMessage({
-                type: 'AUTH_BRIDGE_READY'
-              }, 'https://handbok.org');
-            } else {
-              // Om ingen opener/parent finns, förmodligen direkt besök
-              console.log('Direct visit to auth bridge');
-              
-              // Kontrollera om vi har tokens att skicka till huvuddomänen
-              const token = localStorage.getItem('supabase.auth.token');
-              const user = localStorage.getItem('supabase.auth.user');
-              if (token && user) {
-                // Om vi har auth-data, skicka en ping till huvuddomänen
-                fetch('https://handbok.org/api/auth/ping', {
-                  method: 'POST',
-                  credentials: 'include',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    type: 'SUBDOMAIN_AUTH',
-                    token: token,
-                    user: user
-                  })
-                }).catch(e => console.error('Auth ping failed:', e));
-              }
-            }
-          } catch (e) {
-            console.error('Auth bridge comms error:', e);
-          }
-        };
-        
-        console.log('Auth bridge initialized');
-      } catch (e) {
-        console.error('Auth bridge error:', e);
-      }
-    })();
-  </script>
-</head>
-<body style="background-color: #f9f9f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; text-align: center; padding: 20px;">
-  <div style="max-width: 500px; margin: 50px auto; padding: 30px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    <h1 style="margin-top: 0; color: #333;">Autentisering pågår</h1>
-    <p style="margin-bottom: 30px;">Vi synkroniserar din inloggning mellan domäner...</p>
-    <div style="width: 40px; height: 40px; margin: 0 auto; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-  </div>
-  
+  <title>Auth Bridge</title>
   <style>
+    body {
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+      color: #333;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 15px;
+      border-radius: 5px;
+      max-width: 500px;
+    }
+    .success {
+      background-color: #e6f7e6;
+      border: 1px solid #75c875;
+    }
+    .error {
+      background-color: #fae6e6;
+      border: 1px solid #e88a8a;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #09f;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
   </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <h2>Synkroniserar autentisering...</h2>
+    <p>Du kommer att omdirigeras automatiskt</p>
+  </div>
+  
+  <div id="success" class="status success" style="display: none">
+    <h2>Autentisering lyckades!</h2>
+    <p>Du kan nu stänga denna flik och fortsätta på din tidigare sida.</p>
+  </div>
+  
+  <div id="error" class="status error" style="display: none">
+    <h2>Autentisering misslyckades</h2>
+    <p id="errorMessage">Ett fel uppstod vid autentisering. Försök igen.</p>
+  </div>
+  
+  <script>
+    // This script helps with cross-domain authentication
+    (function() {
+      try {
+        // Get the auth token from URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const redirectUrl = params.get('redirect') || '/';
+        const targetDomain = params.get('domain');
+        
+        // If we don't have a token, show error
+        if (!token) {
+          showError('Ingen autentiseringstoken hittades i URL:en.');
+          return;
+        }
+        
+        // Store the token in local storage
+        localStorage.setItem('supabase.auth.token', token);
+        
+        // If we have a target domain for cross-domain authentication
+        if (targetDomain) {
+          // If the target domain matches the current domain, just redirect
+          if (window.location.hostname === targetDomain || 
+              window.location.hostname.endsWith('.' + targetDomain)) {
+            // Same domain or subdomain, redirect directly
+            showSuccess();
+            setTimeout(() => {
+              window.location.href = redirectUrl;
+            }, 1000);
+            return;
+          }
+          
+          // Otherwise, we need to use postMessage for cross-domain auth
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = `https://${targetDomain}/auth-bridge.html?token=${encodeURIComponent(token)}&mode=receive`;
+          
+          // Listen for messages from the iframe
+          window.addEventListener('message', function(event) {
+            // Only accept messages from our target domain
+            if (event.origin !== `https://${targetDomain}`) return;
+            
+            if (event.data === 'auth-success') {
+              showSuccess();
+              setTimeout(() => {
+                window.location.href = redirectUrl;
+              }, 1000);
+            } else {
+              showError('Kunde inte synkronisera autentisering med måldomänen.');
+            }
+          }, false);
+          
+          // Add the iframe to the page
+          document.body.appendChild(iframe);
+          
+          // Set a timeout in case we don't get a response
+          setTimeout(() => {
+            showError('Timeout vid synkronisering av autentisering. Prova att ladda om sidan.');
+          }, 5000);
+        } else {
+          // No cross-domain needed, just redirect
+          showSuccess();
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 1000);
+        }
+      } catch (error) {
+        showError('Ett fel uppstod: ' + error.message);
+        console.error('Auth bridge error:', error);
+      }
+      
+      function showSuccess() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('success').style.display = 'block';
+      }
+      
+      function showError(message) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        if (message) {
+          document.getElementById('errorMessage').textContent = message;
+        }
+      }
+      
+      // For iframe mode, listen for token requests
+      if (params.get('mode') === 'receive') {
+        // Send a message back to the parent window
+        if (window.parent && token) {
+          localStorage.setItem('supabase.auth.token', token);
+          window.parent.postMessage('auth-success', '*');
+        } else {
+          window.parent.postMessage('auth-error', '*');
+        }
+      }
+    })();
+  </script>
 </body>
 </html> 

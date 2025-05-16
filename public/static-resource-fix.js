@@ -56,36 +56,98 @@
       }
     };
     
+    // Create a stylesheet with fallback fonts to ensure the page renders even if fonts fail to load
+    function createFallbackFonts() {
+      const styleEl = document.createElement('style');
+      styleEl.setAttribute('data-resource-fix-fallback', 'true');
+      styleEl.textContent = `
+        /* Fallback font definitions om CORS misslyckas */
+        @font-face {
+          font-family: 'Geist';
+          font-style: normal;
+          font-weight: 400;
+          src: local('Arial');
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'Geist Mono';
+          font-style: normal;
+          font-weight: 400;
+          src: local('Courier New');
+          font-display: swap;
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+    
+    // Set up fallback fonts immediately
+    createFallbackFonts();
+    
     // Fetch och cache kritiska resurser som kan fallback vid CORS-fel
     function prefetchCriticalResources() {
-      // Använd blob för att hantera fonter när CORS misslyckas
-      if (window.fetch) {
-        // Försök hämta fontdata med proxy
-        const geistFontUrl = getResourceUrl('/_next/static/media/569ce4b8f30dc480-s.p.woff2');
-        fetch(geistFontUrl)
-          .then(res => res.blob())
-          .then(blob => {
-            criticalResources.fontData['geist'] = URL.createObjectURL(blob);
-            console.log('[StaticResourceFix] Font cached: geist');
-            createFontFaceRules();
-          })
-          .catch(e => console.error('[StaticResourceFix] Font fetch failed:', e));
+      // Prefetch the fonts
+      const fontUrls = [
+        { url: '/_next/static/media/569ce4b8f30dc480-s.p.woff2', name: 'geist' },
+        { url: '/_next/static/media/a34f9d1faa5f3315-s.p.woff2', name: 'geist-mono' }
+      ];
+      
+      function prefetchFont(fontData) {
+        const proxyUrl = getResourceUrl(fontData.url);
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.href = proxyUrl;
+        link.as = 'font';
+        link.type = 'font/woff2';
+        link.crossOrigin = 'anonymous';
         
-        const geistMonoUrl = getResourceUrl('/_next/static/media/a34f9d1faa5f3315-s.p.woff2');
-        fetch(geistMonoUrl)
-          .then(res => res.blob())
-          .then(blob => {
-            criticalResources.fontData['geist-mono'] = URL.createObjectURL(blob);
-            console.log('[StaticResourceFix] Font cached: geist-mono');
-            createFontFaceRules();
-          })
-          .catch(e => console.error('[StaticResourceFix] Font fetch failed:', e));
+        // Add success handler
+        link.onload = function() {
+          console.log(`[StaticResourceFix] Font preloaded successfully: ${fontData.name}`);
+        };
+        
+        // Add error handler
+        link.onerror = function() {
+          console.warn(`[StaticResourceFix] Font preload failed, trying fetch: ${fontData.name}`);
+          
+          // Try fetch as fallback
+          fetch(proxyUrl, { mode: 'cors' })
+            .then(res => res.blob())
+            .then(blob => {
+              criticalResources.fontData[fontData.name] = URL.createObjectURL(blob);
+              console.log(`[StaticResourceFix] Font cached via fetch: ${fontData.name}`);
+              createFontFaceRules();
+            })
+            .catch(err => {
+              console.error(`[StaticResourceFix] Font fetch also failed: ${fontData.name}`, err);
+              // Try direct URL as last resort
+              const directUrl = getDirectUrl(fontData.url);
+              fetch(directUrl, { mode: 'cors' })
+                .then(res => res.blob())
+                .then(blob => {
+                  criticalResources.fontData[fontData.name] = URL.createObjectURL(blob);
+                  console.log(`[StaticResourceFix] Font cached via direct URL: ${fontData.name}`);
+                  createFontFaceRules();
+                })
+                .catch(e => console.error(`[StaticResourceFix] All font loading methods failed: ${fontData.name}`, e));
+            });
+        };
+        
+        document.head.appendChild(link);
       }
+      
+      // Start prefetching fonts
+      fontUrls.forEach(prefetchFont);
     }
     
     // Skapa font-face regler baserat på cachade fontfiler
     function createFontFaceRules() {
       if (!criticalResources.fontData['geist'] && !criticalResources.fontData['geist-mono']) return;
+      
+      // Remove existing style if present
+      const existingStyle = document.querySelector('style[data-resource-fix="true"]');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
       
       const styleEl = document.createElement('style');
       styleEl.setAttribute('data-resource-fix', 'true');
@@ -208,6 +270,38 @@
         })
         .catch(error => {
           console.error('[StaticResourceFix] Failed to inline resource:', url, error);
+          
+          // Try direct URL as last resort
+          const directUrl = getDirectUrl(url);
+          if (directUrl !== resourceUrl) {
+            console.log('[StaticResourceFix] Trying direct URL as fallback:', directUrl);
+            
+            return fetch(directUrl, {mode: 'cors'})
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`Failed to load direct ${directUrl}: ${response.status}`);
+                }
+                
+                if (type === 'script') {
+                  return response.text().then(text => {
+                    const script = document.createElement('script');
+                    script.textContent = text;
+                    document.head.appendChild(script);
+                    console.log('[StaticResourceFix] Inlined script via direct URL:', url);
+                  });
+                } else if (type === 'style') {
+                  return response.text().then(text => {
+                    const style = document.createElement('style');
+                    style.textContent = text;
+                    document.head.appendChild(style);
+                    console.log('[StaticResourceFix] Inlined style via direct URL:', url);
+                  });
+                }
+              })
+              .catch(err => {
+                console.error('[StaticResourceFix] All resource loading methods failed:', url, err);
+              });
+          }
         });
     }
     
@@ -227,18 +321,26 @@
           
           if (el.tagName.toLowerCase() === 'script') {
             el.setAttribute('src', newSrc);
+            el.setAttribute('crossorigin', 'anonymous');
             
             // Fallback om skriptet misslyckas ladda p.g.a. CORS
             el.addEventListener('error', function() {
               console.log('[StaticResourceFix] Script load failed, trying inline:', newSrc);
+              // Remove the failed script
+              el.remove();
+              // Load it inline
               loadInlineResource(src, 'script');
             });
           } else if (el.getAttribute('rel') === 'stylesheet') {
             el.setAttribute('href', newSrc);
+            el.setAttribute('crossorigin', 'anonymous');
             
             // Fallback om CSS misslyckas ladda p.g.a. CORS
             el.addEventListener('error', function() {
               console.log('[StaticResourceFix] Stylesheet load failed, trying inline:', newSrc);
+              // Remove the failed link
+              el.remove();
+              // Load it inline
               loadInlineResource(src, 'style');
             });
           } else {
@@ -278,10 +380,14 @@
                   
                   if (node.tagName === 'SCRIPT') {
                     node.setAttribute('src', newSrc);
+                    node.setAttribute('crossorigin', 'anonymous');
                     
                     // Fallback om skriptet misslyckas ladda p.g.a. CORS
                     node.addEventListener('error', function() {
                       console.log('[StaticResourceFix] Dynamic script load failed, trying inline:', newSrc);
+                      // Remove the failed script
+                      node.remove();
+                      // Load it inline
                       loadInlineResource(src, 'script');
                     });
                   } else {
@@ -294,6 +400,9 @@
                     if (node.getAttribute('rel') === 'stylesheet') {
                       node.addEventListener('error', function() {
                         console.log('[StaticResourceFix] Dynamic stylesheet load failed, trying inline:', newSrc);
+                        // Remove the failed link
+                        node.remove();
+                        // Load it inline
                         loadInlineResource(src, 'style');
                       });
                     }
@@ -312,8 +421,55 @@
       subtree: true
     });
     
+    // Add a debug message to the console
     console.log('[StaticResourceFix] Setup complete - using proxy mode');
+    
+    // Create a diagnostic element that can help debug issues
+    if (window.location.search.includes('debug=1')) {
+      const debugDiv = document.createElement('div');
+      debugDiv.style.position = 'fixed';
+      debugDiv.style.bottom = '0';
+      debugDiv.style.right = '0';
+      debugDiv.style.background = 'rgba(0,0,0,0.7)';
+      debugDiv.style.color = 'white';
+      debugDiv.style.padding = '10px';
+      debugDiv.style.fontSize = '12px';
+      debugDiv.style.fontFamily = 'monospace';
+      debugDiv.style.zIndex = '9999';
+      debugDiv.textContent = `Host: ${window.location.hostname} | Using: ${USE_PROXY ? 'Proxy' : 'Direct'} | Subdom: ${isSubdomain()}`;
+      document.body.appendChild(debugDiv);
+    }
   } catch (e) {
     console.error('[StaticResourceFix] Error:', e);
+    
+    // Try to recover in case of an error
+    try {
+      // Add basic error reporting
+      const errorDiv = document.createElement('div');
+      errorDiv.style.position = 'fixed';
+      errorDiv.style.top = '0';
+      errorDiv.style.left = '0';
+      errorDiv.style.right = '0';
+      errorDiv.style.background = 'rgba(255,0,0,0.8)';
+      errorDiv.style.color = 'white';
+      errorDiv.style.padding = '10px';
+      errorDiv.style.zIndex = '9999';
+      errorDiv.innerHTML = `
+        <strong>Resource loading error:</strong> ${e.message}<br>
+        <small>Please use the debug page at <a href="/debug.html" style="color:white;text-decoration:underline;">debug.html</a></small>
+      `;
+      
+      // Only add the error div when DOM is ready
+      if (document.body) {
+        document.body.prepend(errorDiv);
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.body.prepend(errorDiv);
+        });
+      }
+    } catch (innerError) {
+      // Nothing more we can do
+      console.error('[StaticResourceFix] Fatal error:', innerError);
+    }
   }
 })(); 

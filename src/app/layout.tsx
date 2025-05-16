@@ -4,21 +4,27 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Script from 'next/script';
 
+// Configure fonts with better cross-domain support
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: 'swap',
+  preload: true,
+  fallback: ['Arial', 'sans-serif'],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: 'swap',
+  preload: true,
+  fallback: ['Courier New', 'monospace'],
 });
 
 export const metadata: Metadata = {
   title: "Handbok.org - Digital handbok för bostadsrättsföreningar",
   description: "Skapa en digital handbok för din bostadsrättsförening",
+  metadataBase: new URL('https://handbok.org'),
 };
 
 export default function RootLayout({
@@ -29,9 +35,43 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <head>
-        {/* Inline CORS fix - körs innan något annat */}
+        {/* Fallback font styles to ensure text displays immediately */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          /* Fallback fonts that will be used if Google Fonts fail to load */
+          @font-face {
+            font-family: 'Geist Fallback';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: local('Arial');
+          }
+          
+          @font-face {
+            font-family: 'Geist Mono Fallback';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: local('Courier New');
+          }
+          
+          :root {
+            --font-geist-sans-fallback: 'Geist Fallback', Arial, sans-serif;
+            --font-geist-mono-fallback: 'Geist Mono Fallback', 'Courier New', monospace;
+          }
+          
+          /* Apply fallback immediately while waiting for the real fonts */
+          body {
+            font-family: var(--font-geist-sans, var(--font-geist-sans-fallback));
+          }
+          
+          code, pre, .font-mono {
+            font-family: var(--font-geist-mono, var(--font-geist-mono-fallback));
+          }
+        `}} />
+        
+        {/* Inline CORS fix script - runs first */}
         <script dangerouslySetInnerHTML={{ __html: `
-          // Detectera om detta är en subdomän eller www
+          // Detect if this is a subdomain
           (function() {
             const host = window.location.hostname;
             const isHandbokDomain = host === 'handbok.org' || 
@@ -40,109 +80,20 @@ export default function RootLayout({
             
             if (!isHandbokDomain) return;
             
-            // Om detta inte är huvuddomänen, aktivera proxy
+            // If this is not the main domain, activate the resource proxy
             if (host !== 'handbok.org') {
-              const currentOrigin = window.location.origin;
+              // Load the full resource fix script
+              const script = document.createElement('script');
+              script.src = '/static-resource-fix.js';
+              script.crossOrigin = 'anonymous';
+              document.head.appendChild(script);
               
-              // Override fetch globalt - körs för alla resurser
-              const originalFetch = window.fetch;
-              window.fetch = function(url, options) {
-                if (typeof url === 'string' && url.startsWith('/') && 
-                    (url.includes('/_next/') || url.endsWith('.js') || url.endsWith('.css') || 
-                    url.endsWith('.woff') || url.endsWith('.woff2'))) {
-                  const proxyUrl = currentOrigin + '/api/resources?path=' + encodeURIComponent(url);
-                  console.log('[CORS-Fix] Redirecting fetch:', url, '->', proxyUrl);
-                  url = proxyUrl;
-                }
-                return originalFetch(url, options);
-              };
-              
-              // Skapa en MutationObserver för att fånga <script> och <link> som läggs till
-              const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                  if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach(function(node) {
-                      if (node.nodeType === 1) { // Element node
-                        if (node.tagName === 'SCRIPT' || node.tagName === 'LINK') {
-                          const src = node.getAttribute('src') || node.getAttribute('href');
-                          if (src && src.startsWith('/') && 
-                              (src.includes('/_next/') || src.endsWith('.js') || src.endsWith('.css') || 
-                              src.endsWith('.woff') || src.endsWith('.woff2'))) {
-                            
-                            const newSrc = currentOrigin + '/api/resources?path=' + encodeURIComponent(src);
-                            console.log('[CORS-Fix] Fixing resource:', src, '->', newSrc);
-                            
-                            if (node.tagName === 'SCRIPT') {
-                              node.setAttribute('src', newSrc);
-                            } else {
-                              node.setAttribute('href', newSrc);
-                            }
-                          }
-                        }
-                      }
-                    });
-                  }
-                });
-              });
-              
-              // Starta observering av förändringar i DOM
-              document.addEventListener('DOMContentLoaded', function() {
-                observer.observe(document.documentElement, {
-                  childList: true,
-                  subtree: true
-                });
-                
-                // Fixa befintliga resurser
-                document.querySelectorAll('script[src], link[rel="stylesheet"], link[rel="preload"]').forEach(function(el) {
-                  const src = el.getAttribute('src') || el.getAttribute('href');
-                  if (src && src.startsWith('/') && 
-                      (src.includes('/_next/') || src.endsWith('.js') || src.endsWith('.css') || 
-                      src.endsWith('.woff') || src.endsWith('.woff2'))) {
-                    
-                    const newSrc = currentOrigin + '/api/resources?path=' + encodeURIComponent(src);
-                    console.log('[CORS-Fix] Fixing existing resource:', src, '->', newSrc);
-                    
-                    if (el.tagName.toLowerCase() === 'script') {
-                      el.setAttribute('src', newSrc);
-                    } else {
-                      el.setAttribute('href', newSrc);
-                    }
-                  }
-                });
-              });
-              
-              // Om DOM redan är laddad
-              if (document.readyState === 'interactive' || document.readyState === 'complete') {
-                observer.observe(document.documentElement, {
-                  childList: true,
-                  subtree: true
-                });
-                
-                // Fixa befintliga resurser
-                document.querySelectorAll('script[src], link[rel="stylesheet"], link[rel="preload"]').forEach(function(el) {
-                  const src = el.getAttribute('src') || el.getAttribute('href');
-                  if (src && src.startsWith('/') && 
-                      (src.includes('/_next/') || src.endsWith('.js') || src.endsWith('.css') || 
-                      src.endsWith('.woff') || src.endsWith('.woff2'))) {
-                    
-                    const newSrc = currentOrigin + '/api/resources?path=' + encodeURIComponent(src);
-                    console.log('[CORS-Fix] Fixing existing resource:', src, '->', newSrc);
-                    
-                    if (el.tagName.toLowerCase() === 'script') {
-                      el.setAttribute('src', newSrc);
-                    } else {
-                      el.setAttribute('href', newSrc);
-                    }
-                  }
-                });
-              }
-              
-              console.log('[CORS-Fix] Active - using proxy at', currentOrigin);
+              console.log('[CORS-Fix] Loading static resource fix script');
             }
           })();
         `}} />
         
-        {/* Huvudskript för CORS-fix (körs efter det inlineskriptet) */}
+        {/* Main CORS fix script */}
         <Script 
           src="/static-resource-fix.js" 
           strategy="beforeInteractive"
