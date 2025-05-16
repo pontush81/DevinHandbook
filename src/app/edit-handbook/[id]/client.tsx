@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -67,12 +65,6 @@ export default function EditHandbookClient({
       router.push("/login");
     }
   }, [user, isLoading, router]);
-
-  useEffect(() => {
-    if (user) {
-      fetchHandbookData();
-    }
-  }, [user, id, fetchHandbookData]);
 
   const fetchHandbookData = useCallback(async () => {
     try {
@@ -144,6 +136,12 @@ export default function EditHandbookClient({
       setIsLoadingData(false);
     }
   }, [id, router, user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchHandbookData();
+    }
+  }, [user, id, fetchHandbookData]);
 
   const handleSavePage = async () => {
     if (!selectedPageId) return;
