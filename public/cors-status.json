@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "version": "1.0",
+  "cors_enabled": true,
+  "timestamp": "2023-05-16T14:30:00Z",
+  "proxy_available": true,
+  "description": "Använd denna fil för att testa om statiskt innehåll kan laddas"
+} 

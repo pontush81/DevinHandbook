@@ -17,7 +17,16 @@ export async function GET(request: NextRequest) {
   
   try {
     // Hämta resursen från huvuddomänen
-    const resourceURL = `https://handbok.org${path}`;
+    // Preservera alla URL-parametrar från originalförfrågan
+    const originalUrl = new URL(request.url);
+    const queryParams = Array.from(originalUrl.searchParams.entries())
+      .filter(([key]) => key !== 'path') // Skippa path-parametern
+      .map(([key, value]) => `${key}=${value}`)
+      .join('&');
+    
+    const resourceURL = `https://handbok.org${path}${queryParams ? '?' + queryParams : ''}`;
+    console.log('Proxy resource:', resourceURL);
+    
     const response = await fetch(resourceURL);
     
     if (!response.ok) {
