@@ -5,6 +5,8 @@
   try {
     const MAIN_DOMAIN = 'handbok.org';
     const MAIN_URL = 'https://' + MAIN_DOMAIN;
+    const CURRENT_DOMAIN = window.location.hostname;
+    const USE_PROXY = true; // Använd proxy för att hämta resurser (bättre för CORS)
     
     // Function to check if the current host is a subdomain
     function isSubdomain() {
@@ -14,11 +16,34 @@
              host.endsWith('.' + MAIN_DOMAIN);
     }
     
-    // Only apply fixes on subdomains
+    // Only apply fixes on subdomains and www
     if (!isSubdomain() && window.location.hostname !== 'www.' + MAIN_DOMAIN) return;
     
     // Log message for debugging
     console.log('[StaticResourceFix] Running on:', window.location.hostname);
+    
+    // Transform a resource path to use the proxy
+    function getProxyUrl(path) {
+      if (path.startsWith('/')) {
+        // For local paths, use our proxy endpoint
+        const currentOrigin = window.location.origin;
+        return `${currentOrigin}/api/resources?path=${encodeURIComponent(path)}`;
+      }
+      return path; // External resources stay as-is
+    }
+    
+    // Transform a resource path to use the main domain directly
+    function getDirectUrl(path) {
+      if (path.startsWith('/')) {
+        return MAIN_URL + path;
+      }
+      return path;
+    }
+    
+    // Get the right URL based on our strategy
+    function getResourceUrl(path) {
+      return USE_PROXY ? getProxyUrl(path) : getDirectUrl(path);
+    }
     
     // Funktioner för inlining av kritiska resurser när CORS misslyckas
     const criticalResources = {
@@ -35,8 +60,9 @@
     function prefetchCriticalResources() {
       // Använd blob för att hantera fonter när CORS misslyckas
       if (window.fetch) {
-        // Försök hämta fontdata med no-cors som fallback
-        fetch(`${MAIN_URL}/_next/static/media/569ce4b8f30dc480-s.p.woff2`, {mode: 'cors'})
+        // Försök hämta fontdata med proxy
+        const geistFontUrl = getResourceUrl('/_next/static/media/569ce4b8f30dc480-s.p.woff2');
+        fetch(geistFontUrl)
           .then(res => res.blob())
           .then(blob => {
             criticalResources.fontData['geist'] = URL.createObjectURL(blob);
@@ -45,7 +71,8 @@
           })
           .catch(e => console.error('[StaticResourceFix] Font fetch failed:', e));
         
-        fetch(`${MAIN_URL}/_next/static/media/a34f9d1faa5f3315-s.p.woff2`, {mode: 'cors'})
+        const geistMonoUrl = getResourceUrl('/_next/static/media/a34f9d1faa5f3315-s.p.woff2');
+        fetch(geistMonoUrl)
           .then(res => res.blob())
           .then(blob => {
             criticalResources.fontData['geist-mono'] = URL.createObjectURL(blob);
@@ -108,18 +135,18 @@
             url.endsWith('.woff2') ||
             url.includes('/static/')) {
           
-          // Rewrite relative URLs to absolute ones pointing to main domain
+          // Rewrite relative URLs to use our proxy
           if (url.startsWith('/')) {
-            console.log('[StaticResourceFix] Redirecting fetch:', url, '→', MAIN_URL + url);
-            url = MAIN_URL + url;
+            const newUrl = getResourceUrl(url);
+            console.log('[StaticResourceFix] Redirecting fetch:', url, '→', newUrl);
+            url = newUrl;
             
             // Add cors mode to options if not specified
             if (options) {
-              options.credentials = 'omit'; // Skip credentials to avoid CORS issues
+              // Allow credentials to flow through
               options.mode = 'cors';
             } else {
               options = {
-                credentials: 'omit',
                 mode: 'cors' 
               };
             }
@@ -141,10 +168,11 @@
             url.endsWith('.woff2') ||
             url.includes('/static/')) {
           
-          // Rewrite relative URLs to absolute ones pointing to main domain
+          // Rewrite relative URLs to use our proxy
           if (url.startsWith('/')) {
-            console.log('[StaticResourceFix] Redirecting XHR:', url, '→', MAIN_URL + url);
-            url = MAIN_URL + url;
+            const newUrl = getResourceUrl(url);
+            console.log('[StaticResourceFix] Redirecting XHR:', url, '→', newUrl);
+            url = newUrl;
           }
         }
       }
@@ -153,14 +181,13 @@
     
     // Hjälpfunktion för inline-laddning av resurser
     function loadInlineResource(url, type) {
-      if (url.startsWith('/')) {
-        url = MAIN_URL + url;
-      }
+      // Alltid använd proxy för inline-resources
+      const resourceUrl = getResourceUrl(url);
       
-      return fetch(url, {mode: 'cors', credentials: 'omit'})
+      return fetch(resourceUrl, {mode: 'cors'})
         .then(response => {
           if (!response.ok) {
-            throw new Error(`Failed to load ${url}: ${response.status}`);
+            throw new Error(`Failed to load ${resourceUrl}: ${response.status}`);
           }
           
           if (type === 'script') {
@@ -184,9 +211,8 @@
         });
     }
     
-    // Listen for DOM content loaded to fix existing resources
-    document.addEventListener('DOMContentLoaded', function() {
-      // Fix all script tags
+    // Funktion för att fixa alla script/style element på sidan
+    function fixResourceElements() {
       document.querySelectorAll('script[src], link[rel="stylesheet"], link[rel="preload"]').forEach(function(el) {
         const src = el.getAttribute('src') || el.getAttribute('href');
         if (src && src.startsWith('/') && 
@@ -196,7 +222,7 @@
              src.endsWith('.woff') || 
              src.endsWith('.woff2'))) {
           
-          const newSrc = MAIN_URL + src;
+          const newSrc = getResourceUrl(src);
           console.log('[StaticResourceFix] Fixing resource:', src, '→', newSrc);
           
           if (el.tagName.toLowerCase() === 'script') {
@@ -222,7 +248,15 @@
           }
         }
       });
-    });
+    }
+    
+    // Listen for DOM content loaded to fix existing resources
+    document.addEventListener('DOMContentLoaded', fixResourceElements);
+    
+    // Fixa även befintliga resurser direkt, om DOM är redan laddad
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      fixResourceElements();
+    }
     
     // MutationObserver to catch dynamically added resources
     const observer = new MutationObserver(function(mutations) {
@@ -239,7 +273,7 @@
                      src.endsWith('.woff') || 
                      src.endsWith('.woff2'))) {
                   
-                  const newSrc = MAIN_URL + src;
+                  const newSrc = getResourceUrl(src);
                   console.log('[StaticResourceFix] Fixing dynamically added resource:', src, '→', newSrc);
                   
                   if (node.tagName === 'SCRIPT') {
@@ -278,7 +312,7 @@
       subtree: true
     });
     
-    console.log('[StaticResourceFix] Setup complete');
+    console.log('[StaticResourceFix] Setup complete - using proxy mode');
   } catch (e) {
     console.error('[StaticResourceFix] Error:', e);
   }

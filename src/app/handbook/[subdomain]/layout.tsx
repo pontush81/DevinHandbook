@@ -32,6 +32,10 @@ export default function HandbookLayout({
   children: React.ReactNode;
   params: { subdomain: string };
 }>) {
+  // Generera lokal URL för skript och resurser
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const staticResourceFixUrl = `${currentOrigin}/static-resource-fix.js`;
+  
   return (
     <html lang="sv">
       <head>
@@ -43,14 +47,14 @@ export default function HandbookLayout({
             font-style: normal;
             font-weight: 400;
             font-display: swap;
-            src: url('https://handbok.org/_next/static/media/569ce4b8f30dc480-s.p.woff2') format('woff2');
+            src: local('Geist'), url('/api/resources?path=/_next/static/media/569ce4b8f30dc480-s.p.woff2') format('woff2');
           }
           @font-face {
             font-family: 'Geist Mono';
             font-style: normal;
             font-weight: 400;
             font-display: swap;
-            src: url('https://handbok.org/_next/static/media/a34f9d1faa5f3315-s.p.woff2') format('woff2');
+            src: local('Geist Mono'), url('/api/resources?path=/_next/static/media/a34f9d1faa5f3315-s.p.woff2') format('woff2');
           }
           /* Förhindra FOUC (Flash of Unstyled Content) */
           body { 
@@ -64,7 +68,7 @@ export default function HandbookLayout({
         
         {/* Cross-origin resource fix script */}
         <Script 
-          src="https://handbok.org/static-resource-fix.js"
+          src="/static-resource-fix.js"
           strategy="beforeInteractive"
           crossOrigin="anonymous"
         />
