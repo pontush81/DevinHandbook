@@ -1,4 +1,4 @@
-// Detta konfigurerar babel endast för Jest-tester
+// Detta konfigurerar babel endast för Jest-tester och påverkar inte Next.js
 module.exports = {
   presets: [
     ['@babel/preset-env', { targets: { node: 'current' } }],

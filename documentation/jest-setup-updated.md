@@ -12,39 +12,24 @@ npm install --save-dev @babel/preset-env @babel/preset-react @babel/preset-types
 npm install --save-dev jest-environment-jsdom @babel/plugin-syntax-import-attributes
 ```
 
-## Konfigurationsfiler
+## Konfigurationsstruktur
 
-### jest.config.js
+För att undvika konflikter med Next.js SWC-kompilatorn har vi isolerat Babel-konfigurationen för Jest i en separat mapp:
 
-```javascript
-/** @type {import("jest").Config} **/
-module.exports = {
-  testEnvironment: "jsdom",
-  transform: {
-    "^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
-  },
-  setupFilesAfterEnv: ['@testing-library/jest-dom'],
-  testPathIgnorePatterns: ["/node_modules/", "/dist/", "/.next/"],
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
-  // Förhindra att Jest behandlar Next.js interna filer
-  transformIgnorePatterns: [
-    '/node_modules/(?!.*.mjs$)'
-  ],
-  // Ignorera Next.js specifika filer i tester
-  modulePathIgnorePatterns: [
-    "<rootDir>/.next/"
-  ],
-  // Använd jest-environment-jsdom för testers
-  testEnvironmentOptions: {
-    url: "http://localhost/",
-  },
-};
+```
+projekt/
+  ├── jest-config/
+  │   └── babel-jest.js  # Babel-konfiguration för Jest
+  ├── jest.config.js     # Jest huvudkonfiguration
+  └── package.json       # Uppdaterat test-skript
 ```
 
-### .babelrc.js (Ersätter babel.config.js)
+## Konfigurationsfiler
+
+### jest-config/babel-jest.js
 
 ```javascript
-// Detta konfigurerar babel endast för Jest-tester
+// Detta konfigurerar babel endast för Jest-tester och påverkar inte Next.js
 module.exports = {
   presets: [
     ['@babel/preset-env', { targets: { node: 'current' } }],
@@ -57,20 +42,47 @@ module.exports = {
 };
 ```
 
+### jest.config.js
+
+```javascript
+/** @type {import("jest").Config} **/
+module.exports = {
+  testEnvironment: "jsdom",
+  transform: {
+    "^.+\\.(js|jsx|ts|tsx)$": ["babel-jest", { configFile: './jest-config/babel-jest.js' }]
+  },
+  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+  testPathIgnorePatterns: ["/node_modules/", "/dist/", "/.next/"],
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+  // Förhindra att Jest behandlar Next.js interna filer
+  transformIgnorePatterns: [
+    '/node_modules/(?!.*.mjs$)'
+  ],
+  // Ignorera Next.js specifika filer i tester
+  modulePathIgnorePatterns: [
+    "<rootDir>/.next/"
+  ],
+  // Använd jest-environment-jsdom för tester
+  testEnvironmentOptions: {
+    url: "http://localhost/",
+  },
+};
+```
+
 ## Uppdaterade package.json scripts
 
 ```json
 "scripts": {
-  "test": "NODE_ENV=test jest"
+  "test": "NODE_ENV=test jest --config=jest.config.js"
 }
 ```
 
-## Varför dessa ändringar?
+## Varför denna struktur?
 
-1. Vi har flyttat Babel-konfigurationen från `babel.config.js` till `.babelrc.js` för att inte störa Next.js standard-build-process
-2. Vi har lagt till Next.js-specifika ignoreringar i Jest-konfigurationen
-3. Vi inkluderar `@babel/plugin-syntax-import-attributes` för att hantera Next.js syntax
-4. Vi kör testerna med explicit `NODE_ENV=test` för att isolera testmiljön
+1. Vi har flyttat Babel-konfigurationen till en egen mapp (`jest-config/`) för att helt isolera den från Next.js byggprocess
+2. Vi pekar explicit på Babel-konfigurationen i Jest-transformern för att undvika att Next.js hittar en `.babelrc` eller `babel.config.js` fil
+3. Vi kör testerna med explicit konfiguration via `--config=jest.config.js`
+4. Detta låter Next.js använda sin SWC-kompilator för byggprocessen utan konflikter
 
 ## Skriva tester
 

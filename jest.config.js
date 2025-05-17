@@ -2,7 +2,7 @@
 module.exports = {
   testEnvironment: "jsdom",
   transform: {
-    "^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
+    "^.+\\.(js|jsx|ts|tsx)$": ["babel-jest", { configFile: './jest-config/babel-jest.js' }]
   },
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
   testPathIgnorePatterns: ["/node_modules/", "/dist/", "/.next/"],
