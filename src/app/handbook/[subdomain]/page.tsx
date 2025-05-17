@@ -20,21 +20,43 @@ interface Page {
   section_id: string;
 }
 
-export const revalidate = 180; // 3 minutes
-
-export async function generateStaticParams() {
-  return [];
-}
+// Temporärt inaktivera revalidering och statiska parametrar
+// export const revalidate = 180;
+// export async function generateStaticParams() {
+//   return [];
+// }
 
 export default async function HandbookPage({
   params,
 }: {
   params: { subdomain: string };
 }) {
-  const handbook = await getHandbookBySubdomain(params.subdomain);
+  // Försök hämta handbook, men med extra felhantering för att undvika redirects
+  let handbook = null;
+  try {
+    handbook = await getHandbookBySubdomain(params.subdomain);
+  } catch (error) {
+    console.error('Error fetching handbook:', error);
+    // Visa en fallback istället för notFound() för att undvika redirect
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <h1 className="text-2xl font-bold">Handbook Viewer</h1>
+        <p className="text-red-500">
+          Det gick inte att ladda handboken just nu. Försök igen senare.
+        </p>
+        <p className="text-gray-500 mt-4">Subdomain: {params.subdomain}</p>
+      </div>
+    );
+  }
   
+  // Om ingen handbook hittades, visa en felsida istället för notFound()
   if (!handbook) {
-    notFound();
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <h1 className="text-2xl font-bold">Handbook Not Found</h1>
+        <p>Handboken "{params.subdomain}" kunde inte hittas.</p>
+      </div>
+    );
   }
   
   return (
@@ -89,7 +111,7 @@ export default async function HandbookPage({
       
       <footer className="bg-gray-50 border-t py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
-          Powered by <a href="https://handbok.org" className="font-medium hover:text-gray-700">Handbok.org</a>
+          Powered by <span className="font-medium">Handbok.org</span>
         </div>
       </footer>
     </div>
