@@ -14,10 +14,21 @@ export default async function middleware(request) {
   // Få host header från förfrågan
   const host = request.headers.get('host') || '';
   
-  // Check if we're already in a redirect loop by looking for a special header
+  // DEBUG: Logga information om förfrågan för att diagnostisera
+  console.log(`Middleware processing: ${request.method} ${url.pathname} - Host: ${host}`);
+  
+  // Check if we're already in a redirect loop by looking for a special header or cookie
   const redirectCount = parseInt(request.headers.get('x-redirect-count') || '0', 10);
+  
+  // Förhindra för många redirects - en säkerhetsmekanism
   if (redirectCount > 2) {
-    return new Response('Too many redirects detected', { status: 508 });
+    console.log(`Too many redirects detected (${redirectCount})`);
+    return new Response('Too many redirects detected', { 
+      status: 508,
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
   }
   
   // Kontrollera om det här är en förfrågan från en specifik subdomän
@@ -40,19 +51,25 @@ export default async function middleware(request) {
   if (subdomainMatch) {
     const subdomain = subdomainMatch.groups?.subdomain;
     
+    // Loggning för att diagnostisera
+    console.log(`Subdomain detected: ${subdomain}`);
+    
     // För www, omdirigera direkt till huvuddomänen handbok.org
     if (subdomain === 'www') {
       // Create a URL that points to the main domain with the same path
       const redirectUrl = new URL(url.pathname + url.search, 'https://handbok.org');
-      return Response.redirect(redirectUrl, 307);
+      console.log(`Redirecting www to main domain: ${redirectUrl.toString()}`);
+      return Response.redirect(redirectUrl.toString(), 307);
     }
     
     // För statiska resurser, lägg till CORS headers
-    if (url.pathname.includes('/_next/') || 
+    if (url.pathname.startsWith('/_next/') || 
         url.pathname.endsWith('.js') || 
         url.pathname.endsWith('.css') || 
         url.pathname.endsWith('.woff') || 
         url.pathname.endsWith('.woff2')) {
+      
+      console.log(`Static resource detected: ${url.pathname}`);
       
       // För statiska resurser, gör en proxying via handbok.org
       const resourceUrl = `https://handbok.org${url.pathname}${url.search}`;
@@ -66,6 +83,7 @@ export default async function middleware(request) {
         });
         
         if (!resourceResponse.ok) {
+          console.log(`Resource fetch failed: ${resourceResponse.status}`);
           return new Response(`Failed to load resource: ${resourceResponse.status}`, { 
             status: resourceResponse.status 
           });
@@ -74,6 +92,7 @@ export default async function middleware(request) {
         const body = await resourceResponse.arrayBuffer();
         const contentType = resourceResponse.headers.get('content-type') || 'application/octet-stream';
         
+        console.log(`Serving proxied resource: ${url.pathname}`);
         return new Response(body, {
           status: 200,
           headers: {
@@ -89,20 +108,26 @@ export default async function middleware(request) {
       }
     }
     
+    // VIKTIGT: Kontrollera om vi redan är på handbook-sidan för att undvika redirect-loop
+    if (url.pathname.startsWith(`/handbook/${subdomain}`)) {
+      console.log(`Already on the correct handbook path: ${url.pathname}`);
+      return Response.next();
+    }
+    
     // Hantera andra subdomäner - redirect to main domain with path
-    const newUrl = new URL(`/handbook/${subdomain}${url.pathname}`, 'https://handbok.org');
+    const newUrl = new URL(`/handbook/${subdomain}${url.pathname === '/' ? '' : url.pathname}`, 'https://handbok.org');
     newUrl.search = url.search;
+    
+    console.log(`Redirecting subdomain to handbook path: ${newUrl.toString()}`);
     
     // Increment the redirect counter in the header
     const headers = new Headers();
     headers.set('x-redirect-count', String(redirectCount + 1));
     
-    return Response.redirect(newUrl.toString(), {
-      status: 307,
-      headers
-    });
+    return Response.redirect(newUrl.toString(), 307);
   }
   
   // För alla andra förfrågningar, fortsätt normalt
+  console.log('Continuing with regular request processing');
   return Response.next();
 } 
