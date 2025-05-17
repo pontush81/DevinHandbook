@@ -36,6 +36,38 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
       ? urlString 
       : `https://${urlString}`;
   
+  // Skapa nya headers för att undvika CORS-problem
+  const headers = new Headers(options?.headers || {});
+  
+  // Lägg till cache-headers för att förhindra caching-problem
+  headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  headers.set('Pragma', 'no-cache');
+  
+  // Om vi är i servermiljö och ansluter till Supabase, lägg till extra headers
+  if (typeof window === 'undefined' && secureUrl.includes('supabase.co')) {
+    // Dessa headers kan hjälpa med servermiljöer
+    headers.set('Accept', 'application/json');
+    headers.set('Connection', 'keep-alive');
+    
+    // Om vi har en Vercel-deployment, lägg till det som ursprung
+    if (process.env.VERCEL_URL) {
+      headers.set('Origin', `https://${process.env.VERCEL_URL}`);
+    }
+  }
+  
+  // Logg för debugging
+  const debugInfo = {
+    url: secureUrl,
+    isServer: typeof window === 'undefined',
+    isEdgeRuntime: typeof EdgeRuntime !== 'undefined',
+    nodeEnv: process.env.NODE_ENV,
+    vercelUrl: process.env.VERCEL_URL || null,
+  };
+  
+  if (process.env.DEBUG_SUPABASE === 'true') {
+    console.log('Fetch-anrop detaljer:', JSON.stringify(debugInfo, null, 2));
+  }
+  
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       // Om vi är på andra eller senare försök, vänta lite innan vi försöker igen
@@ -51,15 +83,20 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
         console.log(`Fetch-anrop till: ${secureUrl}, försök ${attempt + 1}`);
       }
       
-      const response = await fetch(secureUrl, {
+      // Konfigurera timeout för att förhindra hängande förfrågningar
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 sek timeout
+      
+      const fetchOptions = {
         ...options,
-        // Lägg till SSL-relaterade inställningar och andra viktiga inställningar
+        headers,
+        signal: controller.signal,
         cache: 'no-store',
         credentials: 'same-origin',
-        headers: {
-          ...options?.headers,
-        },
-      });
+      };
+      
+      const response = await fetch(secureUrl, fetchOptions);
+      clearTimeout(timeoutId); // Rensa timeout
       
       // Logg för att bekräfta svar
       if (process.env.DEBUG_SUPABASE === 'true') {
@@ -74,7 +111,12 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
       return response;
     } catch (err) {
       error = err;
-      console.error(`Fetch-försök ${attempt + 1} misslyckades:`, err);
+      // Avbruten förfrågan pga timeout
+      if (err.name === 'AbortError') {
+        console.error(`Fetch-timeout för ${secureUrl}`);
+      } else {
+        console.error(`Fetch-försök ${attempt + 1} misslyckades:`, err);
+      }
       
       // Logg mer detaljerad information om felet
       if (err instanceof Error) {
@@ -111,6 +153,10 @@ export const supabase = createClient(
     // Lägg till dessa inställningar för bättre prestanda/felhantering
     realtime: {
       timeout: 30000, // Öka timeout för realtidsanslutningar
+    },
+    // Anpassade headers som behövs för vissa miljöer
+    headers: {
+      'x-client-info': 'supabase-js/2.0',
     },
     // SSL-inställningar för säkra anslutningar
     maxRetries: 5,
