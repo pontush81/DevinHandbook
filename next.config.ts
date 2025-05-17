@@ -14,9 +14,11 @@ const nextConfig: NextConfig = {
     domains: ['kjsquvjzctdwgjypcjrg.supabase.co'],
     unoptimized: isProd, // För smidigare hantering av bilder i produktion
   },
-  // Ensure that static assets are loaded from the main domain but allow localhost in dev
-  assetPrefix: isProd ? 'https://handbok.org' : undefined,
-  // Enable cross-origin
+  // Specify the domains for the site
+  basePath: '',
+  // Remove assetPrefix as it's causing CORS issues
+  // assetPrefix: isProd ? 'https://handbok.org' : undefined,
+  // Enable cross-origin properly
   crossOrigin: 'anonymous',
   // Använd även webpack för att konfigurera CrossOrigin för alla resurser
   webpack: (config) => {
@@ -34,7 +36,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        // Redirect _next requests to the main domain in production
+        // Static assets should load from main domain  
         {
           source: '/_next/:path*',
           has: [
@@ -45,7 +47,7 @@ const nextConfig: NextConfig = {
           ],
           destination: 'https://handbok.org/_next/:path*',
         },
-        // Normal page routing for subdomains
+        // Handle subdomains
         {
           source: '/:path*',
           has: [
@@ -63,11 +65,20 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: '/(.*)',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With' },
+        ],
+      },
+      {
         source: '/_next/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
       {
@@ -84,15 +95,6 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With' },
-        ],
-      },
-      {
-        source: '/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
         ],
       },
     ];

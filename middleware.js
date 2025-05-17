@@ -8,9 +8,6 @@ export const config = {
 };
 
 export default async function middleware(request) {
-  // Logga information om förfrågan för att hjälpa till med felsökning
-  console.log('Middleware processing:', request.url);
-  
   // Klona aktuell URL för att hantera omdirigeringar
   const url = new URL(request.url);
   
@@ -37,6 +34,13 @@ export default async function middleware(request) {
   if (subdomainMatch) {
     const subdomain = subdomainMatch.groups?.subdomain;
     
+    // För www, omdirigera direkt till huvuddomänen handbok.org
+    if (subdomain === 'www') {
+      // Create a URL that points to the main domain with the same path
+      const redirectUrl = new URL(url.pathname + url.search, 'https://handbok.org');
+      return Response.redirect(redirectUrl, 307);
+    }
+    
     // För statiska resurser, lägg till CORS headers
     if (url.pathname.includes('/_next/') || 
         url.pathname.endsWith('.js') || 
@@ -48,7 +52,13 @@ export default async function middleware(request) {
       const resourceUrl = `https://handbok.org${url.pathname}${url.search}`;
       
       try {
-        const resourceResponse = await fetch(resourceUrl);
+        const resourceResponse = await fetch(resourceUrl, {
+          headers: {
+            'Origin': 'https://handbok.org',
+            'Referer': 'https://handbok.org'
+          }
+        });
+        
         if (!resourceResponse.ok) {
           return new Response(`Failed to load resource: ${resourceResponse.status}`, { 
             status: resourceResponse.status 
@@ -73,32 +83,11 @@ export default async function middleware(request) {
       }
     }
     
-    if (subdomain === 'www') {
-      // För www, låt Next.js hantera det normalt med CORS-headers
-      return new Response(null, { 
-        status: 200,
-        headers: {
-          'access-control-allow-origin': '*',
-          'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'access-control-allow-headers': 'content-type, authorization'
-        }
-      });
-    } else {
-      // Hantera andra subdomäner
-      url.pathname = `/handbook/${subdomain}${url.pathname}`;
-      
-      // Omdirigera till den korrekta handbook-sidan
-      return Response.redirect(url);
-    }
+    // Hantera andra subdomäner
+    url.pathname = `/handbook/${subdomain}${url.pathname}`;
+    return Response.redirect(url, 307);
   }
   
   // För alla andra förfrågningar, fortsätt normalt
-  return new Response(null, { 
-    status: 200,
-    headers: {
-      'access-control-allow-origin': '*',
-      'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'access-control-allow-headers': 'content-type, authorization'
-    }
-  });
+  return Response.next();
 } 

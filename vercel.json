@@ -52,6 +52,19 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www\\.handbok\\.org"
+        }
+      ],
+      "destination": "https://handbok.org/$1",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/_next/:path*",
@@ -59,16 +72,6 @@
         {
           "type": "host",
           "value": "(?<subdomain>[^.]+)\\.handbok\\.org"
-        }
-      ],
-      "destination": "https://handbok.org/_next/:path*"
-    },
-    {
-      "source": "/_next/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "www\\.handbok\\.org"
         }
       ],
       "destination": "https://handbok.org/_next/:path*"

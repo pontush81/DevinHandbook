@@ -69,41 +69,53 @@ export default function RootLayout({
           }
         `}} />
         
-        {/* Inline CORS fix script - runs first */}
+        {/* Inline CORS and domain fix script - runs first */}
         <script dangerouslySetInnerHTML={{ __html: `
-          // Detect if this is a subdomain
           (function() {
             const host = window.location.hostname;
-            const isHandbokDomain = host === 'handbok.org' || 
-                                    host === 'www.handbok.org' || 
-                                    host.endsWith('.handbok.org');
+            
+            // Redirect www to non-www immediately to avoid CORS issues
+            if (host === 'www.handbok.org') {
+              window.location.href = window.location.href.replace('www.handbok.org', 'handbok.org');
+              return;
+            }
+            
+            // Check if we're on a handbok.org domain
+            const isHandbokDomain = host === 'handbok.org' || host.endsWith('.handbok.org');
             
             if (!isHandbokDomain) return;
             
-            // If this is not the main domain, activate the resource proxy
+            // If this is a subdomain, activate the resource proxy
             if (host !== 'handbok.org') {
               // Load the full resource fix script
               const script = document.createElement('script');
-              script.src = '/static-resource-fix.js';
+              script.src = 'https://handbok.org/static-resource-fix.js';
               script.crossOrigin = 'anonymous';
+              script.onerror = function() {
+                console.error('[CORS-Fix] Failed to load static resource fix script from main domain. Trying local.');
+                const localScript = document.createElement('script');
+                localScript.src = '/static-resource-fix.js';
+                localScript.crossOrigin = 'anonymous';
+                document.head.appendChild(localScript);
+              };
               document.head.appendChild(script);
               
               console.log('[CORS-Fix] Loading static resource fix script');
             }
           })();
         `}} />
-        
-        {/* Main CORS fix script */}
-        <Script 
-          src="/static-resource-fix.js" 
-          strategy="beforeInteractive"
-          crossOrigin="anonymous"
-        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>{children}</AuthProvider>
+        
+        {/* Main CORS fix script - load at the end to ensure it runs after everything else */}
+        <Script 
+          src="/static-resource-fix.js" 
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+        />
       </body>
     </html>
   );

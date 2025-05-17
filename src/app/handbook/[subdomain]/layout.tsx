@@ -94,7 +94,7 @@ export default function HandbookLayout({
             font-style: normal;
             font-weight: 400 500 600;
             font-display: swap;
-            src: local('Geist'), url('/api/resources?path=/_next/static/media/569ce4b8f30dc480-s.p.woff2') format('woff2');
+            src: local('Geist'), url('https://handbok.org/_next/static/media/569ce4b8f30dc480-s.p.woff2') format('woff2');
           }
           
           @font-face {
@@ -102,7 +102,7 @@ export default function HandbookLayout({
             font-style: normal;
             font-weight: 400 500;
             font-display: swap;
-            src: local('Geist Mono'), url('/api/resources?path=/_next/static/media/a34f9d1faa5f3315-s.p.woff2') format('woff2');
+            src: local('Geist Mono'), url('https://handbok.org/_next/static/media/a34f9d1faa5f3315-s.p.woff2') format('woff2');
           }
         `}} />
         
@@ -110,13 +110,43 @@ export default function HandbookLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           // Initialize static resource fix immediately
           (function() {
-            // Load the static resource fix script
+            // Redirect all subdomain traffic to the appropriate page on the main domain
+            const host = window.location.hostname;
+            const subdomain = host.split('.')[0];
+            const path = window.location.pathname;
+            const search = window.location.search;
+            
+            // Only process if this is a subdomain
+            if (host !== 'handbok.org' && host.endsWith('.handbok.org')) {
+              // Check if we're loading a static resource
+              if (path.includes('/_next/') || 
+                  path.endsWith('.js') || 
+                  path.endsWith('.css') || 
+                  path.endsWith('.woff') || 
+                  path.endsWith('.woff2')) {
+                // For static resources, we'll handle it with a proxy (see static-resource-fix.js)
+              } else {
+                // For normal page loads, redirect to the correct path on the main domain
+                const mainDomainUrl = \`https://handbok.org/handbook/\${subdomain}\${path}\${search}\`;
+                window.location.href = mainDomainUrl;
+                return;
+              }
+            }
+            
+            // Load the static resource fix script directly from the main domain
             const script = document.createElement('script');
-            script.src = '/static-resource-fix.js';
+            script.src = 'https://handbok.org/static-resource-fix.js';
             script.crossOrigin = 'anonymous';
+            script.onerror = function() {
+              // Fallback to loading from the current domain if main domain fails
+              const fallbackScript = document.createElement('script');
+              fallbackScript.src = '/static-resource-fix.js';
+              fallbackScript.crossOrigin = 'anonymous';
+              document.head.appendChild(fallbackScript);
+            };
             document.head.appendChild(script);
             
-            // Preload critical fonts directly
+            // Preload critical fonts directly from the main domain
             const fontUrls = [
               '/_next/static/media/569ce4b8f30dc480-s.p.woff2',
               '/_next/static/media/a34f9d1faa5f3315-s.p.woff2'
@@ -127,7 +157,7 @@ export default function HandbookLayout({
               link.rel = 'preload';
               link.as = 'font';
               link.type = 'font/woff2';
-              link.href = '/api/resources?path=' + encodeURIComponent(url);
+              link.href = 'https://handbok.org' + url;
               link.crossOrigin = 'anonymous';
               document.head.appendChild(link);
             });
@@ -145,7 +175,7 @@ export default function HandbookLayout({
                   badge.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#f44336;color:white;padding:10px;border-radius:5px;font-size:12px;cursor:pointer;z-index:9999;';
                   badge.textContent = 'Resource Errors Detected';
                   badge.onclick = function() {
-                    window.location.href = '/debug.html';
+                    window.location.href = 'https://handbok.org/debug.html';
                   };
                   
                   // Only add when document body is ready
@@ -161,13 +191,11 @@ export default function HandbookLayout({
             }, true);
           })();
         `}} />
-        
-        {/* Cross-origin resource fix script */}
-        <Script 
-          src="/static-resource-fix.js"
-          strategy="beforeInteractive"
-          crossOrigin="anonymous"
-        />
+      </head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased handbook-body`}
+      >
+        <AuthProvider>{children}</AuthProvider>
         
         {/* Direct script to activate page after loading */}
         <Script id="show-page" strategy="afterInteractive">
@@ -188,11 +216,6 @@ export default function HandbookLayout({
             setTimeout(showPage, 1000);
           `}
         </Script>
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased handbook-body`}
-      >
-        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
