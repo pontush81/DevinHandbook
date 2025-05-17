@@ -56,19 +56,24 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
           ))}
       </div>
       
-      <button
-        onClick={goToNextStep}
-        disabled={!canGoNext()}
-        className={`px-4 py-2 rounded-md ${
-          !canGoNext()
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-            : currentStep === totalSteps - 1
-            ? "bg-black text-white hover:bg-gray-800"
-            : "bg-black text-white hover:bg-gray-800"
-        }`}
-      >
-        {currentStep === totalSteps - 1 ? "Slutför" : "Nästa"}
-      </button>
+      {currentStep < totalSteps - 1 && (
+        <button
+          onClick={goToNextStep}
+          disabled={!canGoNext()}
+          className={`px-4 py-2 rounded-md ${
+            !canGoNext()
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-black text-white hover:bg-gray-800"
+          }`}
+        >
+          Nästa
+        </button>
+      )}
+      
+      {/* Om vi är på sista steget, visa en tom div för att behålla layouten */}
+      {currentStep === totalSteps - 1 && (
+        <div className="w-24"></div> {/* Ungefär samma bredd som knappen */}
+      )}
     </div>
   );
 }
