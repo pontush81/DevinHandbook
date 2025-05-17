@@ -7,10 +7,45 @@ export default function ProxyTestPage() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [networkTest, setNetworkTest] = useState<{ ok: boolean; details: string } | null>(null);
+  
+  const testNetworkConnectivity = async () => {
+    try {
+      // Testa direkt nätverksanslutning till Supabase
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        const startTime = Date.now();
+        const resp = await fetch('/api/test-network');
+        const data = await resp.json();
+        
+        setNetworkTest({
+          ok: data.success,
+          details: data.success 
+            ? `Lyckades ansluta på ${Date.now() - startTime}ms` 
+            : `Misslyckades: ${data.error}`
+        });
+        
+        return data.success;
+      }
+      return false;
+    } catch (err) {
+      setNetworkTest({
+        ok: false,
+        details: `Nätverkstest misslyckades: ${err.message}`
+      });
+      return false;
+    }
+  };
   
   const testProxyConnection = async () => {
     setLoading(true);
     setError(null);
+    
+    // Testa först nätverksanslutningen
+    const networkOk = await testNetworkConnectivity();
+    
+    if (!networkOk) {
+      console.warn("Nätverksanslutning misslyckades, men försöker ändå med proxy");
+    }
     
     try {
       // Skapa proxyklienten
@@ -72,6 +107,14 @@ export default function ProxyTestPage() {
           {loading ? 'Testar...' : 'Testa igen'}
         </button>
       </div>
+      
+      {/* Nätverkstest */}
+      {networkTest && (
+        <div className={`p-4 mb-4 border rounded ${networkTest.ok ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <h2 className="font-bold mb-1">Nätverksanslutning: {networkTest.ok ? '✓' : '⚠️'}</h2>
+          <p>{networkTest.details}</p>
+        </div>
+      )}
       
       {error && (
         <div className="bg-red-50 p-4 border border-red-200 rounded mb-4">

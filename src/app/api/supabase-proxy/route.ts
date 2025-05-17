@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
     
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json({
+        success: false,
         error: 'Saknar Supabase-konfiguration',
         details: {
           hasUrl: !!supabaseUrl,
@@ -19,18 +20,34 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
     
+    // Validera Supabase URL format
+    if (!supabaseUrl.startsWith('https://')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Ogiltig Supabase URL',
+        details: 'URL måste börja med https://'
+      }, { status: 500 });
+    }
+    
+    console.log(`Ansluter till Supabase på: ${supabaseUrl}`);
+    
     // Skapa en Supabase-klient med service_role-nyckeln för admin-åtkomst
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false }
+    });
     
     // Hämta förfrågningsdata
     const { table, method, params = {} } = await request.json();
     
     if (!table || !method) {
       return NextResponse.json({
+        success: false,
         error: 'Ogiltiga parametrar',
         details: 'Både table och method måste anges'
       }, { status: 400 });
     }
+    
+    console.log(`Utför ${method}-operation på tabell: ${table}`);
     
     // Skapa en referens till tabellen
     const tableRef = supabase.from(table);
@@ -78,6 +95,7 @@ export async function POST(request: NextRequest) {
         
       default:
         return NextResponse.json({
+          success: false,
           error: 'Ogiltig metod',
           details: `Metoden '${method}' stöds inte`
         }, { status: 400 });
@@ -94,12 +112,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Proxy-fel:', error);
     
+    // Detaljerad felrapportering
     return NextResponse.json({
       success: false,
-      error: error.message,
-      details: error.cause ? String(error.cause) : undefined,
-      stack: error.stack ? error.stack.split('\n')[0] : null,
-      timestamp: new Date().toISOString()
+      error: error.message || 'Ett okänt fel inträffade',
+      details: error.cause ? String(error.cause) : null,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : null,
+      time: new Date().toISOString(),
+      request_id: crypto.randomUUID()
     }, { status: 500 });
   }
 } 

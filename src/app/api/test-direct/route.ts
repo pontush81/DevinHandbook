@@ -1,59 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createDirectClient, testDirectConnection } from '@/lib/direct-db';
-import { testDatabaseConnection } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'edge';
 export const preferredRegion = ['arn1'];
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("Testar direktanslutning till Supabase");
-    const startTime = Date.now();
+    // Hämta konfiguration
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
-    // Testa både standard-anslutning och direktanslutning
-    const standardResult = await testDatabaseConnection();
-    const directResult = await testDirectConnection();
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({
+        success: false,
+        error: 'Saknar Supabase-konfiguration',
+        details: {
+          hasUrl: !!supabaseUrl,
+          hasAnonKey: !!supabaseAnonKey
+        }
+      }, { status: 500 });
+    }
     
-    const endTime = Date.now();
-    
-    return NextResponse.json({
-      timestamp: new Date().toISOString(),
-      totalDuration: endTime - startTime,
-      environment: {
-        runtime: typeof EdgeRuntime !== 'undefined' ? 'edge' : 'node',
-        vercelUrl: process.env.VERCEL_URL,
-        vercelRegion: process.env.VERCEL_REGION,
-        nodeEnv: process.env.NODE_ENV,
-      },
-      tests: {
-        standard: standardResult,
-        direct: directResult,
-      },
-      conclusion: {
-        standardWorking: standardResult.connected,
-        directWorking: directResult.connected,
-        recommendation: directResult.connected 
-          ? 'Använd direktanslutningen istället' 
-          : 'Båda metoderna misslyckades'
-      }
-    }, {
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-store',
-      }
+    // Skapa en Supabase-klient med anonym nyckel (säker för klientsidan)
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false }
     });
+    
+    // Hämta lite data för att testa anslutningen
+    const { data, error } = await supabase
+      .from('handbooks')
+      .select('id, title')
+      .limit(5);
+      
+    if (error) {
+      throw new Error(error.message, { cause: error });
+    }
+    
+    // Returnera resultatet
+    return NextResponse.json({
+      success: true,
+      message: 'Direktanslutning till Supabase lyckades',
+      data,
+      timestamp: new Date().toISOString()
+    });
+    
   } catch (error) {
-    console.error("Fel vid test av direktanslutning:", error);
+    console.error('Direktanslutningsfel:', error);
     
     return NextResponse.json({
-      error: 'Ett fel uppstod vid test av direktanslutning',
-      message: error.message,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n'),
-    }, { 
-      status: 500,
-      headers: {
-        'Cache-Control': 'no-store',
-      }
-    });
+      success: false,
+      error: error.message,
+      details: error.cause,
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 } 
