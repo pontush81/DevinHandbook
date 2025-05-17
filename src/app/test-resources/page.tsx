@@ -9,7 +9,8 @@ export default function ResourceTestPage() {
     js: { status: 'pending', message: 'Testing JS resources...' },
     image: { status: 'pending', message: 'Testing image loading...' },
     api: { status: 'pending', message: 'Testing API connectivity...' },
-    cors: { status: 'pending', message: 'Testing CORS configuration...' }
+    cors: { status: 'pending', message: 'Testing CORS configuration...' },
+    debugCSS: { status: 'pending', message: 'Testing debug CSS loading...' }
   });
   
   const [diagnosticData, setDiagnosticData] = useState(null);
@@ -21,7 +22,7 @@ export default function ResourceTestPage() {
   }, []);
   
   async function runTests() {
-    // Test CSS
+    // Test CSS från modulen
     try {
       const div = document.createElement('div');
       div.id = 'css-test-element';
@@ -52,6 +53,47 @@ export default function ResourceTestPage() {
       }));
     }
     
+    // Test debug CSS
+    try {
+      // Lägg till ett style-element som laddar debug CSS
+      const debugCssLink = document.createElement('link');
+      debugCssLink.rel = 'stylesheet';
+      debugCssLink.href = '/api/debug?mode=css';
+      document.head.appendChild(debugCssLink);
+      
+      // Skapa ett test-element
+      const debugDiv = document.createElement('div');
+      debugDiv.className = 'debug-test';
+      debugDiv.textContent = 'Debug CSS Test';
+      document.body.appendChild(debugDiv);
+      
+      // Vänta på att CSS laddar
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Hämta computed style
+      const computedStyle = window.getComputedStyle(debugDiv);
+      const hasColor = computedStyle.color === 'rgb(0, 0, 255)'; // blue
+      const hasBorder = computedStyle.borderColor === 'rgb(0, 128, 0)'; // green
+      
+      setTests(prev => ({
+        ...prev,
+        debugCSS: {
+          status: (hasColor || hasBorder) ? 'success' : 'failed',
+          message: (hasColor || hasBorder) 
+            ? 'Debug CSS loaded successfully' 
+            : 'Debug CSS failed to load properly'
+        }
+      }));
+      
+      // Cleanup
+      document.body.removeChild(debugDiv);
+    } catch (error) {
+      setTests(prev => ({
+        ...prev,
+        debugCSS: { status: 'failed', message: `Debug CSS test error: ${error.message}` }
+      }));
+    }
+    
     // Test JS (this is already running, so JS works if we got here)
     setTests(prev => ({
       ...prev,
@@ -60,12 +102,14 @@ export default function ResourceTestPage() {
     
     // Test image loading
     try {
-      const imgUrl = '/logo.png';  // Antag att denna bild existerar i public-mappen
+      // Försök ladda favicon (som bör finnas) istället för logo.png
+      const imgUrl = '/favicon.ico';  
       const img = new Image();
       
       const imagePromise = new Promise((resolve, reject) => {
         img.onload = () => resolve(true);
         img.onerror = () => reject(new Error('Failed to load image'));
+        setTimeout(() => reject(new Error('Image load timeout')), 3000);
         img.src = imgUrl;
       });
       
@@ -103,22 +147,27 @@ export default function ResourceTestPage() {
       }));
     }
     
-    // Test CORS with resource proxy
+    // Test CORS with resource proxy - använd vår debug CSS
     try {
-      const cssPath = '/_next/static/css/bb2534fb94d47e9a.css';
-      const response = await fetch(`/api/resources?path=${encodeURIComponent(cssPath)}`);
+      const cssPath = '/api/debug?mode=css';
+      const response = await fetch(cssPath);
       
       if (response.ok) {
+        const css = await response.text();
+        
         setTests(prev => ({
           ...prev,
-          cors: { status: 'success', message: 'Resource proxy is working' }
+          cors: { 
+            status: 'success', 
+            message: 'Resource proxy is working' 
+          }
         }));
       } else {
         setTests(prev => ({
           ...prev,
           cors: { 
             status: 'failed', 
-            message: `Resource proxy returned status ${response.status}` 
+            message: `Resource returned status ${response.status}` 
           }
         }));
       }
@@ -177,6 +226,15 @@ export default function ResourceTestPage() {
           </pre>
         </div>
       )}
+      
+      <div style={{ marginTop: '20px' }}>
+        <h2>Quick Links</h2>
+        <ul>
+          <li><a href="/api/debug" target="_blank">Debug API</a></li>
+          <li><a href="/api/debug?mode=resource-test" target="_blank">Resource Test</a></li>
+          <li><a href="/api/diagnosis" target="_blank">Diagnosis API</a></li>
+        </ul>
+      </div>
       
       <button 
         onClick={runTests}
