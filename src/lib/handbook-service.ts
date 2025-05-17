@@ -127,7 +127,7 @@ export async function getHandbookBySubdomain(subdomain: string) {
 
 export async function revalidateHandbook(subdomain: string) {
   try {
-    revalidatePath(`/handbook/${subdomain}`);
+    revalidatePath(`/view`);
     return { success: true };
   } catch (error) {
     console.error('Error revalidating handbook:', error);

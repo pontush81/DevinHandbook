@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handbok.org - Statisk Fallback</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      margin-top: 0;
+      color: #000;
+    }
+    
+    .alert {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: #f9f9f9;
+    }
+    
+    .button {
+      display: inline-block;
+      background-color: #4a5568;
+      color: white;
+      padding: 10px 15px;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    .button:hover {
+      background-color: #2d3748;
+    }
+  </style>
+</head>
+<body>
+  <h1>Handbok.org - Statisk Fallback</h1>
+  
+  <div class="alert">
+    <strong>OBS!</strong> Du ser denna statiska sida eftersom webbapplikationen stötte på ett fel.
+  </div>
+  
+  <div class="card">
+    <h2>Vad betyder detta?</h2>
+    <p>
+      Webbapplikationen upptäckte ett möjligt oändligt omdirigeringsproblem (redirect loop) och laddade 
+      därför denna statiska sida för att undvika att din webbläsare hänger sig.
+    </p>
+    <p>
+      Du kan försöka visa din handbok direkt genom att använda länken nedan och ange ditt företagsnamn:
+    </p>
+    <p>
+      <a href="/view" class="button">Gå till handböcker</a>
+    </p>
+  </div>
+  
+  <div class="card">
+    <h2>Kontakt och support</h2>
+    <p>
+      Om problemet kvarstår, vänligen kontakta oss på <a href="mailto:support@handbok.org">support@handbok.org</a>.
+    </p>
+  </div>
+  
+  <script>
+    // Reset redirect counter
+    try {
+      sessionStorage.setItem('redirect_count', '0');
+    } catch (e) {
+      console.error('Failed to reset redirect counter:', e);
+    }
+  </script>
+</body>
+</html> 

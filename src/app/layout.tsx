@@ -68,6 +68,59 @@ export default function RootLayout({
             font-family: var(--font-geist-mono, var(--font-geist-mono-fallback));
           }
         `}} />
+        
+        {/* Redirect loop breaker script */}
+        <Script id="redirect-loop-breaker" strategy="beforeInteractive">
+          {`
+            (function() {
+              try {
+                // Get current URL and parameters
+                var url = new URL(window.location.href);
+                var path = url.pathname;
+                
+                // Check if we're having a loop
+                var redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0');
+                
+                // If redirected too many times, stop
+                if (redirectCount > 3) {
+                  console.error('TOO MANY REDIRECTS - Breaking loop');
+                  sessionStorage.removeItem('redirect_count');
+                  
+                  // Show emergency feedback to the user
+                  document.addEventListener('DOMContentLoaded', function() {
+                    var div = document.createElement('div');
+                    div.style.position = 'fixed';
+                    div.style.top = '0';
+                    div.style.left = '0';
+                    div.style.right = '0';
+                    div.style.padding = '16px';
+                    div.style.background = 'red';
+                    div.style.color = 'white';
+                    div.style.textAlign = 'center';
+                    div.style.zIndex = '9999';
+                    div.innerHTML = '<strong>Redirect loop detected!</strong> Trying emergency static page. <a href="/view" style="color:white;text-decoration:underline;">Click here for handbok viewer</a>';
+                    document.body.appendChild(div);
+                  });
+                  
+                  // If we're not on the static fallback page already, go there
+                  if (path !== '/view' && path !== '/static-fallback.html') {
+                    window.location.href = '/static-fallback.html';
+                  }
+                } else {
+                  // Increment count for next page load
+                  sessionStorage.setItem('redirect_count', (redirectCount + 1).toString());
+                  
+                  // Reset count after 5 seconds if no more redirects
+                  setTimeout(function() {
+                    sessionStorage.setItem('redirect_count', '0');
+                  }, 5000);
+                }
+              } catch(e) {
+                console.error('Error in redirect detection', e);
+              }
+            })();
+          `}
+        </Script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

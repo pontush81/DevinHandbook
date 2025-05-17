@@ -43,6 +43,17 @@ export default function Home() {
           </a>
         </div>
 
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-700 mb-6">
+          <strong>Ny funktion!</strong> Du kan nu använda vår förenklade handboksvisare. 
+          Istället för att använda subdomäner (företag.handbok.org) kan du besöka:
+          <div className="mt-2 font-mono p-2 bg-white rounded border border-blue-100">
+            handbok.org/view?company=dittföretagsnamn
+          </div>
+          <div className="mt-2">
+            Detta är en stabilare version som inte drabbas av omdirigeringsproblem.
+          </div>
+        </div>
+
         <div className="mt-6">
           <Link 
             href="/view" 

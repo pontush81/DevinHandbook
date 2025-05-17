@@ -37,3 +37,55 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Rebuild Trigger
 Triggering a new build to production: 2023-07-16
+
+## Handboksvisare
+
+För att undvika problem med subdomänhantering i Next.js med Middle, App Router och dynamisk routing har vi implementerat en förenklad handboksvisare som använder query parameters istället för dynamiska routes.
+
+### Använda handboksvisaren
+
+Du kan komma åt handboksvisaren via:
+
+```
+https://handbok.org/view?company=företagsnamn
+```
+
+där `företagsnamn` är subdomänen för den handbok du vill visa.
+
+### Teknisk lösning
+
+Vi har medvetet undvikit:
+- Dynamiska routes med `[subdomain]`
+- Middleware för subdomän-redirects
+- Client-side redirects
+
+Detta ger en mer stabil och felsäker lösning utan redirect-loopar.
+
+## Routing Structure
+
+### Simplified Routing
+
+We've moved away from subdomain-based routing to a simpler query parameter approach to avoid redirect issues:
+
+- **Old approach (disabled)**: `company.handbok.org`
+- **New approach (recommended)**: `handbok.org/view?company=name`
+
+The new approach is more stable and doesn't suffer from redirect loops that can happen with subdomain routing in Next.js App Router.
+
+### Accessing Handbooks
+
+To view a handbook, use the `/view` route with a `company` query parameter:
+
+```
+https://handbok.org/view?company=companyname
+```
+
+### Fallback Page
+
+If redirect loops are detected, a static fallback page will be shown:
+
+```
+/static-fallback.html
+```
+
+This page can be accessed directly and will reset any redirect counters.
