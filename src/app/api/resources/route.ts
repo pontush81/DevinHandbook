@@ -16,20 +16,41 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    // Hämta resursen från huvuddomänen
-    // Preservera alla URL-parametrar från originalförfrågan
+    // Hämta resursen från rätt källdomän baserat på den aktuella domänen
     const originalUrl = new URL(request.url);
+    const host = request.headers.get('host') || '';
+    
+    // Avgör källdomänen baserat på aktuell host
+    let sourceHost = 'handbok.org';
+    
+    // Om vi är på test-domänen, använd samma domän för att hämta resurser
+    if (host.includes('test.handbok.org')) {
+      sourceHost = 'test.handbok.org';
+    } else if (host.includes('devin-handbook.vercel.app')) {
+      sourceHost = 'devin-handbook.vercel.app';
+    }
+    
+    // Preservera alla URL-parametrar från originalförfrågan
     const queryParams = Array.from(originalUrl.searchParams.entries())
       .filter(([key]) => key !== 'path') // Skippa path-parametern
       .map(([key, value]) => `${key}=${value}`)
       .join('&');
     
-    const resourceURL = `https://handbok.org${path}${queryParams ? '?' + queryParams : ''}`;
-    console.log('Proxy resource:', resourceURL);
+    // Använd HTTPS för alla resurshämtningar
+    const resourceURL = `https://${sourceHost}${path}${queryParams ? '?' + queryParams : ''}`;
+    console.log('Proxy resource from:', resourceURL);
     
-    const response = await fetch(resourceURL);
+    // Försök hämta resursen direkt från Vercel CDN om det är en statisk resurs
+    const response = await fetch(resourceURL, {
+      headers: {
+        'User-Agent': request.headers.get('user-agent') || '',
+        'Accept': request.headers.get('accept') || '*/*',
+        'Accept-Encoding': request.headers.get('accept-encoding') || ''
+      }
+    });
     
     if (!response.ok) {
+      console.error(`Resource fetch failed: ${response.status} for ${resourceURL}`);
       return new NextResponse(`Resource fetch failed: ${response.status}`, { 
         status: response.status 
       });
@@ -46,6 +67,12 @@ export async function GET(request: NextRequest) {
       'Access-Control-Max-Age': '86400',
       'Cache-Control': 'public, max-age=31536000, immutable'
     });
+    
+    // Bevara andra viktiga headers från originalsvaret
+    const contentEncoding = response.headers.get('content-encoding');
+    if (contentEncoding) {
+      headers.set('Content-Encoding', contentEncoding);
+    }
     
     return new NextResponse(body, {
       headers,
