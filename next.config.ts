@@ -33,6 +33,8 @@ const nextConfig: NextConfig = {
     
     return config;
   },
+  // INAKTIVERAD - Orsakade sannolikt redirect-loopen
+  /*
   async rewrites() {
     return {
       beforeFiles: [
@@ -61,6 +63,7 @@ const nextConfig: NextConfig = {
       ],
     };
   },
+  */
   // Set appropriate CORS headers
   async headers() {
     return [

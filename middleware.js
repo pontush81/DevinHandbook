@@ -1,15 +1,27 @@
 // Detta är en Vercel middleware som körs på edge level (Server side)
-// Denna fil är placerad i root-katalogen (utanför src) för att Vercel ska hitta den först
-// TEMPORÄRT INAKTIVERAD FÖR ATT DIAGNOSTISERA REDIRECT-PROBLEM
+// Nu förenklad för att bara hantera CORS och undvika redirects
 
 export const config = {
   matcher: [
-    // Inaktiverar matcher tillfälligt för att stoppa alla redirects
-    '/_debugger_disable_matcher_temporarily_/*'
+    // Bara matcha faktiska API-anrop som kan behöva CORS-headers
+    '/api/:path*',
   ]
 };
 
 export default async function middleware(request) {
-  // Enkel passthrough - inga redirects
+  // Enkelt svar för CORS preflight-requests
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+        'Access-Control-Max-Age': '86400'
+      }
+    });
+  }
+  
+  // För alla andra förfrågningar, fortsätt normalt
   return Response.next();
 } 
