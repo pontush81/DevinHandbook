@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SuccessClient() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
   
   const handbookName = searchParams.get('handbook_name');
   const subdomain = searchParams.get('subdomain');
@@ -19,11 +21,27 @@ export default function SuccessClient() {
       return;
     }
     
-    const timer = setTimeout(() => {
+    // Simulera laddningstid medan handboken skapas
+    const loadingTimer = setTimeout(() => {
       setIsLoading(false);
+      
+      // Starta nedräkning för omdirigering
+      const countdownInterval = setInterval(() => {
+        setRedirectCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            // Omdirigera till den nyskapade handboken
+            window.location.href = `https://${subdomain}.handbok.org`;
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => clearInterval(countdownInterval);
     }, 3000);
     
-    return () => clearTimeout(timer);
+    return () => clearTimeout(loadingTimer);
   }, [handbookName, subdomain]);
   
   if (isLoading) {
@@ -80,17 +98,24 @@ export default function SuccessClient() {
             <a 
               href={`https://${subdomain}.handbok.org`} 
               className="block mt-2 font-medium text-blue-600 hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               {subdomain}.handbok.org
             </a>
           </p>
+          <p className="text-center mt-3 text-gray-600">
+            Du kommer att omdirigeras automatiskt om {redirectCountdown} sekunder
+          </p>
         </div>
         
-        <div className="flex justify-center">
-          <Link href="/" className="px-4 py-2 bg-black text-white rounded-md">
-            Gå till startsidan
+        <div className="flex justify-center space-x-4">
+          <a 
+            href={`https://${subdomain}.handbok.org`} 
+            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+          >
+            Gå till din handbok nu
+          </a>
+          <Link href="/" className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+            Tillbaka till startsidan
           </Link>
         </div>
       </div>
