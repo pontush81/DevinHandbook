@@ -88,7 +88,7 @@ export default function HandbookLayout({
             font-family: var(--font-geist-mono, var(--font-geist-mono-fallback));
           }
           
-          /* Base font preloading with proxy URLs */
+          /* Base font preloading with direct URLs */
           @font-face {
             font-family: 'Geist';
             font-style: normal;
@@ -106,46 +106,9 @@ export default function HandbookLayout({
           }
         `}} />
         
-        {/* Inline script for CORS fix - runs first */}
+        {/* Resource loading helper without redirects */}
         <script dangerouslySetInnerHTML={{ __html: `
-          // Initialize static resource fix immediately
           (function() {
-            // Redirect all subdomain traffic to the appropriate page on the main domain
-            const host = window.location.hostname;
-            const subdomain = host.split('.')[0];
-            const path = window.location.pathname;
-            const search = window.location.search;
-            
-            // Only process if this is a subdomain
-            if (host !== 'handbok.org' && host.endsWith('.handbok.org')) {
-              // Check if we're loading a static resource
-              if (path.includes('/_next/') || 
-                  path.endsWith('.js') || 
-                  path.endsWith('.css') || 
-                  path.endsWith('.woff') || 
-                  path.endsWith('.woff2')) {
-                // For static resources, we'll handle it with a proxy (see static-resource-fix.js)
-              } else {
-                // For normal page loads, redirect to the correct path on the main domain
-                const mainDomainUrl = \`https://handbok.org/handbook/\${subdomain}\${path}\${search}\`;
-                window.location.href = mainDomainUrl;
-                return;
-              }
-            }
-            
-            // Load the static resource fix script directly from the main domain
-            const script = document.createElement('script');
-            script.src = 'https://handbok.org/static-resource-fix.js';
-            script.crossOrigin = 'anonymous';
-            script.onerror = function() {
-              // Fallback to loading from the current domain if main domain fails
-              const fallbackScript = document.createElement('script');
-              fallbackScript.src = '/static-resource-fix.js';
-              fallbackScript.crossOrigin = 'anonymous';
-              document.head.appendChild(fallbackScript);
-            };
-            document.head.appendChild(script);
-            
             // Preload critical fonts directly from the main domain
             const fontUrls = [
               '/_next/static/media/569ce4b8f30dc480-s.p.woff2',
@@ -161,34 +124,6 @@ export default function HandbookLayout({
               link.crossOrigin = 'anonymous';
               document.head.appendChild(link);
             });
-            
-            // Detect failures and display diagnostics if needed
-            window.addEventListener('error', function(e) {
-              // Only track resource errors
-              if (e.target && (e.target.tagName === 'LINK' || e.target.tagName === 'SCRIPT')) {
-                console.error('[Resource Error]', e.target.src || e.target.href);
-                
-                // Add a debug button if multiple errors
-                if (document.querySelectorAll('.resource-error-badge').length === 0) {
-                  const badge = document.createElement('div');
-                  badge.className = 'resource-error-badge';
-                  badge.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#f44336;color:white;padding:10px;border-radius:5px;font-size:12px;cursor:pointer;z-index:9999;';
-                  badge.textContent = 'Resource Errors Detected';
-                  badge.onclick = function() {
-                    window.location.href = 'https://handbok.org/debug.html';
-                  };
-                  
-                  // Only add when document body is ready
-                  if (document.body) {
-                    document.body.appendChild(badge);
-                  } else {
-                    window.addEventListener('DOMContentLoaded', function() {
-                      document.body.appendChild(badge);
-                    });
-                  }
-                }
-              }
-            }, true);
           })();
         `}} />
       </head>

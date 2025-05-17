@@ -75,16 +75,6 @@
         }
       ],
       "destination": "https://handbok.org/_next/:path*"
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "(?<subdomain>[^.]+)\\.handbok\\.org"
-        }
-      ],
-      "destination": "/handbook/:subdomain/:path*"
     }
   ]
 } 

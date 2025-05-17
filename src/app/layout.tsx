@@ -69,38 +69,32 @@ export default function RootLayout({
           }
         `}} />
         
-        {/* Inline CORS and domain fix script - runs first */}
+        {/* Simple redirect checker - only redirects if needed */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
+            // Check if we need to redirect www to non-www
             const host = window.location.hostname;
             
-            // Redirect www to non-www immediately to avoid CORS issues
+            // Only redirect www to non-www directly
             if (host === 'www.handbok.org') {
-              window.location.href = window.location.href.replace('www.handbok.org', 'handbok.org');
-              return;
-            }
-            
-            // Check if we're on a handbok.org domain
-            const isHandbokDomain = host === 'handbok.org' || host.endsWith('.handbok.org');
-            
-            if (!isHandbokDomain) return;
-            
-            // If this is a subdomain, activate the resource proxy
-            if (host !== 'handbok.org') {
-              // Load the full resource fix script
-              const script = document.createElement('script');
-              script.src = 'https://handbok.org/static-resource-fix.js';
-              script.crossOrigin = 'anonymous';
-              script.onerror = function() {
-                console.error('[CORS-Fix] Failed to load static resource fix script from main domain. Trying local.');
-                const localScript = document.createElement('script');
-                localScript.src = '/static-resource-fix.js';
-                localScript.crossOrigin = 'anonymous';
-                document.head.appendChild(localScript);
-              };
-              document.head.appendChild(script);
+              // Get the URL's path and search
+              const path = window.location.pathname;
+              const search = window.location.search;
               
-              console.log('[CORS-Fix] Loading static resource fix script');
+              // Check for redirect loop by counting redirects via sessionStorage
+              try {
+                let redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0');
+                if (redirectCount > 2) {
+                  console.error('Too many redirects detected');
+                  return;
+                }
+                sessionStorage.setItem('redirect_count', String(redirectCount + 1));
+              } catch (e) {
+                // Handle case where sessionStorage is not available
+              }
+              
+              // Build the redirect URL
+              window.location.replace('https://handbok.org' + path + search);
             }
           })();
         `}} />
@@ -110,7 +104,7 @@ export default function RootLayout({
       >
         <AuthProvider>{children}</AuthProvider>
         
-        {/* Main CORS fix script - load at the end to ensure it runs after everything else */}
+        {/* Main resource fix script - load at the end of the body */}
         <Script 
           src="/static-resource-fix.js" 
           strategy="afterInteractive"

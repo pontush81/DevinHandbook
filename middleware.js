@@ -14,6 +14,12 @@ export default async function middleware(request) {
   // Få host header från förfrågan
   const host = request.headers.get('host') || '';
   
+  // Check if we're already in a redirect loop by looking for a special header
+  const redirectCount = parseInt(request.headers.get('x-redirect-count') || '0', 10);
+  if (redirectCount > 2) {
+    return new Response('Too many redirects detected', { status: 508 });
+  }
+  
   // Kontrollera om det här är en förfrågan från en specifik subdomän
   const subdomainMatch = host.match(/^(?<subdomain>[^.]+)\.handbok\.org$/);
   
@@ -83,9 +89,18 @@ export default async function middleware(request) {
       }
     }
     
-    // Hantera andra subdomäner
-    url.pathname = `/handbook/${subdomain}${url.pathname}`;
-    return Response.redirect(url, 307);
+    // Hantera andra subdomäner - redirect to main domain with path
+    const newUrl = new URL(`/handbook/${subdomain}${url.pathname}`, 'https://handbok.org');
+    newUrl.search = url.search;
+    
+    // Increment the redirect counter in the header
+    const headers = new Headers();
+    headers.set('x-redirect-count', String(redirectCount + 1));
+    
+    return Response.redirect(newUrl.toString(), {
+      status: 307,
+      headers
+    });
   }
   
   // För alla andra förfrågningar, fortsätt normalt
