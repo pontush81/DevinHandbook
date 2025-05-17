@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'edge';
-export const preferredRegion = ['arn1'];
+export const preferredRegion = ['arn1']; // Stockholm region
 
 // Funktion för att testa SSL-anslutningar med olika metoder
 async function testSslConnection(url: string) {
