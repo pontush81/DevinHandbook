@@ -25,29 +25,67 @@ try {
     dotenv.config({ path: envPath });
   }
   
-  // Hämta Stripe-nyckeln
+  // Hämta Stripe-nycklarna
   const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const stripeTestKey = process.env.STRIPE_SECRET_KEY_TEST;
   
-  if (!stripeKey) {
-    console.log('\x1b[31m%s\x1b[0m', 'Ingen STRIPE_SECRET_KEY hittades i miljökonfigurationen.');
+  if (!stripeKey && !stripeTestKey) {
+    console.log('\x1b[31m%s\x1b[0m', 'Inga Stripe-nycklar hittades i miljökonfigurationen.');
     process.exit(1);
   }
   
-  // Kontrollera vilken typ av nyckel det är
-  const isTestKey = stripeKey.startsWith('sk_test_');
-  const isLiveKey = stripeKey.startsWith('sk_live_');
+  // Kontrollera vilken typ av nycklar det är
+  const prodKeyIsTest = stripeKey && stripeKey.startsWith('sk_test_');
+  const prodKeyIsLive = stripeKey && stripeKey.startsWith('sk_live_');
   
-  if (isTestKey) {
-    console.log('\x1b[32m%s\x1b[0m', '✅ Stripe är konfigurerad i TESTLÄGE');
-    console.log('\x1b[32m%s\x1b[0m', '   Alla betalningar kommer att simuleras och inga verkliga transaktioner kommer att ske.');
-    console.log('\x1b[32m%s\x1b[0m', '   Du kan använda testkort som 4242 4242 4242 4242 för betalningar.');
-  } else if (isLiveKey) {
-    console.log('\x1b[31m%s\x1b[0m', '🔴 Stripe är konfigurerad i SKARPT LÄGE');
-    console.log('\x1b[31m%s\x1b[0m', '   Varning: Verkliga betalningar kommer att utföras och ditt konto kommer att debiteras.');
-    console.log('\x1b[33m%s\x1b[0m', '   För utveckling rekommenderas att byta till testläge. Se documentation/stripe-test-mode.md');
+  const testKeyIsTest = stripeTestKey && stripeTestKey.startsWith('sk_test_');
+  
+  console.log('\x1b[36m%s\x1b[0m', '=== Stripe-konfiguration ===');
+  
+  // Kontrollera produktionsnyckel
+  if (stripeKey) {
+    if (prodKeyIsTest) {
+      console.log('\x1b[33m%s\x1b[0m', '⚠️  STRIPE_SECRET_KEY är konfigurerad med en testnyckel!');
+      console.log('\x1b[33m%s\x1b[0m', '   Detta kan vara problematiskt om denna nyckel används i produktion.');
+    } else if (prodKeyIsLive) {
+      console.log('\x1b[32m%s\x1b[0m', '✅ STRIPE_SECRET_KEY är konfigurerad med en produktionsnyckel.');
+    } else {
+      console.log('\x1b[33m%s\x1b[0m', '⚠️  STRIPE_SECRET_KEY har ett okänt format.');
+    }
   } else {
-    console.log('\x1b[33m%s\x1b[0m', '⚠️ Kunde inte avgöra om Stripe-nyckeln är för test eller skarpt läge.');
-    console.log('\x1b[33m%s\x1b[0m', '   Kontrollera att STRIPE_SECRET_KEY är korrekt konfigurerad i .env.local.');
+    console.log('\x1b[33m%s\x1b[0m', '⚠️  STRIPE_SECRET_KEY är inte konfigurerad.');
+  }
+  
+  // Kontrollera testnyckel
+  if (stripeTestKey) {
+    if (testKeyIsTest) {
+      console.log('\x1b[32m%s\x1b[0m', '✅ STRIPE_SECRET_KEY_TEST är konfigurerad med en testnyckel.');
+    } else {
+      console.log('\x1b[33m%s\x1b[0m', '⚠️  STRIPE_SECRET_KEY_TEST är inte en giltig testnyckel.');
+    }
+  } else {
+    console.log('\x1b[33m%s\x1b[0m', '⚠️  STRIPE_SECRET_KEY_TEST är inte konfigurerad.');
+  }
+  
+  // Summering av konfigurationen
+  console.log('\x1b[36m%s\x1b[0m', '\n=== Sammanfattning ===');
+  
+  if (prodKeyIsLive && testKeyIsTest) {
+    console.log('\x1b[32m%s\x1b[0m', '✅ Konfigurationen är korrekt för både produktion och testmiljö.');
+    console.log('\x1b[32m%s\x1b[0m', '   - Produktionsmiljön kommer att använda skarpa betalningar');
+    console.log('\x1b[32m%s\x1b[0m', '   - Test-/utvecklingsmiljön kommer att använda testbetalningar');
+  } else if (!stripeKey && testKeyIsTest) {
+    console.log('\x1b[33m%s\x1b[0m', '⚠️  Endast testmiljö är konfigurerad. Ingen produktionsnyckel hittades.');
+  } else if (prodKeyIsLive && !stripeTestKey) {
+    console.log('\x1b[33m%s\x1b[0m', '⚠️  Endast produktionsmiljö är konfigurerad. Ingen testnyckel hittades.');
+  } else {
+    console.log('\x1b[31m%s\x1b[0m', '❌ Konfigurationen verkar vara felaktig eller ofullständig.');
+  }
+  
+  console.log('\x1b[36m%s\x1b[0m', '\n=== Användning ===');
+  if (testKeyIsTest) {
+    console.log('\x1b[32m%s\x1b[0m', '🧪 I testläge kan du använda testkort som 4242 4242 4242 4242');
+    console.log('\x1b[32m%s\x1b[0m', '   med valfritt framtida utgångsdatum, CVC och postnummer.');
   }
   
 } catch (error) {

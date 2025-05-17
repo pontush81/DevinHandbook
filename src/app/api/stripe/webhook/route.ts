@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { constructEventFromPayload } from '@/lib/stripe';
+import { constructEventFromPayload, isTestMode } from '@/lib/stripe';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || false;
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     let event;
     try {
-      event = await constructEventFromPayload(payload, signature, webhookSecret);
+      event = await constructEventFromPayload(payload, signature);
     } catch (err) {
       console.error('Webhook signature verification failed.', err);
       return NextResponse.json({ error: 'Webhook signature verification failed.' }, { status: 400 });

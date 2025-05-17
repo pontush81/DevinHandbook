@@ -1,11 +1,25 @@
 import Stripe from 'stripe';
 
 /**
- * Stripe-instans som konfigureras för testläge
- * För att använda testläge, se till att STRIPE_SECRET_KEY
- * i .env.local är en testnyckel (börjar med sk_test_)
+ * Väljer rätt Stripe-nyckel baserat på miljö
+ * Produktionsnycklar används endast i produktionsmiljö, annars testnycklar
  */
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const isProduction = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
+const stripeSecretKey = isProduction 
+  ? process.env.STRIPE_SECRET_KEY
+  : process.env.STRIPE_SECRET_KEY_TEST;
+
+const stripeWebhookSecret = isProduction
+  ? process.env.STRIPE_WEBHOOK_SECRET
+  : process.env.STRIPE_WEBHOOK_SECRET_TEST;
+
+// Exportera teststatus för användning i andra moduler
+export const isTestMode = !isProduction;
+
+/**
+ * Stripe-instans som konfigureras baserat på miljö
+ */
+export const stripe = new Stripe(stripeSecretKey!, {
   apiVersion: '2025-04-30.basil',
 });
 
@@ -43,7 +57,12 @@ export const createCheckoutSession = async (
 export const constructEventFromPayload = async (
   payload: string,
   signature: string,
-  webhookSecret: string
+  webhookSecret?: string
 ) => {
-  return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+  // Använd rätt webhook-nyckel baserat på miljö
+  return stripe.webhooks.constructEvent(
+    payload, 
+    signature, 
+    webhookSecret || stripeWebhookSecret!
+  );
 };

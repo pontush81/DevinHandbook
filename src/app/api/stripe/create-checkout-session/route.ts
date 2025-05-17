@@ -1,7 +1,5 @@
-import { createCheckoutSession } from '@/lib/stripe';
+import { createCheckoutSession, isTestMode } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
-
-const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || false;
 
 export async function POST(req: NextRequest) {
   try {

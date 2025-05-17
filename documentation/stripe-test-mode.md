@@ -1,6 +1,6 @@
 # Stripe Testläge - Konfigurationsguide
 
-För att använda Stripe i testläge istället för skarpt läge behöver du ändra API-nycklarna i din `.env.local` fil. Följ dessa steg:
+För att använda Stripe i testläge istället för skarpt läge behöver du konfigurera rätt miljövariabler. Följ dessa steg:
 
 ## 1. Hämta dina Stripe testnyckar
 
@@ -19,16 +19,34 @@ För att använda Stripe i testläge istället för skarpt läge behöver du än
 4. Välj de events du behöver lyssna på (minst `checkout.session.completed`)
 5. Kopiera "Signing secret" som skapas
 
-## 3. Uppdatera din `.env.local` fil
+## 3. Uppdatera dina miljövariabler
 
-Ändra följande variabler i din `.env.local` fil:
+### För lokal utveckling (.env.local)
+```
+# Stripe Test Variables
+STRIPE_SECRET_KEY_TEST=sk_test_...din_test_secret_key...
+STRIPE_WEBHOOK_SECRET_TEST=whsec_...din_test_webhook_secret...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST=pk_test_...din_test_publishable_key...
 
+# Stripe Production Variables (om du behöver båda)
+STRIPE_SECRET_KEY=sk_live_...din_live_secret_key...
+STRIPE_WEBHOOK_SECRET=whsec_...din_live_webhook_secret...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...din_live_publishable_key...
 ```
-# Stripe Variables
-STRIPE_SECRET_KEY=sk_test_...din_test_secret_key...
-STRIPE_WEBHOOK_SECRET=whsec_...din_test_webhook_secret...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...din_test_publishable_key...
-```
+
+### För Vercel-deployment
+
+I Vercel behöver du konfigurera olika miljövariabler för olika miljöer:
+
+**För produktion (main branch):**
+- STRIPE_SECRET_KEY = sk_live_...
+- STRIPE_WEBHOOK_SECRET = whsec_live_...
+- NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = pk_live_...
+
+**För preview (staging branch):**
+- STRIPE_SECRET_KEY_TEST = sk_test_...
+- STRIPE_WEBHOOK_SECRET_TEST = whsec_test_...
+- NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST = pk_test_...
 
 ## 4. Testa betalningar
 
@@ -48,8 +66,18 @@ I testläge kan du använda följande testkort:
 
 För fler testkortnummer och testresurser, se [Stripe's testdokumentation](https://stripe.com/docs/testing).
 
+## Kontrollera konfigurationen
+
+För att kontrollera att dina Stripe-nycklar är korrekt konfigurerade, kör:
+
+```bash
+npm run check-stripe
+```
+
+Detta kommer att visa vilka nycklar som är konfigurerade och om de är korrekt uppsatta för test- och produktionsmiljöer.
+
 ## Viktigt att tänka på
 
 - Alla transaktioner i testläge är fiktiva och inga riktiga pengar överförs
 - Dubbelkolla alltid att du är i testläge i Stripe-dashboarden (grå bakgrund med "TEST" indikator)
-- Innan du går i produktion, se till att byta till skarpa nycklar i din `.env.local` fil 
+- Använd aldrig produktionsnycklar under utveckling 
