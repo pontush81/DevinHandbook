@@ -29,6 +29,42 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
     }
   };
   
+  // Rendera nästa-knappen bara om vi inte är på sista steget
+  const renderNextButton = () => {
+    if (currentStep < totalSteps - 1) {
+      return (
+        <button
+          onClick={goToNextStep}
+          disabled={!canGoNext()}
+          className={`px-4 py-2 rounded-md ${
+            !canGoNext()
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-black text-white hover:bg-gray-800"
+          }`}
+        >
+          Nästa
+        </button>
+      );
+    }
+    
+    // På sista steget visar vi en tom div istället
+    return <div className="w-24"></div>;
+  };
+  
+  // Generera stegindikatorerna
+  const renderStepIndicators = () => {
+    return Array(totalSteps)
+      .fill(0)
+      .map((_, index) => (
+        <div
+          key={index}
+          className={`w-2 h-2 rounded-full ${
+            index === currentStep ? "bg-black" : "bg-gray-300"
+          }`}
+        />
+      ));
+  };
+  
   return (
     <div className="flex justify-between mt-8">
       <button
@@ -44,36 +80,10 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
       </button>
       
       <div className="flex items-center gap-1">
-        {Array(totalSteps)
-          .fill(0)
-          .map((_, index) => (
-            <div
-              key={index}
-              className={`w-2 h-2 rounded-full ${
-                index === currentStep ? "bg-black" : "bg-gray-300"
-              }`}
-            />
-          ))}
+        {renderStepIndicators()}
       </div>
       
-      {currentStep < totalSteps - 1 && (
-        <button
-          onClick={goToNextStep}
-          disabled={!canGoNext()}
-          className={`px-4 py-2 rounded-md ${
-            !canGoNext()
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-black text-white hover:bg-gray-800"
-          }`}
-        >
-          Nästa
-        </button>
-      )}
-      
-      {/* Om vi är på sista steget, visa en tom div för att behålla layouten */}
-      {currentStep === totalSteps - 1 && (
-        <div className="w-24"></div> {/* Ungefär samma bredd som knappen */}
-      )}
+      {renderNextButton()}
     </div>
   );
 }
