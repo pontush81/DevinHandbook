@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const host = request.headers.get('host') || '';
   const isSubdomain = host !== 'handbok.org' && host.endsWith('.handbok.org');
   const isWww = host === 'www.handbok.org';
+  const subdomain = isSubdomain ? host.replace('.handbok.org', '') : null;
 
   // Create diagnostic information
   const diagnosticData = {
@@ -15,10 +16,21 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       host: host,
       isSubdomain: isSubdomain,
+      subdomain: subdomain,
       isWww: isWww,
       origin: request.headers.get('origin'),
       referer: request.headers.get('referer'),
-      userAgent: request.headers.get('user-agent')
+      userAgent: request.headers.get('user-agent'),
+      headers: Object.fromEntries(request.headers.entries()),
+      url: request.url,
+    },
+    dns: {
+      wildcardEnabled: true,
+      subdomainRedirectsEnabled: true,
+      vercelDnsConfig: {
+        status: 'unknown',
+        note: 'Verifiera att Vercel-projektet har en wildcard-domän inställd för *.handbok.org'
+      }
     },
     cors: {
       corsHeadersPresent: true,
@@ -26,8 +38,13 @@ export async function GET(request: NextRequest) {
       accessControlAllowMethods: 'GET, POST, OPTIONS',
       accessControlAllowHeaders: 'Content-Type, Authorization, X-Requested-With'
     },
+    middleware: {
+      redirects: {
+        subdomain: isSubdomain ? `/handbook/${subdomain}${request.nextUrl.pathname}` : 'N/A',
+      }
+    },
     recommendation: isSubdomain 
-      ? "För subdomäner, använd CORS-diagnosverktyget på /debug.html för att åtgärda resursladdningsproblem."
+      ? "För subdomäner, använd CORS-diagnosverktyget på /test-ui för att åtgärda resursladdningsproblem."
       : "Ingen CORS-åtgärd krävs på huvuddomänen."
   };
 

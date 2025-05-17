@@ -7,7 +7,14 @@ export default function TestSubdomains() {
   const [name, setName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<null | { success: boolean; url?: string; error?: string; details?: string }>(null);
+  const [result, setResult] = useState<null | { 
+    success: boolean; 
+    url?: string; 
+    error?: string; 
+    details?: string;
+    status?: number;
+    errorInfo?: any;
+  }>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,6 +22,8 @@ export default function TestSubdomains() {
     setResult(null);
     
     try {
+      console.log('Försöker skapa handbok:', { name, subdomain });
+      
       const response = await fetch('/api/test/create-handbook', {
         method: 'POST',
         headers: {
@@ -23,11 +32,43 @@ export default function TestSubdomains() {
         body: JSON.stringify({ name, subdomain }),
       });
       
-      const data = await response.json();
-      setResult(data);
+      console.log('Statuskod från API:', response.status);
+      
+      // Parse response
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Fel vid parsning av API-svar:', jsonError);
+        const responseText = await response.text();
+        console.log('Råtext från API:', responseText);
+        throw new Error('Kunde inte tolka svaret från API:et');
+      }
+      
+      console.log('Svar från API:', data);
+      
+      if (!response.ok) {
+        setResult({ 
+          success: false, 
+          error: data.error || 'Serverfel', 
+          details: data.details || 'Ingen ytterligare information',
+          status: response.status,
+          errorInfo: data.errorInfo
+        });
+      } else {
+        setResult({
+          success: true,
+          url: data.url,
+          ...data
+        });
+      }
     } catch (error) {
-      console.error('Error in test:', error);
-      setResult({ success: false, error: 'Ett fel uppstod vid anrop till API:et' });
+      console.error('Nätverksfel:', error);
+      setResult({ 
+        success: false, 
+        error: `Nätverksfel: ${error.message}`,
+        details: 'Ett fel uppstod när anropet skulle skickas till servern. Kontrollera din internetanslutning.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -62,15 +103,20 @@ export default function TestSubdomains() {
                 type="text"
                 id="subdomain"
                 value={subdomain}
-                onChange={(e) => setSubdomain(e.target.value)}
+                onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                 className="block w-full border border-gray-300 rounded-l-md px-3 py-2"
                 placeholder="min-test"
                 required
+                pattern="[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?"
+                title="Subdomänen får endast innehålla små bokstäver, siffror och bindestreck. Den får inte börja eller sluta med bindestreck."
               />
               <span className="inline-flex items-center px-3 py-2 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500">
                 .handbok.org
               </span>
             </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Endast små bokstäver, siffror och bindestreck. Inga specialtecken eller mellanslag.
+            </p>
           </div>
           
           <button
@@ -102,9 +148,17 @@ export default function TestSubdomains() {
               </>
             ) : (
               <>
-                <p className="text-red-700 font-semibold">Ett fel uppstod:</p>
+                <p className="text-red-700 font-semibold">Ett fel uppstod{result.status ? ` (${result.status})` : ''}:</p>
                 <p className="mt-1 text-red-600">{result.error}</p>
                 {result.details && <p className="mt-1 text-sm text-red-500">{result.details}</p>}
+                {result.errorInfo && (
+                  <details className="mt-2">
+                    <summary className="text-xs text-red-500 cursor-pointer">Detaljerad felinformation</summary>
+                    <pre className="text-xs text-red-500 mt-2 p-2 bg-red-50 rounded overflow-auto">
+                      {JSON.stringify(result.errorInfo, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </>
             )}
           </div>

@@ -50,6 +50,17 @@ export default function TestUI() {
               Testa subdomäner
             </Link>
           </div>
+
+          <div className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <h2 className="text-xl font-semibold mb-3">DNS Tester</h2>
+            <p className="text-gray-600 mb-4">Testa DNS-konfigurationen för subdomäner</p>
+            <Link 
+              href="/dns-test" 
+              className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded"
+            >
+              DNS-test & diagnostik
+            </Link>
+          </div>
           
           <div className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
             <h2 className="text-xl font-semibold mb-3">Diagnostikverktyg</h2>
