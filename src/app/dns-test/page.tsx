@@ -7,6 +7,7 @@ export default function DnsTest() {
   const [host, setHost] = useState('');
   const [isSubdomain, setIsSubdomain] = useState(false);
   const [diagnosticData, setDiagnosticData] = useState<any>(null);
+  const [subdomainTestData, setSubdomainTestData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,6 +17,7 @@ export default function DnsTest() {
     setIsSubdomain(hostname !== 'handbok.org' && hostname.endsWith('.handbok.org'));
     
     fetchDiagnosticData();
+    fetchSubdomainTest();
   }, []);
   
   const fetchDiagnosticData = async () => {
@@ -36,11 +38,30 @@ export default function DnsTest() {
     }
   };
   
+  const fetchSubdomainTest = async () => {
+    try {
+      const response = await fetch('/api/subdomain-test');
+      if (!response.ok) {
+        console.error('Fel vid hämtning av subdomäntest:', response.status);
+        return;
+      }
+      
+      const data = await response.json();
+      setSubdomainTestData(data);
+    } catch (err) {
+      console.error('Fel vid subdomäntest:', err);
+    }
+  };
+  
   const testNewSubdomain = async () => {
     const testSubdomain = `test-${Date.now().toString(36)}`;
     const url = `https://${testSubdomain}.handbok.org/dns-test`;
     
     window.open(url, '_blank');
+  };
+  
+  const testSubdomainApi = async () => {
+    window.open('/api/subdomain-test', '_blank');
   };
 
   return (
@@ -83,6 +104,31 @@ export default function DnsTest() {
               </div>
             </div>
             
+            {subdomainTestData && (
+              <div className="border rounded-md p-4 mb-4">
+                <h3 className="font-medium mb-2">Subdomäntest-resultat:</h3>
+                <div className={`p-3 rounded-md mb-3 ${subdomainTestData.status === 'ok' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                  <p className={subdomainTestData.status === 'ok' ? 'text-green-700' : 'text-red-700'}>
+                    <span className="font-semibold">Status:</span> {subdomainTestData.status}
+                  </p>
+                  {subdomainTestData.database && (
+                    <p className={subdomainTestData.database.connected ? 'text-green-700' : 'text-red-700'}>
+                      <span className="font-semibold">Databas:</span> {subdomainTestData.database.connected ? 'Ansluten' : 'Kunde inte ansluta'}
+                      {subdomainTestData.database.error && <span className="text-red-700"> ({subdomainTestData.database.error})</span>}
+                    </p>
+                  )}
+                  {subdomainTestData.handbook && (
+                    <p className={subdomainTestData.handbook.exists ? 'text-green-700' : 'text-yellow-700'}>
+                      <span className="font-semibold">Handbok:</span> {subdomainTestData.handbook.exists ? 'Hittad' : 'Kunde inte hitta handbok för denna subdomän'}
+                    </p>
+                  )}
+                </div>
+                <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto max-h-40">
+                  {JSON.stringify(subdomainTestData, null, 2)}
+                </pre>
+              </div>
+            )}
+            
             {diagnosticData && (
               <>
                 <div className="border rounded-md p-4 mb-4">
@@ -110,7 +156,7 @@ export default function DnsTest() {
               </>
             )}
             
-            <div className="mt-6 flex gap-4 justify-center">
+            <div className="mt-6 flex flex-wrap gap-4 justify-center">
               <button
                 onClick={fetchDiagnosticData}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -124,6 +170,25 @@ export default function DnsTest() {
               >
                 Testa slumpmässig subdomän
               </button>
+              
+              <button
+                onClick={testSubdomainApi}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+              >
+                Testa subdomän API
+              </button>
+            </div>
+            
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <h3 className="font-medium text-yellow-800 mb-2">Vercel-domänkonfiguration</h3>
+              <p className="text-yellow-700 mb-2">
+                För att subdomäner ska fungera korrekt behöver du kontrollera:
+              </p>
+              <ol className="list-decimal pl-5 space-y-2 text-yellow-700">
+                <li>Att du har en wildcard-domän (<code>*.handbok.org</code>) konfigurerad i Vercel-projektet</li>
+                <li>Att din DNS-leverantör har en CNAME eller A-record för <code>*.handbok.org</code></li>
+                <li>Att du har väntat tillräckligt länge för att DNS-ändringarna ska spridas (kan ta upp till 48 timmar)</li>
+              </ol>
             </div>
           </>
         )}

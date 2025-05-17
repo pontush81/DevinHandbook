@@ -11,37 +11,76 @@ const supabaseUrl = ensureHttpsPrefix(process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey
-);
-
-let supabaseAdminClient: SupabaseClient | null = null;
-try {
-  if (typeof window === 'undefined' && supabaseServiceRoleKey) {
-    supabaseAdminClient = createClient(
-      supabaseUrl,
-      supabaseServiceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
-  }
-} catch (error) {
-  console.error('Error creating Supabase admin client:', error);
+// Validera konfigurations-input
+if (!supabaseUrl) {
+  console.error('NEXT_PUBLIC_SUPABASE_URL saknas i miljövariabler');
+}
+if (!supabaseAnonKey) {
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY saknas i miljövariabler');
+}
+if (!supabaseServiceRoleKey && typeof window === 'undefined') {
+  console.error('SUPABASE_SERVICE_ROLE_KEY saknas i miljövariabler (endast server-side)');
 }
 
-export const supabaseAdmin = supabaseAdminClient || supabase;
-
-export const getServiceSupabase = () => {
-  if (!supabaseAdminClient) {
-    console.warn('Service role key not available, using anonymous client instead');
+// Skapa basklassen för anonym klient
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      persistSession: typeof window !== 'undefined',
+      autoRefreshToken: typeof window !== 'undefined'
+    },
+    global: {
+      fetch: (...args) => {
+        return fetch(...args);
+      }
+    }
   }
-  return supabaseAdminClient || supabase;
+);
+
+// Skapa admin-klienten för server-side operationer
+let supabaseAdminClient: SupabaseClient | null = null;
+
+// Funktion som skapar eller returnerar admin-klienten on-demand
+export const getServiceSupabase = () => {
+  // Endast skapa admin-klienten om vi är på server-sidan
+  if (typeof window === 'undefined') {
+    if (!supabaseAdminClient && supabaseServiceRoleKey) {
+      try {
+        supabaseAdminClient = createClient(
+          supabaseUrl,
+          supabaseServiceRoleKey,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false
+            },
+            global: {
+              fetch: (...args) => {
+                return fetch(...args);
+              }
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error creating Supabase admin client:', error);
+        // Fallback till anonym klient om admin-klienten inte kunde skapas
+        return supabase;
+      }
+    }
+    
+    // Om service-klienten existerar, returnera den, annars anonym klient
+    return supabaseAdminClient || supabase;
+  } else {
+    // På klientsidan, returnera alltid den anonyma klienten
+    return supabase;
+  }
 };
+
+// Exportera admin-klienten för enklare användning
+export const supabaseAdmin = getServiceSupabase();
+
 export type Database = {
   public: {
     Tables: {
