@@ -68,48 +68,11 @@ export default function RootLayout({
             font-family: var(--font-geist-mono, var(--font-geist-mono-fallback));
           }
         `}} />
-        
-        {/* Simple redirect checker - only redirects if needed */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            // Check if we need to redirect www to non-www
-            const host = window.location.hostname;
-            
-            // Only redirect www to non-www directly
-            if (host === 'www.handbok.org') {
-              // Get the URL's path and search
-              const path = window.location.pathname;
-              const search = window.location.search;
-              
-              // Check for redirect loop by counting redirects via sessionStorage
-              try {
-                let redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0');
-                if (redirectCount > 2) {
-                  console.error('Too many redirects detected');
-                  return;
-                }
-                sessionStorage.setItem('redirect_count', String(redirectCount + 1));
-              } catch (e) {
-                // Handle case where sessionStorage is not available
-              }
-              
-              // Build the redirect URL
-              window.location.replace('https://handbok.org' + path + search);
-            }
-          })();
-        `}} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>{children}</AuthProvider>
-        
-        {/* Main resource fix script - load at the end of the body */}
-        <Script 
-          src="/static-resource-fix.js" 
-          strategy="afterInteractive"
-          crossOrigin="anonymous"
-        />
       </body>
     </html>
   );
