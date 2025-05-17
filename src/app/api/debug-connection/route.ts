@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase, testDatabaseConnection } from '@/lib/supabase';
 
 export const runtime = 'edge';
-export const preferredRegion = ['arn1', 'waw1'];
+export const preferredRegion = ['arn1'];
 
 // Testar nätverksanslutningen direkt
 async function testNetworkConnection(url: string) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
-export const preferredRegion = ['arn1', 'waw1'];
+export const preferredRegion = ['arn1'];
 
 // Funktion för att testa SSL-anslutningar med olika metoder
 async function testSslConnection(url: string) {
