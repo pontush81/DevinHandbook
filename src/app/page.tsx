@@ -3,17 +3,29 @@
 import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [isTestDomain, setIsTestDomain] = useState(false);
   const [host, setHost] = useState('');
+  const router = useRouter();
   
   useEffect(() => {
     // Kolla om vi är på testdomänen
     const hostname = window.location.hostname;
     setHost(hostname);
-    setIsTestDomain(hostname === 'test.handbok.org');
-  }, []);
+    
+    // För testdomänen
+    if (hostname === 'test.handbok.org') {
+      // Om URL-parametern visar test-ui, visa testsidan
+      if (window.location.search.includes('test-ui=true')) {
+        setIsTestDomain(true);
+      } else {
+        // Annars, omdirigera till själva applikationen
+        router.push('/create-handbook');
+      }
+    }
+  }, [router]);
   
   if (isTestDomain) {
     return (
@@ -27,6 +39,22 @@ export default function Home() {
           <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-700 mb-6">
             <strong>Testmiljö!</strong> Du är nu i testmiljön för Handbok.org. 
             <p className="mt-2">Här kan du testa nya funktioner och Stripe-betalningar i testläge utan att påverka produktionsdata.</p>
+          </div>
+          
+          <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center justify-center">
+            <Link 
+              href="/create-handbook" 
+              className="w-full sm:w-auto text-center py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md text-lg shadow-sm"
+            >
+              Gå till applikationen →
+            </Link>
+            
+            <Link 
+              href="/view" 
+              className="w-full sm:w-auto text-center py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md text-lg shadow-sm"
+            >
+              Öppna handböcker →
+            </Link>
           </div>
           
           <div className="grid md:grid-cols-2 gap-6 mt-8">
@@ -92,6 +120,15 @@ export default function Home() {
                 <div><strong>Domän:</strong> {host}</div>
               </div>
             </div>
+          </div>
+          
+          <div className="mt-8">
+            <p className="text-center text-gray-700 font-semibold">För att alltid gå direkt till applikationen, använd denna adress:</p>
+            <p className="text-center font-mono bg-gray-100 p-2 rounded mt-2">
+              <a href="https://test.handbok.org/create-handbook" className="text-blue-600 hover:underline">
+                https://test.handbok.org/create-handbook
+              </a>
+            </p>
           </div>
         </main>
         

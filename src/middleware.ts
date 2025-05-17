@@ -40,9 +40,16 @@ export default async function middleware(req: NextRequest) {
     return response;
   }
   
-  // Undantag för testdomänen - låt den fungera utan omskrivning
+  // För test.handbok.org, hantera specifika paths
   if (hostname === 'test.handbok.org') {
-    console.log('Test domain detected, skipping rewrite');
+    // Endast visa testsidan på /test-ui eller /
+    if (path === '/' || path === '/test-ui') {
+      // Skicka till testsidan
+      return response;
+    }
+    
+    // För alla andra paths, skicka till huvudapplikationen
+    // Detta gör att /create-handbook, /view, etc. fungerar
     return response;
   }
   
