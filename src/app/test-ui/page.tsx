@@ -40,6 +40,17 @@ export default function TestUI() {
         </div>
         
         <div className="grid md:grid-cols-2 gap-6 mt-8">
+          <div className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+            <h2 className="text-xl font-semibold mb-3">Testa subdomäner</h2>
+            <p className="text-gray-600 mb-4">Testa att skapa nya subdomäner utan att gå via betalningsflödet</p>
+            <Link 
+              href="/test-subdomains" 
+              className="inline-block bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-4 rounded"
+            >
+              Testa subdomäner
+            </Link>
+          </div>
+          
           <div className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
             <h2 className="text-xl font-semibold mb-3">Diagnostikverktyg</h2>
             <p className="text-gray-600 mb-4">Kontrollera resursladdning och konfigurationer</p>
