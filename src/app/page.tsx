@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from 'next/link';
 
 export default function Home() {
   return (
@@ -40,6 +41,15 @@ export default function Home() {
           >
             Read our docs
           </a>
+        </div>
+
+        <div className="mt-6">
+          <Link 
+            href="/view" 
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+          >
+            Öppna Handbok-visaren
+          </Link>
         </div>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
