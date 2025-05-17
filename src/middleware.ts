@@ -40,6 +40,12 @@ export default async function middleware(req: NextRequest) {
     return response;
   }
   
+  // Undantag för testdomänen - låt den fungera utan omskrivning
+  if (hostname === 'test.handbok.org') {
+    console.log('Test domain detected, skipping rewrite');
+    return response;
+  }
+  
   const handbookSubdomainMatch = hostname.match(/^(?<subdomain>[^.]+)\.handbok\.org$/);
   
   if (handbookSubdomainMatch) {
