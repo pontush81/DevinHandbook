@@ -1,8 +1,12 @@
 import { createCheckoutSession } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 
+const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || false;
+
 export async function POST(req: NextRequest) {
   try {
+    console.log(`Stripe Checkout körs i ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
+    
     const { handbookData } = await req.json();
 
     const { name, subdomain } = handbookData;
@@ -18,7 +22,11 @@ export async function POST(req: NextRequest) {
       `${origin}/create-handbook`
     );
 
-    return NextResponse.json({ sessionId, sessionUrl: session.url });
+    return NextResponse.json({ 
+      sessionId, 
+      sessionUrl: session.url,
+      isTestMode
+    });
   } catch (error) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json(

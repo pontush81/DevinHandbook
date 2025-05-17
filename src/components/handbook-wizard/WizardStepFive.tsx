@@ -7,6 +7,7 @@ export function WizardStepFive() {
   const { name, subdomain, template } = useHandbookStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
   
   const handbookData = useMemo(() => ({
     name,
@@ -42,6 +43,9 @@ export function WizardStepFive() {
         throw new Error('Failed to create checkout session');
       }
       
+      // Uppdatera testlägesstatus från API-svaret
+      setIsTestMode(data.isTestMode);
+      
       window.location.href = data.sessionUrl;
     } catch (err: unknown) {
       console.error('Error creating checkout session:', err);
@@ -58,6 +62,11 @@ export function WizardStepFive() {
         <p className="text-gray-500">
           Din handbok är redo att publiceras. Klicka på knappen nedan för att slutföra betalningen.
         </p>
+        {isTestMode === true && (
+          <div className="bg-yellow-100 text-yellow-800 p-2 rounded text-sm mt-2">
+            🧪 Testläge aktivt - ingen faktisk betalning kommer att ske
+          </div>
+        )}
       </div>
       
       <div className="bg-gray-50 p-6 rounded-lg border">
@@ -95,6 +104,13 @@ export function WizardStepFive() {
           Efter betalning kommer din handbok att vara tillgänglig på{" "}
           <span className="font-medium">https://{subdomain}.handbok.org</span>
         </p>
+        
+        {isTestMode === true && (
+          <p className="text-xs bg-yellow-50 p-2 rounded mt-2 text-yellow-700">
+            I testläge kan du använda kortnummer <strong>4242 4242 4242 4242</strong> med valfritt 
+            framtida utgångsdatum, CVC och postnummer för att simulera en lyckad betalning.
+          </p>
+        )}
       </div>
     </div>
   );

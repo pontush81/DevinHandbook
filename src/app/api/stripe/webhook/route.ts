@@ -3,9 +3,12 @@ import { constructEventFromPayload } from '@/lib/stripe';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') || false;
 
 export async function POST(req: NextRequest) {
   try {
+    console.log(`Stripe Webhook körs i ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
+    
     const payload = await req.text();
     const signature = req.headers.get('stripe-signature') || '';
 
