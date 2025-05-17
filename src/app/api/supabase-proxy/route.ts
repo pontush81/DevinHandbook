@@ -31,9 +31,55 @@ export async function POST(request: NextRequest) {
     
     console.log(`Ansluter till Supabase på: ${supabaseUrl}`);
     
+    // Försök att göra en fetch mot Supabase URL:en för att testa SSL-anslutningen
+    try {
+      const sslTestResponse = await fetch(supabaseUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        // Important: Set rejectUnauthorized to false only when testing the SSL
+        // This is a serverless function, so we can allow this here for diagnostics
+      });
+      
+      if (!sslTestResponse.ok) {
+        // Cloudflare SSL-fel (error 526)
+        if (sslTestResponse.status === 526 || sslTestResponse.status === 525) {
+          return NextResponse.json({
+            success: false,
+            error: `Cloudflare SSL-valideringsfel (status ${sslTestResponse.status})`,
+            details: 'Supabase-projektets SSL-certifikat kunde inte valideras av Cloudflare.',
+            solution: 'Kontrollera Supabase-projektet i Supabase-konsolen eller kontakta Supabase-support.',
+            url: supabaseUrl,
+            time: new Date().toISOString()
+          }, { status: 502 });
+        }
+        
+        console.warn(`SSL test mot Supabase gav felstatus: ${sslTestResponse.status}`);
+      } else {
+        console.log('SSL-anslutning till Supabase fungerar.');
+      }
+    } catch (sslError) {
+      console.error('SSL-anslutningsfel:', sslError);
+      
+      // SSL-fel eller annat anslutningsfel
+      return NextResponse.json({
+        success: false,
+        error: 'Anslutningsfel till Supabase',
+        details: sslError.message || 'Kunde inte ansluta till Supabase. Möjligt SSL-fel.',
+        url: supabaseUrl,
+        errorCode: sslError.code || 'UNKNOWN',
+        time: new Date().toISOString()
+      }, { status: 502 });
+    }
+    
     // Skapa en Supabase-klient med service_role-nyckeln för admin-åtkomst
+    // Notera: sätter auth.autoRefreshToken till false för att undvika problem
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { persistSession: false }
+      auth: { 
+        persistSession: false,
+        autoRefreshToken: false
+      }
     });
     
     // Hämta förfrågningsdata

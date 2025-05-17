@@ -26,7 +26,7 @@ export class SupabaseProxyClient {
       try {
         console.log(`[SupabaseProxyClient] Anropar ${this.baseUrl} (försök ${retries + 1}/${this.maxRetries + 1})`);
         
-        const response = await fetch(this.baseUrl, {
+        const fetchOptions = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -37,36 +37,83 @@ export class SupabaseProxyClient {
             params,
           }),
           cache: 'no-store', // Undvik caching problem
-        });
+        };
         
-        if (!response.ok) {
-          const errorData = await response.text();
-          let parsedError;
+        // För att hantera problem med SSL och Cloudflare
+        try {
+          const response = await fetch(this.baseUrl, fetchOptions);
           
-          try {
-            parsedError = JSON.parse(errorData);
-          } catch (e) {
-            parsedError = { message: errorData };
+          if (!response.ok) {
+            const errorData = await response.text();
+            let parsedError;
+            
+            try {
+              parsedError = JSON.parse(errorData);
+            } catch (e) {
+              parsedError = { message: errorData };
+            }
+            
+            throw new Error(`HTTP error ${response.status}: ${parsedError.error || errorData}`, { 
+              cause: parsedError 
+            });
           }
           
-          throw new Error(`HTTP error ${response.status}: ${parsedError.error || errorData}`, { 
-            cause: parsedError 
-          });
+          const result = await response.json();
+          
+          if (result.error) {
+            // Om proxyn returnerar ett fel från Supabase
+            console.warn(`[SupabaseProxyClient] Proxyn returnerade ett fel:`, result.error);
+            
+            // Om det är ett SSL-relaterat fel (Cloudflare)
+            if (typeof result.error === 'string' && 
+                (result.error.includes('526') || 
+                 result.error.includes('SSL') || 
+                 result.error.includes('certificate'))) {
+              
+              console.error('[SupabaseProxyClient] SSL-fel detekterat, detta kan bero på Cloudflare-validering');
+              // Vi fortsätter med retries även för SSL-fel
+              throw new Error('SSL-valideringsfel vid anslutning till Supabase via Cloudflare', {
+                cause: { cloudflareError: true, details: result.error }
+              });
+            }
+            
+            return { data: null, error: result.error };
+          }
+          
+          return { data: result.data, error: null };
+        } catch (fetchError) {
+          // Om det är ett nätverksfel
+          if (fetchError.message.includes('fetch failed')) {
+            console.error('[SupabaseProxyClient] Nätverksfel:', fetchError);
+            // Vi fortsätter med retries
+            throw fetchError;
+          }
+          // Andra fetch-fel kastas vidare
+          throw fetchError;
         }
-        
-        const result = await response.json();
-        
-        if (result.error) {
-          return { data: null, error: result.error };
-        }
-        
-        return { data: result.data, error: null };
       } catch (error) {
         retries++;
+        const waitTime = 500 * Math.pow(2, retries - 1);
+        
         console.error(`[SupabaseProxyClient] Fel vid försök ${retries}/${this.maxRetries + 1}:`, error);
+        console.log(`[SupabaseProxyClient] Väntar ${waitTime}ms innan nästa försök...`);
         
         // Om det är sista försöket, returnera felet
         if (retries > this.maxRetries) {
+          // Särskild hantering för SSL-fel (Cloudflare)
+          if (error.cause?.cloudflareError) {
+            return {
+              data: null, 
+              error: {
+                message: 'Cloudflare SSL-valideringsfel (Error 526)',
+                details: 'Din Supabase-instans har antagligen problem med SSL-certifikatet eller Cloudflare-validering.',
+                solution: 'Kontrollera Supabase-projektets status eller kontakta Supabase-support.',
+                technicalDetails: error.cause,
+                time: new Date().toISOString()
+              }
+            };
+          }
+          
           return {
             data: null, 
             error: {
@@ -78,7 +125,7 @@ export class SupabaseProxyClient {
         }
         
         // Vänta innan nästa försök (exponentiell backoff)
-        await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, retries - 1)));
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
     

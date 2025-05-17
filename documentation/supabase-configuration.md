@@ -42,7 +42,8 @@ Vi har flera verktyg för att felsöka Supabase-anslutningsproblem:
 
 1. **Diagnostiksidan** - Besök `/supabase-test` för en fullständig diagnostikrapport.
 2. **Proxy-testare** - Besök `/proxy-test` för att testa anslutning via serverless-proxyn.
-3. **API-endpoints**:
+3. **SSL-testare** - Besök `/api/test-ssl` för att diagnostisera SSL-relaterade problem med Supabase.
+4. **API-endpoints**:
    - `/api/supabase-diagnosis` - Kör diagnostik på serversidan
    - `/api/test-direct` - Testar direktanslutning från servern
 
@@ -55,6 +56,22 @@ Detta fel uppstår vanligtvis när:
 1. **URL-format** - Supabase URL saknar `https://` prefixet.
 2. **Nätverksproblem** - API-servern kan inte nå Supabase-URL:en.
 3. **Miljövariabelproblem** - Miljövariablerna är inte korrekt konfigurerade i Vercel.
+
+### Cloudflare SSL-fel (Error 526)
+
+Detta är ett vanligt problem när Cloudflare inte kan verifiera SSL-certifikatet för din Supabase-instans.
+
+**Diagnostisera:**
+1. Kör `/api/test-ssl` för att bekräfta problemet
+2. Kontrollera om du ser statuscode 526 i svaret
+
+**Lösningar:**
+1. **Vänta en stund** - Problemet är ofta tillfälligt och löses när Supabase förnyar sitt SSL-certifikat
+2. **Kontrollera projektstatus** - Gå till Supabase-konsolen och verifiera att ditt projekt är aktivt
+3. **Kontakta Supabase-support** - Om problemet kvarstår
+
+**Temporär lösning:**
+Använd SupabaseProxyClient som är konfigurerad att hantera dessa fel bättre än direktanslutningen.
 
 ### Anslutning fungerar lokalt men inte i produktion
 
@@ -78,4 +95,13 @@ Om du får CORS-relaterade fel, kontrollera:
 
 ## Kontinuerlig övervakning
 
-Kör regelbundet `/api/supabase-diagnosis` för att övervaka anslutningen till Supabase och snabbt upptäcka eventuella problem. 
+Kör regelbundet `/api/supabase-diagnosis` för att övervaka anslutningen till Supabase och snabbt upptäcka eventuella problem.
+
+## Supabase Projektunderhåll
+
+Om du upplever återkommande problem med SSL eller anslutningar, kan det bero på att din Supabase-instans behöver underhåll:
+
+1. **Kontrollera projektets status** i Supabase-adminkonsolen
+2. **Pausa och återaktivera projektet** för att åtgärda vissa anslutningsproblem
+3. **Uppdatera projektet** till den senaste versionen om möjligt
+4. **Kontrollera kvoteringsgränser** för att se om du nått någon begränsning 
