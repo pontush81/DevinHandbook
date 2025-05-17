@@ -3,6 +3,7 @@ import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { HandbookTemplate } from '@/lib/templates/handbook-template';
 import { getServiceSupabase, testDatabaseConnection } from '@/lib/supabase';
 import { createDirectClient, testDirectConnection } from '@/lib/direct-db';
+import { createHandbookViaProxy, testProxyConnection } from '@/lib/proxy-db';
 
 export const runtime = 'edge';
 export const preferredRegion = ['arn1']; 
@@ -102,37 +103,48 @@ export async function POST(req: NextRequest) {
   }
   
   try {
-    // Testa databasanslutningen först
-    console.log("[TEST API] Testar databasanslutning...");
-    const connectionTest = await testDatabaseConnection();
+    // Testa alla anslutningsmetoder
+    console.log("[TEST API] Testar databasanslutningar...");
+    const standardConnection = await testDatabaseConnection();
+    let directConnection = null;
+    let proxyConnection = null;
     
     // Om standardanslutningen misslyckades, testa direktanslutning
-    if (!connectionTest.connected) {
+    if (!standardConnection.connected) {
       console.log("[TEST API] Standard databaskoppling misslyckades, testar direktanslutning");
-      const directTest = await testDirectConnection();
+      directConnection = await testDirectConnection();
       
-      if (!directTest.connected) {
-        console.error("[TEST API] Båda anslutningssätten misslyckades:", 
-                    { standard: connectionTest.error, direct: directTest.error });
-        return NextResponse.json({ 
-          error: 'Kunde inte ansluta till databasen med någon metod', 
-          details: {
-            standard: connectionTest.error,
-            direct: directTest.error
-          }
-        }, { 
-          status: 500,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        });
+      // Om direktanslutningen också misslyckades, testa proxyanslutning
+      if (!directConnection.connected) {
+        console.log("[TEST API] Direktanslutning misslyckades, testar proxyanslutning");
+        proxyConnection = await testProxyConnection();
+        
+        if (!proxyConnection.connected) {
+          console.error("[TEST API] Alla anslutningsmetoder misslyckades:", 
+                    { standard: standardConnection.error, direct: directConnection.error, proxy: proxyConnection.error });
+          return NextResponse.json({ 
+            error: 'Kunde inte ansluta till databasen med någon metod', 
+            details: {
+              standard: standardConnection.error,
+              direct: directConnection.error,
+              proxy: proxyConnection ? proxyConnection.error : 'Not tested'
+            }
+          }, { 
+            status: 500,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            }
+          });
+        }
+        
+        console.log("[TEST API] Proxyanslutning OK!");
+      } else {
+        console.log("[TEST API] Direktkoppling OK!");
       }
-      
-      console.log("[TEST API] Direktkoppling OK!");
     } else {
-      console.log("[TEST API] Databaskoppling OK");
+      console.log("[TEST API] Standard databaskoppling OK");
     }
     
     // Verifiera att vi är i testmiljö
@@ -242,15 +254,27 @@ export async function POST(req: NextRequest) {
     try {
       // Skapa handboken med rätt metod baserat på anslutningsförmåga
       let handbookId;
+      let method = 'unknown';
       
-      if (connectionTest.connected) {
+      if (standardConnection.connected) {
         // Använd standard-metoden om den fungerade
         console.log("[TEST API] Anropar createHandbookWithSectionsAndPages (standard)");
         handbookId = await createHandbookWithSectionsAndPages(name, subdomain, testTemplate);
-      } else {
-        // Använd direktmetoden som fallback
-        console.log("[TEST API] Anropar createHandbookDirectly (fallback)");
+        method = 'standard';
+      } else if (directConnection && directConnection.connected) {
+        // Använd direktmetoden som första fallback
+        console.log("[TEST API] Anropar createHandbookDirectly (fallback 1)");
         handbookId = await createHandbookDirectly(name, subdomain, testTemplate);
+        method = 'direct';
+      } else if (proxyConnection && proxyConnection.connected) {
+        // Använd proxymetoden som sista utväg
+        console.log("[TEST API] Anropar createHandbookViaProxy (fallback 2)");
+        handbookId = await createHandbookViaProxy(name, subdomain);
+        // Eftersom vi bara skapar handboken utan sektioner via proxy, logga detta
+        console.log("[TEST API] OBS: Sektioner och sidor skapas inte via proxy-metoden");
+        method = 'proxy';
+      } else {
+        throw new Error("Ingen fungerande anslutningsmetod hittades, vilket borde ha fångats tidigare");
       }
       
       console.log("[TEST API] Handbok skapad, ID:", handbookId);
@@ -262,7 +286,7 @@ export async function POST(req: NextRequest) {
         name,
         subdomain,
         url: `https://${subdomain}.handbok.org`,
-        method: connectionTest.connected ? 'standard' : 'direct'
+        method
       }, {
         headers: {
           'Access-Control-Allow-Origin': '*',
