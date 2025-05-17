@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase, testDatabaseConnection } from '@/lib/supabase';
 
 export const runtime = 'edge';
-export const preferredRegion = ['arn1', 'waw1']; // Lägg till regioner för bättre prestanda
+export const preferredRegion = ['arn1']; // Stockholm region
 
 async function checkHandbookExists(subdomain: string) {
   try {
