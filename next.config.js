@@ -26,22 +26,10 @@ const nextConfig = {
     return [];
   },
   
-  // Redirects för test-subdomän i både produktion och staging
+  // Redirects för dev-subdomäner i staging
   async redirects() {
     return [
-      // För produktion: test.handbok.org -> www.handbok.org (direkt)
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'test.handbok.org',
-          },
-        ],
-        destination: 'https://www.handbok.org',
-        permanent: false,
-      },
-      // För staging: test.dev.handbok.org -> dev.handbok.org
+      // För staging: test.dev.handbok.org -> dev.handbok.org/handbook/test
       {
         source: '/:path*',
         has: [
@@ -50,7 +38,7 @@ const nextConfig = {
             value: 'test.dev.handbok.org',
           },
         ],
-        destination: 'https://dev.handbok.org',
+        destination: 'https://dev.handbok.org/handbook/test',
         permanent: false,
       }
     ];

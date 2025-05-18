@@ -11,7 +11,7 @@
   <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
   <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin">
   
-  <!-- Direkt meta refresh för test.handbok.org -->
+  <!-- Direkt meta refresh för alla subdomäner -->
   <script>
     (function() {
       const hostname = window.location.hostname;
@@ -23,23 +23,13 @@
         
         const subdomain = hostname.split('.')[0];
         
-        // Specialhantering för test.handbok.org
-        if (subdomain === 'test') {
-          const metaRefresh = document.createElement('meta');
-          metaRefresh.httpEquiv = 'refresh';
-          metaRefresh.content = '0;url=https://www.handbok.org/';
-          document.head.appendChild(metaRefresh);
-          
-          console.log('Meta refresh satt för test: till huvudsidan');
-        } else {
-          // För övriga subdomäner
-          const metaRefresh = document.createElement('meta');
-          metaRefresh.httpEquiv = 'refresh';
-          metaRefresh.content = '0;url=https://www.handbok.org/handbook/' + subdomain;
-          document.head.appendChild(metaRefresh);
-          
-          console.log('Meta refresh satt för: ' + subdomain);
-        }
+        // För alla subdomäner
+        const metaRefresh = document.createElement('meta');
+        metaRefresh.httpEquiv = 'refresh';
+        metaRefresh.content = '0;url=https://www.handbok.org/handbook/' + subdomain;
+        document.head.appendChild(metaRefresh);
+        
+        console.log('Meta refresh satt för: ' + subdomain);
       }
     })();
   </script>
@@ -105,34 +95,20 @@
         
         const subdomain = hostname.split('.')[0];
         
-        // Specialhantering för test.handbok.org
-        if (subdomain === 'test') {
-          const redirectUrl = 'https://www.handbok.org/';
-          
-          // Uppdatera UI med test-information
-          document.getElementById('title').textContent = 'TEST';
-          document.getElementById('message').textContent = 'Omdirigerar till Handbok.org där du kan skapa en handbok...';
-          document.getElementById('manual-link').href = redirectUrl;
-          document.getElementById('manual-link').textContent = 'Gå till Handbok.org';
-          
-          // Direkt omdirigering
-          window.location.href = redirectUrl;
-        } else {
-          // För övriga subdomäner
-          const redirectUrl = 'https://www.handbok.org/handbook/' + subdomain;
-          
-          // Uppdatera UI med subdomän-information
-          document.getElementById('title').textContent = subdomain.toUpperCase();
-          document.getElementById('message').textContent = 'Omdirigerar till ' + subdomain + ' handbok...';
-          document.getElementById('manual-link').href = redirectUrl;
-          document.getElementById('manual-link').textContent = 'Öppna ' + subdomain + ' handbok';
-          
-          // Direkt omdirigering
-          window.location.href = redirectUrl;
-        }
+        // För alla subdomäner
+        const redirectUrl = 'https://www.handbok.org/handbook/' + subdomain;
+        
+        // Uppdatera UI med subdomän-information
+        document.getElementById('title').textContent = subdomain.toUpperCase();
+        document.getElementById('message').textContent = 'Omdirigerar till ' + subdomain + ' handbok...';
+        document.getElementById('manual-link').href = redirectUrl;
+        document.getElementById('manual-link').textContent = 'Öppna ' + subdomain + ' handbok';
+        
+        // Direkt omdirigering
+        window.location.href = redirectUrl;
       } else {
         // På huvuddomänen
-        window.location.href = 'https://handbok.org/';
+        window.location.href = 'https://www.handbok.org/';
       }
     })();
   </script>

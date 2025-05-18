@@ -17,7 +17,9 @@
   
   // 1. Omdirigera direkt till huvuddomänen
   const subdomain = hostname.split('.')[0];
-  window.location.href = 'https://handbok.org/handbook/' + subdomain;
+  
+  // För alla subdomäner - gå till handboken
+  window.location.href = 'https://www.handbok.org/handbook/' + subdomain;
   
   // 2. Fixa font-fel om omdirigering misslyckas
   document.addEventListener('DOMContentLoaded', function() {

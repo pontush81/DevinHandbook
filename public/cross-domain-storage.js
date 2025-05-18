@@ -12,9 +12,9 @@
       currentDomain !== 'www.handbok.org' && 
       currentDomain !== 'handbok.org') {
     
-    // Omdirigera till huvuddomänen med subdomänen som parameter
+    // Hämta subdomänen och omdirigera till handboken
     const subdomain = currentDomain.split('.')[0];
-    window.location.href = 'https://handbok.org/handbook/' + subdomain;
+    window.location.href = 'https://www.handbok.org/handbook/' + subdomain;
     return;
   }
   

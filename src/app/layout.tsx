@@ -60,14 +60,11 @@ export default function RootLayout({
                 const parts = currentDomain.split('.');
                 const subdomain = parts[0];
                 
-                // Skippa redirects för test-subdomäner (både i produktion och staging)
-                if (subdomain === 'test') return;
-                
                 // Bestäm måldomän baserat på om vi är på staging (dev.handbok.org) eller produktion
                 const isStaging = currentDomain.includes('dev.handbok.org');
                 const targetDomain = isStaging ? 'https://dev.handbok.org' : 'https://www.handbok.org';
                 
-                // För övriga subdomäner, dirigera till {domän}/handbook/{subdomain}
+                // För subdomäner, dirigera till {domän}/handbook/{subdomain}
                 window.location.href = targetDomain + '/handbook/' + subdomain;
               }
             })();

@@ -11,6 +11,8 @@
        currentDomain !== 'handbok.org') {
     
     const subdomain = currentDomain.split('.')[0];
-    window.location.href = 'https://handbok.org/handbook/' + subdomain;
+    
+    // För alla subdomäner - gå till handboken
+    window.location.href = 'https://www.handbok.org/handbook/' + subdomain;
   }
 })(); 
