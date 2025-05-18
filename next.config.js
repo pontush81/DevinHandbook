@@ -29,7 +29,7 @@ const nextConfig = {
   // Redirects för test-subdomän i både produktion och staging
   async redirects() {
     return [
-      // För produktion: test.handbok.org -> handbok.org
+      // För produktion: test.handbok.org -> www.handbok.org (direkt)
       {
         source: '/:path*',
         has: [
@@ -38,7 +38,7 @@ const nextConfig = {
             value: 'test.handbok.org',
           },
         ],
-        destination: 'https://handbok.org',
+        destination: 'https://www.handbok.org',
         permanent: false,
       },
       // För staging: test.dev.handbok.org -> dev.handbok.org

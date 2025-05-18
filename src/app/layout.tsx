@@ -65,7 +65,7 @@ export default function RootLayout({
                 
                 // Bestäm måldomän baserat på om vi är på staging (dev.handbok.org) eller produktion
                 const isStaging = currentDomain.includes('dev.handbok.org');
-                const targetDomain = isStaging ? 'https://dev.handbok.org' : 'https://handbok.org';
+                const targetDomain = isStaging ? 'https://dev.handbok.org' : 'https://www.handbok.org';
                 
                 // För övriga subdomäner, dirigera till {domän}/handbook/{subdomain}
                 window.location.href = targetDomain + '/handbook/' + subdomain;

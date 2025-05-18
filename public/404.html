@@ -27,7 +27,7 @@
         if (subdomain === 'test') {
           const metaRefresh = document.createElement('meta');
           metaRefresh.httpEquiv = 'refresh';
-          metaRefresh.content = '0;url=https://handbok.org/';
+          metaRefresh.content = '0;url=https://www.handbok.org/';
           document.head.appendChild(metaRefresh);
           
           console.log('Meta refresh satt för test: till huvudsidan');
@@ -35,7 +35,7 @@
           // För övriga subdomäner
           const metaRefresh = document.createElement('meta');
           metaRefresh.httpEquiv = 'refresh';
-          metaRefresh.content = '0;url=https://handbok.org/handbook/' + subdomain;
+          metaRefresh.content = '0;url=https://www.handbok.org/handbook/' + subdomain;
           document.head.appendChild(metaRefresh);
           
           console.log('Meta refresh satt för: ' + subdomain);
@@ -107,7 +107,7 @@
         
         // Specialhantering för test.handbok.org
         if (subdomain === 'test') {
-          const redirectUrl = 'https://handbok.org/';
+          const redirectUrl = 'https://www.handbok.org/';
           
           // Uppdatera UI med test-information
           document.getElementById('title').textContent = 'TEST';
@@ -119,7 +119,7 @@
           window.location.href = redirectUrl;
         } else {
           // För övriga subdomäner
-          const redirectUrl = 'https://handbok.org/handbook/' + subdomain;
+          const redirectUrl = 'https://www.handbok.org/handbook/' + subdomain;
           
           // Uppdatera UI med subdomän-information
           document.getElementById('title').textContent = subdomain.toUpperCase();
