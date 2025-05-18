@@ -1,330 +1,317 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CORS Diagnostik - Handbok.org</title>
+  <title>Handbok.org Subdomain Debug</title>
   <style>
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      line-height: 1.5;
-      margin: 0;
-      padding: 20px;
-      color: #333;
-      background-color: #f5f5f5;
-    }
-    .container {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
       max-width: 800px;
       margin: 0 auto;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       padding: 20px;
+      color: #333;
     }
     h1 {
-      margin-top: 0;
-      border-bottom: 1px solid #eee;
+      border-bottom: 2px solid #eee;
       padding-bottom: 10px;
+      margin-bottom: 20px;
     }
-    h2 {
-      margin-top: 1.5em;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
     }
-    .test-section {
-      margin: 1em 0;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    .test-result {
-      margin-top: 10px;
+    th, td {
       padding: 10px;
-      border-radius: 4px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f8f8f8;
     }
     .success {
-      background-color: #d4edda;
-      color: #155724;
-    }
-    .error {
-      background-color: #f8d7da;
-      color: #721c24;
-    }
-    .button {
-      background-color: #0070f3;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    .button:hover {
-      background-color: #0051a8;
-    }
-    pre {
-      background: #f8f8f8;
-      padding: 10px;
-      border-radius: 4px;
-      overflow-x: auto;
-    }
-    .status {
+      color: green;
       font-weight: bold;
     }
-    .fix-button {
-      background-color: #38a169;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 10px;
+    .error {
+      color: red;
+      font-weight: bold;
     }
-    .fix-button:hover {
-      background-color: #2f855a;
-    }
-    .info {
-      background-color: #e9f5fe;
-      border-left: 4px solid #3182ce;
+    .status-box {
       padding: 10px;
       margin: 10px 0;
+      border-radius: 4px;
+    }
+    .status-success {
+      background-color: #e7f7e7;
+      border: 1px solid #c3e6c3;
+    }
+    .status-error {
+      background-color: #f7e7e7;
+      border: 1px solid #e6c3c3;
+    }
+    .resource-test {
+      margin-bottom: 20px;
+    }
+    .test-result {
+      font-weight: bold;
+    }
+    .test-details {
+      font-size: 0.9em;
+      margin-top: 5px;
+      color: #666;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>CORS Diagnostik - Handbok.org</h1>
+  <h1>Handbok.org Subdomain Debug</h1>
+  
+  <div id="hostname-info">
+    <h2>Request Information</h2>
+    <p>Current hostname: <strong id="current-hostname">Loading...</strong></p>
+    <p>Is subdomain: <strong id="is-subdomain">Checking...</strong></p>
+    <p>Path: <strong id="current-path">Loading...</strong></p>
+  </div>
+
+  <div id="resource-tests">
+    <h2>Resource Loading Tests</h2>
     
-    <div class="info">
-      <p>Detta verktyg hjälper till att diagnostisera och åtgärda CORS-relaterade problem som kan uppstå på subdomäner.</p>
-      <p>Subdomän: <span id="current-subdomain">Identifierar...</span></p>
-    </div>
-    
-    <h2>Resurstester</h2>
-    
-    <div class="test-section">
-      <h3>JSON Test</h3>
-      <button id="test-json" class="button">Kör test</button>
-      <div id="json-result" class="test-result"></div>
-    </div>
-    
-    <div class="test-section">
-      <h3>CSS Test</h3>
-      <button id="test-css" class="button">Kör test</button>
-      <div id="css-result" class="test-result"></div>
-    </div>
-    
-    <div class="test-section">
-      <h3>API Proxy Test</h3>
-      <button id="test-api-proxy" class="button">Kör test</button>
-      <div id="api-proxy-result" class="test-result"></div>
-    </div>
-    
-    <div id="fix-section" style="margin-top: 30px; display: none;">
-      <h2>Åtgärda problem</h2>
-      <p>Vi har identifierat potentiella CORS-problem. Klicka på knappen nedan för att försöka åtgärda dem:</p>
-      <button id="apply-fix" class="fix-button">Åtgärda CORS-problem</button>
-      <div id="fix-result" class="test-result"></div>
-    </div>
-    
-    <div style="margin-top: 30px;">
-      <h2>Navigering</h2>
-      <div style="display: flex; gap: 10px;">
-        <a href="/" class="button" style="text-decoration: none;">Tillbaka till startsidan</a>
-        <a href="javascript:window.location.reload()" class="button" style="background-color: #6b7280; text-decoration: none;">Ladda om sidan</a>
+    <div class="resource-test">
+      <h3>CSS Loading Test</h3>
+      <div id="css-test-result" class="test-result">Testing...</div>
+      <div class="test-details">
+        Attempts to load a small CSS file from _next/static/css/ to verify CSS resource loading.
       </div>
+    </div>
+    
+    <div class="resource-test">
+      <h3>JavaScript Loading Test</h3>
+      <div id="js-test-result" class="test-result">Testing...</div>
+      <div class="test-details">
+        Attempts to load a small JavaScript file from _next/static/chunks/ to verify JS resource loading.
+      </div>
+    </div>
+    
+    <div class="resource-test">
+      <h3>CORS Headers Test</h3>
+      <div id="cors-test-result" class="test-result">Testing...</div>
+      <div class="test-details">
+        Checks if proper CORS headers are set on static resources.
+      </div>
+    </div>
+  </div>
+  
+  <div id="rewrite-tests">
+    <h2>Rewrite Configuration Tests</h2>
+    
+    <div class="resource-test">
+      <h3>API Endpoint Test</h3>
+      <div id="api-test-result" class="test-result">Testing...</div>
+      <div class="test-details">
+        Tests if API endpoints are accessible through the subdomain.
+      </div>
+    </div>
+    
+    <div class="resource-test">
+      <h3>Subdomain Rewrite Test</h3>
+      <div id="rewrite-test-result" class="test-result">Testing...</div>
+      <div class="test-details">
+        Checks if subdomain rewrites are working as expected.
+      </div>
+    </div>
+  </div>
+  
+  <div id="recommendations">
+    <h2>Recommendations</h2>
+    <div id="recommendation-content">
+      Analyzing results...
     </div>
   </div>
 
   <script>
-    // Identifiera subdomän
-    function identifySubdomain() {
+    // Populate basic information
+    document.addEventListener('DOMContentLoaded', function() {
       const hostname = window.location.hostname;
-      const subdomainElement = document.getElementById('current-subdomain');
+      const path = window.location.pathname;
+      const isSubdomain = hostname.split('.').length > 2 && !hostname.startsWith('www');
       
-      if (hostname === 'localhost') {
-        subdomainElement.textContent = 'localhost (utveckling)';
-      } else if (hostname.includes('vercel.app')) {
-        subdomainElement.textContent = hostname + ' (Vercel)';
-      } else if (hostname === 'handbok.org' || hostname === 'www.handbok.org') {
-        subdomainElement.textContent = hostname + ' (huvuddomän)';
-      } else if (hostname.endsWith('.handbok.org')) {
-        const subdomain = hostname.split('.')[0];
-        subdomainElement.textContent = subdomain + ' (subdomän)';
-        
-        // Visa fixsektion på subdomäner
-        document.getElementById('fix-section').style.display = 'block';
-      } else {
-        subdomainElement.textContent = hostname + ' (okänd)';
-      }
-    }
-    
-    // Test JSON endpoint
-    async function testJson() {
-      const resultElement = document.getElementById('json-result');
-      resultElement.innerHTML = '<p>Testar JSON endpoint...</p>';
-      resultElement.className = 'test-result';
+      document.getElementById('current-hostname').textContent = hostname;
+      document.getElementById('is-subdomain').textContent = isSubdomain ? 'Yes' : 'No';
+      document.getElementById('current-path').textContent = path;
       
-      try {
-        const response = await fetch('/api/diagnosis');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        resultElement.innerHTML = '<p class="status">JSON Test Successful</p><pre>' + 
-          JSON.stringify(data, null, 2) + '</pre>';
-        resultElement.className = 'test-result success';
-      } catch (error) {
-        resultElement.innerHTML = '<p class="status">JSON Test Failed</p><p>Error: ' + 
-          error.message + '</p>';
-        resultElement.className = 'test-result error';
-      }
-    }
-    
-    // Test CSS loading
-    function testCss() {
-      const resultElement = document.getElementById('css-result');
-      resultElement.innerHTML = '<p>Testar CSS-laddning...</p>';
-      resultElement.className = 'test-result';
+      // Test CSS loading
+      testResourceLoading(
+        '/_next/static/css/test-resource.css', 
+        'CSS', 
+        'css-test-result'
+      );
       
-      // Create a test element
-      const testElement = document.createElement('div');
-      testElement.className = 'testElement';
-      testElement.textContent = 'Test Element';
-      document.body.appendChild(testElement);
+      // Test JS loading
+      testResourceLoading(
+        '/_next/static/chunks/test-resource.js', 
+        'JavaScript', 
+        'js-test-result'
+      );
       
-      // Try to load a CSS file
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = '/_next/static/css/test.css';
+      // Test CORS
+      testCORSHeaders('cors-test-result');
       
-      // Add success/error handlers
-      link.onload = () => {
-        resultElement.innerHTML = '<p class="status">CSS Test Successful</p>' +
-          '<p>CSS-filen laddades utan problem.</p>';
-        resultElement.className = 'test-result success';
-      };
+      // Test API endpoint
+      testAPIEndpoint('api-test-result');
       
-      link.onerror = () => {
-        resultElement.innerHTML = '<p class="status">CSS Test Failed</p>' +
-          '<p>Error: Failed to load CSS</p>';
-        resultElement.className = 'test-result error';
-      };
-      
-      document.head.appendChild(link);
-      
-      // Set timeout in case neither event fires
-      setTimeout(() => {
-        // Check if the test element got styled
-        const testElementStyle = window.getComputedStyle(testElement);
-        if (testElementStyle.backgroundColor === 'rgb(240, 240, 240)') {
-          resultElement.innerHTML = '<p class="status">CSS Test Successful</p>' +
-            '<p>CSS laddades och tillämpades korrekt.</p>';
-          resultElement.className = 'test-result success';
-        } else if (resultElement.className !== 'test-result success') {
-          resultElement.innerHTML = '<p class="status">CSS Test Failed</p>' +
-            '<p>Error: CSS laddades inte eller tillämpades inte.</p>';
-          resultElement.className = 'test-result error';
-        }
-        
-        // Clean up
-        document.body.removeChild(testElement);
-      }, 2000);
-    }
-    
-    // Test API proxy
-    async function testApiProxy() {
-      const resultElement = document.getElementById('api-proxy-result');
-      resultElement.innerHTML = '<p>Testar API proxy...</p>';
-      resultElement.className = 'test-result';
-      
-      try {
-        // Try to load a CSS file through the proxy
-        const cssUrl = '/_next/static/css/bb2534fb94d47e9a.css';
-        const proxyUrl = `/api/resources?path=${encodeURIComponent(cssUrl)}`;
-        
-        const response = await fetch(proxyUrl);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}`);
-        }
-        
-        // Check if the content is CSS
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('text/css')) {
-          resultElement.innerHTML = '<p class="status">API Proxy Test Successful</p>' +
-            '<p>Proxy-endpointen fungerar korrekt för statiska resurser.</p>';
-          resultElement.className = 'test-result success';
-        } else {
-          resultElement.innerHTML = '<p class="status">API Proxy Test Warning</p>' +
-            '<p>Proxy svarade med oväntad Content-Type: ' + contentType + '</p>';
-          resultElement.className = 'test-result warning';
-        }
-      } catch (error) {
-        const errorHtml = `
-            <p class="status">API Proxy Test Failed</p>
-            <p>Error: ${error.message}</p>
-            <p>URL: https://${window.location.hostname}/api/resources?path=/_next/static/css/bb2534fb94d47e9a.css</p>
-            <p>Proxy endpoint might not be deployed yet or is not functioning correctly.</p>
-          `;
-        resultElement.innerHTML = errorHtml;
-        resultElement.className = 'test-result error';
-      }
-    }
-    
-    // Apply fix
-    function applyFix() {
-      const resultElement = document.getElementById('fix-result');
-      resultElement.innerHTML = '<p>Tillämpar CORS-fix...</p>';
-      resultElement.className = 'test-result';
-      
-      try {
-        // Add the static resource fix script
-        const script = document.createElement('script');
-        script.src = '/static-resource-fix.js';
-        script.onload = () => {
-          resultElement.innerHTML = `
-          <p class="status">Direct Fix Applied</p>
-          <p>
-          - Overridden fetch to redirect through proxy
-          - Fixed existing script/link tags
-          - Set up MutationObserver for new elements
-          </p>
-          <p>Now try loading the main site again in a new tab. The CORS errors should be fixed.</p>
-          `;
-          resultElement.className = 'test-result success';
-        };
-        
-        script.onerror = () => {
-          resultElement.innerHTML = `
-          <p class="status">Fix Failed</p>
-          <p>Error: Could not load static-resource-fix.js</p>
-          <p>Try refreshing the page or contacting support.</p>
-          `;
-          resultElement.className = 'test-result error';
-        };
-        
-        document.head.appendChild(script);
-      } catch (error) {
-        resultElement.innerHTML = `
-        <p class="status">Fix Failed</p>
-        <p>Error: ${error.message}</p>
-        `;
-        resultElement.className = 'test-result error';
-      }
-    }
-    
-    // Set up event listeners
-    document.addEventListener('DOMContentLoaded', () => {
-      identifySubdomain();
-      
-      document.getElementById('test-json').addEventListener('click', testJson);
-      document.getElementById('test-css').addEventListener('click', testCss);
-      document.getElementById('test-api-proxy').addEventListener('click', testApiProxy);
-      document.getElementById('apply-fix').addEventListener('click', applyFix);
+      // Test subdomain rewrite
+      testSubdomainRewrite('rewrite-test-result');
     });
+    
+    function testResourceLoading(resourcePath, resourceType, resultElementId) {
+      const resultElement = document.getElementById(resultElementId);
+      
+      fetch(`https://handbok.org${resourcePath}`, {
+        method: 'HEAD',
+        mode: 'cors'
+      })
+      .then(response => {
+        if (response.ok) {
+          resultElement.className = 'test-result success';
+          resultElement.innerHTML = `✅ ${resourceType} resources accessible`;
+        } else {
+          resultElement.className = 'test-result error';
+          resultElement.innerHTML = `❌ ${resourceType} resources not accessible (Status: ${response.status})`;
+        }
+      })
+      .catch(error => {
+        resultElement.className = 'test-result error';
+        resultElement.innerHTML = `❌ ${resourceType} resources error: ${error.message}`;
+      });
+    }
+    
+    function testCORSHeaders(resultElementId) {
+      const resultElement = document.getElementById(resultElementId);
+      
+      fetch('https://handbok.org/_next/static/test-cors.txt', {
+        method: 'HEAD',
+        mode: 'cors'
+      })
+      .then(response => {
+        const corsHeader = response.headers.get('Access-Control-Allow-Origin');
+        
+        if (corsHeader) {
+          resultElement.className = 'test-result success';
+          resultElement.innerHTML = `✅ CORS headers correctly set (${corsHeader})`;
+        } else {
+          resultElement.className = 'test-result error';
+          resultElement.innerHTML = `❌ CORS headers missing`;
+        }
+      })
+      .catch(error => {
+        resultElement.className = 'test-result error';
+        resultElement.innerHTML = `❌ CORS test error: ${error.message}`;
+      });
+    }
+    
+    function testAPIEndpoint(resultElementId) {
+      const resultElement = document.getElementById(resultElementId);
+      
+      fetch('/api/subdomain-test')
+      .then(response => response.json())
+      .then(data => {
+        resultElement.className = 'test-result success';
+        resultElement.innerHTML = `✅ API endpoint accessible (subdomain: ${data.request?.subdomain || 'unknown'})`;
+      })
+      .catch(error => {
+        resultElement.className = 'test-result error';
+        resultElement.innerHTML = `❌ API endpoint error: ${error.message}`;
+      });
+    }
+    
+    function testSubdomainRewrite(resultElementId) {
+      const resultElement = document.getElementById(resultElementId);
+      const hostname = window.location.hostname;
+      const isSubdomain = hostname.split('.').length > 2 && !hostname.startsWith('www');
+      
+      if (!isSubdomain) {
+        resultElement.className = 'test-result';
+        resultElement.innerHTML = `ℹ️ Not testing on a subdomain`;
+        return;
+      }
+      
+      fetch('/api/subdomain-test')
+      .then(response => response.json())
+      .then(data => {
+        if (data.middleware?.rewrite) {
+          resultElement.className = 'test-result success';
+          resultElement.innerHTML = `✅ Subdomain rewrite working (${data.middleware.rewrite})`;
+        } else {
+          resultElement.className = 'test-result error';
+          resultElement.innerHTML = `❌ Subdomain rewrite not detected`;
+        }
+      })
+      .catch(error => {
+        resultElement.className = 'test-result error';
+        resultElement.innerHTML = `❌ Rewrite test error: ${error.message}`;
+      });
+    }
+    
+    // Generate recommendations based on test results
+    setTimeout(() => {
+      const recommendations = [];
+      const testResults = document.querySelectorAll('.test-result');
+      let hasErrors = false;
+      
+      testResults.forEach(element => {
+        if (element.classList.contains('error')) {
+          hasErrors = true;
+        }
+      });
+      
+      if (hasErrors) {
+        recommendations.push('<div class="status-box status-error">There are issues with your subdomain configuration.</div>');
+        
+        if (document.getElementById('css-test-result').classList.contains('error') || 
+            document.getElementById('js-test-result').classList.contains('error')) {
+          recommendations.push(`
+            <p><strong>Static Resource Issues:</strong></p>
+            <ul>
+              <li>Check your <code>next.config.js</code> rewrite rules for <code>/_next/static/</code> paths</li>
+              <li>Ensure CORS headers are properly set</li>
+              <li>Verify your DNS configuration for the wildcard domain</li>
+            </ul>
+          `);
+        }
+        
+        if (document.getElementById('api-test-result').classList.contains('error')) {
+          recommendations.push(`
+            <p><strong>API Issues:</strong></p>
+            <ul>
+              <li>Check your <code>next.config.js</code> rewrite rules for <code>/api/</code> paths</li>
+              <li>Verify API routes are accepting requests from subdomains</li>
+            </ul>
+          `);
+        }
+        
+        if (document.getElementById('rewrite-test-result').classList.contains('error')) {
+          recommendations.push(`
+            <p><strong>Rewrite Issues:</strong></p>
+            <ul>
+              <li>Check your <code>next.config.js</code> rewrite configuration</li>
+              <li>Verify that <code>beforeFiles</code> rewrites are configured correctly</li>
+            </ul>
+          `);
+        }
+      } else {
+        recommendations.push('<div class="status-box status-success">All tests passed! Your subdomain configuration appears to be working correctly.</div>');
+      }
+      
+      document.getElementById('recommendation-content').innerHTML = recommendations.join('');
+    }, 3000);
   </script>
 </body>
 </html> 

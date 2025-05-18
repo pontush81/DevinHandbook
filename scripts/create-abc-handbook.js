@@ -33,17 +33,18 @@ async function createAbcHandbook() {
     const { data: existingHandbook, error: checkError } = await supabase
       .from('handbooks')
       .select('id, title')
-      .eq('subdomain', subdomain);
+      .eq('subdomain', subdomain)
+      .single();
       
-    if (checkError) {
+    if (checkError && checkError.code !== 'PGRST116') {
       console.error('❌ Error checking for existing handbook:', checkError.message);
       return;
     }
     
-    if (existingHandbook && existingHandbook.length > 0) {
+    if (existingHandbook) {
       console.log('ℹ️ A handbook with this subdomain already exists:');
-      console.log(`   ID: ${existingHandbook[0].id}`);
-      console.log(`   Title: ${existingHandbook[0].title}`);
+      console.log(`   ID: ${existingHandbook.id}`);
+      console.log(`   Title: ${existingHandbook.title}`);
       console.log(`   URL: https://${subdomain}.handbok.org`);
       return;
     }
@@ -76,7 +77,7 @@ async function createAbcHandbook() {
       .insert({
         title: 'Welcome',
         description: 'Welcome to this handbook',
-        order: 0,
+        order_index: 0,
         handbook_id: handbook.id
       })
       .select()
@@ -97,8 +98,9 @@ async function createAbcHandbook() {
       .insert({
         title: 'Welcome',
         content: `# Welcome to ${title}\n\nThis is the start page for your handbook. You can access this handbook at https://${subdomain}.handbok.org.`,
-        order: 0,
-        section_id: section.id
+        order_index: 0,
+        section_id: section.id,
+        slug: 'welcome'
       })
       .select()
       .single();

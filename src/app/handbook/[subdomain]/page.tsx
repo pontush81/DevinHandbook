@@ -1,5 +1,4 @@
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
-import { notFound } from 'next/navigation';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
@@ -20,17 +19,18 @@ interface Page {
   section_id: string;
 }
 
-// Temporärt inaktivera revalidering och statiska parametrar
-// export const revalidate = 180;
-// export async function generateStaticParams() {
-//   return [];
-// }
+// Se till att denna sida renderas dynamiskt för att hantera subdomäner korrekt
+export const dynamic = 'force-dynamic';
 
-export default async function HandbookPage({
-  params,
-}: {
-  params: { subdomain: string };
-}) {
+type PageParams = {
+  subdomain: string;
+};
+
+type Props = {
+  params: PageParams;
+};
+
+export default async function HandbookPage({ params }: Props) {
   // Försök hämta handbook, men med extra felhantering för att undvika redirects
   let handbook = null;
   try {

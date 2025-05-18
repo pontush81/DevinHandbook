@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Inaktiverar middleware genom att inte matcha några sökvägar
 export const config = {
-  matcher: [], // Inaktivera alla matcher för att middleware inte ska köras
+  matcher: [], // Tom array betyder att middleware inte körs
 };
 
 export default async function middleware(req: NextRequest) {
