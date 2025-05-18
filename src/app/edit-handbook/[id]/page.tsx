@@ -1,7 +1,11 @@
-"use server";
+"use client";
 
+import { useParams } from 'next/navigation';
 import EditHandbookClient from "./client";
 
-export default async function EditHandbookPage({ params }: { params: { id: string } }) {
-  return <EditHandbookClient id={params.id} />;
+export default function EditHandbookPage() {
+  const params = useParams();
+  const id = params.id as string;
+  
+  return <EditHandbookClient id={id} />;
 }

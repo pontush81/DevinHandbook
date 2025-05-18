@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { FileUploader } from "@/components/file-upload/FileUploader";
+import FileUploader from "@/components/file-upload/FileUploader";
 import ReactMarkdown from "react-markdown";
 
 interface Handbook {

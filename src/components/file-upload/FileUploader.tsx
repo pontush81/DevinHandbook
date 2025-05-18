@@ -9,7 +9,7 @@ interface FileUploaderProps {
   onUploadComplete: (filePath: string, fileName: string) => void;
 }
 
-export function FileUploader({ handbookId, sectionId, onUploadComplete }: FileUploaderProps) {
+export default function FileUploader({ handbookId, sectionId, onUploadComplete }: FileUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
