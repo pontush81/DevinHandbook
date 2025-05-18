@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function HomePage() {
   const router = useRouter();
   const [subdomain, setSubdomain] = useState<string | null>(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [currentSubdomain, setCurrentSubdomain] = useState<string | null>(null);
 
   useEffect(() => {
     // Kontrollera om användaren kommer från en subdomän
@@ -20,39 +20,37 @@ export default function HomePage() {
       const parts = hostname.split('.');
       if (parts.length >= 3) {
         const extractedSubdomain = parts[0];
-        setSubdomain(extractedSubdomain);
-        // Omdirigera till view-sidan
-        setIsRedirecting(true);
-        router.push(`/view?company=${extractedSubdomain}`);
+        setCurrentSubdomain(extractedSubdomain);
+        
+        // Vi sparar subdomänen men redirectar INTE längre
+        // Detta gör att vi kan visa en anpassad startsida för varje subdomän
       }
     }
-  }, [router]);
+  }, []);
 
-  if (isRedirecting && subdomain) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <h1 className="text-2xl font-bold mb-4">Omdirigerar...</h1>
-        <p className="text-gray-500">Du tas till handboken för {subdomain}.</p>
-        <div className="mt-4 bg-blue-50 p-4 rounded-md">
-          <p className="text-sm text-blue-700">
-            Om du inte omdirigeras automatiskt, 
-            <a href={`/view?company=${subdomain}`} className="underline ml-1">
-              klicka här
-            </a>
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Anpassa rubriken baserat på subdomän
+  const getTitle = () => {
+    if (currentSubdomain) {
+      return `Välkommen till ${currentSubdomain.toUpperCase()}`;
+    }
+    return "Välkommen till Handbok.org";
+  };
+
+  const getSubtitle = () => {
+    if (currentSubdomain) {
+      return `Skapa en digital handbok för ${currentSubdomain}`;
+    }
+    return "Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.";
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
       <div className="max-w-2xl w-full bg-white p-8 rounded-lg shadow-sm">
         <h1 className="text-3xl font-bold mb-6">
-          Välkommen till Handbok.org
+          {getTitle()}
         </h1>
         <p className="text-gray-600 mb-8">
-          Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.
+          {getSubtitle()}
         </p>
         
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
