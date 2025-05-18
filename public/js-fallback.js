@@ -10,6 +10,24 @@
   // Bestäm om vi är i staging eller produktion
   const isStaging = hostname.includes('staging.handbok.org');
   
+  // Handle special case for test.*.handbok.org subdomains
+  if (hostname.startsWith('test.') && (
+      hostname.endsWith('.handbok.org') || 
+      hostname.endsWith('.staging.handbok.org')
+  )) {
+    // Extract actual subdomain (format: test.subdomain.handbok.org -> subdomain)
+    const parts = hostname.split('.');
+    // For test.subdomain.handbok.org, the actual subdomain is parts[1]
+    const subdomain = parts[1];
+    
+    // Bestäm måldomän baserat på miljö
+    const targetDomain = isStaging ? 'https://staging.handbok.org' : 'https://www.handbok.org';
+    
+    // Redirect to the handbook with the correct path
+    window.location.href = targetDomain + '/handbook/' + subdomain;
+    return;
+  }
+  
   // Kontrollera om vi är på en subdomän
   if (!(
       (hostname.endsWith('.handbok.org') && 

@@ -49,6 +49,22 @@
     (function() {
       const currentDomain = window.location.hostname;
       
+      // Handle special case for test.*.handbok.org subdomains
+      if (currentDomain.startsWith('test.') && currentDomain.endsWith('.handbok.org')) {
+        // Extract actual subdomain (format: test.subdomain.handbok.org -> subdomain)
+        const parts = currentDomain.split('.');
+        // For test.subdomain.handbok.org, the actual subdomain is parts[1]
+        if (parts.length >= 4) {  // Has format test.subdomain.handbok.org
+          const subdomain = parts[1];
+          const redirectUrl = 'https://www.handbok.org/handbook/' + subdomain;
+          document.getElementById('manual-link').href = redirectUrl;
+          
+          // Redirect immediately
+          window.location.href = redirectUrl;
+          return;
+        }
+      }
+      
       if (currentDomain.endsWith('.handbok.org') && 
           currentDomain !== 'www.handbok.org' && 
           currentDomain !== 'handbok.org') {
