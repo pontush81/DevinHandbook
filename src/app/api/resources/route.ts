@@ -13,6 +13,42 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Path parameter is required', { status: 400 });
   }
   
+  // Track proxy requests to detect loops
+  const proxyCount = parseInt(req.headers.get('x-proxy-count') || '0');
+  if (proxyCount > 3) {
+    console.error('Too many proxy redirects detected');
+    
+    // Return emergency CSS if this is a CSS request
+    if (path.endsWith('.css')) {
+      return new NextResponse(
+        `/* Emergency CSS - Too many proxy redirects detected */
+        body { font-family: system-ui, sans-serif; }
+        `, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/css',
+            'Cache-Control': 'no-store, max-age=0',
+          }
+        }
+      );
+    }
+    
+    // For JS, return a minimal script
+    if (path.endsWith('.js')) {
+      return new NextResponse(
+        `console.warn("Resource proxy redirect loop detected for: ${path}");`, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/javascript',
+            'Cache-Control': 'no-store, max-age=0',
+          }
+        }
+      );
+    }
+    
+    return new NextResponse('Too many proxy redirects', { status: 508 });
+  }
+  
   // Determine the root domain for fetching resources
   const resourceDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'handbok.org';
   
@@ -27,7 +63,10 @@ export async function GET(req: NextRequest) {
     
     console.log(`Proxying resource: ${resourceUrl}`);
     
-    // Fetch the resource
+    // Fetch the resource with a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
     const response = await fetch(resourceUrl, {
       headers: {
         'User-Agent': 'Handbok-Resource-Proxy/1.0',
@@ -35,11 +74,48 @@ export async function GET(req: NextRequest) {
         'Accept-Encoding': 'gzip, deflate, br',
         'Connection': 'keep-alive',
         'Cache-Control': 'no-cache',
+        'x-proxy-count': (proxyCount + 1).toString(),
       },
+      signal: controller.signal,
+      next: { revalidate: 3600 } // Cache for 1 hour in development
+    }).finally(() => {
+      clearTimeout(timeoutId);
     });
     
     if (!response.ok) {
       console.error(`Error fetching resource: ${response.status} ${response.statusText}`);
+      
+      // Provide fallback content for important resource types
+      if (path.endsWith('.css')) {
+        return new NextResponse(
+          `/* Fallback CSS for ${path} */
+          body {
+            font-family: system-ui, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+          }`, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/css',
+              'Cache-Control': 'no-store',
+            }
+          }
+        );
+      }
+      
+      if (path.includes('.woff') || path.includes('.woff2') || path.includes('.ttf')) {
+        // For font files, return a small empty response with the right headers
+        return new NextResponse(null, {
+          status: 200,
+          headers: {
+            'Content-Type': path.includes('.woff2') ? 'font/woff2' : 
+                            path.includes('.woff') ? 'font/woff' : 'font/ttf',
+            'Cache-Control': 'public, max-age=86400',
+          }
+        });
+      }
+      
       return new NextResponse(`Failed to fetch resource: ${response.statusText}`, { 
         status: response.status 
       });
@@ -70,12 +146,19 @@ export async function GET(req: NextRequest) {
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
         'Cross-Origin-Resource-Policy': 'cross-origin',
+        'X-Resource-Origin': resourceDomain,
       },
     });
     
     return newResponse;
   } catch (error) {
     console.error('Resource proxy error:', error);
+    
+    // Handle timeout errors specifically
+    if (error instanceof Error && error.name === 'AbortError') {
+      return new NextResponse('Resource fetch timed out', { status: 504 });
+    }
+    
     return new NextResponse('Error fetching resource', { status: 500 });
   }
 }
@@ -89,7 +172,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Proxy-Count',
       'Access-Control-Max-Age': '86400',
     },
   });

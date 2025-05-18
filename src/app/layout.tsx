@@ -35,8 +35,17 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <head>
-        {/* Fallback font styles to ensure text displays immediately */}
+        {/* Inline critical CSS för att förhindra FOUC */}
         <style dangerouslySetInnerHTML={{ __html: `
+          body {
+            background-color: #ffffff;
+            color: #333333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.2s ease;
+          }
+          
           /* Fallback fonts that will be used if Google Fonts fail to load */
           @font-face {
             font-family: 'Geist Fallback';
@@ -69,90 +78,86 @@ export default function RootLayout({
           }
         `}} />
         
-        {/* Redirect loop breaker script */}
-        <Script id="redirect-loop-breaker" strategy="beforeInteractive">
+        {/* Loading scripts for fixing cross-domain issues */}
+        <Script id="fix-scripts" strategy="beforeInteractive">
           {`
+            // Add the script tags dynamically with proper error handling
             (function() {
               try {
-                // Get current URL and parameters
-                var url = new URL(window.location.href);
-                var path = url.pathname;
+                // Check if we need to load resource fixes
+                const host = window.location.hostname;
+                const isSubdomain = host.endsWith('.handbok.org') && 
+                                   host !== 'handbok.org' && 
+                                   host !== 'www.handbok.org';
                 
+                // Function to safely add a script to the page
+                function loadScript(src, id) {
+                  const script = document.createElement('script');
+                  script.src = src;
+                  script.id = id;
+                  script.async = false; // Load in order
+                  script.onerror = function() {
+                    console.error('Failed to load script:', src);
+                    // Add a retry mechanism
+                    setTimeout(() => {
+                      console.log('Retrying script load:', src);
+                      loadScript(src, id + '-retry');
+                    }, 2000);
+                  };
+                  document.head.appendChild(script);
+                }
+                
+                // Add redirect loop breaker for all domains
                 // Check if we're having a loop
-                var redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0');
+                var redirectCount = 0;
+                try {
+                  redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0');
+                } catch(e) {
+                  console.warn('Could not access sessionStorage:', e);
+                }
                 
                 // If redirected too many times, stop
                 if (redirectCount > 3) {
                   console.error('TOO MANY REDIRECTS - Breaking loop');
-                  sessionStorage.removeItem('redirect_count');
+                  try {
+                    sessionStorage.removeItem('redirect_count');
+                  } catch(e) {
+                    console.warn('Could not clear sessionStorage:', e);
+                  }
                   
-                  // Show emergency feedback to the user
-                  document.addEventListener('DOMContentLoaded', function() {
-                    var div = document.createElement('div');
-                    div.style.position = 'fixed';
-                    div.style.top = '0';
-                    div.style.left = '0';
-                    div.style.right = '0';
-                    div.style.padding = '16px';
-                    div.style.background = 'red';
-                    div.style.color = 'white';
-                    div.style.textAlign = 'center';
-                    div.style.zIndex = '9999';
-                    div.innerHTML = '<strong>Redirect loop detected!</strong> Trying emergency static page. <a href="/view" style="color:white;text-decoration:underline;">Click here for handbok viewer</a>';
-                    document.body.appendChild(div);
-                  });
-                  
-                  // If we're not on the static fallback page already, go there
-                  if (path !== '/view' && path !== '/static-fallback.html') {
+                  // If not on the static fallback page already, go there
+                  if (window.location.pathname !== '/static-fallback.html') {
                     window.location.href = '/static-fallback.html';
                   }
                 } else {
                   // Increment count for next page load
-                  sessionStorage.setItem('redirect_count', (redirectCount + 1).toString());
-                  
-                  // Reset count after 5 seconds if no more redirects
+                  try {
+                    sessionStorage.setItem('redirect_count', (redirectCount + 1).toString());
+                    // Reset count after 5 seconds if no more redirects
+                    setTimeout(function() {
+                      sessionStorage.setItem('redirect_count', '0');
+                    }, 5000);
+                  } catch(e) {
+                    console.warn('Could not update sessionStorage:', e);
+                  }
+                }
+                
+                // Load static resource fix first (for all domains)
+                loadScript('/static-resource-fix.js', 'static-resource-fix');
+                
+                // Only load cross-domain storage for subdomains
+                if (isSubdomain) {
+                  // Allow the first script to load first
                   setTimeout(function() {
-                    sessionStorage.setItem('redirect_count', '0');
-                  }, 5000);
+                    loadScript('/cross-domain-storage.js', 'cross-domain-storage');
+                  }, 100);
                 }
               } catch(e) {
-                console.error('Error in redirect detection', e);
+                console.error('Error in fix-scripts:', e);
               }
             })();
           `}
         </Script>
-
-        {/* Script for handling static resources on subdomains */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              // Check if we're on a subdomain
-              (function() {
-                const host = window.location.hostname;
-                const isSubdomain = host.endsWith('.handbok.org') && host !== 'handbok.org' && host !== 'www.handbok.org';
-                
-                if (isSubdomain) {
-                  console.log('Subdomain detected, loading resource fix script');
-                  const script = document.createElement('script');
-                  script.src = '/static-resource-fix.js';
-                  script.async = true;
-                  document.head.appendChild(script);
-                  
-                  // Also load cross-domain storage script for auth handling
-                  const storageScript = document.createElement('script');
-                  storageScript.src = '/cross-domain-storage.js';
-                  storageScript.async = true;
-                  document.head.appendChild(storageScript);
-                }
-              })();
-            `
-          }}
-        />
-        
-        {/* Preload cross-domain scripts for faster loading */}
-        <link rel="preload" href="/static-resource-fix.js" as="script" />
-        <link rel="preload" href="/cross-domain-storage.js" as="script" />
-        <link rel="preload" href="/storage-bridge.html" as="document" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

@@ -1,21 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Optimera statiska resurser och fonter
+  optimizeFonts: true,
+  optimizeImages: true,
+  swcMinify: true, // Använd SWC för minifiering
+  
   // Konfigurera domänhantering för subdomäner
   async rewrites() {
     return {
       beforeFiles: [
-        // Hantera statiska filer och assets via subdomäner
-        {
-          source: '/_next/:path*',
-          has: [
-            {
-              type: 'host',
-              value: '(?<subdomain>[^.]+).handbok.org',
-            },
-          ],
-          destination: 'https://handbok.org/_next/:path*',
-        },
-        // Hantera CSS-filer specifikt
+        // CSS-resurser måste hanteras direkt för att undvika CORS-problem
         {
           source: '/_next/static/css/:path*',
           has: [
@@ -26,7 +20,7 @@ const nextConfig = {
           ],
           destination: 'https://handbok.org/_next/static/css/:path*',
         },
-        // Hantera JS-filer specifikt
+        // Hantera JS-filer direkt
         {
           source: '/_next/static/chunks/:path*',
           has: [
@@ -37,7 +31,7 @@ const nextConfig = {
           ],
           destination: 'https://handbok.org/_next/static/chunks/:path*',
         },
-        // Hantera media-filer (font, etc)
+        // Hantera media-filer (font, etc) direkt
         {
           source: '/_next/static/media/:path*',
           has: [
@@ -48,7 +42,7 @@ const nextConfig = {
           ],
           destination: 'https://handbok.org/_next/static/media/:path*',
         },
-        // Hantera public-mappen
+        // Hantera andra statiska resurser
         {
           source: '/static/:path*',
           has: [
@@ -70,7 +64,7 @@ const nextConfig = {
           ],
           destination: '/create-handbook',  // Dirigera till femstegsguiden
         },
-        // Alternativ för API-anrop via subdomäner
+        // API-anrop passerar vidare normalt
         {
           source: '/api/:path*',
           has: [
@@ -79,29 +73,32 @@ const nextConfig = {
               value: '(?<subdomain>[^.]+).handbok.org',
             },
           ],
-          destination: '/api/:path*',  // Låt API-anrop gå till rätt endpoint
+          destination: '/api/:path*', 
         },
       ],
     };
   },
-  // Konfigurera headers för att hantera CORS
+  
+  // Konfigurera headers för säkerhet och CORS
   async headers() {
     return [
+      // För alla Next.js-genererade resurser
       {
         source: '/_next/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, stale-while-revalidate=86400' }
         ],
       },
+      // Speciellt för API-routes
       {
         source: '/api/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Proxy-Count' },
           { key: 'Cache-Control', value: 'no-store, max-age=0' }
         ],
       },
@@ -111,7 +108,8 @@ const nextConfig = {
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Content-Type', value: 'text/css; charset=UTF-8' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
         ],
       },
       // För JavaScript-filer specifikt
@@ -120,12 +118,31 @@ const nextConfig = {
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
+        ],
+      },
+      // För font-filer
+      {
+        source: '/_next/static/media/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
+        ],
+      },
+      // För statiska sidor och hjälpfiler
+      {
+        source: '/static-:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'public, max-age=86400' }
         ],
       },
     ];
   },
-  // Befintlig konfiguration
+  
+  // Bildhantering och domänkonfiguration
   images: {
     remotePatterns: [
       {
@@ -137,16 +154,21 @@ const nextConfig = {
         hostname: '**.handbok.org',
       },
     ],
-    // Lägg till domäner för bilder
     domains: ['handbok.org', 'www.handbok.org'],
+    unoptimized: process.env.NODE_ENV === 'production', // För bättre hantering i produktion
   },
-  // Tillfälligt ignorera TypeScript-fel för att få en fungerande deployment
+  
+  // Kompilering och byggkonfiguration
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
+  
+  // Statiska resurser och komprimeringskonfiguration
+  compress: true,
+  poweredByHeader: false,
 };
 
 module.exports = nextConfig; 
