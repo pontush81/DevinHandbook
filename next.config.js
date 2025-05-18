@@ -2,7 +2,7 @@
 const nextConfig = {
   // Bildhantering
   images: {
-    domains: ['handbok.org', 'www.handbok.org'],
+    domains: ['handbok.org', 'www.handbok.org', 'staging.handbok.org'],
     unoptimized: true,
   },
   
@@ -26,19 +26,19 @@ const nextConfig = {
     return [];
   },
   
-  // Redirects för dev-subdomäner i staging
+  // Redirects för test.staging.handbok.org
   async redirects() {
     return [
-      // För staging: test.dev.handbok.org -> dev.handbok.org/handbook/test
+      // För test.staging.handbok.org -> staging.handbok.org/handbook/test
       {
         source: '/:path*',
         has: [
           {
             type: 'host',
-            value: 'test.dev.handbok.org',
+            value: 'test.staging.handbok.org',
           },
         ],
-        destination: 'https://dev.handbok.org/handbook/test',
+        destination: 'https://staging.handbok.org/handbook/test',
         permanent: false,
       }
     ];

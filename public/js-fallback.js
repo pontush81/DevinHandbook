@@ -9,17 +9,25 @@
   const hostname = window.location.hostname;
   if (!(hostname.endsWith('.handbok.org') && 
        hostname !== 'handbok.org' && 
-       hostname !== 'www.handbok.org')) {
+       hostname !== 'www.handbok.org' &&
+       hostname !== 'staging.handbok.org')) {
     return;
   }
   
   console.log('[JS Fallback] Aktiv på subdomän');
   
+  // Bestäm om vi är i staging eller produktion
+  const isStaging = hostname.includes('staging.handbok.org') || 
+                     hostname.endsWith('.staging.handbok.org');
+  
   // 1. Omdirigera direkt till huvuddomänen
   const subdomain = hostname.split('.')[0];
   
+  // Välj rätt måldomän baserat på miljö
+  const targetDomain = isStaging ? 'https://staging.handbok.org' : 'https://www.handbok.org';
+  
   // För alla subdomäner - gå till handboken
-  window.location.href = 'https://www.handbok.org/handbook/' + subdomain;
+  window.location.href = targetDomain + '/handbook/' + subdomain;
   
   // 2. Fixa font-fel om omdirigering misslyckas
   document.addEventListener('DOMContentLoaded', function() {

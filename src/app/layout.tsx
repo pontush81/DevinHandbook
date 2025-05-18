@@ -49,20 +49,23 @@ export default function RootLayout({
             (function() {
               // Kontrollera om vi är på en subdomän
               const currentDomain = window.location.hostname;
+              
+              // Bestäm om vi är i staging eller produktion
+              const isStaging = currentDomain.includes('staging.handbok.org') || 
+                                currentDomain.endsWith('.staging.handbok.org');
+                                
               const isSubdomain = currentDomain.split('.').length > 2 && 
-                                 (currentDomain.endsWith('.handbok.org') || 
-                                  currentDomain.endsWith('.dev.handbok.org')) &&
+                                 (currentDomain.endsWith('.handbok.org')) &&
                                  currentDomain !== 'www.handbok.org' &&
                                  currentDomain !== 'handbok.org' &&
-                                 currentDomain !== 'dev.handbok.org';
+                                 currentDomain !== 'staging.handbok.org';
               
               if (isSubdomain) {
                 const parts = currentDomain.split('.');
                 const subdomain = parts[0];
                 
-                // Bestäm måldomän baserat på om vi är på staging (dev.handbok.org) eller produktion
-                const isStaging = currentDomain.includes('dev.handbok.org');
-                const targetDomain = isStaging ? 'https://dev.handbok.org' : 'https://www.handbok.org';
+                // Bestäm måldomän baserat på miljö
+                const targetDomain = isStaging ? 'https://staging.handbok.org' : 'https://www.handbok.org';
                 
                 // För subdomäner, dirigera till {domän}/handbook/{subdomain}
                 window.location.href = targetDomain + '/handbook/' + subdomain;
@@ -174,6 +177,8 @@ export default function RootLayout({
         {/* Preconnect to main domain for faster resource loading */}
         <link rel="preconnect" href="https://handbok.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://handbok.org" />
+        <link rel="preconnect" href="https://staging.handbok.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://staging.handbok.org" />
         
         {/* Load critical utilities before anything else */}
         <Script src="/cross-domain-storage.js" strategy="beforeInteractive" />
@@ -213,9 +218,15 @@ export default function RootLayout({
               
               // Only run emergency checks on subdomain
               const currentHost = window.location.hostname;
+              
+              // Bestäm om vi är i staging eller produktion
+              const isStaging = currentHost.includes('staging.handbok.org') || 
+                               currentHost.endsWith('.staging.handbok.org');
+                                
               const isSubdomain = currentHost.endsWith('.handbok.org') && 
                                  currentHost !== 'handbok.org' &&
-                                 currentHost !== 'www.handbok.org';
+                                 currentHost !== 'www.handbok.org' &&
+                                 currentHost !== 'staging.handbok.org';
               
               if (isSubdomain) {
                 const isRedirectLoop = detectRedirects();

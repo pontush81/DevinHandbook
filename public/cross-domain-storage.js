@@ -8,13 +8,22 @@
   // Kontrollera om vi är på en subdomän
   const currentDomain = window.location.hostname;
   
+  // Bestäm om vi är i staging eller produktion
+  const isStaging = currentDomain.includes('staging.handbok.org') || 
+                   currentDomain.endsWith('.staging.handbok.org');
+  
   if (currentDomain.endsWith('.handbok.org') && 
       currentDomain !== 'www.handbok.org' && 
-      currentDomain !== 'handbok.org') {
+      currentDomain !== 'handbok.org' &&
+      currentDomain !== 'staging.handbok.org') {
     
     // Hämta subdomänen och omdirigera till handboken
     const subdomain = currentDomain.split('.')[0];
-    window.location.href = 'https://www.handbok.org/handbook/' + subdomain;
+    
+    // Välj rätt måldomän baserat på miljö
+    const targetDomain = isStaging ? 'https://staging.handbok.org' : 'https://www.handbok.org';
+    
+    window.location.href = targetDomain + '/handbook/' + subdomain;
     return;
   }
   
