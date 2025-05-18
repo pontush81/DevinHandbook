@@ -1,16 +1,19 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === 'development';
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
+const isTest = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV !== 'production';
 
-// Lägg till stöd för domäner och subdomäner
+// Lägg till stöd för domäner och subdomäner - dynamiskt hantera alla tänkbara subdomäner
 const validDomains = [
   'handbok.org',
   'www.handbok.org',
   'test.handbok.org',
-  'hej.handbok.org',
-  'hej1.handbok.org',
-  'devin-handbook.vercel.app'
+  '*.handbok.org',          // Alla subdomäner
+  '*.test.handbok.org',     // Alla test subdomäner
+  'test.*.handbok.org',     // Alternativ pattern för test
+  'devin-handbook.vercel.app',
+  '*.vercel.app'            // Alla Vercel preview-domäner
 ];
 
 // Lägg till Supabase-domänen för korrekt CORS-hantering
@@ -35,6 +38,8 @@ if (supabaseDomain && !imageDomains.includes(supabaseDomain)) {
   imageDomains.push(supabaseDomain);
 }
 
+console.log(`Next.js konfiguration: ${isProd ? 'PRODUKTION' : isTest ? 'TEST' : 'UTVECKLING'}`);
+
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -43,10 +48,23 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: imageDomains,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.handbok.org',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.vercel.app',
+      },
+      {
+        protocol: 'https',
+        hostname: 'kjsquvjzctdwgjypcjrg.supabase.co',
+      }
+    ],
     unoptimized: isProd, // För smidigare hantering av bilder i produktion
   },
-  // Återlägg nödvändiga Cross-Origin konfigurationer
+  // Cross-Origin konfigurationer för att tillåta användning från subdomäner
   async headers() {
     return [
       {
@@ -128,6 +146,26 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
           { key: 'Timing-Allow-Origin', value: '*' },
+        ],
+      },
+      // För statiskt resursfixskript
+      {
+        source: '/static-resource-fix.js',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      // För debugsida
+      {
+        source: '/debug.html',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Type', value: 'text/html; charset=UTF-8' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
     ];

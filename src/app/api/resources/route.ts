@@ -5,66 +5,120 @@ export const runtime = 'edge';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const path = searchParams.get('path');
+  const host = request.headers.get('host') || '';
   
   if (!path) {
     return new NextResponse('Missing path parameter', { status: 400 });
   }
   
   // För debugging
-  console.log('Resource proxy request for path:', path);
+  console.log('Resource proxy request for path:', path, 'from host:', host);
   
   try {
-    // För _next-resurser, använd alltid Vercel-hostnamnet direkt för att undvika CORS och auth-problem
-    const vercelDeploymentUrl = 'devin-handbook.vercel.app';
+    // Dynamisk hantering av resurskällor baserat på miljö
+    const isProd = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
+    const isTest = process.env.VERCEL_ENV === 'preview' || !isProd;
+    
+    // Baserad på miljö, välj rätt källdomän för resurser
+    let sourceHost = 'devin-handbook.vercel.app'; // Default 
+    
+    // Om vi är på en faktisk subdomän, använd huvuddomänen som källa
+    if (host.endsWith('.handbok.org')) {
+      if (host.includes('.test.')) {
+        // Hantera nested test subdomäner: foo.test.handbok.org
+        sourceHost = 'test.handbok.org';
+      } else if (host.startsWith('test.')) {
+        // Hantera test subdomäner: test.foo.handbok.org
+        sourceHost = 'test.handbok.org';
+      } else {
+        // Vanliga subdomäner
+        sourceHost = 'handbok.org';
+      }
+    }
+    
+    console.log(`Environment: ${isProd ? 'PRODUCTION' : 'TEST/DEV'}, using source: ${sourceHost}`);
     
     // Direkt URL-konstruktion för enklare hantering
     let resourceURL;
     
     // För CSS och andra statiska filer, förväntar vi rätt path format
-    // Om path börjar med /, behåll det, annars lägg till /
     if (path.startsWith('/')) {
-      resourceURL = `https://${vercelDeploymentUrl}${path}`;
+      resourceURL = `https://${sourceHost}${path}`;
     } else {
-      resourceURL = `https://${vercelDeploymentUrl}/${path}`;
+      resourceURL = `https://${sourceHost}/${path}`;
     }
     
     console.log('Fetching resource from:', resourceURL);
     
-    // Om detta är en test CSS som kanske inte finns, använd vår debug-CSS istället
-    if (path.includes('bb2534fb94d47e9a.css') || path.endsWith('.css')) {
-      console.log('Detected CSS request - using debug CSS instead');
-      
-      // Returnera egen CSS för test
-      const css = `
-        /* Debug CSS ersättning */
-        body { 
-          font-family: system-ui, sans-serif; 
-          background: #f7f7f7;
+    // Specialhantering för vissa filtyper
+    if (path.endsWith('.css')) {
+      // För CSS-filer, försök först hämta från källan, fallback till egen CSS
+      try {
+        const response = await fetch(resourceURL, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Handbok-Proxy/1.0',
+            'Accept': 'text/css,*/*',
+            'Origin': `https://${sourceHost}`
+          },
+          next: { revalidate: 3600 }
+        });
+        
+        if (response.ok) {
+          const css = await response.text();
+          console.log('Successfully fetched CSS, size:', css.length);
+          return new NextResponse(css, {
+            headers: {
+              'Content-Type': 'text/css',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=86400'
+            }
+          });
+        } else {
+          throw new Error(`CSS fetch failed with status ${response.status}`);
         }
-        .testElement { 
-          background-color: #f0f0f0 !important;
-          border: 1px solid #ccc !important;
-          padding: 20px !important;
-          border-radius: 4px !important;
-        }
-      `;
-      
-      return new NextResponse(css, {
-        headers: {
-          'Content-Type': 'text/css',
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'no-cache'
-        }
-      });
+      } catch (cssError) {
+        console.log('CSS fetch failed, using fallback:', cssError);
+        // Fallback CSS för alla CSS-filer som inte kan hämtas
+        const fallbackCss = `
+          /* Fallback CSS för ${path} */
+          body { 
+            font-family: system-ui, sans-serif; 
+            background: #f7f7f7;
+          }
+          .testElement { 
+            background-color: #f0f0f0 !important;
+            border: 1px solid #ccc !important;
+            padding: 20px !important;
+            border-radius: 4px !important;
+          }
+        `;
+        
+        return new NextResponse(fallbackCss, {
+          headers: {
+            'Content-Type': 'text/css',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=86400'
+          }
+        });
+      }
     }
     
-    // Använd standardfetch utan extra parametrar för att undvika 401/403
+    // Hantera font-filer speciellt
+    if (path.includes('/fonts/') || 
+        path.endsWith('.woff') || 
+        path.endsWith('.woff2') || 
+        path.endsWith('.ttf')) {
+      console.log('Font resource detected, setting special headers');
+    }
+    
+    // Standard fetch för alla andra filtyper
     const response = await fetch(resourceURL, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Vercel-Proxy/1.0',
+        'User-Agent': 'Handbok-Proxy/1.0',
         'Accept': '*/*',
-        'Origin': `https://${vercelDeploymentUrl}`
+        'Origin': `https://${sourceHost}`
       },
       next: { revalidate: 3600 } // Caching med revalidering efter 1 timme
     });
@@ -72,24 +126,42 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       console.error(`Resource fetch failed: ${response.status} for ${resourceURL}`);
       
-      // Fallback för vissa filtyper
+      // Fallback för olika filtyper
       if (path.endsWith('.js')) {
         console.log('Providing fallback JS content');
-        return new NextResponse('console.log("Fallback JS loaded");', {
+        return new NextResponse('console.log("Fallback JS loaded for ' + path + '");', {
           headers: {
             'Content-Type': 'application/javascript',
             'Access-Control-Allow-Origin': '*'
           }
         });
+      } else if (path.includes('/fonts/') || 
+                 path.endsWith('.woff') || 
+                 path.endsWith('.woff2') || 
+                 path.endsWith('.ttf')) {
+        // För fontfiler, returnera en korrekt formatterad tomfil
+        console.log('Providing empty font file');
+        return new NextResponse(new ArrayBuffer(0), {
+          headers: {
+            'Content-Type': path.endsWith('.woff2') ? 'font/woff2' : 
+                           path.endsWith('.woff') ? 'font/woff' : 
+                           path.endsWith('.ttf') ? 'font/ttf' : 
+                           'application/octet-stream',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=86400'
+          }
+        });
       }
       
-      // Ge mer detaljerad felinformation för felsökning
+      // Ge mer detaljerad felinformation för övriga filtyper
       return new NextResponse(
         JSON.stringify({
           error: `Failed to fetch resource: ${response.statusText}`,
           status: response.status,
           resource: resourceURL,
-          path: path
+          path: path,
+          host: host,
+          sourceHost: sourceHost
         }), 
         { 
           status: response.status,
@@ -103,7 +175,7 @@ export async function GET(request: NextRequest) {
     
     // Klona svaret och lägg till CORS-headers
     const body = await response.arrayBuffer();
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const contentType = response.headers.get('content-type') || getContentTypeFromPath(path);
     
     const headers = new Headers({
       'Content-Type': contentType,
@@ -111,7 +183,7 @@ export async function GET(request: NextRequest) {
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Max-Age': '86400',
       'Cache-Control': 'public, max-age=31536000, immutable',
-      'X-Proxy-Source': 'vercel-cdn'
+      'X-Proxy-Source': sourceHost
     });
     
     // Bevara viktiga headers från originalsvaret
@@ -133,7 +205,8 @@ export async function GET(request: NextRequest) {
         error: 'Internal server error', 
         message: error instanceof Error ? error.message : String(error),
         path: path,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        host: host
       }), 
       { 
         status: 500,
@@ -144,6 +217,21 @@ export async function GET(request: NextRequest) {
       }
     );
   }
+}
+
+// Hjälpfunktion för att gissa MIME-typ från filsökväg
+function getContentTypeFromPath(path: string): string {
+  if (path.endsWith('.js')) return 'application/javascript; charset=UTF-8';
+  if (path.endsWith('.css')) return 'text/css; charset=UTF-8';
+  if (path.endsWith('.html')) return 'text/html; charset=UTF-8';
+  if (path.endsWith('.json')) return 'application/json; charset=UTF-8';
+  if (path.endsWith('.png')) return 'image/png';
+  if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return 'image/jpeg';
+  if (path.endsWith('.svg')) return 'image/svg+xml';
+  if (path.endsWith('.woff2')) return 'font/woff2';
+  if (path.endsWith('.woff')) return 'font/woff';
+  if (path.endsWith('.ttf')) return 'font/ttf';
+  return 'application/octet-stream';
 }
 
 export async function OPTIONS() {

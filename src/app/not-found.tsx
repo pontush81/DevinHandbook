@@ -24,14 +24,30 @@ export default function NotFound() {
           </div>
         </div>
         
-        <div className="mt-8 text-sm text-gray-500">
-          <p>Har du problem med att ladda resurser på en subdomän?</p>
-          <p className="mt-2">
-            Detta kan bero på CORS-begränsningar. Prova att använda 
-            <Link href="/debug.html" className="text-blue-600 hover:underline">
-              {' '}diagnosverktyget
-            </Link> för att åtgärda problemet.
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-2">Har du problem med att ladda resurser?</h2>
+          <p className="text-gray-600 mb-4">
+            Detta kan bero på CORS-begränsningar. Prova någon av dessa lösningar:
           </p>
+          
+          <div className="flex flex-col gap-2 mt-4">
+            <Link 
+              href="/debug.html" 
+              className="text-blue-600 hover:underline text-sm inline-flex items-center"
+            >
+              <span className="mr-1">→</span> Använd diagnosverktyget
+            </Link>
+            <button 
+              onClick={() => {
+                const script = document.createElement('script');
+                script.src = '/static-resource-fix.js';
+                document.head.appendChild(script);
+              }}
+              className="text-blue-600 hover:underline text-sm inline-flex items-center"
+            >
+              <span className="mr-1">→</span> Applicera CORS-fix direkt
+            </button>
+          </div>
         </div>
       </div>
       
@@ -54,8 +70,18 @@ export default function NotFound() {
                 console.log('Debug info:', {
                   subdomain: host,
                   path: window.location.pathname,
-                  url: window.location.href
+                  url: window.location.href,
+                  type: host.startsWith('test.') ? 'test-subdomain' : 'regular-subdomain',
+                  timestamp: new Date().toISOString()
                 });
+                
+                // Auto-redirect to debug page if specific debugging parameter is present
+                if (window.location.search.includes('debug=1')) {
+                  console.log('Debug parameter detected, redirecting to debug page');
+                  setTimeout(() => {
+                    window.location.href = '/debug.html';
+                  }, 1000);
+                }
               }
             })();
           `
