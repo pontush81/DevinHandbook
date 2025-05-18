@@ -6,11 +6,13 @@ export const config = {
      * Match all paths except for:
      * 1. /api routes
      * 2. /_next (Next.js internals)
-     * 3. /fonts (inside /public)
-     * 4. /examples (inside /public)
-     * 5. all root files inside /public (e.g. /favicon.ico)
+     * 3. /_next/static (statiska resurser)
+     * 4. /fonts (inside /public)
+     * 5. /examples (inside /public)
+     * 6. /static (statiska resurser)
+     * 7. all root files inside /public (e.g. /favicon.ico)
      */
-    '/((?!api|_next|fonts|examples|[\\w-]+\\.\\w+).*)',
+    '/((?!api|_next|_next/static|fonts|static|examples|[\\w-]+\\.\\w+).*)',
   ],
 };
 
@@ -30,20 +32,6 @@ export default async function middleware(req: NextRequest) {
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Authorization');
     response.headers.set('Access-Control-Max-Age', '86400');
-    return response;
-  }
-  
-  // Handle static resources in a cached way
-  if (path.includes('/_next/') || 
-      path.includes('/fonts/') || 
-      path.includes('/images/') || 
-      path.includes('/icons/') || 
-      path.includes('/static/')) {
-    console.log(`[Middleware] Static resource detected: ${path}`);
-    // Allow static resources to be loaded from anywhere, with caching
-    const response = NextResponse.next();
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Cache-Control', 'public, max-age=3600');
     return response;
   }
   
@@ -73,13 +61,18 @@ export default async function middleware(req: NextRequest) {
     // Om detta är www, fortsätt som vanligt
     if (subdomain === 'www') {
       console.log(`[Middleware] Handling www subdomain as main site`);
-      return NextResponse.next();
+      const response = NextResponse.next();
+      // Lägg till CORS-headers för alla responses
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      return response;
     }
     
     // Special case for test domain
     if (subdomain === 'test') {
       console.log(`[Middleware] Handling test subdomain: ${path}`);
-      return NextResponse.next();
+      const response = NextResponse.next();
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      return response;
     }
     
     try {

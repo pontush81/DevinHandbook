@@ -8,6 +8,7 @@ const validDomains = [
   'handbok.org',
   'www.handbok.org',
   'test.handbok.org',
+  'hej.handbok.org',
   'devin-handbook.vercel.app'
 ];
 
@@ -55,6 +56,7 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
       {
@@ -66,14 +68,60 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
           { key: 'Cache-Control', value: 'no-store, max-age=0' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
       {
-        // För statiska resurser
+        // För Next.js statiska resurser
         source: '/_next/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+        ],
+      },
+      {
+        // För CSS-filer specifikt
+        source: '/_next/static/css/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type', value: 'text/css; charset=UTF-8' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
+        // För JavaScript-filer specifikt
+        source: '/_next/static/chunks/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
+        // För statiska resurser i public-mappen
+        source: '/static/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
+        // För fontfiler (woff2, etc)
+        source: '/_next/static/media/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
     ];

@@ -121,6 +121,9 @@ export default function RootLayout({
             })();
           `}
         </Script>
+        
+        {/* Ladda in static-resource-fix.js för CORS-problem med statiska resurser */}
+        <Script id="static-resource-fix" src="/static-resource-fix.js" strategy="beforeInteractive" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
