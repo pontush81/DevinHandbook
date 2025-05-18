@@ -44,6 +44,8 @@ export default function RootLayout({
         <meta httpEquiv="Cross-Origin-Resource-Policy" content="cross-origin" />
         
         {/* Enkel omdirigering för subdomäner - utan att försöka vara smart */}
+        {/* OBS: För att test.subdomain.handbok.org ska fungera korrekt krävs rätt DNS-konfiguration
+                 Se documentation/dns-config/cloudflare-config.md för konfigurationsdetaljer */}
         <Script id="subdomain-redirect" strategy="beforeInteractive">
           {`
             (function() {

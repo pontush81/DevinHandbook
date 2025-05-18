@@ -1,4 +1,51 @@
 {
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "test.handbok.org"
+        }
+      ],
+      "destination": "https://www.handbok.org/handbook/test/:path*"
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "test.{subdomain}.handbok.org"
+        }
+      ],
+      "destination": "https://www.handbok.org/handbook/:subdomain/:path*"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "handbok.org"
+        }
+      ],
+      "destination": "https://www.handbok.org/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "{subdomain}.handbok.org",
+          "regex": "(?!www)([a-z0-9\\-]+)\\.handbok\\.org"
+        }
+      ],
+      "destination": "https://www.handbok.org/handbook/:subdomain/:path*",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -10,6 +57,10 @@
         {
           "key": "Access-Control-Allow-Methods",
           "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
         }
       ]
     }

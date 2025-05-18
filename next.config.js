@@ -21,9 +21,21 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Inga omskrivningar
+  // Skapa faktiska omskrivningar för test-subdomän
   async rewrites() {
-    return [];
+    return [
+      // Skriv om trafik från test.handbok.org -> www.handbok.org/handbook/test
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'test.handbok.org',
+          },
+        ],
+        destination: 'https://www.handbok.org/handbook/test/:path*',
+      },
+    ];
   },
   
   // Redirects för subdomäner
@@ -41,7 +53,8 @@ const nextConfig = {
         destination: 'https://staging.handbok.org/handbook/test/:path*',
         permanent: false,
       },
-      // För test.{subdomain}.handbok.org -> www.handbok.org/handbook/{subdomain}
+      
+      // Hantera test.{subdomain}.handbok.org -> www.handbok.org/handbook/{subdomain}
       {
         source: '/:path*',
         has: [
@@ -51,6 +64,19 @@ const nextConfig = {
           },
         ],
         destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
+        permanent: false,
+      },
+      
+      // Grundläggande handbok.org -> www.handbok.org
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'handbok.org',
+          }
+        ],
+        destination: 'https://www.handbok.org/:path*',
         permanent: false,
       }
     ];
