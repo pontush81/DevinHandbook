@@ -3,129 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Handbok.org - Felåtgärd</title>
+  <title>Handbok.org - Nödfallsläge</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      line-height: 1.5;
+      padding: 1rem;
       max-width: 800px;
-      margin: 50px auto;
-      background-color: white;
-      padding: 40px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin: 0 auto;
+      color: #333;
     }
     h1 {
-      color: #2563eb;
-      margin-top: 0;
+      margin-top: 1.5em;
+      color: #222;
+      font-size: 2rem;
     }
-    .alert {
-      background-color: #fee2e2;
-      border-left: 4px solid #ef4444;
-      padding: 12px 16px;
-      margin-bottom: 24px;
-      border-radius: 4px;
+    h2 {
+      margin-top: 1.2em;
+      color: #444;
+      font-size: 1.5rem;
     }
-    .steps {
-      margin-top: 30px;
-      background-color: #f9fafb;
-      padding: 20px;
-      border-radius: 6px;
+    p {
+      margin-bottom: 1em;
     }
-    .steps h3 {
-      margin-top: 0;
+    a {
+      color: #4a56e2;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
     }
     .btn {
       display: inline-block;
-      background-color: #2563eb;
+      background: #4a56e2;
       color: white;
-      padding: 10px 20px;
-      border-radius: 4px;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 0.25rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
       text-decoration: none;
-      margin-top: 16px;
-      font-weight: 500;
     }
     .btn:hover {
-      background-color: #1d4ed8;
+      background: #3a46d2;
+      text-decoration: none;
     }
-    .diagnostic {
-      margin-top: 30px;
-      font-size: 14px;
-      color: #666;
-      padding: 15px;
-      background-color: #f1f5f9;
-      border-radius: 4px;
-      font-family: monospace;
-      white-space: pre-wrap;
+    .alert {
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0.25rem;
+    }
+    .alert-warning {
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+    }
+    .alert-info {
+      background-color: #e6f7ff;
+      color: #004085;
+      border: 1px solid #b8daff;
+    }
+    header {
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #eee;
+    }
+    .logo {
+      font-weight: bold;
+      font-size: 1.5rem;
+      color: #333;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Handbok.org - Statisk Nödsida</h1>
-    
-    <div class="alert">
-      <strong>Problem upptäckt:</strong> Ditt besök omdirigerades för många gånger och stoppades av säkerhetsskäl.
-    </div>
-    
-    <p>
-      Vi har upptäckt ett problem med laddningen av sidan. Detta kan bero på en omdirigerings-loop 
-      eller problem med resursinladdning från våra servrar.
-    </p>
-    
-    <div class="steps">
-      <h3>Åtgärder du kan prova:</h3>
-      <ol>
-        <li>Rensa webbläsarens cache och cookies</li>
-        <li>Prova att öppna sidan i inkognitoläge</li>
-        <li>Försök igen om några minuter</li>
-        <li>Besök <a href="https://handbok.org">huvudsidan</a> direkt</li>
-      </ol>
-      
-      <a href="/" class="btn">Försök igen</a>
-    </div>
-    
-    <div class="diagnostic" id="diagnostics">
-      Diagnosinformation samlas in...
-    </div>
+  <header>
+    <div class="logo">Handbok.org</div>
+  </header>
+
+  <div class="alert alert-warning">
+    <strong>Nödfallsläge:</strong> Sidan visas med begränsad formatering på grund av problem med resursinladdning.
   </div>
-  
+
+  <h1>Välkommen till Handbok.org</h1>
+
+  <p>Vi upplever för närvarande tekniska problem med vår webbplats. Detta är en nödfallsversion av sidan som ska hjälpa dig att komma igång trots problemen.</p>
+
+  <h2>Vad kan du göra nu?</h2>
+
+  <ul>
+    <li>Besök <a href="https://handbok.org">huvudsidan</a> för att se om problemen är lösta</li>
+    <li>Försök ladda om sidan (tryck F5 eller Ctrl+R)</li>
+    <li>Rensa webbläsarens cache och cookies</li>
+    <li>Prova en annan webbläsare</li>
+  </ul>
+
+  <h2>Kontakt</h2>
+
+  <p>Om problemen fortsätter, vänligen kontakta vår support:</p>
+  <a href="mailto:support@handbok.org" class="btn">Kontakta support</a>
+
+  <div class="alert alert-info" style="margin-top: 2rem;">
+    <p><strong>Teknisk information:</strong> Denna sida visas när de normala resurserna (CSS, JavaScript, bilder) inte kan laddas korrekt från vår server. Detta kan bero på temporära nätverksproblem eller konfigurationsfel.</p>
+  </div>
+
   <script>
-    // Samla diagnosinformation för felsökning
-    window.addEventListener('DOMContentLoaded', function() {
-      const diagnosticDiv = document.getElementById('diagnostics');
-      
-      try {
-        const info = {
-          url: window.location.href,
-          host: window.location.hostname,
-          userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString(),
-          redirectCount: sessionStorage.getItem('redirect_count') || 'unknown',
-          referrer: document.referrer || 'none',
-          protocol: window.location.protocol,
-          pathName: window.location.pathname,
-          storageAvailable: (function() {
-            try {
-              localStorage.setItem('test', 'test');
-              localStorage.removeItem('test');
-              return true;
-            } catch(e) {
-              return false;
-            }
-          })()
-        };
+    // Försök att återställa sidans normala funktionalitet
+    document.addEventListener('DOMContentLoaded', function() {
+      // Kontrollera om vi kan nå huvuddomänen
+      fetch('https://handbok.org/api/health-check', { 
+        method: 'GET',
+        mode: 'no-cors'
+      })
+      .then(() => {
+        console.log('Main domain is accessible');
         
-        diagnosticDiv.textContent = JSON.stringify(info, null, 2);
-      } catch(e) {
-        diagnosticDiv.textContent = 'Kunde inte samla diagnosinformation: ' + e.message;
-      }
+        // Lägg till en knapp för att återvända till huvudsidan
+        const returnButton = document.createElement('a');
+        returnButton.href = window.location.href;
+        returnButton.className = 'btn';
+        returnButton.style.marginLeft = '10px';
+        returnButton.textContent = 'Försök igen';
+        
+        document.querySelector('.btn').parentNode.appendChild(returnButton);
+      })
+      .catch(err => {
+        console.warn('Could not reach main domain:', err);
+      });
     });
   </script>
 </body>

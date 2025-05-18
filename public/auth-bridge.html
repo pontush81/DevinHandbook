@@ -3,160 +3,195 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Auth Bridge</title>
+  <title>Auth Bridge - Handbok.org</title>
   <style>
     body {
-      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
       padding: 20px;
-      text-align: center;
+      color: #444;
+      background-color: #f9f9f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    h1 {
       color: #333;
+      font-size: 24px;
+      margin-top: 0;
+    }
+    p {
+      line-height: 1.5;
     }
     .status {
-      margin: 20px 0;
-      padding: 15px;
-      border-radius: 5px;
-      max-width: 500px;
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
     }
-    .success {
-      background-color: #e6f7e6;
-      border: 1px solid #75c875;
-    }
-    .error {
-      background-color: #fae6e6;
-      border: 1px solid #e88a8a;
-    }
-    .spinner {
-      border: 4px solid rgba(0, 0, 0, 0.1);
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border-left-color: #09f;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .active {
+      background-color: #e6f7ee;
+      color: #0d854f;
     }
   </style>
 </head>
 <body>
-  <div id="loading">
-    <div class="spinner"></div>
-    <h2>Synkroniserar autentisering...</h2>
-    <p>Du kommer att omdirigeras automatiskt</p>
+  <div class="container">
+    <h1>Auth Bridge</h1>
+    <p>Status: <span class="status active">Aktiv</span></p>
+    <p>Denna sida hjälper till att hantera autentisering mellan subdomäner på handbok.org.</p>
+    <p>Sidan används internt av systemet och behöver vara öppen för att dela inloggningsinformation.</p>
+    <p>Teknisk status: <span id="auth-status">Initializing...</span></p>
   </div>
-  
-  <div id="success" class="status success" style="display: none">
-    <h2>Autentisering lyckades!</h2>
-    <p>Du kan nu stänga denna flik och fortsätta på din tidigare sida.</p>
-  </div>
-  
-  <div id="error" class="status error" style="display: none">
-    <h2>Autentisering misslyckades</h2>
-    <p id="errorMessage">Ett fel uppstod vid autentisering. Försök igen.</p>
-  </div>
-  
+
   <script>
-    // This script helps with cross-domain authentication
+    /**
+     * Auth Bridge Script
+     * 
+     * This script allows authenticated sessions to be shared across subdomains
+     * by securely storing authentication tokens on the main domain and
+     * communicating with subdomains via postMessage.
+     */
     (function() {
-      try {
-        // Get the auth token from URL parameters
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
-        const redirectUrl = params.get('redirect') || '/';
-        const targetDomain = params.get('domain');
-        
-        // If we don't have a token, show error
-        if (!token) {
-          showError('Ingen autentiseringstoken hittades i URL:en.');
+      console.log('[Auth Bridge] Initializing...');
+      const statusElement = document.getElementById('auth-status');
+      const AUTH_KEYS = [
+        'supabase.auth.token',
+        'supabase.auth.refresh_token',
+        'supabase.auth.expires_at',
+        'supabase-auth-token',
+        'user_session',
+        'user_metadata'
+      ];
+      
+      // This flag helps the parent page know if we're ready
+      let isReady = false;
+      
+      // Helper to broadcast auth status to all frames
+      function broadcastAuthStatus() {
+        try {
+          const authTokenKey = 'supabase.auth.token';
+          const hasAuth = !!localStorage.getItem(authTokenKey);
+          
+          // Notify parent and any message origins of auth status
+          window.parent.postMessage({
+            type: 'auth_status',
+            isAuthenticated: hasAuth
+          }, '*');
+          
+          statusElement.textContent = hasAuth ? 'Authenticated' : 'Not authenticated';
+          statusElement.style.color = hasAuth ? '#0d854f' : '#888';
+        } catch (e) {
+          console.error('[Auth Bridge] Error broadcasting auth status:', e);
+          statusElement.textContent = 'Error: ' + e.message;
+          statusElement.style.color = '#dc3545';
+        }
+      }
+      
+      // Listen for messages from other windows/frames
+      window.addEventListener('message', function(event) {
+        // Only accept messages from our own domains
+        if (!event.origin.match(/^https?:\/\/(.*\.)?handbok\.org$/)) {
+          console.warn('[Auth Bridge] Rejected message from unauthorized origin:', event.origin);
           return;
         }
         
-        // Store the token in local storage
-        localStorage.setItem('supabase.auth.token', token);
+        const data = event.data;
         
-        // If we have a target domain for cross-domain authentication
-        if (targetDomain) {
-          // If the target domain matches the current domain, just redirect
-          if (window.location.hostname === targetDomain || 
-              window.location.hostname.endsWith('.' + targetDomain)) {
-            // Same domain or subdomain, redirect directly
-            showSuccess();
-            setTimeout(() => {
-              window.location.href = redirectUrl;
-            }, 1000);
-            return;
+        // Skip if not an object or missing required info
+        if (!data || typeof data !== 'object') return;
+        
+        try {
+          // Handle different message types
+          switch(data.type) {
+            case 'auth_ping':
+              // Respond to ping, let the other window know we're alive
+              event.source.postMessage({
+                type: 'auth_pong',
+                isReady: isReady
+              }, event.origin);
+              break;
+              
+            case 'auth_get':
+              // Retrieve auth data for a specific key
+              if (AUTH_KEYS.includes(data.key)) {
+                const value = localStorage.getItem(data.key);
+                event.source.postMessage({
+                  type: 'auth_data',
+                  key: data.key,
+                  value: value,
+                  request_id: data.request_id
+                }, event.origin);
+              }
+              break;
+              
+            case 'auth_set':
+              // Store auth data for a specific key
+              if (AUTH_KEYS.includes(data.key)) {
+                if (data.value === null) {
+                  localStorage.removeItem(data.key);
+                } else {
+                  localStorage.setItem(data.key, data.value);
+                }
+                
+                // Broadcast the updated auth status
+                broadcastAuthStatus();
+                
+                // Confirm action
+                event.source.postMessage({
+                  type: 'auth_set_done',
+                  key: data.key,
+                  request_id: data.request_id
+                }, event.origin);
+              }
+              break;
+              
+            case 'auth_clear':
+              // Clear all auth data
+              AUTH_KEYS.forEach(key => {
+                localStorage.removeItem(key);
+              });
+              
+              broadcastAuthStatus();
+              
+              // Confirm action
+              event.source.postMessage({
+                type: 'auth_clear_done',
+                request_id: data.request_id
+              }, event.origin);
+              break;
           }
-          
-          // Otherwise, we need to use postMessage for cross-domain auth
-          const iframe = document.createElement('iframe');
-          iframe.style.display = 'none';
-          iframe.src = `https://${targetDomain}/auth-bridge.html?token=${encodeURIComponent(token)}&mode=receive`;
-          
-          // Listen for messages from the iframe
-          window.addEventListener('message', function(event) {
-            // Only accept messages from our target domain
-            if (event.origin !== `https://${targetDomain}`) return;
-            
-            if (event.data === 'auth-success') {
-              showSuccess();
-              setTimeout(() => {
-                window.location.href = redirectUrl;
-              }, 1000);
-            } else {
-              showError('Kunde inte synkronisera autentisering med måldomänen.');
-            }
-          }, false);
-          
-          // Add the iframe to the page
-          document.body.appendChild(iframe);
-          
-          // Set a timeout in case we don't get a response
-          setTimeout(() => {
-            showError('Timeout vid synkronisering av autentisering. Prova att ladda om sidan.');
-          }, 5000);
-        } else {
-          // No cross-domain needed, just redirect
-          showSuccess();
-          setTimeout(() => {
-            window.location.href = redirectUrl;
-          }, 1000);
+        } catch (e) {
+          console.error('[Auth Bridge] Error processing message:', e);
+          // Let the sender know about the error
+          event.source.postMessage({
+            type: 'auth_error',
+            error: e.message,
+            request_id: data.request_id
+          }, event.origin);
         }
-      } catch (error) {
-        showError('Ett fel uppstod: ' + error.message);
-        console.error('Auth bridge error:', error);
+      });
+      
+      // Initialize
+      try {
+        broadcastAuthStatus();
+        isReady = true;
+        console.log('[Auth Bridge] Ready');
+        statusElement.textContent = 'Ready';
+      } catch (e) {
+        console.error('[Auth Bridge] Initialization error:', e);
+        statusElement.textContent = 'Error: ' + e.message;
+        statusElement.style.color = '#dc3545';
       }
       
-      function showSuccess() {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('success').style.display = 'block';
-      }
-      
-      function showError(message) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('error').style.display = 'block';
-        if (message) {
-          document.getElementById('errorMessage').textContent = message;
-        }
-      }
-      
-      // For iframe mode, listen for token requests
-      if (params.get('mode') === 'receive') {
-        // Send a message back to the parent window
-        if (window.parent && token) {
-          localStorage.setItem('supabase.auth.token', token);
-          window.parent.postMessage('auth-success', '*');
-        } else {
-          window.parent.postMessage('auth-error', '*');
-        }
-      }
+      // Keep checking auth status periodically
+      setInterval(broadcastAuthStatus, 10000);
     })();
   </script>
 </body>

@@ -1,10 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Optimera statiska resurser och fonter
-  optimizeFonts: true,
-  optimizeImages: true,
-  swcMinify: true, // Använd SWC för minifiering
-  
   // Konfigurera domänhantering för subdomäner
   async rewrites() {
     return {
@@ -139,6 +134,26 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=86400' }
         ],
       },
+      // För auth-bridge och storage-bridge
+      {
+        source: '/(auth-bridge|storage-bridge).html',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }
+        ],
+      },
+      // För JS hjälpskript
+      {
+        source: '/(cross-domain-storage|static-resource-fix).js',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Cache-Control', value: 'no-cache, must-revalidate' }
+        ],
+      },
     ];
   },
   
@@ -166,7 +181,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Statiska resurser och komprimeringskonfiguration
+  // Komprimering
   compress: true,
   poweredByHeader: false,
 };
