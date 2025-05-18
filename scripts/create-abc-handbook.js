@@ -4,11 +4,11 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Constants for the ABC handbook
 const subdomain = 'abc';
-const name = 'ABC Handbook';
+const title = 'ABC Handbook';
 
 console.log(`\n====== CREATING ABC HANDBOOK ======`);
 console.log(`Subdomain: ${subdomain}`);
-console.log(`Name: ${name}`);
+console.log(`Title: ${title}`);
 
 // Get environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,7 +32,7 @@ async function createAbcHandbook() {
     // Check if a handbook with this subdomain already exists
     const { data: existingHandbook, error: checkError } = await supabase
       .from('handbooks')
-      .select('id, name')
+      .select('id, title')
       .eq('subdomain', subdomain);
       
     if (checkError) {
@@ -43,18 +43,18 @@ async function createAbcHandbook() {
     if (existingHandbook && existingHandbook.length > 0) {
       console.log('ℹ️ A handbook with this subdomain already exists:');
       console.log(`   ID: ${existingHandbook[0].id}`);
-      console.log(`   Name: ${existingHandbook[0].name}`);
+      console.log(`   Title: ${existingHandbook[0].title}`);
       console.log(`   URL: https://${subdomain}.handbok.org`);
       return;
     }
     
-    console.log(`\n🔧 Creating new handbook "${name}" with subdomain "${subdomain}"...`);
+    console.log(`\n🔧 Creating new handbook "${title}" with subdomain "${subdomain}"...`);
     
     // Create the handbook
     const { data: handbook, error: handbookError } = await supabase
       .from('handbooks')
       .insert({
-        name,
+        title,
         subdomain,
         published: true
       })
@@ -96,7 +96,7 @@ async function createAbcHandbook() {
       .from('pages')
       .insert({
         title: 'Welcome',
-        content: `# Welcome to ${name}\n\nThis is the start page for your handbook. You can access this handbook at https://${subdomain}.handbok.org.`,
+        content: `# Welcome to ${title}\n\nThis is the start page for your handbook. You can access this handbook at https://${subdomain}.handbok.org.`,
         order: 0,
         section_id: section.id
       })
@@ -113,7 +113,7 @@ async function createAbcHandbook() {
     // Show summary
     console.log(`\n🎉 ABC Handbook created successfully!`);
     console.log(`\n📋 Summary:`);
-    console.log(`   Name: ${handbook.name}`);
+    console.log(`   Title: ${handbook.title}`);
     console.log(`   Subdomain: ${handbook.subdomain}`);
     console.log(`   ID: ${handbook.id}`);
     console.log(`   Created: ${new Date(handbook.created_at).toLocaleString()}`);

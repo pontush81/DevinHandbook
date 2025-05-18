@@ -9,13 +9,13 @@ echo "Creating ABC handbook via API..."
 API_URL="https://handbok.org/api/create-handbook"
 API_KEY="handbok-secret-key"
 SUBDOMAIN="abc"
-NAME="ABC Handbook"
+TITLE="ABC Handbook"
 
 # Create the JSON payload
 JSON_PAYLOAD=$(cat <<EOF
 {
   "subdomain": "$SUBDOMAIN",
-  "name": "$NAME"
+  "title": "$TITLE"
 }
 EOF
 )
