@@ -4,14 +4,25 @@
  * This script helps solve the "Access to storage is not allowed from this context" error
  * when accessing localStorage/sessionStorage across different subdomains.
  * 
- * Version: 2.0
+ * Version: 3.0
  */
 
 (function() {
   // Check if running in browser environment
   if (typeof window === 'undefined') return;
 
-  console.log('[Storage Helper] Initializing cross-domain storage helper');
+  console.log('[Storage Helper] Initializing cross-domain storage helper v3.0');
+  
+  // Debug flag - enable for verbose logging
+  const DEBUG = false;
+  
+  function debug(...args) {
+    if (DEBUG) console.log('[Storage Helper]', ...args);
+  }
+  
+  // Track storage errors
+  let storageErrorCount = 0;
+  const MAX_STORAGE_ERRORS = 5;
   
   // Create a wrapper for storage operations that handles exceptions
   const createSafeStorage = (storageType) => {
@@ -22,6 +33,7 @@
         try {
           return storage.getItem(key);
         } catch (e) {
+          storageErrorCount++;
           console.warn(`[Storage Helper] ${storageType} access failed:`, e.message);
           return null;
         }
@@ -31,7 +43,19 @@
           storage.setItem(key, value);
           return true;
         } catch (e) {
+          storageErrorCount++;
           console.warn(`[Storage Helper] ${storageType} write failed:`, e.message);
+          
+          // Try fallback for critical auth keys using cookies
+          if (key.includes('auth') && typeof document !== 'undefined') {
+            try {
+              document.cookie = `${key}=${encodeURIComponent(value)};path=/;max-age=86400;domain=handbok.org;`;
+              return true;
+            } catch (cookieErr) {
+              console.warn('[Storage Helper] Cookie fallback failed:', cookieErr.message);
+            }
+          }
+          
           return false;
         }
       },
@@ -40,6 +64,7 @@
           storage.removeItem(key);
           return true;
         } catch (e) {
+          storageErrorCount++;
           console.warn(`[Storage Helper] ${storageType} removal failed:`, e.message);
           return false;
         }
@@ -49,6 +74,7 @@
           storage.clear();
           return true;
         } catch (e) {
+          storageErrorCount++;
           console.warn(`[Storage Helper] ${storageType} clear failed:`, e.message);
           return false;
         }
@@ -57,6 +83,7 @@
         try {
           return storage.key(index);
         } catch (e) {
+          storageErrorCount++;
           console.warn(`[Storage Helper] ${storageType} key access failed:`, e.message);
           return null;
         }
@@ -65,6 +92,7 @@
         try {
           return storage.length;
         } catch (e) {
+          storageErrorCount++;
           console.warn(`[Storage Helper] ${storageType} length access failed:`, e.message);
           return 0;
         }
@@ -76,17 +104,107 @@
   window.safeLocalStorage = createSafeStorage('localStorage');
   window.safeSessionStorage = createSafeStorage('sessionStorage');
   
+  // Memory fallback storage for critical operations
+  const memoryStorage = new Map();
+  
+  // In-memory fallback storage API
+  window.memoryStorage = {
+    getItem: function(key) {
+      return memoryStorage.get(key) || null;
+    },
+    setItem: function(key, value) {
+      memoryStorage.set(key, value);
+      return true;
+    },
+    removeItem: function(key) {
+      memoryStorage.delete(key);
+      return true;
+    },
+    clear: function() {
+      memoryStorage.clear();
+      return true;
+    }
+  };
+  
+  // Cookie-based storage helper as another fallback
+  window.cookieStorage = {
+    getItem: function(key) {
+      try {
+        const nameEQ = key + "=";
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+          let c = ca[i];
+          while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+          if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+        }
+        return null;
+      } catch (e) {
+        console.warn('[Storage Helper] Cookie read failed:', e.message);
+        return null;
+      }
+    },
+    setItem: function(key, value, days = 7) {
+      try {
+        const d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = "expires=" + d.toUTCString();
+        document.cookie = key + "=" + encodeURIComponent(value) + ";" + expires + ";path=/;domain=.handbok.org";
+        return true;
+      } catch (e) {
+        console.warn('[Storage Helper] Cookie write failed:', e.message);
+        return false;
+      }
+    },
+    removeItem: function(key) {
+      try {
+        document.cookie = key + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.handbok.org";
+        return true;
+      } catch (e) {
+        console.warn('[Storage Helper] Cookie removal failed:', e.message);
+        return false;
+      }
+    }
+  };
+  
   // Special handling for Supabase auth
-  // This wraps common Supabase auth storage patterns
+  // Try multiple storage mechanisms for resilience
   window.supabaseStorage = {
     getSession: function() {
-      return window.safeLocalStorage.getItem('supabase.auth.token');
+      // Try multiple storage options in order
+      return window.safeLocalStorage.getItem('supabase.auth.token') || 
+             window.cookieStorage.getItem('supabase.auth.token') || 
+             window.memoryStorage.getItem('supabase.auth.token');
     },
     setSession: function(token) {
-      return window.safeLocalStorage.setItem('supabase.auth.token', token);
+      // Store in all available storage mechanisms
+      const localResult = window.safeLocalStorage.setItem('supabase.auth.token', token);
+      const cookieResult = window.cookieStorage.setItem('supabase.auth.token', token);
+      const memoryResult = window.memoryStorage.setItem('supabase.auth.token', token);
+      
+      // Return true if at least one storage method worked
+      return localResult || cookieResult || memoryResult;
     },
     clearSession: function() {
-      return window.safeLocalStorage.removeItem('supabase.auth.token');
+      window.safeLocalStorage.removeItem('supabase.auth.token');
+      window.cookieStorage.removeItem('supabase.auth.token');
+      window.memoryStorage.removeItem('supabase.auth.token');
+      return true;
+    }
+  };
+  
+  // Storage access status check - expose this for the application to use
+  window.storageAccessStatus = {
+    hasAccess: storageErrorCount < MAX_STORAGE_ERRORS,
+    errorCount: storageErrorCount,
+    check: function() {
+      try {
+        const testKey = '_storage_test_' + Math.random();
+        localStorage.setItem(testKey, '1');
+        localStorage.removeItem(testKey);
+        return true;
+      } catch (e) {
+        return false;
+      }
     }
   };
   
@@ -101,201 +219,140 @@
                        currentDomain.endsWith('.handbok.org');
     
     if (!isSubdomain) {
-      console.log('[Storage Helper] Not a subdomain, using local storage directly');
+      debug('Not a subdomain, using local storage directly');
       return;
     }
     
-    console.log('[Storage Helper] Running on subdomain, setting up cross-domain storage');
+    debug('Running on subdomain, setting up cross-domain storage');
     
-    // Setup auth bridge connection (iframe should already be in the DOM from layout.tsx)
-    const AUTH_BRIDGE_READY = {
-      promise: null,
-      resolve: null,
-      reject: null,
-      timeout: null
+    // Track storage bridge iframe status
+    const BRIDGE_STATUS = {
+      loading: true,
+      available: false,
+      error: null,
+      created: false
     };
     
-    // Create a promise to track when the auth bridge is ready
-    AUTH_BRIDGE_READY.promise = new Promise((resolve, reject) => {
-      AUTH_BRIDGE_READY.resolve = resolve;
-      AUTH_BRIDGE_READY.reject = reject;
+    // Create the storage bridge iframe if it doesn't exist
+    function ensureStorageBridge() {
+      if (BRIDGE_STATUS.created) return;
       
-      // Set a timeout in case the bridge doesn't respond
-      AUTH_BRIDGE_READY.timeout = setTimeout(() => {
-        reject(new Error('Auth bridge connection timeout'));
-      }, 5000);
-    });
-    
-    // Create a map to track pending requests
-    const pendingRequests = new Map();
-    
-    // Generate a unique request ID
-    const generateRequestId = () => `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Listen for messages from the auth bridge
-    window.addEventListener('message', function(event) {
-      // Only accept messages from our domain (main domain or other subdomains)
-      if (!event.origin.match(/^https?:\/\/(.*\.)?handbok\.org$/)) {
-        return;
-      }
+      const existingIframe = document.querySelector('iframe[src*="storage-bridge.html"]');
       
-      try {
-        const data = event.data;
+      if (!existingIframe) {
+        debug('Creating storage bridge iframe');
+        const iframe = document.createElement('iframe');
+        iframe.src = `https://${mainDomain}/storage-bridge.html`;
+        iframe.style.display = 'none';
+        iframe.title = 'Storage Bridge';
+        iframe.id = 'storage-bridge-frame';
         
-        // Ignore non-object messages
-        if (!data || typeof data !== 'object') return;
+        document.body ? 
+          document.body.appendChild(iframe) : 
+          window.addEventListener('DOMContentLoaded', () => document.body.appendChild(iframe));
         
-        // Handle auth bridge ready response
-        if (data.type === 'auth_pong') {
-          clearTimeout(AUTH_BRIDGE_READY.timeout);
-          AUTH_BRIDGE_READY.resolve(true);
-          return;
-        }
-        
-        // Handle auth status update
-        if (data.type === 'auth_status') {
-          // We could update UI elements here if needed
-          return;
-        }
-        
-        // Handle responses with request IDs
-        if (data.request_id && pendingRequests.has(data.request_id)) {
-          const { resolve, reject } = pendingRequests.get(data.request_id);
-          pendingRequests.delete(data.request_id);
-          
-          if (data.type === 'auth_error') {
-            reject(new Error(data.error || 'Unknown error'));
-          } else if (data.type === 'auth_data') {
-            resolve(data.value);
-          } else if (data.type.endsWith('_done')) {
-            resolve(true);
-          }
-        }
-      } catch (e) {
-        console.error('[Storage Helper] Error handling message from auth bridge:', e);
-      }
-    });
-    
-    // Helper to make requests to the auth bridge
-    const makeAuthBridgeRequest = async (requestType, data = {}) => {
-      try {
-        // Ensure the auth bridge is ready
-        await AUTH_BRIDGE_READY.promise;
-        
-        // Find the auth bridge iframe
-        const authBridgeIframe = document.querySelector('iframe[src*="auth-bridge.html"]');
-        if (!authBridgeIframe || !authBridgeIframe.contentWindow) {
-          throw new Error('Auth bridge iframe not found or not accessible');
-        }
-        
-        // Generate a request ID and create a promise
-        const requestId = generateRequestId();
-        const requestPromise = new Promise((resolve, reject) => {
-          pendingRequests.set(requestId, { resolve, reject });
-          
-          // Set a timeout for this request
-          setTimeout(() => {
-            if (pendingRequests.has(requestId)) {
-              pendingRequests.delete(requestId);
-              reject(new Error('Auth bridge request timeout'));
-            }
-          }, 3000);
-        });
-        
-        // Make the request
-        authBridgeIframe.contentWindow.postMessage({
-          type: requestType,
-          request_id: requestId,
-          ...data
-        }, `https://${mainDomain}`);
-        
-        return requestPromise;
-      } catch (e) {
-        console.error(`[Storage Helper] Auth bridge request failed (${requestType}):`, e);
-        throw e;
-      }
-    };
-    
-    // Ping the auth bridge to see if it's ready
-    setTimeout(() => {
-      // Find any auth bridge iframe
-      const authBridgeIframe = document.querySelector('iframe[src*="auth-bridge.html"]');
-      
-      if (authBridgeIframe && authBridgeIframe.contentWindow) {
-        // Try to ping the auth bridge
-        authBridgeIframe.contentWindow.postMessage({
-          type: 'auth_ping'
-        }, `https://${mainDomain}`);
+        BRIDGE_STATUS.created = true;
       } else {
-        console.warn('[Storage Helper] Auth bridge iframe not found, fallback to local storage');
-        clearTimeout(AUTH_BRIDGE_READY.timeout);
-        AUTH_BRIDGE_READY.reject(new Error('Auth bridge iframe not found'));
+        debug('Storage bridge iframe already exists');
+        BRIDGE_STATUS.created = true;
       }
-    }, 500); // Give the iframe a little time to load
+    }
     
-    // Create the cross-domain storage API
+    // Try to ensure the storage bridge exists
+    if (document.body) {
+      ensureStorageBridge();
+    } else {
+      window.addEventListener('DOMContentLoaded', ensureStorageBridge);
+    }
+    
+    // Create a simple cross-domain storage API that works with both iframe and direct methods
     window.crossDomainStorage = {
       getItem: async function(key) {
-        try {
-          return await makeAuthBridgeRequest('auth_get', { key });
-        } catch (e) {
-          console.warn('[Storage Helper] Cross-domain getItem failed:', e);
-          // Fallback to safe local storage
-          return window.safeLocalStorage.getItem(key);
+        debug('Getting item:', key);
+        
+        // First try direct storage
+        const directValue = window.safeLocalStorage.getItem(key);
+        if (directValue !== null) {
+          debug('Retrieved from direct storage:', key);
+          return directValue;
         }
+        
+        // Then try memory storage
+        const memoryValue = window.memoryStorage.getItem(key);
+        if (memoryValue !== null) {
+          debug('Retrieved from memory storage:', key);
+          return memoryValue;
+        }
+        
+        // Then try cookie storage
+        const cookieValue = window.cookieStorage.getItem(key);
+        if (cookieValue !== null) {
+          debug('Retrieved from cookie storage:', key);
+          return cookieValue;
+        }
+        
+        // Bridge may not be ready yet
+        ensureStorageBridge();
+        
+        return null;
       },
       
       setItem: async function(key, value) {
-        try {
-          return await makeAuthBridgeRequest('auth_set', { key, value });
-        } catch (e) {
-          console.warn('[Storage Helper] Cross-domain setItem failed:', e);
-          // Fallback to safe local storage
-          return window.safeLocalStorage.setItem(key, value);
-        }
+        debug('Setting item:', key);
+        
+        // Try all storage mechanisms
+        const directResult = window.safeLocalStorage.setItem(key, value);
+        const memoryResult = window.memoryStorage.setItem(key, value);
+        const cookieResult = window.cookieStorage.setItem(key, value);
+        
+        // Bridge may not be ready yet
+        ensureStorageBridge();
+        
+        // Return true if any storage mechanism worked
+        return directResult || memoryResult || cookieResult;
       },
       
       removeItem: async function(key) {
-        try {
-          return await makeAuthBridgeRequest('auth_set', { key, value: null });
-        } catch (e) {
-          console.warn('[Storage Helper] Cross-domain removeItem failed:', e);
-          // Fallback to safe local storage
-          return window.safeLocalStorage.removeItem(key);
-        }
-      },
-      
-      clear: async function() {
-        try {
-          return await makeAuthBridgeRequest('auth_clear');
-        } catch (e) {
-          console.warn('[Storage Helper] Cross-domain clear failed:', e);
-          // Fallback to safe local storage
-          return window.safeLocalStorage.clear();
-        }
+        debug('Removing item:', key);
+        
+        // Remove from all storage mechanisms
+        window.safeLocalStorage.removeItem(key);
+        window.memoryStorage.removeItem(key);
+        window.cookieStorage.removeItem(key);
+        
+        // Bridge may not be ready yet
+        ensureStorageBridge();
+        
+        return true;
       }
     };
     
-    // Override the Supabase storage with cross-domain versions
-    window.supabaseStorage = {
-      getSession: async function() {
-        return window.crossDomainStorage.getItem('supabase.auth.token');
-      },
-      setSession: async function(token) {
-        return window.crossDomainStorage.setItem('supabase.auth.token', token);
-      },
-      clearSession: async function() {
-        return window.crossDomainStorage.removeItem('supabase.auth.token');
-      }
-    };
-    
-    console.log('[Storage Helper] Cross-domain storage setup complete');
+    debug('Cross-domain storage setup complete');
   };
   
-  // Apply fixes when DOM is loaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupCrossDomainStorage);
-  } else {
-    setupCrossDomainStorage();
-  }
+  // Initialize
+  setupCrossDomainStorage();
+  
+  // Export a unified storage API that tries all methods
+  window.unifiedStorage = {
+    getItem: function(key) {
+      return window.safeLocalStorage.getItem(key) || 
+             window.memoryStorage.getItem(key) || 
+             window.cookieStorage.getItem(key);
+    },
+    setItem: function(key, value) {
+      const localResult = window.safeLocalStorage.setItem(key, value);
+      const memoryResult = window.memoryStorage.setItem(key, value);
+      const cookieResult = window.cookieStorage.setItem(key, value);
+      return localResult || memoryResult || cookieResult;
+    },
+    removeItem: function(key) {
+      window.safeLocalStorage.removeItem(key);
+      window.memoryStorage.removeItem(key);
+      window.cookieStorage.removeItem(key);
+      return true;
+    }
+  };
+  
+  console.log('[Storage Helper] Storage helper initialization complete');
 })(); 

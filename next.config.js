@@ -12,6 +12,12 @@ const nextConfig = {
               type: 'host',
               value: '(?<subdomain>[^.]+).handbok.org',
             },
+            // Prevents redirect loops - only redirect if NOT already from handbok.org
+            {
+              type: 'header',
+              key: 'referer',
+              value: '(?!.*handbok\\.org).*',
+            }
           ],
           destination: 'https://handbok.org/_next/static/css/:path*',
         },
@@ -23,6 +29,12 @@ const nextConfig = {
               type: 'host',
               value: '(?<subdomain>[^.]+).handbok.org',
             },
+            // Prevents redirect loops
+            {
+              type: 'header',
+              key: 'referer',
+              value: '(?!.*handbok\\.org).*',
+            }
           ],
           destination: 'https://handbok.org/_next/static/chunks/:path*',
         },
@@ -34,8 +46,25 @@ const nextConfig = {
               type: 'host',
               value: '(?<subdomain>[^.]+).handbok.org',
             },
+            // Prevents redirect loops
+            {
+              type: 'header',
+              key: 'referer',
+              value: '(?!.*handbok\\.org).*',
+            }
           ],
           destination: 'https://handbok.org/_next/static/media/:path*',
+        },
+        // Proxy endpoint for fonts with wildcards to handle any hash in filename
+        {
+          source: '/:path*.woff2',
+          has: [
+            {
+              type: 'host',
+              value: '(?<subdomain>[^.]+).handbok.org',
+            }
+          ],
+          destination: 'https://handbok.org/:path.woff2',
         },
         // Hantera andra statiska resurser
         {
@@ -44,9 +73,20 @@ const nextConfig = {
             {
               type: 'host',
               value: '(?<subdomain>[^.]+).handbok.org',
-            },
+            }
           ],
           destination: 'https://handbok.org/static/:path*',
+        },
+        // API proxy for resource loading
+        {
+          source: '/api/resources/:path*',
+          has: [
+            {
+              type: 'host',
+              value: '(?<subdomain>[^.]+).handbok.org',
+            }
+          ],
+          destination: 'https://handbok.org/api/resources/:path*',
         },
         // Hantera subdomän-routing utan middleware för besökare
         {
@@ -55,7 +95,7 @@ const nextConfig = {
             {
               type: 'host',
               value: '(?<subdomain>[^.]+).handbok.org',
-            },
+            }
           ],
           destination: '/create-handbook',  // Dirigera till femstegsguiden
         },
@@ -66,7 +106,7 @@ const nextConfig = {
             {
               type: 'host',
               value: '(?<subdomain>[^.]+).handbok.org',
-            },
+            }
           ],
           destination: '/api/:path*', 
         },
@@ -117,11 +157,21 @@ const nextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
         ],
       },
-      // För font-filer
+      // För font-filer - explicit content-type
       {
         source: '/_next/static/media/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
+        ],
+      },
+      // För alla woff2 font-filer med mera exakta content-type headers
+      {
+        source: '/:path*.woff2',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Content-Type', value: 'font/woff2' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
         ],

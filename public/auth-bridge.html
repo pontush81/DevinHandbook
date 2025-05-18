@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Auth Bridge - Handbok.org</title>
+  <meta name="robots" content="noindex, nofollow">
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       margin: 0;
       padding: 20px;
       color: #444;
@@ -23,7 +24,6 @@
     h1 {
       color: #333;
       font-size: 24px;
-      margin-top: 0;
     }
     p {
       line-height: 1.5;
@@ -39,160 +39,362 @@
       background-color: #e6f7ee;
       color: #0d854f;
     }
+    .error {
+      background-color: #ffe6e6;
+      color: #c53030;
+    }
+    .log {
+      font-family: monospace;
+      font-size: 12px;
+      background: #f5f5f5;
+      border: 1px solid #eee;
+      padding: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
   </style>
+  <!-- Enable credentials for cross-origin -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src *; frame-ancestors https://*.handbok.org https://handbok.org">
 </head>
 <body>
   <div class="container">
-    <h1>Auth Bridge</h1>
-    <p>Status: <span class="status active">Aktiv</span></p>
-    <p>Denna sida hjälper till att hantera autentisering mellan subdomäner på handbok.org.</p>
-    <p>Sidan används internt av systemet och behöver vara öppen för att dela inloggningsinformation.</p>
-    <p>Teknisk status: <span id="auth-status">Initializing...</span></p>
+    <h1>Auth Bridge v2.0</h1>
+    <p>Status: <span id="status-indicator" class="status active">Aktiv</span></p>
+    <p>Detta är en hjälpsida för att hantera autentisering över subdomäner på handbok.org.</p>
+    <p>Begäranden hanterade: <span id="request-count">0</span></p>
+    <div id="log" class="log" style="display: none"></div>
   </div>
 
   <script>
     /**
-     * Auth Bridge Script
+     * Auth Bridge Script v2.0
      * 
-     * This script allows authenticated sessions to be shared across subdomains
-     * by securely storing authentication tokens on the main domain and
-     * communicating with subdomains via postMessage.
+     * Enhanced cross-domain authentication bridge
+     * This bridge enables seamless authentication state sharing across subdomains
      */
     (function() {
-      console.log('[Auth Bridge] Initializing...');
-      const statusElement = document.getElementById('auth-status');
-      const AUTH_KEYS = [
+      // Configuration
+      const DEBUG = false;
+      const AUTH_STORAGE_KEYS = [
         'supabase.auth.token',
-        'supabase.auth.refresh_token',
-        'supabase.auth.expires_at',
-        'supabase-auth-token',
-        'user_session',
-        'user_metadata'
+        'supabase.auth.refreshToken',
+        'supabase.auth.accessToken',
+        'sb-refresh-token',
+        'sb-access-token',
+        'handbok.user',
+        'handbok.session',
+        'auth-data'
       ];
       
-      // This flag helps the parent page know if we're ready
-      let isReady = false;
+      // Optional debug display
+      const logElement = document.getElementById('log');
+      const statusIndicator = document.getElementById('status-indicator');
+      const requestCountElement = document.getElementById('request-count');
       
-      // Helper to broadcast auth status to all frames
-      function broadcastAuthStatus() {
-        try {
-          const authTokenKey = 'supabase.auth.token';
-          const hasAuth = !!localStorage.getItem(authTokenKey);
-          
-          // Notify parent and any message origins of auth status
-          window.parent.postMessage({
-            type: 'auth_status',
-            isAuthenticated: hasAuth
-          }, '*');
-          
-          statusElement.textContent = hasAuth ? 'Authenticated' : 'Not authenticated';
-          statusElement.style.color = hasAuth ? '#0d854f' : '#888';
-        } catch (e) {
-          console.error('[Auth Bridge] Error broadcasting auth status:', e);
-          statusElement.textContent = 'Error: ' + e.message;
-          statusElement.style.color = '#dc3545';
-        }
+      // Show debug UI if needed
+      if (DEBUG) {
+        logElement.style.display = 'block';
       }
       
-      // Listen for messages from other windows/frames
+      // Request counter
+      let requestCount = 0;
+      
+      // Log helper function
+      function log(message) {
+        if (DEBUG) {
+          const time = new Date().toLocaleTimeString('sv-SE');
+          const logItem = document.createElement('div');
+          logItem.textContent = `[${time}] ${message}`;
+          logElement.appendChild(logItem);
+          logElement.scrollTop = logElement.scrollHeight;
+          
+          // Keep logs trimmed
+          while (logElement.childElementCount > 50) {
+            logElement.removeChild(logElement.firstChild);
+          }
+        }
+        
+        console.log(`[Auth Bridge] ${message}`);
+      }
+      
+      // Log error helper
+      function logError(message, error) {
+        statusIndicator.className = 'status error';
+        statusIndicator.textContent = 'Fel';
+        
+        const errorMsg = error ? `${message}: ${error.message}` : message;
+        
+        if (DEBUG) {
+          const time = new Date().toLocaleTimeString('sv-SE');
+          const logItem = document.createElement('div');
+          logItem.textContent = `[${time}] ❌ ${errorMsg}`;
+          logItem.style.color = '#c53030';
+          logElement.appendChild(logItem);
+          logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        console.error(`[Auth Bridge] ${errorMsg}`);
+      }
+      
+      // Storage access handler with fallbacks
+      const safeStorage = {
+        getItem: function(key) {
+          try {
+            return localStorage.getItem(key);
+          } catch (e) {
+            logError(`Failed to get item "${key}" from localStorage`, e);
+            return null;
+          }
+        },
+        
+        setItem: function(key, value) {
+          try {
+            localStorage.setItem(key, value);
+            return true;
+          } catch (e) {
+            logError(`Failed to set item "${key}" in localStorage`, e);
+            
+            // Try cookie as fallback for auth tokens
+            if (AUTH_STORAGE_KEYS.includes(key)) {
+              try {
+                const d = new Date();
+                d.setTime(d.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days
+                const expires = "expires=" + d.toUTCString();
+                document.cookie = `${key}=${encodeURIComponent(value)};${expires};path=/;domain=.handbok.org`;
+                return true;
+              } catch (cookieError) {
+                logError('Failed to set cookie fallback', cookieError);
+              }
+            }
+            
+            return false;
+          }
+        },
+        
+        removeItem: function(key) {
+          try {
+            localStorage.removeItem(key);
+            
+            // Also clear cookie if it exists
+            document.cookie = `${key}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.handbok.org`;
+            
+            return true;
+          } catch (e) {
+            logError(`Failed to remove item "${key}" from localStorage`, e);
+            return false;
+          }
+        },
+        
+        getAllItems: function() {
+          try {
+            const items = {};
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key) {
+                items[key] = localStorage.getItem(key);
+              }
+            }
+            return items;
+          } catch (e) {
+            logError('Failed to get all items from localStorage', e);
+            return {};
+          }
+        }
+      };
+      
+      log('Auth bridge initialized');
+      
+      /**
+       * Handle incoming message requests
+       */
       window.addEventListener('message', function(event) {
-        // Only accept messages from our own domains
+        // Only accept messages from our domain or subdomains
         if (!event.origin.match(/^https?:\/\/(.*\.)?handbok\.org$/)) {
-          console.warn('[Auth Bridge] Rejected message from unauthorized origin:', event.origin);
+          log(`Rejected message from unauthorized origin: ${event.origin}`);
           return;
         }
         
-        const data = event.data;
+        // Validate message format
+        if (!event.data || typeof event.data !== 'object' || !event.data.action) {
+          return;
+        }
         
-        // Skip if not an object or missing required info
-        if (!data || typeof data !== 'object') return;
+        // Update request counter
+        requestCount++;
+        requestCountElement.textContent = requestCount.toString();
+        
+        const data = event.data;
+        const source = event.source;
+        
+        // Respond to ping requests immediately
+        if (data.action === 'auth_ping') {
+          log('Received ping from ' + event.origin);
+          source?.postMessage({
+            type: 'auth_pong',
+            message: 'Auth bridge is active'
+          }, event.origin);
+          return;
+        }
+        
+        // Process message
+        log(`Processing ${data.action} request from ${event.origin}`);
+        
+        let response = {
+          type: 'auth_error',
+          request_id: data.request_id,
+          error: null,
+          value: null
+        };
         
         try {
-          // Handle different message types
-          switch(data.type) {
-            case 'auth_ping':
-              // Respond to ping, let the other window know we're alive
-              event.source.postMessage({
-                type: 'auth_pong',
-                isReady: isReady
-              }, event.origin);
-              break;
-              
+          // Handle different action types
+          switch (data.action) {
             case 'auth_get':
-              // Retrieve auth data for a specific key
-              if (AUTH_KEYS.includes(data.key)) {
-                const value = localStorage.getItem(data.key);
-                event.source.postMessage({
-                  type: 'auth_data',
-                  key: data.key,
-                  value: value,
-                  request_id: data.request_id
-                }, event.origin);
+              // Get a specific item from storage
+              if (data.key) {
+                response.type = 'auth_data';
+                response.value = safeStorage.getItem(data.key);
+              } else {
+                response.error = 'Key is required for auth_get';
               }
               break;
               
             case 'auth_set':
-              // Store auth data for a specific key
-              if (AUTH_KEYS.includes(data.key)) {
-                if (data.value === null) {
-                  localStorage.removeItem(data.key);
-                } else {
-                  localStorage.setItem(data.key, data.value);
+              // Set an item in storage
+              if (data.key) {
+                const success = safeStorage.setItem(data.key, data.value);
+                response.type = success ? 'auth_set_done' : 'auth_error';
+                if (!success) {
+                  response.error = 'Failed to set item in storage';
                 }
-                
-                // Broadcast the updated auth status
-                broadcastAuthStatus();
-                
-                // Confirm action
-                event.source.postMessage({
-                  type: 'auth_set_done',
-                  key: data.key,
-                  request_id: data.request_id
-                }, event.origin);
+              } else {
+                response.error = 'Key is required for auth_set';
               }
               break;
               
-            case 'auth_clear':
-              // Clear all auth data
-              AUTH_KEYS.forEach(key => {
-                localStorage.removeItem(key);
-              });
-              
-              broadcastAuthStatus();
-              
-              // Confirm action
-              event.source.postMessage({
-                type: 'auth_clear_done',
-                request_id: data.request_id
-              }, event.origin);
+            case 'auth_remove':
+              // Remove an item from storage
+              if (data.key) {
+                const success = safeStorage.removeItem(data.key);
+                response.type = success ? 'auth_remove_done' : 'auth_error';
+                if (!success) {
+                  response.error = 'Failed to remove item from storage';
+                }
+              } else {
+                response.error = 'Key is required for auth_remove';
+              }
               break;
+              
+            case 'auth_get_all':
+              // Get all auth-related items
+              response.type = 'auth_data';
+              
+              // Filter only auth-related keys
+              const allItems = safeStorage.getAllItems();
+              const authItems = {};
+              
+              for (const key in allItems) {
+                if (AUTH_STORAGE_KEYS.some(authKey => key.includes(authKey))) {
+                  authItems[key] = allItems[key];
+                }
+              }
+              
+              response.value = authItems;
+              break;
+              
+            case 'auth_sync_all':
+              // Get all auth-related items
+              if (data.items && typeof data.items === 'object') {
+                // Synchronize all provided items to local storage
+                let syncedCount = 0;
+                
+                for (const key in data.items) {
+                  if (data.items[key] !== null) {
+                    safeStorage.setItem(key, data.items[key]);
+                    syncedCount++;
+                  }
+                }
+                
+                response.type = 'auth_sync_done';
+                response.value = { syncedCount };
+              } else {
+                response.error = 'Items object is required for auth_sync_all';
+              }
+              break;
+              
+            case 'auth_status':
+              // Simple status check
+              response.type = 'auth_status';
+              response.value = {
+                active: true,
+                hasLocalStorage: typeof localStorage !== 'undefined',
+                hasSessionStorage: typeof sessionStorage !== 'undefined',
+                requestsHandled: requestCount
+              };
+              break;
+              
+            default:
+              response.error = `Unknown action: ${data.action}`;
           }
         } catch (e) {
-          console.error('[Auth Bridge] Error processing message:', e);
-          // Let the sender know about the error
-          event.source.postMessage({
-            type: 'auth_error',
-            error: e.message,
-            request_id: data.request_id
-          }, event.origin);
+          logError(`Error processing ${data.action} request`, e);
+          response.error = e.message || 'Unknown error';
+        }
+        
+        // Send the response back to the requester
+        if (source) {
+          try {
+            source.postMessage(response, event.origin);
+            log(`Response sent for ${data.action} request`);
+          } catch (e) {
+            logError('Failed to send response', e);
+          }
         }
       });
       
-      // Initialize
-      try {
-        broadcastAuthStatus();
-        isReady = true;
-        console.log('[Auth Bridge] Ready');
-        statusElement.textContent = 'Ready';
-      } catch (e) {
-        console.error('[Auth Bridge] Initialization error:', e);
-        statusElement.textContent = 'Error: ' + e.message;
-        statusElement.style.color = '#dc3545';
+      // Check and synchronize auth states across tabs
+      function broadcastAuthState() {
+        try {
+          // Broadcast authenticated state to all other tabs
+          const authItems = {};
+          
+          // Get all auth-related items
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && AUTH_STORAGE_KEYS.some(authKey => key.includes(authKey))) {
+              authItems[key] = localStorage.getItem(key);
+            }
+          }
+          
+          if (Object.keys(authItems).length > 0) {
+            localStorage.setItem('__auth_broadcast', JSON.stringify({
+              time: Date.now(),
+              items: authItems
+            }));
+          }
+        } catch (e) {
+          logError('Failed to broadcast auth state', e);
+        }
       }
       
-      // Keep checking auth status periodically
-      setInterval(broadcastAuthStatus, 10000);
+      // Synchronize auth state every minute
+      setInterval(broadcastAuthState, 60000);
+      
+      // Reset status indicator every 30 seconds if there was an error
+      setInterval(function() {
+        if (statusIndicator.className.includes('error')) {
+          statusIndicator.className = 'status active';
+          statusIndicator.textContent = 'Aktiv';
+        }
+      }, 30000);
+      
+      // Initial broadcast to synchronize
+      setTimeout(broadcastAuthState, 2000);
+      
+      log('Ready to handle auth requests');
     })();
   </script>
 </body>
+</html> 
 </html> 

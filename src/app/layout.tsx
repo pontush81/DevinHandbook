@@ -35,24 +35,55 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <head>
-        {/* Inline critical CSS för att förhindra FOUC */}
+        {/* Inline critical CSS för att förhindra FOUC och garantera grundläggande styling */}
         <style dangerouslySetInnerHTML={{ __html: `
+          /* Critical CSS for base styling - will always load */
           body {
             background-color: #ffffff;
             color: #333333;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 0;
+            line-height: 1.5;
           }
           
-          /* Nödfalls-style för att säkerställa visuell grundstruktur */
+          /* Base typography */
           h1, h2, h3, h4, h5, h6 { margin-top: 1.5rem; margin-bottom: 1rem; color: #111; }
+          h1 { font-size: 2.25rem; font-weight: 700; }
+          h2 { font-size: 1.75rem; font-weight: 600; }
+          h3 { font-size: 1.5rem; font-weight: 600; }
           p { margin-bottom: 1rem; }
           a { color: #2563eb; text-decoration: none; }
           a:hover { text-decoration: underline; }
-          button, .btn { padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 0.25rem; }
-          input, textarea, select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 0.25rem; }
+          
+          /* Basic components */
+          button, .btn { 
+            padding: 0.5rem 1rem; 
+            background: #2563eb; 
+            color: white; 
+            border: none; 
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 1rem;
+          }
+          button:hover, .btn:hover {
+            background: #1d4ed8;
+          }
+          input, textarea, select { 
+            padding: 0.5rem; 
+            border: 1px solid #ddd; 
+            border-radius: 0.25rem;
+            font-size: 1rem;
+            line-height: 1.5;
+          }
+          
+          /* Layout */
           .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+          
+          /* Utility classes */
+          .text-center { text-align: center; }
+          .my-4 { margin-top: 1rem; margin-bottom: 1rem; }
+          .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
           
           /* Font fallbacks */
           @font-face {
@@ -67,9 +98,9 @@ export default function RootLayout({
             font-display: swap;
           }
           
-          /* Emergency classes */
+          /* Emergency styles */
           .emergency-notice {
-            padding: 10px 15px;
+            padding: 12px 16px;
             margin: 10px 0;
             background-color: #fff3cd;
             color: #856404;
@@ -79,93 +110,102 @@ export default function RootLayout({
           }
         `}} />
         
-        {/* Preconnect to main domain to improve resource loading */}
+        {/* Preconnect to main domain for faster resource loading */}
         <link rel="preconnect" href="https://handbok.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://handbok.org" />
         
-        {/* Load critical resources with fallbacks */}
+        {/* Load critical utilities before anything else */}
         <Script src="/cross-domain-storage.js" strategy="beforeInteractive" />
         <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
         
-        {/* Nödfalls-skript för förhindra redirects och lösa resursproblem */}
+        {/* Emergency script to handle loading issues */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             try {
-              // Hantera redirect detection
-              var redirectCount = 0;
-              try { redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0'); } 
-              catch(e) { console.warn('Session storage access error:', e); }
-              
-              if (redirectCount > 3) {
-                console.error('Too many redirects detected, applying emergency mode');
-                try { sessionStorage.setItem('redirect_count', '0'); } catch(e) {}
-                
-                // Tillämpa enkel nödfalls-CSS om sidan har problem med resursladdning
-                var style = document.createElement('style');
-                style.innerHTML = 'body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }';
-                document.head.appendChild(style);
-                
-                // Visa en notifiering till användaren
-                document.addEventListener('DOMContentLoaded', function() {
-                  var div = document.createElement('div');
-                  div.className = 'emergency-notice';
-                  div.innerHTML = '<strong>Nödfallsläge:</strong> Sidan visas med begränsad formatering på grund av laddningsproblem.';
-                  if (document.body) document.body.prepend(div);
-                });
-              } else {
+              // Redirect loop detection
+              const detectRedirects = () => {
+                let redirectCount = 0;
                 try { 
-                  sessionStorage.setItem('redirect_count', (redirectCount + 1).toString());
-                  setTimeout(function() { sessionStorage.setItem('redirect_count', '0'); }, 3000);
-                } catch(e) {}
-              }
-              
-              // Fix för font-laddning
-              document.fonts.ready.then(function() {
-                if (document.fonts.check('1em Geist') === false) {
-                  console.warn('Font loading failed, applying fallbacks');
-                  var style = document.createElement('style');
-                  style.innerHTML = '.font-sans, .font-geist-sans, [class*="--font-geist-sans"] { font-family: Arial, sans-serif !important; } .font-mono, .font-geist-mono, [class*="--font-geist-mono"] { font-family: "Courier New", monospace !important; }';
-                  document.head.appendChild(style);
+                  redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0');
+                } catch(e) { 
+                  console.warn('Session storage error:', e);
                 }
-              });
                 
-              // Vidarebefordra statiska resurser direkt till huvuddomänen för att förhindra redirects
-              var currentHost = window.location.hostname;
-              var isSubdomain = currentHost.endsWith('.handbok.org') && 
-                               currentHost !== 'handbok.org' && 
-                               currentHost !== 'www.handbok.org';
+                if (redirectCount > 3) {
+                  console.error('Redirect loop detected - applying emergency mode');
+                  // Reset counter
+                  try { sessionStorage.setItem('redirect_count', '0'); } catch(e) {}
+                  return true;
+                } else {
+                  try { 
+                    sessionStorage.setItem('redirect_count', (redirectCount + 1).toString());
+                    
+                    // Auto-reset after 3 seconds if page loads normally
+                    setTimeout(() => {
+                      try { sessionStorage.setItem('redirect_count', '0'); } catch(e) {}
+                    }, 3000);
+                  } catch(e) {}
+                  return false;
+                }
+              };
+              
+              // Only run emergency checks on subdomain
+              const currentHost = window.location.hostname;
+              const isSubdomain = currentHost.endsWith('.handbok.org') && 
+                                 currentHost !== 'handbok.org' &&
+                                 currentHost !== 'www.handbok.org';
               
               if (isSubdomain) {
-                // 1. Direkt DOM-fixning för befintliga element
-                function fixStaticResources() {
-                  var resources = document.querySelectorAll('link[href^="/_next/"], script[src^="/_next/"], img[src^="/_next/"]');
-                  resources.forEach(function(el) {
-                    var attrName = el.hasAttribute('href') ? 'href' : 'src';
-                    var url = el.getAttribute(attrName);
+                const isRedirectLoop = detectRedirects();
+                
+                if (isRedirectLoop) {
+                  // Apply emergency styles
+                  const style = document.createElement('style');
+                  style.innerHTML = 'body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }';
+                  document.head.appendChild(style);
+                  
+                  // Show emergency notice when DOM is loaded
+                  window.addEventListener('DOMContentLoaded', () => {
+                    const div = document.createElement('div');
+                    div.className = 'emergency-notice';
+                    div.innerHTML = '<strong>Nödfallsläge:</strong> Sidan visas med begränsad formatering på grund av laddningsproblem.';
+                    if (document.body) document.body.prepend(div);
+                  });
+                }
+                
+                // Fix for static resource loading
+                const fixStaticResources = () => {
+                  // Direct DOM fixing for resources
+                  document.querySelectorAll('link[href^="/_next/"], script[src^="/_next/"], img[src^="/_next/"]').forEach(el => {
+                    const attrName = el.hasAttribute('href') ? 'href' : 'src';
+                    const url = el.getAttribute(attrName);
                     if (url && url.startsWith('/_next/')) {
                       el.setAttribute(attrName, 'https://handbok.org' + url);
                     }
                   });
+                };
+                
+                // Run resource fix both immediately and when DOM is loaded
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', fixStaticResources);
+                } else {
+                  fixStaticResources();
                 }
-                
-                // Kör omedelbart och vid DOMContentLoaded
-                fixStaticResources();
-                document.addEventListener('DOMContentLoaded', fixStaticResources);
-                
-                // 2. Övervaka resursladdningsproblem
-                window.addEventListener('error', function(e) {
-                  var target = e.target;
-                  if (target && (target.tagName === 'LINK' || target.tagName === 'SCRIPT' || target.tagName === 'IMG')) {
-                    var url = target.src || target.href;
-                    if (url && url.includes('/_next/')) {
-                      console.warn('Resource loading failed, attempting fix:', url);
-                      var newUrl = 'https://handbok.org' + new URL(url).pathname;
-                      target.src ? target.src = newUrl : target.href = newUrl;
-                    }
-                  }
-                }, true);
               }
               
-              // Fix för storage-problem
+              // Font loading fallback
+              if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(() => {
+                  if (!document.fonts.check('1em Geist')) {
+                    console.warn('Font loading failed - applying fallbacks');
+                    const style = document.createElement('style');
+                    style.innerHTML = '.font-sans, .font-geist-sans, [class*="--font-geist-sans"] { font-family: Arial, sans-serif !important; } .font-mono, .font-geist-mono, [class*="--font-geist-mono"] { font-family: "Courier New", monospace !important; }';
+                    document.head.appendChild(style);
+                  }
+                }).catch(e => console.error('Font loading error:', e));
+              }
+              
+              // Safe storage access for cross-origin contexts
               window.safeStorage = {
                 getItem: function(key) {
                   try { return localStorage.getItem(key); } 
@@ -186,16 +226,15 @@ export default function RootLayout({
           })();
         `}} />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>{children}</AuthProvider>
         
-        {/* Load auth bridge for cross-domain storage access */}
+        {/* Storage bridge iframe for cross-domain storage access */}
         <iframe 
-          src="https://handbok.org/auth-bridge.html" 
-          style={{ display: 'none' }} 
-          title="Auth Bridge" 
+          src="https://handbok.org/storage-bridge.html" 
+          style={{ display: 'none', width: 0, height: 0, position: 'absolute' }} 
+          title="Storage Bridge" 
+          aria-hidden="true"
         />
       </body>
     </html>

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * This API route serves as a proxy for fetching static resources across subdomains
  * to avoid CORS and redirect issues when accessing resources like CSS, JS, and fonts.
  * 
- * Version: 2.0
+ * Version: 3.0
  */
 
 // Map of minimal fallbacks for critical resource types
@@ -36,9 +36,24 @@ const FALLBACKS = {
       box-sizing: border-box;
       margin-bottom: 1rem;
     }
+    .container, main, section {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
   `,
   js: `console.warn("Fallback script loaded - original resource unavailable");`,
   font: new Uint8Array([0]), // Empty font file
+};
+
+// Resource type cache duration mapping
+const CACHE_DURATIONS = {
+  css: 86400,    // CSS files: 1 day
+  js: 86400,     // JS files: 1 day
+  font: 2592000, // Font files: 30 days
+  image: 604800, // Images: 7 days
+  other: 3600    // Other: 1 hour
 };
 
 // Helper to get content type based on path
@@ -60,11 +75,18 @@ function getContentType(path: string): string {
 }
 
 // Helper to get resource type category
-function getResourceType(path: string): 'css' | 'js' | 'font' | 'other' {
+function getResourceType(path: string): 'css' | 'js' | 'font' | 'image' | 'other' {
   if (path.endsWith('.css')) return 'css';
   if (path.endsWith('.js')) return 'js';
   if (path.match(/\.(woff2?|ttf|otf|eot)$/i)) return 'font';
+  if (path.match(/\.(png|jpe?g|gif|svg|webp|ico)$/i)) return 'image';
   return 'other';
+}
+
+// Helper to get cache duration based on resource type
+function getCacheDuration(path: string): number {
+  const resourceType = getResourceType(path);
+  return CACHE_DURATIONS[resourceType] || CACHE_DURATIONS.other;
 }
 
 // Helper to create a fallback response
@@ -73,22 +95,60 @@ function createFallbackResponse(path: string): NextResponse {
   const contentType = getContentType(path);
   
   // Get appropriate fallback content
-  const fallbackContent = FALLBACKS[resourceType] || '';
+  const fallbackContent = FALLBACKS[resourceType] || null;
+  
+  if (!fallbackContent) {
+    return NextResponse.json(
+      { error: 'Resource not available and no fallback exists for this type' },
+      { status: 404 }
+    );
+  }
   
   console.log(`Serving fallback for ${resourceType} resource: ${path}`);
   
-  return NextResponse.json(
-    { success: false, message: 'Resource not available, fallback provided' },
-    { 
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'no-store',
-        'Access-Control-Allow-Origin': '*',
-        'X-Resource-Fallback': 'true'
-      }
+  return new NextResponse(fallbackContent, {
+    status: 200,
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
+      'X-Resource-Fallback': 'true'
     }
-  );
+  });
+}
+
+// Cache for previously requested resources to improve performance
+const resourceCache = new Map<string, {data: ArrayBuffer, type: string, time: number}>();
+const CACHE_SIZE_LIMIT = 50; // Maximum number of items to keep in memory cache
+const CACHE_TTL = 300000; // 5 minutes cache TTL for memory cache
+
+// Helper to clean up old cache entries
+function cleanupCache() {
+  const now = Date.now();
+  let itemsToRemove = [];
+  
+  // Identify old items
+  for (const [key, value] of resourceCache.entries()) {
+    if (now - value.time > CACHE_TTL) {
+      itemsToRemove.push(key);
+    }
+  }
+  
+  // Remove old items
+  for (const key of itemsToRemove) {
+    resourceCache.delete(key);
+  }
+  
+  // If still too many items, remove oldest ones
+  if (resourceCache.size > CACHE_SIZE_LIMIT) {
+    const sortedEntries = Array.from(resourceCache.entries())
+      .sort((a, b) => a[1].time - b[1].time);
+    
+    const excessCount = resourceCache.size - CACHE_SIZE_LIMIT;
+    for (let i = 0; i < excessCount; i++) {
+      resourceCache.delete(sortedEntries[i][0]);
+    }
+  }
 }
 
 /**
@@ -104,6 +164,28 @@ export async function GET(req: NextRequest) {
       { error: 'Path parameter is required' },
       { status: 400 }
     );
+  }
+  
+  // Check cache first (before tracking proxy count)
+  const cacheKey = path;
+  if (resourceCache.has(cacheKey)) {
+    const cached = resourceCache.get(cacheKey);
+    
+    // Update access time
+    if (cached) {
+      cached.time = Date.now();
+      
+      return new NextResponse(cached.data, {
+        status: 200,
+        headers: {
+          'Content-Type': cached.type,
+          'Cache-Control': `public, max-age=${getCacheDuration(path)}`,
+          'Access-Control-Allow-Origin': '*',
+          'Cross-Origin-Resource-Policy': 'cross-origin',
+          'X-Resource-Cache': 'hit'
+        },
+      });
+    }
   }
   
   // Track proxy requests to detect loops
@@ -135,7 +217,7 @@ export async function GET(req: NextRequest) {
     
     const response = await fetch(resourceUrl, {
       headers: {
-        'User-Agent': 'Handbok-Resource-Proxy/2.0',
+        'User-Agent': 'Handbok-Resource-Proxy/3.0',
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate, br',
         'Connection': 'keep-alive',
@@ -143,7 +225,7 @@ export async function GET(req: NextRequest) {
         'x-proxy-count': (proxyCount + 1).toString(),
       },
       signal: controller.signal,
-      next: { revalidate: 3600 } // Cache for 1 hour in development
+      next: { revalidate: getCacheDuration(path) } // Use appropriate cache duration
     }).finally(() => {
       clearTimeout(timeoutId);
     });
@@ -164,12 +246,26 @@ export async function GET(req: NextRequest) {
     // Get the response body as an array buffer for binary data support
     const arrayBuffer = await response.arrayBuffer();
     
+    // Cache the response in memory (only if it's not too large)
+    if (arrayBuffer.byteLength < 1024 * 1024) { // Don't cache items larger than 1MB
+      resourceCache.set(cacheKey, {
+        data: arrayBuffer,
+        type: contentType,
+        time: Date.now()
+      });
+      
+      // Clean up cache if needed
+      if (resourceCache.size > CACHE_SIZE_LIMIT) {
+        cleanupCache();
+      }
+    }
+    
     // Create and return a new response with appropriate headers
     return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': `public, max-age=${getCacheDuration(path)}`,
         'Access-Control-Allow-Origin': '*',
         'Cross-Origin-Resource-Policy': 'cross-origin',
         'X-Resource-Origin': resourceDomain,

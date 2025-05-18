@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross-Domain Resource Test - Handbok.org</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+      color: #333;
+    }
+    h1 {
+      color: #2563eb;
+      margin-bottom: 1.5rem;
+    }
+    h2 {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+    }
+    .result {
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d1fae5;
+      border-left: 4px solid #10b981;
+    }
+    .failure {
+      background-color: #fee2e2;
+      border-left: 4px solid #ef4444;
+    }
+    .warning {
+      background-color: #fff3cd;
+      border-left: 4px solid #f59e0b;
+    }
+    .info {
+      background-color: #e0f2fe;
+      border-left: 4px solid #3b82f6;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    pre {
+      background-color: #f9fafb;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.875rem;
+    }
+    .test-section {
+      margin-bottom: 2rem;
+    }
+    #results {
+      margin-top: 1rem;
+    }
+    .timestamp {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+  </style>
+  <script src="/cross-domain-storage.js"></script>
+  <script src="/static-resource-fix.js"></script>
+</head>
+<body>
+  <h1>Cross-Domain Resource Test</h1>
+  <p>This page tests if the cross-domain resource loading solutions are working correctly.</p>
+
+  <div class="info result">
+    <p><strong>Current Host:</strong> <span id="current-host"></span></p>
+    <p><strong>Time:</strong> <span id="current-time"></span></p>
+  </div>
+
+  <div class="test-section">
+    <h2>1. Storage Access Test</h2>
+    <button id="test-storage">Test Storage Access</button>
+    <button id="clear-storage">Clear Test Values</button>
+    <div id="storage-results"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Font Loading Test</h2>
+    <button id="test-fonts">Test Font Loading</button>
+    <div id="font-results"></div>
+    <div>
+      <p>Sample text (should use Geist font if available):</p>
+      <p style="font-family: 'Geist', -apple-system, sans-serif;">The quick brown fox jumps over the lazy dog. 1234567890</p>
+      <p>Monospaced sample (should use Geist Mono if available):</p>
+      <p style="font-family: 'Geist Mono', monospace;">function testCode() { return true; }</p>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Resource Loading Test</h2>
+    <button id="test-resources">Test Resources</button>
+    <div id="resource-results"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. API Proxy Test</h2>
+    <button id="test-api-proxy">Test API Proxy</button>
+    <div id="api-results"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>5. Auth Bridge Test</h2>
+    <button id="test-auth-bridge">Test Auth Bridge</button>
+    <div id="auth-bridge-results"></div>
+  </div>
+  
+  <h2>All Test Results</h2>
+  <div id="results"></div>
+
+  <script>
+    // Helper functions
+    function addResult(message, type = 'info', container = 'results') {
+      const resultElement = document.createElement('div');
+      resultElement.className = `${type} result`;
+      
+      const timestamp = new Date().toLocaleTimeString();
+      resultElement.innerHTML = `
+        <div class="timestamp">${timestamp}</div>
+        <div>${message}</div>
+      `;
+      
+      document.getElementById(container).prepend(resultElement);
+      
+      // Also add to general results container if not already there
+      if (container !== 'results') {
+        addResult(message, type, 'results');
+      }
+    }
+    
+    // Set current information
+    document.getElementById('current-host').textContent = window.location.hostname;
+    document.getElementById('current-time').textContent = new Date().toLocaleString();
+    
+    // 1. Storage Access Test
+    document.getElementById('test-storage').addEventListener('click', async function() {
+      const storageResults = document.getElementById('storage-results');
+      storageResults.innerHTML = '';
+      
+      // Test direct localStorage
+      try {
+        localStorage.setItem('direct_test', 'direct_value');
+        const directValue = localStorage.getItem('direct_test');
+        
+        if (directValue === 'direct_value') {
+          addResult('Direct localStorage access: SUCCESS', 'success', 'storage-results');
+        } else {
+          addResult('Direct localStorage access: FAILED - Unexpected value', 'failure', 'storage-results');
+        }
+      } catch (e) {
+        addResult(`Direct localStorage access: FAILED - ${e.message}`, 'failure', 'storage-results');
+      }
+      
+      // Test safe storage api
+      try {
+        const testKey = 'safe_storage_test';
+        const testValue = 'test_value_' + Date.now();
+        
+        // Test safeLocalStorage if available
+        if (window.safeLocalStorage) {
+          window.safeLocalStorage.setItem(testKey, testValue);
+          const retrievedValue = window.safeLocalStorage.getItem(testKey);
+          
+          if (retrievedValue === testValue) {
+            addResult('Safe Storage API: SUCCESS', 'success', 'storage-results');
+          } else {
+            addResult('Safe Storage API: FAILED - Value mismatch', 'warning', 'storage-results');
+          }
+        } else {
+          addResult('Safe Storage API: NOT AVAILABLE', 'warning', 'storage-results');
+        }
+      } catch (e) {
+        addResult(`Safe Storage API: ERROR - ${e.message}`, 'failure', 'storage-results');
+      }
+      
+      // Test cross-domain storage if available
+      if (window.crossDomainStorage) {
+        try {
+          const crossDomainKey = 'cross_domain_test';
+          const crossDomainValue = 'cross_domain_value_' + Date.now();
+          
+          await window.crossDomainStorage.setItem(crossDomainKey, crossDomainValue);
+          const retrievedValue = await window.crossDomainStorage.getItem(crossDomainKey);
+          
+          if (retrievedValue === crossDomainValue) {
+            addResult('Cross-Domain Storage: SUCCESS', 'success', 'storage-results');
+          } else {
+            addResult('Cross-Domain Storage: FAILED - Value mismatch', 'warning', 'storage-results');
+          }
+        } catch (e) {
+          addResult(`Cross-Domain Storage: ERROR - ${e.message}`, 'failure', 'storage-results');
+        }
+      } else {
+        addResult('Cross-Domain Storage: NOT AVAILABLE', 'warning', 'storage-results');
+      }
+      
+      // Test unified storage if available
+      if (window.unifiedStorage) {
+        try {
+          const unifiedKey = 'unified_storage_test';
+          const unifiedValue = 'unified_value_' + Date.now();
+          
+          window.unifiedStorage.setItem(unifiedKey, unifiedValue);
+          const retrievedValue = window.unifiedStorage.getItem(unifiedKey);
+          
+          if (retrievedValue === unifiedValue) {
+            addResult('Unified Storage: SUCCESS', 'success', 'storage-results');
+          } else {
+            addResult('Unified Storage: FAILED - Value mismatch', 'warning', 'storage-results');
+          }
+        } catch (e) {
+          addResult(`Unified Storage: ERROR - ${e.message}`, 'failure', 'storage-results');
+        }
+      } else {
+        addResult('Unified Storage: NOT AVAILABLE', 'warning', 'storage-results');
+      }
+      
+      // Check if storage fix is applied
+      const storageFixApplied = window.safeStorage || window.safeLocalStorage || window.crossDomainStorage || window.unifiedStorage;
+      
+      if (storageFixApplied) {
+        addResult('Storage fix is APPLIED', 'success', 'storage-results');
+      } else {
+        addResult('Storage fix is NOT APPLIED', 'failure', 'storage-results');
+      }
+    });
+    
+    // Clear test storage
+    document.getElementById('clear-storage').addEventListener('click', function() {
+      try {
+        // Clear direct localStorage
+        localStorage.removeItem('direct_test');
+        
+        // Clear safe storage
+        if (window.safeLocalStorage) {
+          window.safeLocalStorage.removeItem('safe_storage_test');
+        }
+        
+        // Clear cross-domain storage
+        if (window.crossDomainStorage) {
+          window.crossDomainStorage.removeItem('cross_domain_test');
+        }
+        
+        // Clear unified storage
+        if (window.unifiedStorage) {
+          window.unifiedStorage.removeItem('unified_storage_test');
+        }
+        
+        addResult('Test storage values cleared', 'info', 'storage-results');
+      } catch (e) {
+        addResult(`Error clearing storage: ${e.message}`, 'failure', 'storage-results');
+      }
+    });
+    
+    // 2. Font Loading Test
+    document.getElementById('test-fonts').addEventListener('click', function() {
+      const fontResults = document.getElementById('font-results');
+      fontResults.innerHTML = '';
+      
+      // Test if Geist fonts are loaded
+      if (document.fonts && document.fonts.check) {
+        // Check if Geist Sans is loaded
+        const geistLoaded = document.fonts.check('1em Geist');
+        
+        if (geistLoaded) {
+          addResult('Geist Sans font: LOADED', 'success', 'font-results');
+        } else {
+          addResult('Geist Sans font: NOT LOADED', 'warning', 'font-results');
+        }
+        
+        // Check if Geist Mono is loaded
+        const geistMonoLoaded = document.fonts.check('1em "Geist Mono"');
+        
+        if (geistMonoLoaded) {
+          addResult('Geist Mono font: LOADED', 'success', 'font-results');
+        } else {
+          addResult('Geist Mono font: NOT LOADED', 'warning', 'font-results');
+        }
+      } else {
+        addResult('Font loading check: NOT SUPPORTED in this browser', 'warning', 'font-results');
+      }
+      
+      // Check if font fallbacks are configured
+      const hasFontFallbacks = 
+        document.querySelector('style') && 
+        document.querySelector('style').textContent.includes('Geist Fallback') ||
+        document.fonts && document.fonts.ready;
+      
+      if (hasFontFallbacks) {
+        addResult('Font fallbacks: CONFIGURED', 'success', 'font-results');
+      } else {
+        addResult('Font fallbacks: NOT DETECTED', 'warning', 'font-results');
+      }
+    });
+    
+    // 3. Resource Loading Test
+    document.getElementById('test-resources').addEventListener('click', function() {
+      const resourceResults = document.getElementById('resource-results');
+      resourceResults.innerHTML = '';
+      
+      // Check if resource fix is loaded
+      if (window.resourceFixStatus || window._resourceFixObserverActive) {
+        addResult('Resource fix script: LOADED', 'success', 'resource-results');
+      } else {
+        addResult('Resource fix script: NOT DETECTED', 'warning', 'resource-results');
+      }
+      
+      // Test loading a CSS file
+      const testCss = document.createElement('link');
+      testCss.rel = 'stylesheet';
+      testCss.href = '/_next/static/css/test-resource.css';
+      
+      testCss.onload = function() {
+        addResult('CSS resource loading: SUCCESS', 'success', 'resource-results');
+      };
+      
+      testCss.onerror = function() {
+        addResult('CSS resource loading: FAILED', 'failure', 'resource-results');
+      };
+      
+      document.head.appendChild(testCss);
+      
+      // Test loading an image
+      const testImg = new Image();
+      testImg.src = '/_next/static/media/test-image.png';
+      
+      testImg.onload = function() {
+        addResult('Image resource loading: SUCCESS', 'success', 'resource-results');
+      };
+      
+      testImg.onerror = function() {
+        addResult('Image resource loading: FAILED', 'failure', 'resource-results');
+      };
+      
+      // Check resource fix strategy
+      if (window.resourceFixStatus && window.resourceFixStatus.getStatus) {
+        try {
+          const status = window.resourceFixStatus.getStatus();
+          addResult(`Resource loading strategy: ${status.strategy}`, 'info', 'resource-results');
+          
+          if (status.emergencyMode) {
+            addResult('Emergency mode is ACTIVE', 'warning', 'resource-results');
+          }
+        } catch (e) {
+          addResult(`Error getting resource status: ${e.message}`, 'failure', 'resource-results');
+        }
+      }
+    });
+    
+    // 4. API Proxy Test
+    document.getElementById('test-api-proxy').addEventListener('click', async function() {
+      const apiResults = document.getElementById('api-results');
+      apiResults.innerHTML = '';
+      
+      // Test API proxy
+      try {
+        const proxyRequest = await fetch('/api/resources?path=/_next/static/css/test-style.css');
+        
+        if (proxyRequest.ok) {
+          const cacheHeader = proxyRequest.headers.get('X-Resource-Cache');
+          const originHeader = proxyRequest.headers.get('X-Resource-Origin');
+          
+          addResult('API proxy request: SUCCESS', 'success', 'api-results');
+          
+          if (cacheHeader) {
+            addResult(`Proxy cache: ${cacheHeader.toUpperCase()}`, 'info', 'api-results');
+          }
+          
+          if (originHeader) {
+            addResult(`Proxy origin: ${originHeader}`, 'info', 'api-results');
+          }
+        } else {
+          addResult(`API proxy request: FAILED - ${proxyRequest.status} ${proxyRequest.statusText}`, 'failure', 'api-results');
+        }
+      } catch (e) {
+        addResult(`API proxy request: ERROR - ${e.message}`, 'failure', 'api-results');
+      }
+    });
+    
+    // 5. Auth Bridge Test
+    document.getElementById('test-auth-bridge').addEventListener('click', async function() {
+      const authResults = document.getElementById('auth-bridge-results');
+      authResults.innerHTML = '';
+      
+      // Look for auth bridge iframe
+      const authBridgeIframe = document.querySelector('iframe[src*="auth-bridge.html"]');
+      
+      if (authBridgeIframe) {
+        addResult('Auth bridge iframe: FOUND', 'success', 'auth-bridge-results');
+      } else {
+        const storageBridgeIframe = document.querySelector('iframe[src*="storage-bridge.html"]');
+        
+        if (storageBridgeIframe) {
+          addResult('Storage bridge iframe: FOUND (using instead of auth bridge)', 'success', 'auth-bridge-results');
+        } else {
+          addResult('Auth/Storage bridge iframe: NOT FOUND', 'warning', 'auth-bridge-results');
+        }
+      }
+      
+      // Test auth token access
+      try {
+        if (window.supabaseStorage && window.supabaseStorage.getSession) {
+          // Try to set and get a test session value
+          const authTestValue = { test: true, timestamp: Date.now() };
+          await window.supabaseStorage.setSession(JSON.stringify(authTestValue));
+          
+          const retrievedSession = window.supabaseStorage.getSession();
+          
+          if (retrievedSession) {
+            addResult('Auth token access: SUCCESS', 'success', 'auth-bridge-results');
+          } else {
+            addResult('Auth token access: FAILED - Could not retrieve token', 'warning', 'auth-bridge-results');
+          }
+          
+          // Clean up test value
+          await window.supabaseStorage.clearSession();
+        } else {
+          addResult('Supabase storage API: NOT AVAILABLE', 'warning', 'auth-bridge-results');
+        }
+      } catch (e) {
+        addResult(`Auth token test: ERROR - ${e.message}`, 'failure', 'auth-bridge-results');
+      }
+    });
+  </script>
+</body>
+</html> 

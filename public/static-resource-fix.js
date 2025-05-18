@@ -7,19 +7,26 @@
  * 3. Fixing existing <link> and <script> tags
  * 4. Setting up a MutationObserver to handle dynamically added elements
  * 
- * Version: 2.0
+ * Version: 3.0
  */
 
 (function() {
   // Check if running in browser environment
   if (typeof window === 'undefined') return;
 
-  console.log('[Resource Fix] Static resource fix script loaded');
+  console.log('[Resource Fix] Static resource fix script loaded v3.0');
   
-  // Get the current hostname
+  // Debug flag - set to true for verbose logging
+  const DEBUG = false;
+  
+  function debug(...args) {
+    if (DEBUG) console.log('[Resource Fix]', ...args);
+  }
+  
+  // Get the current hostname and protocol
   const currentHost = window.location.hostname;
   const protocol = window.location.protocol;
-  console.log('[Resource Fix] Current host:', currentHost, 'Protocol:', protocol);
+  debug('Current host:', currentHost, 'Protocol:', protocol);
   
   // Determine if we're on a subdomain
   const isSubdomain = currentHost.endsWith('.handbok.org') && 
@@ -28,105 +35,96 @@
   
   // If we're not on a subdomain, there's no need to run this script
   if (!isSubdomain) {
-    console.log('[Resource Fix] Not on a subdomain, no fixes needed');
+    debug('Not on a subdomain, no fixes needed');
     return;
   }
   
   // Determine which root domain to use for resource loading
   const rootDomain = 'handbok.org';
   
-  // Break redirect loops if detected
+  // Track resource loading issues
+  const resourceStatus = {
+    totalRequests: 0,
+    failedRequests: 0,
+    redirectLoops: 0,
+    criticalResourcesFailed: false,
+    failedResources: new Set(),
+    emergencyModeActive: false
+  };
+  
+  // Detect and break redirect loops
   try {
     const redirectCounter = Number(sessionStorage.getItem('resource_redirect_count') || '0');
+    
     if (redirectCounter > 5) {
       console.error('[Resource Fix] Resource redirect loop detected - applying emergency CSS');
-      // Apply basic emergency CSS to make page usable
-      const style = document.createElement('style');
-      style.innerHTML = `
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-          line-height: 1.5;
-          padding: 1rem;
-          max-width: 1000px;
-          margin: 0 auto;
-          color: #333;
-        }
-        button, .btn, [type="button"], [type="submit"] {
-          background: #4a56e2;
-          color: white;
-          padding: 0.5rem 1rem;
-          border: none;
-          border-radius: 0.25rem;
-          cursor: pointer;
-        }
-        input, select, textarea {
-          border: 1px solid #ddd;
-          padding: 0.5rem;
-          border-radius: 0.25rem;
-          width: 100%;
-          box-sizing: border-box;
-        }
-        a { color: #4a56e2; }
-        h1, h2, h3 { color: #222; }
-      `;
-      document.head.appendChild(style);
+      applyEmergencyStyles();
+      resourceStatus.emergencyModeActive = true;
+      resourceStatus.redirectLoops++;
       
       // Reset counter
       sessionStorage.setItem('resource_redirect_count', '0');
       
-      // Add message to page
-      const notice = document.createElement('div');
-      notice.className = 'emergency-notice';
-      notice.innerHTML = '<strong>Nödfallsläge:</strong> Sidan visas med begränsad formatering på grund av problem med resursinladdning.';
+      // Show emergency message
+      addEmergencyNotice();
       
-      // Insert at top of body when it's available
-      if (document.body) {
-        document.body.insertBefore(notice, document.body.firstChild);
-      } else {
-        document.addEventListener('DOMContentLoaded', function() {
-          document.body.insertBefore(notice, document.body.firstChild);
-        });
-      }
+      // Continue with script for error monitoring, but don't actively fix resources
+    } else {
+      // Increment counter when accessing resources
+      sessionStorage.setItem('resource_redirect_count', (redirectCounter + 1).toString());
       
-      return; // Stop further execution to prevent more redirects
+      // Reset after 10 seconds if no issues
+      setTimeout(function() {
+        sessionStorage.setItem('resource_redirect_count', '0');
+      }, 10000);
     }
-    
-    // Increment counter when accessing resources
-    sessionStorage.setItem('resource_redirect_count', (redirectCounter + 1).toString());
-    
-    // Reset after 10 seconds if no issues
-    setTimeout(function() {
-      sessionStorage.setItem('resource_redirect_count', '0');
-    }, 10000);
   } catch (e) {
     console.warn('[Resource Fix] Error with redirect detection:', e);
   }
   
   // Resource loading strategies in order of preference
   const LOADING_STRATEGIES = {
-    DIRECT_URL: 'direct',     // Direct URL to the main domain
-    PROXY_API: 'proxy',       // Use the proxy API
-    INLINE_CONTENT: 'inline'  // Use inline content as fallback
+    DIRECT_URL: 'direct',    // Direct URL to the main domain (fastest)
+    PROXY_API: 'proxy',      // Use the proxy API (more reliable but slower)
+    INLINE_CONTENT: 'inline' // Use inline content as fallback (emergency)
   };
   
+  // Start with the fastest strategy
   let selectedStrategy = LOADING_STRATEGIES.DIRECT_URL;
   
-  // Track loading failures to adjust strategy
-  const failedResources = new Set();
+  // Track loading failures to dynamically adjust strategy
   let directUrlFailureCount = 0;
+  let proxyApiFailureCount = 0;
+  
+  // Critical resources that must be loaded for the page to function
+  const CRITICAL_RESOURCES = [
+    '/_next/static/css/',
+    '/_next/static/chunks/',
+    'main',
+    'styles.css'
+  ];
+  
+  // Helper function to check if a resource is critical
+  function isCriticalResource(url) {
+    return CRITICAL_RESOURCES.some(pattern => url.includes(pattern));
+  }
   
   // Helper function to check if a URL is a static resource
   function isStaticResource(url) {
     if (typeof url !== 'string') return false;
     
     return url.includes('/_next/static/') || 
-           url.includes('.css') || 
-           url.includes('.js') ||
+           url.endsWith('.css') || 
+           url.endsWith('.js') ||
            url.includes('/static/') ||
            url.includes('/fonts/') ||
            url.includes('/assets/') ||
-           url.includes('.woff') ||
-           url.includes('.woff2');
+           url.endsWith('.woff') ||
+           url.endsWith('.woff2') ||
+           url.endsWith('.ttf') ||
+           url.endsWith('.png') ||
+           url.endsWith('.jpg') ||
+           url.endsWith('.svg');
   }
   
   // Helper to create direct URL to the root domain
@@ -157,7 +155,12 @@
       } else {
         resourcePath = originalUrl;
       }
-      return `/api/resources?path=${encodeURIComponent(resourcePath)}`;
+      
+      // Add timestamp to prevent caching issues with problem resources
+      const timestamp = resourceStatus.failedResources.has(originalUrl) ? 
+        `&t=${Date.now()}` : '';
+      
+      return `/api/resources?path=${encodeURIComponent(resourcePath)}${timestamp}`;
     } catch (e) {
       console.error('[Resource Fix] Error creating proxy URL:', e);
       return originalUrl;
@@ -169,6 +172,9 @@
     if (!isSubdomain || !isStaticResource(originalUrl)) {
       return originalUrl;
     }
+    
+    // Increment total requests counter
+    resourceStatus.totalRequests++;
     
     // Skip if already a full URL to the root domain
     if (originalUrl.includes(`${rootDomain}/`)) {
@@ -183,6 +189,10 @@
       case LOADING_STRATEGIES.PROXY_API:
         return createProxyUrl(originalUrl);
       
+      case LOADING_STRATEGIES.INLINE_CONTENT:
+        // In inline mode, we'll still return a URL but separately apply fallbacks
+        return createProxyUrl(originalUrl);
+      
       default:
         return createDirectUrl(originalUrl);
     }
@@ -190,62 +200,154 @@
   
   // Downgrade to next strategy if current one isn't working
   function downgradeStrategyIfNeeded(failedUrl) {
+    // Track failed resource
     if (failedUrl) {
-      failedResources.add(failedUrl);
+      resourceStatus.failedRequests++;
+      resourceStatus.failedResources.add(failedUrl);
+      
+      // Check if it was a critical resource
+      if (isCriticalResource(failedUrl)) {
+        resourceStatus.criticalResourcesFailed = true;
+      }
     }
+    
+    debug(`Resource stats: ${resourceStatus.failedRequests}/${resourceStatus.totalRequests} failed`);
+    
+    // If failure rate is over 30%, consider downgrading
+    const failureRate = resourceStatus.totalRequests > 0 ? 
+      resourceStatus.failedRequests / resourceStatus.totalRequests : 0;
     
     if (selectedStrategy === LOADING_STRATEGIES.DIRECT_URL) {
       directUrlFailureCount++;
       
-      if (directUrlFailureCount >= 3) {
-        console.log('[Resource Fix] Too many direct URL failures, switching to proxy API');
+      if (directUrlFailureCount >= 3 || failureRate > 0.3 || resourceStatus.criticalResourcesFailed) {
+        console.log('[Resource Fix] Direct URL strategy failing, switching to proxy API');
         selectedStrategy = LOADING_STRATEGIES.PROXY_API;
         
-        // Apply proxy to all previously failed resources
+        // Apply proxy to previously failed resources
         fixExistingTags();
       }
-    } else if (selectedStrategy === LOADING_STRATEGIES.PROXY_API && failedResources.size > 5) {
-      console.log('[Resource Fix] Proxy API failing too often, applying emergency styles');
-      selectedStrategy = LOADING_STRATEGIES.INLINE_CONTENT;
+    } else if (selectedStrategy === LOADING_STRATEGIES.PROXY_API) {
+      proxyApiFailureCount++;
       
-      // Apply emergency styles
-      const style = document.createElement('style');
-      style.innerHTML = `
-        body {
-          font-family: -apple-system, system-ui, sans-serif;
-          line-height: 1.5;
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 20px;
-          color: #333;
-        }
-        h1, h2, h3 { color: #222; margin-top: 1.5em; margin-bottom: 0.75em; }
-        p { margin-bottom: 1em; }
-        a { color: #4a56e2; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        button, .btn { 
-          background: #4a56e2; color: white;
-          padding: 0.5rem 1rem; border: none;
-          border-radius: 0.25rem; cursor: pointer;
-        }
-        input, select, textarea {
-          border: 1px solid #ddd;
-          padding: 0.5rem;
-          border-radius: 0.25rem;
-          width: 100%;
-          box-sizing: border-box;
-          margin-bottom: 1rem;
-        }
-      `;
-      document.head.appendChild(style);
+      if (proxyApiFailureCount >= 3 || failureRate > 0.5 || 
+         (resourceStatus.criticalResourcesFailed && resourceStatus.failedRequests > 5)) {
+        console.log('[Resource Fix] Proxy API failing too often, applying emergency styles');
+        selectedStrategy = LOADING_STRATEGIES.INLINE_CONTENT;
+        
+        // Apply emergency styles
+        applyEmergencyStyles();
+        
+        // Add emergency notice
+        addEmergencyNotice();
+      }
+    }
+  }
+  
+  // Apply emergency styles when all else fails
+  function applyEmergencyStyles() {
+    if (document.getElementById('emergency-css')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'emergency-css';
+    style.innerHTML = `
+      /* Emergency styles to ensure page remains usable */
+      body {
+        font-family: -apple-system, system-ui, sans-serif;
+        line-height: 1.5;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        color: #333;
+      }
+      h1, h2, h3 { color: #222; margin-top: 1.5em; margin-bottom: 0.75em; }
+      p { margin-bottom: 1em; }
+      a { color: #4a56e2; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      button, .btn, [type="button"], [type="submit"] {
+        background: #4a56e2;
+        color: white;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+      }
+      input, select, textarea {
+        border: 1px solid #ddd;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 1rem;
+      }
       
-      // Add emergency notice
+      /* Containers and layout */
+      .container, main, section {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1rem;
+      }
+      
+      /* Tables */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+      }
+      th, td {
+        text-align: left;
+        padding: 0.5rem;
+        border-bottom: 1px solid #eee;
+      }
+      
+      /* Forms */
+      form {
+        margin-bottom: 2rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+      
+      /* Emergency notification */
+      .emergency-notice {
+        padding: 10px 15px;
+        margin: 10px 0;
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+    `;
+    
+    // Always try to prepend to head first for highest priority
+    document.head.insertBefore(style, document.head.firstChild);
+    
+    console.log('[Resource Fix] Emergency styles applied');
+  }
+  
+  // Add emergency notice to the page
+  function addEmergencyNotice() {
+    if (document.querySelector('.emergency-notice')) return;
+    
+    const notice = document.createElement('div');
+    notice.className = 'emergency-notice';
+    notice.innerHTML = '<strong>Nödfallsläge:</strong> Resurser kunde inte laddas korrekt. Sidan visas med begränsad formatering.';
+    
+    // Insert at top of body when it's available
+    function insertNotice() {
       if (document.body && !document.querySelector('.emergency-notice')) {
-        const notice = document.createElement('div');
-        notice.className = 'emergency-notice';
-        notice.innerHTML = '<strong>Nödfallsläge:</strong> Resurser kunde inte laddas korrekt. Sidan visas med begränsad formatering.';
         document.body.insertBefore(notice, document.body.firstChild);
       }
+    }
+    
+    if (document.body) {
+      insertNotice();
+    } else {
+      document.addEventListener('DOMContentLoaded', insertNotice);
     }
   }
   
@@ -289,300 +391,503 @@
     return originalFetch.apply(this, arguments);
   };
   
-  // Fix existing <link> and <script> tags
+  /**
+   * Fix existing resource tags in the document
+   */
   function fixExistingTags() {
-    try {
-      // Fix CSS links
-      document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-        const href = link.getAttribute('href');
-        if (href && isStaticResource(href)) {
-          const newUrl = getResourceUrl(href);
-          if (newUrl !== href) {
-            console.log('[Resource Fix] Fixing CSS link:', href, '→', newUrl);
-            
-            // Create a new link element to avoid 'changing' the href which can cause issues
-            const newLink = document.createElement('link');
-            Array.from(link.attributes).forEach(attr => {
-              if (attr.name === 'href') {
-                newLink.setAttribute('href', newUrl);
-              } else {
-                newLink.setAttribute(attr.name, attr.value);
-              }
-            });
-            
-            // Add error handling
-            newLink.addEventListener('error', function(e) {
-              console.warn('[Resource Fix] Failed to load CSS:', newUrl);
-              downgradeStrategyIfNeeded(href);
-              
-              // If the strategy changed, we'll fix tags again
-              if (selectedStrategy !== LOADING_STRATEGIES.DIRECT_URL) {
-                setTimeout(fixExistingTags, 100);
-              }
-            });
-            
-            // Replace the old link with the new one
-            if (link.parentNode) {
-              link.parentNode.insertBefore(newLink, link);
-              link.parentNode.removeChild(link);
-            }
-          }
-        }
-      });
-      
-      // Fix JS scripts
-      document.querySelectorAll('script[src]').forEach(script => {
-        const src = script.getAttribute('src');
-        if (src && isStaticResource(src)) {
-          const newUrl = getResourceUrl(src);
-          if (newUrl !== src) {
-            console.log('[Resource Fix] Fixing script src:', src, '→', newUrl);
-            
-            // Create a new script to replace the old one
-            const newScript = document.createElement('script');
-            Array.from(script.attributes).forEach(attr => {
-              if (attr.name === 'src') {
-                newScript.setAttribute('src', newUrl);
-              } else {
-                newScript.setAttribute(attr.name, attr.value);
-              }
-            });
-            
-            // Add error handling
-            newScript.addEventListener('error', function(e) {
-              console.warn('[Resource Fix] Failed to load script:', newUrl);
-              downgradeStrategyIfNeeded(src);
-            });
-            
-            // Replace the old script with the new one
-            if (script.parentNode) {
-              script.parentNode.insertBefore(newScript, script);
-              script.parentNode.removeChild(script);
-            }
-          }
-        }
-      });
-      
-      // Fix font and other preloads
-      document.querySelectorAll('link[rel="preload"]').forEach(link => {
-        const href = link.getAttribute('href');
-        if (href && isStaticResource(href)) {
-          const newUrl = getResourceUrl(href);
-          if (newUrl !== href) {
-            console.log('[Resource Fix] Fixing preload link:', href, '→', newUrl);
-            link.setAttribute('href', newUrl);
-          }
-        }
-      });
-      
-      // Fix favicon and other icon links
-      document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(link => {
-        const href = link.getAttribute('href');
-        if (href) {
-          const newUrl = getResourceUrl(href);
-          if (newUrl !== href) {
-            console.log('[Resource Fix] Fixing icon link:', href, '→', newUrl);
-            link.setAttribute('href', newUrl);
-          }
-        }
-      });
-      
-      // Fix images with static resource paths
-      document.querySelectorAll('img[src]').forEach(img => {
-        const src = img.getAttribute('src');
-        if (src && isStaticResource(src)) {
-          const newUrl = getResourceUrl(src);
-          if (newUrl !== src) {
-            console.log('[Resource Fix] Fixing image src:', src, '→', newUrl);
-            img.setAttribute('src', newUrl);
-          }
-        }
-      });
-    } catch (e) {
-      console.error('[Resource Fix] Error fixing existing tags:', e);
-    }
-  }
-  
-  // Set up MutationObserver to fix dynamically added elements
-  function setupMutationObserver() {
-    try {
-      const observer = new MutationObserver(mutations => {
-        for (const mutation of mutations) {
-          for (const node of mutation.addedNodes) {
-            // Skip non-element nodes
-            if (!node.tagName) continue;
-            
-            // Handle new link elements (CSS, fonts)
-            if (node.tagName === 'LINK') {
-              const href = node.getAttribute('href');
-              if (href && isStaticResource(href)) {
-                const newUrl = getResourceUrl(href);
-                if (newUrl !== href) {
-                  console.log('[Resource Fix] Fixing dynamically added link:', href, '→', newUrl);
-                  node.setAttribute('href', newUrl);
-                  
-                  // Add error listener
-                  node.addEventListener('error', () => {
-                    console.warn('[Resource Fix] Dynamic link loading failed:', newUrl);
-                    downgradeStrategyIfNeeded(href);
-                  });
-                }
-              }
-            }
-            
-            // Handle new script elements
-            if (node.tagName === 'SCRIPT') {
-              const src = node.getAttribute('src');
-              if (src && isStaticResource(src)) {
-                const newUrl = getResourceUrl(src);
-                if (newUrl !== src) {
-                  console.log('[Resource Fix] Fixing dynamically added script:', src, '→', newUrl);
-                  node.setAttribute('src', newUrl);
-                  
-                  // Add error listener
-                  node.addEventListener('error', () => {
-                    console.warn('[Resource Fix] Dynamic script loading failed:', newUrl);
-                    downgradeStrategyIfNeeded(src);
-                  });
-                }
-              }
-            }
-            
-            // Handle new images
-            if (node.tagName === 'IMG') {
-              const src = node.getAttribute('src');
-              if (src && isStaticResource(src)) {
-                const newUrl = getResourceUrl(src);
-                if (newUrl !== src) {
-                  console.log('[Resource Fix] Fixing dynamically added image:', src, '→', newUrl);
-                  node.setAttribute('src', newUrl);
-                }
-              }
-            }
-            
-            // Process all children recursively
-            if (node.querySelectorAll) {
-              // Fix links in this subtree
-              node.querySelectorAll('link[href], script[src], img[src]').forEach(el => {
-                const attr = el.tagName === 'LINK' ? 'href' : 'src';
-                const originalUrl = el.getAttribute(attr);
-                
-                if (originalUrl && isStaticResource(originalUrl)) {
-                  const newUrl = getResourceUrl(originalUrl);
-                  if (newUrl !== originalUrl) {
-                    console.log(`[Resource Fix] Fixing ${el.tagName.toLowerCase()} in new subtree:`, originalUrl, '→', newUrl);
-                    el.setAttribute(attr, newUrl);
-                  }
-                }
-              });
-            }
-          }
-        }
-      });
-      
-      // Start observing
-      observer.observe(document, { childList: true, subtree: true });
-      
-      // Store observer in window so it's not garbage collected
-      window._resourceFixObserver = observer;
-      
-      console.log('[Resource Fix] MutationObserver setup complete');
-    } catch (e) {
-      console.error('[Resource Fix] Error setting up MutationObserver:', e);
-    }
-  }
-  
-  // Monitor resource errors
-  function setupErrorMonitoring() {
-    window.addEventListener('error', function(e) {
-      const target = e.target;
-      
-      // Only handle loading errors for resources
-      if (!target || !target.tagName) return;
-      
-      // Check if this is a resource loading error
-      if ((target.tagName === 'LINK' || target.tagName === 'SCRIPT' || target.tagName === 'IMG') && 
-          (e.type === 'error' || e.type === 'load')) {
-        
-        const url = target.src || target.href;
-        if (!url || !isStaticResource(url)) return;
-        
-        console.warn('[Resource Fix] Resource loading error:', url);
-        downgradeStrategyIfNeeded(url);
-        
-        // Try to fix this specific element
-        const attr = target.tagName === 'LINK' ? 'href' : 'src';
-        const newUrl = getResourceUrl(url);
-        
-        // Only change if we're using a different strategy now
-        if (url !== newUrl) {
-          console.log('[Resource Fix] Attempting to fix failed resource:', url, '→', newUrl);
-          target.setAttribute(attr, newUrl);
-        }
-      }
-    }, true);
-  }
-  
-  // Apply font and CSS fixes for common issues
-  function applyFontFixes() {
-    // Add emergency font-face declarations
-    const style = document.createElement('style');
-    style.innerHTML = `
-      /* Fallback font definitions */
-      @font-face {
-        font-family: 'Geist';
-        src: local('Arial');
-        font-display: swap;
-      }
-      
-      @font-face {
-        font-family: 'Geist Mono';
-        src: local('Courier New');
-        font-display: swap;
-      }
-    `;
-    document.head.appendChild(style);
+    debug('Fixing existing resource tags');
     
-    // Add font loading detection
-    document.fonts.ready.then(function() {
-      if (document.fonts.check('1em Geist') === false) {
-        console.warn('[Resource Fix] Font loading failed, applying fallbacks');
-        const fallbackStyle = document.createElement('style');
-        fallbackStyle.innerHTML = `
-          /* Font fallbacks for missing Geist */
-          .font-sans, [class*="font-geist-sans"], [style*="font-family: Geist"] {
-            font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
+    // Fix existing link tags (CSS)
+    const linkTags = document.querySelectorAll('link[rel="stylesheet"]');
+    linkTags.forEach(linkTag => {
+      const originalHref = linkTag.getAttribute('href');
+      if (originalHref && isStaticResource(originalHref)) {
+        // Don't rewrite already rewritten URLs
+        if (originalHref.includes(`${rootDomain}/`) || originalHref.includes('/api/resources')) {
+          return;
+        }
+        
+        // Mark this tag as processed
+        linkTag.setAttribute('data-resource-fixed', 'true');
+        
+        // Store original URL
+        linkTag.setAttribute('data-original-href', originalHref);
+        
+        // Update href with the appropriate strategy
+        const newHref = getResourceUrl(originalHref);
+        linkTag.setAttribute('href', newHref);
+        
+        debug(`Fixed CSS link: ${originalHref} -> ${newHref}`);
+        
+        // Add error handling
+        linkTag.addEventListener('error', function(e) {
+          console.error(`[Resource Fix] CSS loading failed: ${newHref}`);
+          downgradeStrategyIfNeeded(originalHref);
+          
+          // Try again with a different strategy
+          if (selectedStrategy !== LOADING_STRATEGIES.DIRECT_URL) {
+            const retryHref = getResourceUrl(originalHref);
+            if (retryHref !== newHref) {
+              linkTag.setAttribute('href', retryHref);
+              debug(`Retrying CSS with: ${retryHref}`);
+            }
           }
           
-          .font-mono, [class*="font-geist-mono"], [style*="font-family: Geist Mono"] {
-            font-family: "Courier New", monospace !important;
+          // If it's a critical CSS resource and we're in emergency mode,
+          // inject a minimal inline style
+          if (isCriticalResource(originalHref) && 
+              selectedStrategy === LOADING_STRATEGIES.INLINE_CONTENT) {
+            applyEmergencyStyles();
           }
-        `;
-        document.head.appendChild(fallbackStyle);
+        });
+      }
+    });
+    
+    // Fix existing script tags (JS)
+    const scriptTags = document.querySelectorAll('script[src]');
+    scriptTags.forEach(scriptTag => {
+      const originalSrc = scriptTag.getAttribute('src');
+      if (originalSrc && isStaticResource(originalSrc)) {
+        // Don't rewrite already rewritten URLs
+        if (originalSrc.includes(`${rootDomain}/`) || originalSrc.includes('/api/resources')) {
+          return;
+        }
+        
+        // Mark this tag as processed
+        scriptTag.setAttribute('data-resource-fixed', 'true');
+        
+        // Store original URL
+        scriptTag.setAttribute('data-original-src', originalSrc);
+        
+        // Update src with the appropriate strategy
+        const newSrc = getResourceUrl(originalSrc);
+        scriptTag.setAttribute('src', newSrc);
+        
+        debug(`Fixed script: ${originalSrc} -> ${newSrc}`);
+        
+        // Add error handling
+        scriptTag.addEventListener('error', function(e) {
+          console.error(`[Resource Fix] Script loading failed: ${newSrc}`);
+          downgradeStrategyIfNeeded(originalSrc);
+          
+          // Critical scripts might need replacement
+          if (isCriticalResource(originalSrc) && 
+              selectedStrategy === LOADING_STRATEGIES.INLINE_CONTENT) {
+            // For critical scripts, you might want to provide fallback functionality
+            const fallbackScript = document.createElement('script');
+            fallbackScript.textContent = `
+              console.warn("Fallback script loaded for ${originalSrc}");
+              // Add minimal fallback functionality if needed
+            `;
+            document.head.appendChild(fallbackScript);
+          }
+        });
+      }
+    });
+    
+    // Fix image tags
+    const imgTags = document.querySelectorAll('img[src]');
+    imgTags.forEach(imgTag => {
+      const originalSrc = imgTag.getAttribute('src');
+      if (originalSrc && isStaticResource(originalSrc)) {
+        // Don't rewrite already rewritten URLs
+        if (originalSrc.includes(`${rootDomain}/`) || originalSrc.includes('/api/resources')) {
+          return;
+        }
+        
+        // Mark this tag as processed
+        imgTag.setAttribute('data-resource-fixed', 'true');
+        
+        // Store original URL
+        imgTag.setAttribute('data-original-src', originalSrc);
+        
+        // Update src with the appropriate strategy
+        const newSrc = getResourceUrl(originalSrc);
+        imgTag.setAttribute('src', newSrc);
+        
+        debug(`Fixed image: ${originalSrc} -> ${newSrc}`);
+        
+        // Add error handling
+        imgTag.addEventListener('error', function(e) {
+          console.error(`[Resource Fix] Image loading failed: ${newSrc}`);
+          downgradeStrategyIfNeeded(originalSrc);
+          
+          // Retry with a different strategy for critical images
+          if (selectedStrategy !== LOADING_STRATEGIES.DIRECT_URL) {
+            const retryHref = getResourceUrl(originalSrc);
+            if (retryHref !== newSrc) {
+              imgTag.setAttribute('src', retryHref);
+              debug(`Retrying image with: ${retryHref}`);
+            }
+          }
+        });
+      }
+    });
+    
+    // Fix background images in inline styles
+    const elementsWithStyle = document.querySelectorAll('[style*="url("]');
+    elementsWithStyle.forEach(el => {
+      const originalStyle = el.getAttribute('style');
+      if (originalStyle) {
+        // Find and replace all url() patterns in the style
+        const newStyle = originalStyle.replace(/url\(['"]?([^'")]+)['"]?\)/g, (match, url) => {
+          if (isStaticResource(url)) {
+            const newUrl = getResourceUrl(url);
+            return `url('${newUrl}')`;
+          }
+          return match;
+        });
+        
+        if (originalStyle !== newStyle) {
+          // Save original style
+          el.setAttribute('data-original-style', originalStyle);
+          
+          // Update with new style
+          el.setAttribute('style', newStyle);
+          debug('Fixed inline style with background image');
+        }
+      }
+    });
+    
+    // Fix font face URLs in style tags
+    const styleTags = document.querySelectorAll('style');
+    styleTags.forEach(styleTag => {
+      const cssText = styleTag.textContent;
+      
+      // Check if it contains font face or url() references
+      if (cssText && (cssText.includes('@font-face') || cssText.includes('url('))) {
+        const newCssText = cssText.replace(/url\(['"]?([^'")]+)['"]?\)/g, (match, url) => {
+          if (isStaticResource(url)) {
+            const newUrl = getResourceUrl(url);
+            return `url('${newUrl}')`;
+          }
+          return match;
+        });
+        
+        if (cssText !== newCssText) {
+          // Save original CSS text as data attribute
+          styleTag.setAttribute('data-original-css', cssText);
+          
+          // Update with new CSS text
+          styleTag.textContent = newCssText;
+          debug('Fixed font face URLs in style tag');
+        }
       }
     });
   }
   
-  // Initialize everything
-  function init() {
-    console.log('[Resource Fix] Initializing fixes for subdomain:', currentHost);
+  /**
+   * Set up mutation observer to fix dynamically added elements
+   */
+  function setupMutationObserver() {
+    debug('Setting up mutation observer');
     
-    // Apply font fixes
-    applyFontFixes();
+    // Skip if already observed
+    if (window._resourceFixObserverActive) return;
     
-    // Setup error monitoring
-    setupErrorMonitoring();
+    // Create an observer instance
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        // Process added nodes
+        if (mutation.addedNodes && mutation.addedNodes.length) {
+          mutation.addedNodes.forEach(node => {
+            // Only process element nodes
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            
+            // Fix link tags
+            if (node.tagName === 'LINK' && node.getAttribute('rel') === 'stylesheet') {
+              const href = node.getAttribute('href');
+              if (href && isStaticResource(href) && !node.getAttribute('data-resource-fixed')) {
+                // Store original URL
+                node.setAttribute('data-original-href', href);
+                
+                // Update with new URL
+                const newHref = getResourceUrl(href);
+                node.setAttribute('href', newHref);
+                
+                // Mark as fixed
+                node.setAttribute('data-resource-fixed', 'true');
+                
+                debug(`Fixed dynamically added CSS link: ${href} -> ${newHref}`);
+                
+                // Add error event listener
+                node.addEventListener('error', () => {
+                  console.error(`[Resource Fix] Dynamically added CSS failed to load: ${newHref}`);
+                  downgradeStrategyIfNeeded(href);
+                });
+              }
+            }
+            
+            // Fix script tags
+            if (node.tagName === 'SCRIPT' && node.getAttribute('src')) {
+              const src = node.getAttribute('src');
+              if (src && isStaticResource(src) && !node.getAttribute('data-resource-fixed')) {
+                // Store original URL
+                node.setAttribute('data-original-src', src);
+                
+                // Update with new URL
+                const newSrc = getResourceUrl(src);
+                node.setAttribute('src', newSrc);
+                
+                // Mark as fixed
+                node.setAttribute('data-resource-fixed', 'true');
+                
+                debug(`Fixed dynamically added script: ${src} -> ${newSrc}`);
+                
+                // Add error event listener
+                node.addEventListener('error', () => {
+                  console.error(`[Resource Fix] Dynamically added script failed to load: ${newSrc}`);
+                  downgradeStrategyIfNeeded(src);
+                });
+              }
+            }
+            
+            // Fix img tags
+            if (node.tagName === 'IMG' && node.getAttribute('src')) {
+              const src = node.getAttribute('src');
+              if (src && isStaticResource(src) && !node.getAttribute('data-resource-fixed')) {
+                // Store original URL
+                node.setAttribute('data-original-src', src);
+                
+                // Update with new URL
+                const newSrc = getResourceUrl(src);
+                node.setAttribute('src', newSrc);
+                
+                // Mark as fixed
+                node.setAttribute('data-resource-fixed', 'true');
+                
+                debug(`Fixed dynamically added image: ${src} -> ${newSrc}`);
+                
+                // Add error event listener
+                node.addEventListener('error', () => {
+                  console.error(`[Resource Fix] Dynamically added image failed to load: ${newSrc}`);
+                  downgradeStrategyIfNeeded(src);
+                });
+              }
+            }
+            
+            // Check all child nodes recursively
+            if (node.querySelectorAll) {
+              // Fix links in children
+              const childLinks = node.querySelectorAll('link[rel="stylesheet"]:not([data-resource-fixed])');
+              childLinks.forEach(linkNode => {
+                const href = linkNode.getAttribute('href');
+                if (href && isStaticResource(href)) {
+                  // Store original URL
+                  linkNode.setAttribute('data-original-href', href);
+                  
+                  // Update with new URL
+                  const newHref = getResourceUrl(href);
+                  linkNode.setAttribute('href', newHref);
+                  
+                  // Mark as fixed
+                  linkNode.setAttribute('data-resource-fixed', 'true');
+                  
+                  debug(`Fixed CSS link in dynamic content: ${href} -> ${newHref}`);
+                  
+                  // Add error event listener
+                  linkNode.addEventListener('error', () => {
+                    console.error(`[Resource Fix] CSS in dynamic content failed to load: ${newHref}`);
+                    downgradeStrategyIfNeeded(href);
+                  });
+                }
+              });
+              
+              // Fix scripts in children
+              const childScripts = node.querySelectorAll('script[src]:not([data-resource-fixed])');
+              childScripts.forEach(scriptNode => {
+                const src = scriptNode.getAttribute('src');
+                if (src && isStaticResource(src)) {
+                  // Store original URL
+                  scriptNode.setAttribute('data-original-src', src);
+                  
+                  // Update with new URL
+                  const newSrc = getResourceUrl(src);
+                  scriptNode.setAttribute('src', newSrc);
+                  
+                  // Mark as fixed
+                  scriptNode.setAttribute('data-resource-fixed', 'true');
+                  
+                  debug(`Fixed script in dynamic content: ${src} -> ${newSrc}`);
+                  
+                  // Add error event listener
+                  scriptNode.addEventListener('error', () => {
+                    console.error(`[Resource Fix] Script in dynamic content failed to load: ${newSrc}`);
+                    downgradeStrategyIfNeeded(src);
+                  });
+                }
+              });
+              
+              // Fix images in children
+              const childImages = node.querySelectorAll('img[src]:not([data-resource-fixed])');
+              childImages.forEach(imgNode => {
+                const src = imgNode.getAttribute('src');
+                if (src && isStaticResource(src)) {
+                  // Store original URL
+                  imgNode.setAttribute('data-original-src', src);
+                  
+                  // Update with new URL
+                  const newSrc = getResourceUrl(src);
+                  imgNode.setAttribute('src', newSrc);
+                  
+                  // Mark as fixed
+                  imgNode.setAttribute('data-resource-fixed', 'true');
+                  
+                  debug(`Fixed image in dynamic content: ${src} -> ${newSrc}`);
+                  
+                  // Add error event listener
+                  imgNode.addEventListener('error', () => {
+                    console.error(`[Resource Fix] Image in dynamic content failed to load: ${newSrc}`);
+                    downgradeStrategyIfNeeded(src);
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+    });
     
-    // Fix all existing tags
-    fixExistingTags();
+    // Start observing the document
+    observer.observe(document, {
+      childList: true,
+      subtree: true
+    });
     
-    // Set up observer for future changes
-    setupMutationObserver();
+    // Mark as active
+    window._resourceFixObserverActive = true;
     
-    console.log('[Resource Fix] All fixes applied');
+    debug('Mutation observer active');
   }
   
-  // Run initialization immediately
+  /**
+   * Monitor resource loading errors globally
+   */
+  function setupErrorMonitoring() {
+    debug('Setting up error monitoring');
+    
+    // Skip if already set up
+    if (window._resourceFixErrorHandlerActive) return;
+    
+    // Listen for resource loading errors
+    window.addEventListener('error', function(e) {
+      const target = e.target;
+      
+      // Only handle resource loading errors (not JS errors)
+      if (!target || !target.tagName) return;
+      
+      // Handle various resource types
+      if (target.tagName === 'LINK' || target.tagName === 'SCRIPT' || target.tagName === 'IMG') {
+        const url = target.src || target.href;
+        
+        if (url && isStaticResource(url)) {
+          console.warn('[Resource Fix] Resource loading failed:', url);
+          
+          // Check if this is already a rewritten URL
+          if (url.includes(`${rootDomain}/`) || url.includes('/api/resources')) {
+            // Track failure
+            downgradeStrategyIfNeeded(url);
+          } else {
+            // Fix unfixed URL
+            const newUrl = getResourceUrl(url);
+            
+            // Only update if different
+            if (newUrl !== url) {
+              debug(`Fixing failed resource: ${url} -> ${newUrl}`);
+              target.src ? target.src = newUrl : target.href = newUrl;
+            }
+          }
+        }
+      }
+    }, true);
+    
+    // Mark as active
+    window._resourceFixErrorHandlerActive = true;
+    
+    debug('Error monitoring active');
+  }
+  
+  /**
+   * Apply font loading fixes and fallbacks
+   */
+  function applyFontFixes() {
+    debug('Applying font fixes');
+    
+    // Add font loading status check
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function() {
+        // Check if fonts loaded successfully
+        const geistLoaded = document.fonts.check('1em Geist');
+        const geistMonoLoaded = document.fonts.check('1em "Geist Mono"');
+        
+        if (!geistLoaded || !geistMonoLoaded) {
+          console.warn('[Resource Fix] Font loading failed, applying fallbacks');
+          
+          // Apply a font fallback style
+          const style = document.createElement('style');
+          style.innerHTML = `
+            /* Font fallbacks for failed loading */
+            .font-sans, .font-geist-sans, [class*="--font-geist-sans"] { 
+              font-family: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, Arial, sans-serif !important; 
+            }
+            .font-mono, .font-geist-mono, [class*="--font-geist-mono"] { 
+              font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important; 
+            }
+          `;
+          document.head.appendChild(style);
+          
+          debug('Font fallbacks applied');
+        }
+      }).catch(function(err) {
+        console.error('[Resource Fix] Font loading error:', err);
+      });
+    }
+  }
+  
+  /**
+   * Initialize all fixes
+   */
+  function init() {
+    debug('Initializing resource fix');
+    
+    // Don't apply fixes if we detected a redirect loop
+    if (resourceStatus.emergencyModeActive) {
+      console.log('[Resource Fix] Running in emergency mode (monitoring only)');
+    } else {
+      // Fix existing tags
+      fixExistingTags();
+      
+      // Apply font fixes
+      applyFontFixes();
+    }
+    
+    // Set up monitoring regardless of mode
+    setupMutationObserver();
+    setupErrorMonitoring();
+    
+    // Expose API for debugging
+    window.resourceFixStatus = {
+      getStatus: function() {
+        return {
+          strategy: selectedStrategy,
+          stats: resourceStatus,
+          emergencyMode: resourceStatus.emergencyModeActive
+        };
+      },
+      forceStrategy: function(strategy) {
+        if (LOADING_STRATEGIES[strategy]) {
+          selectedStrategy = LOADING_STRATEGIES[strategy];
+          fixExistingTags(); // Reapply fixes
+          return true;
+        }
+        return false;
+      }
+    };
+    
+    debug('Resource fix initialized');
+  }
+  
+  // Run initialization
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
