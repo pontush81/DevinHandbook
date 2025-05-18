@@ -174,6 +174,10 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV === 'production',
   },
   
+  // Ta bort stöd för dynamiska subdomäner på Vercel för att undvika middleware
+  skipTrailingSlashRedirect: true,
+  skipMiddlewareUrlNormalize: true,
+  
   // Kompilering och byggkonfiguration
   typescript: {
     ignoreBuildErrors: true,

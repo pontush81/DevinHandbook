@@ -58,16 +58,37 @@ export default function RootLayout({
                 // Extrahera subdomännamnet
                 const subdomain = currentDomain.split('.')[0];
                 
-                // Skapa iframe för direkt visning av huvuddomänen
-                window.addEventListener('DOMContentLoaded', function() {
-                  document.body.innerHTML = '<div style="width:100%;height:100vh;margin:0;padding:0;border:none;position:fixed;top:0;left:0;">' +
-                    '<iframe src="https://handbok.org/handbook/' + subdomain + '" ' +
-                    'style="width:100%;height:100%;margin:0;padding:0;border:none;" ' +
-                    'allowfullscreen=true allow="fullscreen" frameborder="0"></iframe>' +
-                  '</div>';
-                  document.title = subdomain + " - Handbok.org";
-                });
+                // Skapa en direkt omdirigering istället för iframe
+                window.location.href = 'https://handbok.org/handbook/' + subdomain;
               }
+              
+              // Säker hantering av localStorage oavsett domän
+              const memoryStorage = {};
+              
+              // Global lagringslösning som försöker använda localStorage men faller tillbaka på minne om det inte går
+              window.safeStorage = {
+                getItem: function(key) {
+                  try {
+                    return localStorage.getItem(key);
+                  } catch(e) {
+                    return memoryStorage[key] || null;
+                  }
+                },
+                setItem: function(key, value) {
+                  try {
+                    localStorage.setItem(key, value);
+                  } catch(e) {
+                    memoryStorage[key] = value;
+                  }
+                },
+                removeItem: function(key) {
+                  try {
+                    localStorage.removeItem(key);
+                  } catch(e) {
+                    delete memoryStorage[key];
+                  }
+                }
+              };
             })();
           `}
         </Script>
@@ -289,22 +310,6 @@ export default function RootLayout({
                   }
                 }).catch(e => console.error('Font loading error:', e));
               }
-              
-              // Safe storage access for cross-origin contexts
-              window.safeStorage = {
-                getItem: function(key) {
-                  try { return localStorage.getItem(key); } 
-                  catch(e) { return null; }
-                },
-                setItem: function(key, value) {
-                  try { localStorage.setItem(key, value); return true; } 
-                  catch(e) { return false; }
-                },
-                removeItem: function(key) {
-                  try { localStorage.removeItem(key); return true; } 
-                  catch(e) { return false; }
-                }
-              };
             } catch(e) {
               console.error('Error in emergency script:', e);
             }
