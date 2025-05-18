@@ -1,0 +1,5 @@
+# Handbok.org lokala domäner för testning
+127.0.0.1       handbok.org
+127.0.0.1       www.handbok.org
+127.0.0.1       test.handbok.org
+127.0.0.1       abc.handbok.org 
