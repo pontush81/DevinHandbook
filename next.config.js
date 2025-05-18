@@ -38,7 +38,7 @@ const nextConfig = {
             value: 'test.staging.handbok.org',
           },
         ],
-        destination: 'https://staging.handbok.org/handbook/test',
+        destination: 'https://staging.handbok.org/handbook/test/:path*',
         permanent: false,
       }
     ];

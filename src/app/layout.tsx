@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Handbok.org - Digital handbok för bostadsrättsföreningar",
   description: "Skapa en digital handbok för din bostadsrättsförening",
-  metadataBase: new URL('https://handbok.org'),
+  metadataBase: new URL('https://www.handbok.org'),
 };
 
 export default function RootLayout({
@@ -69,6 +69,9 @@ export default function RootLayout({
                 
                 // För subdomäner, dirigera till {domän}/handbook/{subdomain}
                 window.location.href = targetDomain + '/handbook/' + subdomain;
+              } else if (currentDomain === 'handbok.org') {
+                // Omdirigera handbok.org -> www.handbok.org
+                window.location.href = 'https://www.handbok.org' + window.location.pathname;
               }
             })();
           `}
@@ -175,8 +178,8 @@ export default function RootLayout({
         `}} />
         
         {/* Preconnect to main domain for faster resource loading */}
-        <link rel="preconnect" href="https://handbok.org" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://handbok.org" />
+        <link rel="preconnect" href="https://www.handbok.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.handbok.org" />
         <link rel="preconnect" href="https://staging.handbok.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://staging.handbok.org" />
         
@@ -253,7 +256,7 @@ export default function RootLayout({
                     const attrName = el.hasAttribute('href') ? 'href' : 'src';
                     const url = el.getAttribute(attrName);
                     if (url && url.startsWith('/_next/')) {
-                      el.setAttribute(attrName, 'https://handbok.org' + url);
+                      el.setAttribute(attrName, 'https://www.handbok.org' + url);
                     }
                   });
                 };
@@ -287,13 +290,13 @@ export default function RootLayout({
                     if (!src) return;
                     
                     const isProblematic = problematicFiles.some(file => src.includes(file));
-                    const needsRewrite = src.includes('-') && !src.includes('https://handbok.org');
+                    const needsRewrite = src.includes('-') && !src.includes('https://www.handbok.org');
                     
                     if (isProblematic || needsRewrite) {
                       // Rewrite the URL to use the main domain
                       const newSrc = src.startsWith('/') 
-                        ? 'https://handbok.org' + src 
-                        : src.includes('://') ? src : 'https://handbok.org/' + src;
+                        ? 'https://www.handbok.org' + src 
+                        : src.includes('://') ? src : 'https://www.handbok.org/' + src;
                       
                       // Sätt upp ett attribut för att visa att detta har fixats
                       script.setAttribute('data-fixed', 'true');

@@ -55,16 +55,7 @@
         
         const subdomain = currentDomain.split('.')[0];
         
-        // Specialhantering för test-subdomänen
-        if (subdomain === 'test') {
-          const redirectUrl = 'https://www.handbok.org/';
-          document.getElementById('manual-link').href = redirectUrl;
-          // Omdirigera direkt till huvudsidan
-          window.location.href = redirectUrl;
-          return;
-        }
-        
-        // För övriga subdomäner
+        // För alla subdomäner
         const redirectUrl = 'https://www.handbok.org/handbook/' + subdomain;
         document.getElementById('manual-link').href = redirectUrl;
         

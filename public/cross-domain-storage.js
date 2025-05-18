@@ -9,20 +9,33 @@
   const currentDomain = window.location.hostname;
   
   // Bestäm om vi är i staging eller produktion
-  const isStaging = currentDomain.includes('staging.handbok.org') || 
-                   currentDomain.endsWith('.staging.handbok.org');
+  const isStaging = currentDomain.includes('staging.handbok.org');
   
-  if (currentDomain.endsWith('.handbok.org') && 
-      currentDomain !== 'www.handbok.org' && 
-      currentDomain !== 'handbok.org' &&
-      currentDomain !== 'staging.handbok.org') {
+  // Om vi är på en subdomän av handbok.org eller staging.handbok.org
+  if ((currentDomain.endsWith('.handbok.org') && 
+       currentDomain !== 'www.handbok.org' && 
+       currentDomain !== 'handbok.org' &&
+       currentDomain !== 'staging.handbok.org') || 
+      (currentDomain.endsWith('.staging.handbok.org'))) {
     
-    // Hämta subdomänen och omdirigera till handboken
-    const subdomain = currentDomain.split('.')[0];
+    let subdomain;
+    let targetDomain;
     
-    // Välj rätt måldomän baserat på miljö
-    const targetDomain = isStaging ? 'https://staging.handbok.org' : 'https://www.handbok.org';
+    if (currentDomain.endsWith('.staging.handbok.org')) {
+      // Format: subdomain.staging.handbok.org -> staging.handbok.org/handbook/subdomain
+      subdomain = currentDomain.split('.')[0];
+      targetDomain = 'https://staging.handbok.org';
+    } else if (isStaging) {
+      // Om vi är på staging.handbok.org eller en subdomain direkt under staging.handbok.org
+      subdomain = currentDomain.split('.')[0];
+      targetDomain = 'https://staging.handbok.org';
+    } else {
+      // Format: subdomain.handbok.org -> www.handbok.org/handbook/subdomain
+      subdomain = currentDomain.split('.')[0];
+      targetDomain = 'https://www.handbok.org';
+    }
     
+    // För alla subdomäner - gå till handboken
     window.location.href = targetDomain + '/handbook/' + subdomain;
     return;
   }
