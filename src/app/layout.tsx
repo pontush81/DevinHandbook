@@ -43,6 +43,35 @@ export default function RootLayout({
         <meta httpEquiv="Cross-Origin-Opener-Policy" content="unsafe-none" />
         <meta httpEquiv="Cross-Origin-Resource-Policy" content="cross-origin" />
         
+        {/* Nödlösning för subdomäner - ladda hela sidan från huvuddomänen */}
+        <Script id="subdomain-handler" strategy="beforeInteractive">
+          {`
+            (function() {
+              // Kontrollera om vi är på en subdomän
+              const currentDomain = window.location.hostname;
+              const isSubdomain = currentDomain.split('.').length > 2 && 
+                                 currentDomain.endsWith('.handbok.org') &&
+                                 currentDomain !== 'www.handbok.org' &&
+                                 currentDomain !== 'handbok.org';
+              
+              if (isSubdomain) {
+                // Extrahera subdomännamnet
+                const subdomain = currentDomain.split('.')[0];
+                
+                // Skapa iframe för direkt visning av huvuddomänen
+                window.addEventListener('DOMContentLoaded', function() {
+                  document.body.innerHTML = '<div style="width:100%;height:100vh;margin:0;padding:0;border:none;position:fixed;top:0;left:0;">' +
+                    '<iframe src="https://handbok.org/handbook/' + subdomain + '" ' +
+                    'style="width:100%;height:100%;margin:0;padding:0;border:none;" ' +
+                    'allowfullscreen=true allow="fullscreen" frameborder="0"></iframe>' +
+                  '</div>';
+                  document.title = subdomain + " - Handbok.org";
+                });
+              }
+            })();
+          `}
+        </Script>
+        
         {/* Resource fix script for cross-domain resources */}
         <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
         

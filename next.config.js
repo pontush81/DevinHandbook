@@ -99,30 +99,28 @@ const nextConfig = {
   // Konfigurera headers för säkerhet och CORS
   async headers() {
     return [
-      // För alla Next.js-genererade resurser
       {
-        source: '/_next/:path*',
+        source: '/(.*)',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, stale-while-revalidate=86400' }
-        ],
-      },
-      // Speciellt för API-routes
-      {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Proxy-Count, X-Requested-With, X-Client-Info, apikey' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Cache-Control', value: 'no-store, max-age=0' }
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' }
         ],
       },
-      // För CSS-filer specifikt
       {
-        source: '/_next/static/css/:path*',
+        source: '/_next/static/(.*)',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
+        ],
+      },
+      {
+        source: '/_next/static/css/(.*)',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Content-Type', value: 'text/css; charset=UTF-8' },
@@ -130,40 +128,16 @@ const nextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
         ],
       },
-      // För JavaScript-filer
       {
-        source: '/_next/static/:path*.js',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' }
-        ],
-      },
-      // För JavaScript chunks
-      {
-        source: '/_next/static/chunks/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' }
-        ],
-      },
-      // För font-filer
-      {
-        source: '/_next/static/media/:path*',
+        source: '/_next/static/media/(.*)',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
         ],
       },
-      // För woff2 font-filer
       {
-        source: '/:path*.woff2',
+        source: '/(.*).woff2',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Content-Type', value: 'font/woff2' },
@@ -171,27 +145,16 @@ const nextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
         ],
       },
-      // För storage-bridge
       {
-        source: '/(auth-bridge|storage-bridge).html',
+        source: '/api/(.*)',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey' },
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Cache-Control', value: 'no-store, max-age=0' }
         ],
-      },
-      // För JS hjälpskript
-      {
-        source: '/(cross-domain-storage|static-resource-fix).js',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-          { key: 'Cache-Control', value: 'no-cache, must-revalidate' }
-        ],
-      },
+      }
     ];
   },
   
