@@ -3,8 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Handbok.org - Omdirigerar...</title>
-  <meta http-equiv="refresh" content="0;url=https://handbok.org/">
+  <title>Handbok.org</title>
+  
+  <!-- CORS headers och säkerhetsåtgärder -->
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
+  <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin">
+  
+  <!-- Meta refresh sätts med JavaScript för att undvika cacheproblem -->
+  <script>
+    (function() {
+      const hostname = window.location.hostname;
+      
+      // Kontrollera om vi är på en subdomän
+      if (hostname.endsWith('.handbok.org') && 
+          hostname !== 'www.handbok.org' && 
+          hostname !== 'handbok.org') {
+        
+        const subdomain = hostname.split('.')[0];
+        
+        // Skapa meta refresh tag
+        const metaRefresh = document.createElement('meta');
+        metaRefresh.httpEquiv = 'refresh';
+        metaRefresh.content = '0;url=https://handbok.org/handbook/' + subdomain;
+        document.head.appendChild(metaRefresh);
+        
+        console.log('Meta refresh satt för: ' + subdomain);
+      }
+    })();
+  </script>
+  
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -12,7 +41,6 @@
       padding: 20px;
       text-align: center;
       line-height: 1.6;
-      color: #333;
     }
     .container {
       max-width: 600px;
@@ -20,8 +48,8 @@
       padding: 40px 20px;
     }
     h1 {
-      font-size: 2rem;
       margin-bottom: 20px;
+      color: #333;
     }
     .loading {
       display: inline-block;
@@ -29,7 +57,7 @@
       height: 50px;
       border: 3px solid rgba(0, 0, 0, 0.1);
       border-radius: 50%;
-      border-top-color: #2563eb;
+      border-top-color: #3498db;
       animation: spin 1s ease-in-out infinite;
       margin-bottom: 20px;
     }
@@ -38,45 +66,48 @@
     }
     .btn {
       display: inline-block;
-      background-color: #2563eb;
+      background: #3498db;
       color: white;
+      text-decoration: none;
       padding: 10px 20px;
       border-radius: 4px;
-      text-decoration: none;
-      margin-top: 20px;
-      font-weight: 500;
-    }
-    .btn:hover {
-      background-color: #1d4ed8;
+      margin-top: 10px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="loading"></div>
-    <h1>Handbok.org</h1>
-    <p>Den digitala plattformen för bostadsrättsföreningar.</p>
-    <p>Du omdirigeras till huvudsidan. Om du inte omdirigeras automatiskt:</p>
+    <h1 id="title">Handbok.org</h1>
+    <p id="message">Den digitala plattformen för bostadsrättsföreningar.</p>
     <a href="https://handbok.org" class="btn" id="manual-link">Gå till huvudsidan</a>
   </div>
 
   <script>
     (function() {
-      const currentDomain = window.location.hostname;
+      const hostname = window.location.hostname;
       
-      if (currentDomain.endsWith('.handbok.org') && 
-          currentDomain !== 'www.handbok.org' && 
-          currentDomain !== 'handbok.org') {
+      // Uppdatera UI baserat på aktuell domän
+      if (hostname.endsWith('.handbok.org') && 
+          hostname !== 'www.handbok.org' && 
+          hostname !== 'handbok.org') {
         
-        const subdomain = currentDomain.split('.')[0];
+        const subdomain = hostname.split('.')[0];
         const redirectUrl = 'https://handbok.org/handbook/' + subdomain;
         
+        // Uppdatera UI med subdomän-information
+        document.getElementById('title').textContent = subdomain.toUpperCase();
+        document.getElementById('message').textContent = 'Omdirigerar till ' + subdomain + ' handbok...';
         document.getElementById('manual-link').href = redirectUrl;
-        document.getElementById('manual-link').textContent = 'Öppna ' + subdomain;
+        document.getElementById('manual-link').textContent = 'Öppna ' + subdomain + ' handbok';
         
-        // Omdirigera direkt utan fördröjning
-        window.location.href = redirectUrl;
+        // Använd JavaScript för omdirigering med fördröjning för att meta refresh ska hinna aktiveras
+        setTimeout(function() {
+          window.location.href = redirectUrl;
+        }, 100);
       } else {
+        // På huvuddomänen
         window.location.href = 'https://handbok.org/';
       }
     })();

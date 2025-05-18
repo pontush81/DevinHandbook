@@ -5,14 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Handbok.org</title>
   
-  <!-- CORS headers och säkerhetsåtgärder -->
-  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-  <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
-  <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
-  <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin">
-  
-  <!-- Meta refresh sätts med JavaScript för att undvika cacheproblem -->
+  <!-- Förenklad meta-refresh för test.handbok.org -->
   <script>
+    // Få aktuell domän och sätt lämplig meta refresh
     (function() {
       const hostname = window.location.hostname;
       
@@ -80,7 +75,7 @@
   <div class="container">
     <div class="loading"></div>
     <h1 id="title">Handbok.org</h1>
-    <p id="message">Den digitala plattformen för bostadsrättsföreningar.</p>
+    <p id="message">Omdirigerar till din handbok...</p>
     <a href="https://handbok.org" class="btn" id="manual-link">Gå till huvudsidan</a>
   </div>
 
@@ -102,13 +97,10 @@
         document.getElementById('manual-link').href = redirectUrl;
         document.getElementById('manual-link').textContent = 'Öppna ' + subdomain + ' handbok';
         
-        // Använd JavaScript för omdirigering med fördröjning för att meta refresh ska hinna aktiveras
+        // Använd både JavaScript och meta refresh för omdirigering
         setTimeout(function() {
           window.location.href = redirectUrl;
         }, 100);
-      } else {
-        // På huvuddomänen
-        window.location.href = 'https://handbok.org/';
       }
     })();
   </script>
