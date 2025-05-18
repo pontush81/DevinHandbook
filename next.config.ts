@@ -9,6 +9,7 @@ const validDomains = [
   'www.handbok.org',
   'test.handbok.org',
   'hej.handbok.org',
+  'hej1.handbok.org',
   'devin-handbook.vercel.app'
 ];
 
@@ -41,6 +42,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Konfigurerar hostingkonfigurationen för att undvika subdomain-middleware
+  assetPrefix: isProd ? 'https://handbok.org' : undefined,
   images: {
     domains: imageDomains,
     unoptimized: isProd, // För smidigare hantering av bilder i produktion
@@ -80,6 +83,7 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'Timing-Allow-Origin', value: '*' },
         ],
       },
       {
@@ -91,6 +95,7 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Content-Type', value: 'text/css; charset=UTF-8' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Timing-Allow-Origin', value: '*' },
         ],
       },
       {
@@ -102,6 +107,7 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Timing-Allow-Origin', value: '*' },
         ],
       },
       {
@@ -112,6 +118,7 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Timing-Allow-Origin', value: '*' },
         ],
       },
       {
@@ -122,6 +129,7 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Timing-Allow-Origin', value: '*' },
         ],
       },
     ];

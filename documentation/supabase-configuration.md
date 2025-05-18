@@ -7,9 +7,9 @@ Detta dokument beskriver hur Supabase är konfigurerat i projektet och hur du ka
 Applikationen använder följande miljövariabler för Supabase-anslutning:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://din-projekt-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=din-anon-nyckel
-SUPABASE_SERVICE_ROLE_KEY=din-service-roll-nyckel
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 ```
 
 **Viktigt:** Supabase URL måste börja med `https://`. Om den inte gör det, kör skriptet `node check-supabase-config.js` för att korrigera formatet.
@@ -105,3 +105,67 @@ Om du upplever återkommande problem med SSL eller anslutningar, kan det bero p�
 2. **Pausa och återaktivera projektet** för att åtgärda vissa anslutningsproblem
 3. **Uppdatera projektet** till den senaste versionen om möjligt
 4. **Kontrollera kvoteringsgränser** för att se om du nått någon begränsning 
+
+## Anslutningsstrategier
+
+För att förbättra pålitligheten i anslutningen till Supabase har vi implementerat flera olika strategier:
+
+### 1. Direktanslutning (Primary)
+
+Vår första anslutningsstrategi är att använda `@supabase/postgrest-js` för att koppla upp direkt mot Supabase REST API. Detta är den snabbaste och mest direkta metoden.
+
+### 2. Proxy-anslutning (Fallback)
+
+Om direktanslutningen misslyckas använder vi en serverless proxy-funktion som kör på Vercel för att vidarebefordra förfrågningar till Supabase. Denna metod kan hjälpa till att kringgå vissa nätverksproblem.
+
+### 3. SmartClient (Automatisk)
+
+`SmartSupabaseClient` kombinerar båda strategierna och försöker automatiskt använda den som fungerar. Den har inbyggd felhantering, återförsök och fallback-mekanismer.
+
+## Testverktyg för anslutning
+
+Vi har också byggt flera testendpoints för att hjälpa dig felsöka anslutningsproblem:
+
+- `/api/test-direct` - Testar direktanslutning till Supabase
+- `/api/test-proxy` - Testar proxy-anslutning till Supabase
+- `/api/test-smart` - Testar SmartClient som automatiskt väljer bästa anslutningsmetod
+
+## Frontend-användning
+
+För att använda SmartClient i React-komponenter, använd vår anpassade hook:
+
+```typescript
+import { useSmartSupabase } from '@/lib/hooks/useSmartSupabase';
+
+function MyComponent() {
+  const { 
+    data, 
+    error, 
+    isLoading, 
+    source, // 'direct' eller 'proxy'
+    refetch, 
+    insert, 
+    update, 
+    remove 
+  } = useSmartSupabase('handbooks', {
+    limit: 10,
+    columns: 'id,name,subdomain'
+  });
+  
+  // Du kan använda data, error, isLoading etc. precis som med en vanlig fetch
+  if (isLoading) return <div>Laddar...</div>;
+  if (error) return <div>Fel: {error}</div>;
+  
+  return (
+    <div>
+      <p>Ansluten via: {source}</p>
+      <ul>
+        {data?.map(handbook => (
+          <li key={handbook.id}>{handbook.name}</li>
+        ))}
+      </ul>
+      <button onClick={refetch}>Uppdatera</button>
+    </div>
+  );
+}
+``` 
