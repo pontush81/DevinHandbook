@@ -3,271 +3,327 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CORS Debug</title>
+  <title>CORS Diagnostik - Handbok.org</title>
   <style>
     body {
-      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.5;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+    .container {
       max-width: 800px;
       margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       padding: 20px;
-      line-height: 1.6;
     }
-    button {
-      background: #0070f3;
+    h1 {
+      margin-top: 0;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    h2 {
+      margin-top: 1.5em;
+    }
+    .test-section {
+      margin: 1em 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .test-result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .button {
+      background-color: #0070f3;
       color: white;
       border: none;
       padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
-      margin: 5px;
+      font-size: 16px;
+    }
+    .button:hover {
+      background-color: #0051a8;
     }
     pre {
-      background: #f5f5f5;
+      background: #f8f8f8;
       padding: 10px;
       border-radius: 4px;
       overflow-x: auto;
-      white-space: pre-wrap;
     }
-    .test-result {
-      margin-top: 10px;
-      padding: 10px;
-      border: 1px solid #ddd;
+    .status {
+      font-weight: bold;
+    }
+    .fix-button {
+      background-color: #38a169;
+      color: white;
+      border: none;
+      padding: 8px 16px;
       border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
     }
-    .success {
-      color: green;
-      font-weight: bold;
+    .fix-button:hover {
+      background-color: #2f855a;
     }
-    .error {
-      color: red;
-      font-weight: bold;
+    .info {
+      background-color: #e9f5fe;
+      border-left: 4px solid #3182ce;
+      padding: 10px;
+      margin: 10px 0;
     }
   </style>
 </head>
 <body>
-  <h1>CORS Debugging Tool</h1>
-  
-  <div id="status">
-    <p>Current status: Checking environment...</p>
+  <div class="container">
+    <h1>CORS Diagnostik - Handbok.org</h1>
+    
+    <div class="info">
+      <p>Detta verktyg hjälper till att diagnostisera och åtgärda CORS-relaterade problem som kan uppstå på subdomäner.</p>
+      <p>Subdomän: <span id="current-subdomain">Identifierar...</span></p>
+    </div>
+    
+    <h2>Resurstester</h2>
+    
+    <div class="test-section">
+      <h3>JSON Test</h3>
+      <button id="test-json" class="button">Kör test</button>
+      <div id="json-result" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+      <h3>CSS Test</h3>
+      <button id="test-css" class="button">Kör test</button>
+      <div id="css-result" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+      <h3>API Proxy Test</h3>
+      <button id="test-api-proxy" class="button">Kör test</button>
+      <div id="api-proxy-result" class="test-result"></div>
+    </div>
+    
+    <div id="fix-section" style="margin-top: 30px; display: none;">
+      <h2>Åtgärda problem</h2>
+      <p>Vi har identifierat potentiella CORS-problem. Klicka på knappen nedan för att försöka åtgärda dem:</p>
+      <button id="apply-fix" class="fix-button">Åtgärda CORS-problem</button>
+      <div id="fix-result" class="test-result"></div>
+    </div>
+    
+    <div style="margin-top: 30px;">
+      <h2>Navigering</h2>
+      <div style="display: flex; gap: 10px;">
+        <a href="/" class="button" style="text-decoration: none;">Tillbaka till startsidan</a>
+        <a href="javascript:window.location.reload()" class="button" style="background-color: #6b7280; text-decoration: none;">Ladda om sidan</a>
+      </div>
+    </div>
   </div>
-  
-  <div>
-    <button id="testApi">Test API Proxy</button>
-    <button id="testJson">Test JSON Loading</button>
-    <button id="testCss">Test CSS Loading</button>
-    <button id="applyDirectFix">Apply Direct Fix</button>
-  </div>
-  
-  <div id="results"></div>
-  
+
   <script>
-    // Utility functions
-    function addResult(title, content, isSuccess = true) {
-      const resultElement = document.createElement('div');
-      resultElement.className = 'test-result';
+    // Identifiera subdomän
+    function identifySubdomain() {
+      const hostname = window.location.hostname;
+      const subdomainElement = document.getElementById('current-subdomain');
       
-      const titleElement = document.createElement('h3');
-      titleElement.className = isSuccess ? 'success' : 'error';
-      titleElement.textContent = title;
-      
-      const contentElement = document.createElement('pre');
-      contentElement.textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
-      
-      resultElement.appendChild(titleElement);
-      resultElement.appendChild(contentElement);
-      
-      document.getElementById('results').prepend(resultElement);
+      if (hostname === 'localhost') {
+        subdomainElement.textContent = 'localhost (utveckling)';
+      } else if (hostname.includes('vercel.app')) {
+        subdomainElement.textContent = hostname + ' (Vercel)';
+      } else if (hostname === 'handbok.org' || hostname === 'www.handbok.org') {
+        subdomainElement.textContent = hostname + ' (huvuddomän)';
+      } else if (hostname.endsWith('.handbok.org')) {
+        const subdomain = hostname.split('.')[0];
+        subdomainElement.textContent = subdomain + ' (subdomän)';
+        
+        // Visa fixsektion på subdomäner
+        document.getElementById('fix-section').style.display = 'block';
+      } else {
+        subdomainElement.textContent = hostname + ' (okänd)';
+      }
     }
     
-    // Environment detection
-    const host = window.location.hostname;
-    const isSubdomain = host !== 'handbok.org' && host.endsWith('.handbok.org');
-    const isWww = host === 'www.handbok.org';
-    
-    document.getElementById('status').innerHTML = `
-      <p><strong>Current environment:</strong></p>
-      <ul>
-        <li>Host: ${host}</li>
-        <li>Is Subdomain: ${isSubdomain}</li>
-        <li>Is WWW: ${isWww}</li>
-        <li>Origin: ${window.location.origin}</li>
-        <li>Protocol: ${window.location.protocol}</li>
-      </ul>
-    `;
-    
-    // Test API Proxy
-    document.getElementById('testApi').addEventListener('click', function() {
-      const proxyUrl = `${window.location.origin}/api/resources?path=/_next/static/css/bb2534fb94d47e9a.css`;
+    // Test JSON endpoint
+    async function testJson() {
+      const resultElement = document.getElementById('json-result');
+      resultElement.innerHTML = '<p>Testar JSON endpoint...</p>';
+      resultElement.className = 'test-result';
       
-      fetch(proxyUrl)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-          }
-          return response.text();
-        })
-        .then(data => {
-          addResult('API Proxy Test Successful', `
-            Fetched CSS via proxy successfully!
-            Size: ${data.length} bytes
-            URL: ${proxyUrl}
-          `);
-        })
-        .catch(error => {
-          addResult('API Proxy Test Failed', `
-            Error: ${error.message}
-            URL: ${proxyUrl}
-            
-            Proxy endpoint might not be deployed yet or is not functioning correctly.
-          `, false);
-        });
-    });
-    
-    // Test JSON Loading
-    document.getElementById('testJson').addEventListener('click', function() {
-      fetch('/cors-status.json')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          addResult('JSON Test Successful', data);
-        })
-        .catch(error => {
-          addResult('JSON Test Failed', `Error: ${error.message}`, false);
-        });
-    });
-    
-    // Test CSS Loading
-    document.getElementById('testCss').addEventListener('click', function() {
-      // Create a test element
-      const testLink = document.createElement('link');
-      testLink.rel = 'stylesheet';
-      testLink.type = 'text/css';
-      
-      // Add a test handler
-      const resultPromise = new Promise((resolve, reject) => {
-        testLink.onload = () => resolve('CSS loaded successfully!');
-        testLink.onerror = () => reject(new Error('Failed to load CSS'));
-        
-        // Try loading via our proxy
-        testLink.href = `${window.location.origin}/api/resources?path=/_next/static/css/bb2534fb94d47e9a.css`;
-        document.head.appendChild(testLink);
-        
-        // Set a timeout
-        setTimeout(() => reject(new Error('CSS load timeout')), 5000);
-      });
-      
-      resultPromise
-        .then(message => {
-          addResult('CSS Test Successful', message);
-        })
-        .catch(error => {
-          addResult('CSS Test Failed', `Error: ${error.message}`, false);
-        });
-    });
-    
-    // Apply direct fix
-    document.getElementById('applyDirectFix').addEventListener('click', function() {
       try {
-        // Override fetch to redirect static resources to our proxy
-        const originalFetch = window.fetch;
-        window.fetch = function(url, options) {
-          if (typeof url === 'string') {
-            // For direct handbok.org URLs, convert to use our proxy
-            if (url.startsWith('https://handbok.org/')) {
-              const path = url.replace('https://handbok.org', '');
-              const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(path)}`;
-              
-              console.log('[CORS-Fix] Redirecting external fetch:', url, '→', proxyUrl);
-              url = proxyUrl;
-            }
-            // For relative URLs that match static resources
-            else if (url.startsWith('/') && 
-                    (url.includes('/_next/') || 
-                    url.endsWith('.js') || 
-                    url.endsWith('.css') || 
-                    url.endsWith('.woff') || 
-                    url.endsWith('.woff2'))) {
-              
-              const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(url)}`;
-              console.log('[CORS-Fix] Redirecting local fetch:', url, '→', proxyUrl);
-              url = proxyUrl;
-            }
-          }
-          return originalFetch.apply(this, [url, options]);
-        };
+        const response = await fetch('/api/diagnosis');
         
-        // Find and fix all current script tags
-        document.querySelectorAll('script[src], link[rel="stylesheet"]').forEach(function(el) {
-          const src = el.getAttribute('src') || el.getAttribute('href');
-          if (src && src.includes('handbok.org')) {
-            const path = src.replace(/https:\/\/handbok\.org/, '');
-            const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(path)}`;
-            
-            console.log('[CORS-Fix] Fixing direct URL:', src, '→', proxyUrl);
-            
-            if (el.tagName.toLowerCase() === 'script') {
-              el.setAttribute('src', proxyUrl);
-            } else {
-              el.setAttribute('href', proxyUrl);
-            }
-          }
-        });
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}`);
+        }
         
-        // Set up a MutationObserver to catch new additions
-        const observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            if (mutation.type === 'childList') {
-              mutation.addedNodes.forEach(function(node) {
-                if (node.nodeType === 1) { // Element node
-                  if (node.tagName === 'SCRIPT' || node.tagName === 'LINK') {
-                    const src = node.getAttribute('src') || node.getAttribute('href');
-                    if (src && src.includes('handbok.org')) {
-                      const path = src.replace(/https:\/\/handbok\.org/, '');
-                      const proxyUrl = `${window.location.origin}/api/resources?path=${encodeURIComponent(path)}`;
-                      
-                      console.log('[CORS-Fix] Fixing new node:', src, '→', proxyUrl);
-                      
-                      if (node.tagName === 'SCRIPT') {
-                        node.setAttribute('src', proxyUrl);
-                      } else {
-                        node.setAttribute('href', proxyUrl);
-                      }
-                    }
-                  }
-                }
-              });
-            }
-          });
-        });
+        const data = await response.json();
         
-        observer.observe(document.documentElement, {
-          childList: true,
-          subtree: true
-        });
+        resultElement.innerHTML = '<p class="status">JSON Test Successful</p><pre>' + 
+          JSON.stringify(data, null, 2) + '</pre>';
+        resultElement.className = 'test-result success';
+      } catch (error) {
+        resultElement.innerHTML = '<p class="status">JSON Test Failed</p><p>Error: ' + 
+          error.message + '</p>';
+        resultElement.className = 'test-result error';
+      }
+    }
+    
+    // Test CSS loading
+    function testCss() {
+      const resultElement = document.getElementById('css-result');
+      resultElement.innerHTML = '<p>Testar CSS-laddning...</p>';
+      resultElement.className = 'test-result';
+      
+      // Create a test element
+      const testElement = document.createElement('div');
+      testElement.className = 'testElement';
+      testElement.textContent = 'Test Element';
+      document.body.appendChild(testElement);
+      
+      // Try to load a CSS file
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/_next/static/css/test.css';
+      
+      // Add success/error handlers
+      link.onload = () => {
+        resultElement.innerHTML = '<p class="status">CSS Test Successful</p>' +
+          '<p>CSS-filen laddades utan problem.</p>';
+        resultElement.className = 'test-result success';
+      };
+      
+      link.onerror = () => {
+        resultElement.innerHTML = '<p class="status">CSS Test Failed</p>' +
+          '<p>Error: Failed to load CSS</p>';
+        resultElement.className = 'test-result error';
+      };
+      
+      document.head.appendChild(link);
+      
+      // Set timeout in case neither event fires
+      setTimeout(() => {
+        // Check if the test element got styled
+        const testElementStyle = window.getComputedStyle(testElement);
+        if (testElementStyle.backgroundColor === 'rgb(240, 240, 240)') {
+          resultElement.innerHTML = '<p class="status">CSS Test Successful</p>' +
+            '<p>CSS laddades och tillämpades korrekt.</p>';
+          resultElement.className = 'test-result success';
+        } else if (resultElement.className !== 'test-result success') {
+          resultElement.innerHTML = '<p class="status">CSS Test Failed</p>' +
+            '<p>Error: CSS laddades inte eller tillämpades inte.</p>';
+          resultElement.className = 'test-result error';
+        }
         
-        addResult('Direct Fix Applied', `
+        // Clean up
+        document.body.removeChild(testElement);
+      }, 2000);
+    }
+    
+    // Test API proxy
+    async function testApiProxy() {
+      const resultElement = document.getElementById('api-proxy-result');
+      resultElement.innerHTML = '<p>Testar API proxy...</p>';
+      resultElement.className = 'test-result';
+      
+      try {
+        // Try to load a CSS file through the proxy
+        const cssUrl = '/_next/static/css/bb2534fb94d47e9a.css';
+        const proxyUrl = `/api/resources?path=${encodeURIComponent(cssUrl)}`;
+        
+        const response = await fetch(proxyUrl);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}`);
+        }
+        
+        // Check if the content is CSS
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/css')) {
+          resultElement.innerHTML = '<p class="status">API Proxy Test Successful</p>' +
+            '<p>Proxy-endpointen fungerar korrekt för statiska resurser.</p>';
+          resultElement.className = 'test-result success';
+        } else {
+          resultElement.innerHTML = '<p class="status">API Proxy Test Warning</p>' +
+            '<p>Proxy svarade med oväntad Content-Type: ' + contentType + '</p>';
+          resultElement.className = 'test-result warning';
+        }
+      } catch (error) {
+        const errorHtml = `
+            <p class="status">API Proxy Test Failed</p>
+            <p>Error: ${error.message}</p>
+            <p>URL: https://${window.location.hostname}/api/resources?path=/_next/static/css/bb2534fb94d47e9a.css</p>
+            <p>Proxy endpoint might not be deployed yet or is not functioning correctly.</p>
+          `;
+        resultElement.innerHTML = errorHtml;
+        resultElement.className = 'test-result error';
+      }
+    }
+    
+    // Apply fix
+    function applyFix() {
+      const resultElement = document.getElementById('fix-result');
+      resultElement.innerHTML = '<p>Tillämpar CORS-fix...</p>';
+      resultElement.className = 'test-result';
+      
+      try {
+        // Add the static resource fix script
+        const script = document.createElement('script');
+        script.src = '/static-resource-fix.js';
+        script.onload = () => {
+          resultElement.innerHTML = `
+          <p class="status">Direct Fix Applied</p>
+          <p>
           - Overridden fetch to redirect through proxy
           - Fixed existing script/link tags
           - Set up MutationObserver for new elements
-          
-          Now try loading the main site again in a new tab. The CORS errors should be fixed.
-        `);
+          </p>
+          <p>Now try loading the main site again in a new tab. The CORS errors should be fixed.</p>
+          `;
+          resultElement.className = 'test-result success';
+        };
         
-        // Add a button to navigate home
-        const homeButton = document.createElement('button');
-        homeButton.textContent = 'Try Home Page';
-        homeButton.addEventListener('click', function() {
-          window.open('/', '_blank');
-        });
-        document.getElementById('results').prepend(homeButton);
+        script.onerror = () => {
+          resultElement.innerHTML = `
+          <p class="status">Fix Failed</p>
+          <p>Error: Could not load static-resource-fix.js</p>
+          <p>Try refreshing the page or contacting support.</p>
+          `;
+          resultElement.className = 'test-result error';
+        };
         
+        document.head.appendChild(script);
       } catch (error) {
-        addResult('Direct Fix Failed', `Error: ${error.message}`, false);
+        resultElement.innerHTML = `
+        <p class="status">Fix Failed</p>
+        <p>Error: ${error.message}</p>
+        `;
+        resultElement.className = 'test-result error';
       }
+    }
+    
+    // Set up event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      identifySubdomain();
+      
+      document.getElementById('test-json').addEventListener('click', testJson);
+      document.getElementById('test-css').addEventListener('click', testCss);
+      document.getElementById('test-api-proxy').addEventListener('click', testApiProxy);
+      document.getElementById('apply-fix').addEventListener('click', applyFix);
     });
   </script>
 </body>

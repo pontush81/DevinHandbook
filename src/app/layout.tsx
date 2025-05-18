@@ -121,6 +121,27 @@ export default function RootLayout({
             })();
           `}
         </Script>
+
+        {/* Script for handling static resources on subdomains */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Check if we're on a subdomain
+              (function() {
+                const host = window.location.hostname;
+                const isSubdomain = host.endsWith('.handbok.org') && host !== 'handbok.org' && host !== 'www.handbok.org';
+                
+                if (isSubdomain) {
+                  console.log('Subdomain detected, loading resource fix script');
+                  const script = document.createElement('script');
+                  script.src = '/static-resource-fix.js';
+                  script.async = true;
+                  document.head.appendChild(script);
+                }
+              })();
+            `
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
