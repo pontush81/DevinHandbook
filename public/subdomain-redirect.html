@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Omdirigerar...</title>
+  <meta http-equiv="refresh" content="0;url=https://handbok.org/">
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -40,16 +41,14 @@
   <div class="container">
     <div class="loading"></div>
     <h1>Omdirigerar till handbok.org</h1>
-    <p>Du kommer att omdirigeras till huvuddomänen automatiskt.</p>
+    <p>Du omdirigeras till huvuddomänen automatiskt.</p>
     <p>Om du inte omdirigeras, <a href="https://handbok.org" id="manual-link">klicka här</a>.</p>
   </div>
 
   <script>
     (function() {
-      // Extrahera subdomännamnet från URL
       const currentDomain = window.location.hostname;
       
-      // Om vi är på en subdomän av handbok.org
       if (currentDomain.endsWith('.handbok.org') && 
           currentDomain !== 'www.handbok.org' && 
           currentDomain !== 'handbok.org') {
@@ -57,15 +56,11 @@
         const subdomain = currentDomain.split('.')[0];
         const redirectUrl = 'https://handbok.org/handbook/' + subdomain;
         
-        // Uppdatera den manuella länken
         document.getElementById('manual-link').href = redirectUrl;
         
-        // Omdirigera användaren efter en kort fördröjning
-        setTimeout(function() {
-          window.location.href = redirectUrl;
-        }, 1000);
+        // Omdirigera direkt utan fördröjning
+        window.location.href = redirectUrl;
       } else {
-        // Om vi inte är på en subdomän, gå till huvudsidan
         window.location.href = 'https://handbok.org/';
       }
     })();

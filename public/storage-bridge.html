@@ -4,98 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Storage Bridge</title>
+  <meta http-equiv="refresh" content="0;url=https://handbok.org/">
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
   <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none" />
   <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none" />
   <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin" />
-  <script>
-    // Säkerhetskontroll för att bara tillåta åtkomst från godkända domäner
-    const ALLOWED_ORIGINS = [
-      'https://handbok.org',
-      'https://www.handbok.org',
-      'http://localhost:3000'
-    ];
-    
-    // Tillåt även alla subdomäner under handbok.org
-    function isAllowedOrigin(origin) {
-      if (!origin) return false;
-      
-      // Check direct matches
-      if (ALLOWED_ORIGINS.includes(origin)) return true;
-      
-      // Check for handbok.org subdomains
-      try {
-        const url = new URL(origin);
-        const hostname = url.hostname;
-        if (hostname.endsWith('.handbok.org')) return true;
-        
-        // Allow localhost development
-        if (hostname === 'localhost') return true;
-      } catch (e) {
-        console.error('Failed to parse origin URL', e);
-      }
-      
-      return false;
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+      line-height: 1.6;
     }
-    
-    window.addEventListener('message', function(event) {
-      // Säkerhetskontroll
-      if (!isAllowedOrigin(event.origin)) {
-        console.error('Unauthorized origin:', event.origin);
-        return;
-      }
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+  </style>
+  <script>
+    (function() {
+      const currentDomain = window.location.hostname;
       
-      // Hantera olika meddelandetyper
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      if (currentDomain.endsWith('.handbok.org') && 
+          currentDomain !== 'www.handbok.org' && 
+          currentDomain !== 'handbok.org') {
         
-        if (!data || !data.action) return;
-        
-        let result;
-        let error = null;
-        
-        try {
-          switch (data.action) {
-            case 'getItem':
-              result = localStorage.getItem(data.key);
-              break;
-            case 'setItem':
-              localStorage.setItem(data.key, data.value);
-              result = true;
-              break;
-            case 'removeItem':
-              localStorage.removeItem(data.key);
-              result = true;
-              break;
-            case 'clear':
-              localStorage.clear();
-              result = true;
-              break;
-            default:
-              error = 'Unknown action';
-          }
-        } catch (e) {
-          error = e.message;
-          console.error('Storage operation failed', e);
-        }
-        
-        // Skicka svar
-        event.source.postMessage(JSON.stringify({
-          id: data.id,
-          result: result,
-          error: error
-        }), event.origin);
-      } catch (e) {
-        console.error('Failed to process message', e);
+        const subdomain = currentDomain.split('.')[0];
+        window.location.href = 'https://handbok.org/handbook/' + subdomain;
+      } else {
+        window.location.href = 'https://handbok.org/';
       }
-    });
-    
-    // Signalera att vi är redo
-    window.parent.postMessage(JSON.stringify({ ready: true }), '*');
+    })();
   </script>
 </head>
 <body>
-  <h1>Storage Bridge</h1>
-  <p>This page enables secure cross-domain localStorage access.</p>
+  <h1>Omdirigerar till handbok.org</h1>
+  <p>Du omdirigeras till huvuddomänen automatiskt.</p>
+  <p>Om du inte omdirigeras, <a href="https://handbok.org">klicka här</a>.</p>
 </body>
 </html> 
