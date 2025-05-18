@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import NotFoundActions from './components/not-found/NotFoundActions';
 
 export default function NotFound() {
   return (
@@ -37,16 +38,7 @@ export default function NotFound() {
             >
               <span className="mr-1">→</span> Använd diagnosverktyget
             </Link>
-            <button 
-              onClick={() => {
-                const script = document.createElement('script');
-                script.src = '/static-resource-fix.js';
-                document.head.appendChild(script);
-              }}
-              className="text-blue-600 hover:underline text-sm inline-flex items-center"
-            >
-              <span className="mr-1">→</span> Applicera CORS-fix direkt
-            </button>
+            <NotFoundActions />
           </div>
         </div>
       </div>
