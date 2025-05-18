@@ -15,13 +15,7 @@ export default function HomePage() {
     const isVercel = hostname.includes('vercel.app');
     const isMainDomain = hostname === 'handbok.org' || hostname === 'www.handbok.org';
     
-    // Om det är en subdomän, ladda font-fix.js direkt
     if (!isDevelopment && !isVercel && !isMainDomain) {
-      // Ladda font-fix.js för att fixa CORS-problem med fonts
-      const fontFixScript = document.createElement('script');
-      fontFixScript.src = '/font-fix.js';
-      document.head.appendChild(fontFixScript);
-      
       // Extrahera subdomän från hostname
       const parts = hostname.split('.');
       if (parts.length >= 3) {

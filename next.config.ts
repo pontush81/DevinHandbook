@@ -42,8 +42,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Konfigurerar hostingkonfigurationen för att undvika subdomain-middleware
-  assetPrefix: isProd ? 'https://handbok.org' : undefined,
   images: {
     domains: imageDomains,
     unoptimized: isProd, // För smidigare hantering av bilder i produktion
