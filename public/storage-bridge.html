@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storage Bridge - Handbok.org</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 20px;
+      color: #444;
+      background-color: #f9f9f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      font-size: 24px;
+    }
+    p {
+      line-height: 1.5;
+    }
+    .status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .active {
+      background-color: #e6f7ee;
+      color: #0d854f;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Storage Bridge</h1>
+    <p>Status: <span class="status active">Aktiv</span></p>
+    <p>Detta är en hjälpsida för att hantera autentisering och lagring över subdomäner på handbok.org.</p>
+    <p>Sidan används internt av systemet och bör inte stängas.</p>
+  </div>
+
+  <script>
+    /**
+     * Storage Bridge Script
+     * 
+     * This script enables cross-domain storage access by serving as a 
+     * secure intermediary between different subdomains.
+     */
+    (function() {
+      console.log('Storage bridge initialized');
+      
+      // Handle incoming message requests
+      window.addEventListener('message', function(event) {
+        // Only accept messages from our own domains
+        if (!event.origin.match(/^https?:\/\/(.*\.)?handbok\.org$/)) {
+          console.warn('Rejected message from unauthorized origin:', event.origin);
+          return;
+        }
+        
+        const data = event.data;
+        const source = event.source;
+        
+        if (!data || !data.action || !data.id) {
+          console.warn('Invalid message format received');
+          return;
+        }
+        
+        console.log('Processing storage request:', data.action, 'for key:', data.key);
+        
+        let response = {
+          id: data.id,
+          error: null
+        };
+        
+        try {
+          // Process based on the requested action
+          switch(data.action) {
+            case 'get':
+              response.value = localStorage.getItem(data.key);
+              break;
+              
+            case 'set':
+              localStorage.setItem(data.key, data.value);
+              break;
+              
+            case 'remove':
+              localStorage.removeItem(data.key);
+              break;
+              
+            default:
+              response.error = 'Unknown action';
+          }
+        } catch (e) {
+          console.error('Error processing storage request:', e);
+          response.error = e.message;
+        }
+        
+        // Send the response back to the requester
+        source.postMessage(response, event.origin);
+      });
+      
+      // Update status to indicate the bridge is active
+      const statusCounter = document.getElementById('counter');
+      let count = 0;
+      
+      // Simple heartbeat to show the page is active
+      setInterval(function() {
+        // Just keeping the page alive
+        count++;
+        if (statusCounter) {
+          statusCounter.textContent = count;
+        }
+      }, 10000);
+    })();
+  </script>
+</body>
+</html> 

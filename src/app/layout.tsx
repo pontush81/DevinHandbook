@@ -137,11 +137,22 @@ export default function RootLayout({
                   script.src = '/static-resource-fix.js';
                   script.async = true;
                   document.head.appendChild(script);
+                  
+                  // Also load cross-domain storage script for auth handling
+                  const storageScript = document.createElement('script');
+                  storageScript.src = '/cross-domain-storage.js';
+                  storageScript.async = true;
+                  document.head.appendChild(storageScript);
                 }
               })();
             `
           }}
         />
+        
+        {/* Preload cross-domain scripts for faster loading */}
+        <link rel="preload" href="/static-resource-fix.js" as="script" />
+        <link rel="preload" href="/cross-domain-storage.js" as="script" />
+        <link rel="preload" href="/storage-bridge.html" as="document" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

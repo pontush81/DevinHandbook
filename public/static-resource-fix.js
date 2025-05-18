@@ -9,6 +9,9 @@
  */
 
 (function() {
+  // Check if running in browser environment
+  if (typeof window === 'undefined') return;
+
   console.log('Static resource fix script loaded');
   
   // Get the current hostname
@@ -171,5 +174,73 @@
     document.addEventListener('DOMContentLoaded', applyFixes);
   } else {
     applyFixes();
+  }
+
+  // Fix for "Access to storage is not allowed from this context" error
+  try {
+    // Create a separate storage object that works across subdomains
+    const safeStorage = {
+      getItem: function(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch (e) {
+          console.warn('LocalStorage access failed:', e.message);
+          return null;
+        }
+      },
+      setItem: function(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {
+          console.warn('LocalStorage write failed:', e.message);
+        }
+      },
+      removeItem: function(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn('LocalStorage removal failed:', e.message);
+        }
+      }
+    };
+
+    // Expose the safe storage methods globally
+    window.safeStorage = safeStorage;
+    
+    // Fix redirects that might be causing too many redirects error
+    const currentUrl = window.location.href;
+    
+    // If we're on a subdomain, but trying to access static resources directly
+    if (currentHost.includes('.handbok.org') && 
+        currentHost !== 'www.handbok.org' && 
+        currentHost !== 'handbok.org') {
+      
+      // Rewrite resource URLs to use the main domain when appropriate
+      document.addEventListener('DOMContentLoaded', () => {
+        // Fix resource URLs in the page
+        const fixResourceUrls = () => {
+          const resourceElements = document.querySelectorAll(
+            'link[href^="/_next/"], script[src^="/_next/"], img[src^="/_next/"]'
+          );
+          
+          resourceElements.forEach(el => {
+            const attrName = el.hasAttribute('href') ? 'href' : 'src';
+            const origValue = el.getAttribute(attrName);
+            
+            if (origValue && origValue.startsWith('/_next/')) {
+              el.setAttribute(attrName, `https://handbok.org${origValue}`);
+            }
+          });
+        };
+        
+        fixResourceUrls();
+        
+        // In case of dynamic content loading
+        setTimeout(fixResourceUrls, 1000);
+        setTimeout(fixResourceUrls, 3000);
+      });
+    }
+  } catch (e) {
+    console.error('Error in static resource fix script:', e);
   }
 })(); 

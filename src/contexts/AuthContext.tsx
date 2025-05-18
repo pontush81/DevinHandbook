@@ -5,6 +5,21 @@ import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
+declare global {
+  interface Window {
+    safeLocalStorage?: {
+      getItem: (key: string) => string | null;
+      setItem: (key: string, value: string) => boolean;
+      removeItem: (key: string) => boolean;
+    };
+    supabaseStorage?: {
+      getSession: () => string | null;
+      setSession: (token: string) => boolean;
+      clearSession: () => boolean;
+    };
+  }
+}
+
 type AuthContextType = {
   user: User | null;
   session: Session | null;
@@ -31,6 +46,36 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function for safely accessing auth session
+const getSafeAuthSession = () => {
+  try {
+    // First try using our cross-domain storage helper if available
+    if (typeof window !== 'undefined' && window.supabaseStorage) {
+      const sessionStr = window.supabaseStorage.getSession();
+      if (sessionStr) {
+        console.log('Retrieved session from safe storage bridge');
+        return JSON.parse(sessionStr);
+      }
+    }
+    // Fallback to direct localStorage in try-catch
+    if (typeof window !== 'undefined') {
+      try {
+        const sessionStr = localStorage.getItem('supabase.auth.token');
+        if (sessionStr) {
+          console.log('Retrieved session from localStorage directly');
+          return JSON.parse(sessionStr);
+        }
+      } catch (e) {
+        console.warn('Local storage access failed:', e);
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error('Error retrieving auth session:', e);
+    return null;
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -39,28 +84,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const setData = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error(error);
+      try {
+        // First try our safe storage helper
+        const safeSession = getSafeAuthSession();
+        
+        if (safeSession) {
+          console.log('Using cached session from safe storage');
+          setSession(safeSession);
+          setUser(safeSession?.user ?? null);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Fallback to Supabase's built-in getSession
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Supabase auth error:', error);
+          setSession(null);
+          setUser(null);
+        } else {
+          console.log('Retrieved fresh session from Supabase');
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Store in our safe storage if available
+          if (session && typeof window !== 'undefined' && window.supabaseStorage) {
+            window.supabaseStorage.setSession(JSON.stringify(session));
+          }
+        }
+      } catch (e) {
+        console.error('Error in auth initialization:', e);
         setSession(null);
         setUser(null);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event);
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Store session in safe storage on changes
+        if (session && typeof window !== 'undefined' && window.supabaseStorage) {
+          window.supabaseStorage.setSession(JSON.stringify(session));
+        } else if (!session && typeof window !== 'undefined' && window.supabaseStorage) {
+          window.supabaseStorage.clearSession();
+        }
       }
     );
 
@@ -91,6 +168,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    
+    // Also clear our safe storage
+    if (typeof window !== 'undefined' && window.supabaseStorage) {
+      window.supabaseStorage.clearSession();
+    }
+    
     router.push("/");
   };
 
