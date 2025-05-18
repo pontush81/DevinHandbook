@@ -29,6 +29,12 @@ export const createCheckoutSession = async (
   successUrl: string,
   cancelUrl: string
 ) => {
+  // Använd ett mycket litet belopp för testning i produktion
+  // HANDBOOK_PRICE är i öre, alltså 300 = 3 kronor (Stripe's minimumgräns)
+  const priceAmount = Number(process.env.HANDBOOK_PRICE) || 300; // Default till 3 kr om ingen miljövariabel finns
+  
+  console.log(`Creating checkout session with amount: ${priceAmount} öre (${priceAmount/100} kr)`);
+  
   return await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
@@ -39,7 +45,7 @@ export const createCheckoutSession = async (
             name: `Digital handbok: ${handbookName}`,
             description: `Subdomän: ${subdomain}.handbok.org`,
           },
-          unit_amount: Number(process.env.HANDBOOK_PRICE) || 99500, // 995 SEK i öre
+          unit_amount: priceAmount, // Använder priset från miljövariabeln eller default (3 kr)
         },
         quantity: 1,
       },

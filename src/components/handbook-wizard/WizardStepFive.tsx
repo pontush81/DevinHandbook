@@ -8,6 +8,7 @@ export function WizardStepFive() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
+  const [price, setPrice] = useState<number>(995); // Default pris i kr
   
   const handbookData = useMemo(() => ({
     name,
@@ -23,6 +24,26 @@ export function WizardStepFive() {
   useEffect(() => {
     console.log("Complete handbook data:", handbookData);
   }, [handbookData]);
+  
+  // Hämta aktuellt prisbelopp från API
+  useEffect(() => {
+    async function fetchPrice() {
+      try {
+        const response = await fetch('/api/stripe/check-mode');
+        const data = await response.json();
+        setIsTestMode(data.isTestMode);
+        
+        // Hämta det faktiska prisbeloppet om det är tillgängligt
+        if (data.priceAmount) {
+          // Konvertera från öre till kronor för visning
+          setPrice(data.priceAmount / 100);
+        }
+      } catch (err) {
+        console.error('Error fetching stripe mode:', err);
+      }
+    }
+    fetchPrice();
+  }, []);
   
   const handleCheckout = async () => {
     setIsLoading(true);
@@ -67,13 +88,18 @@ export function WizardStepFive() {
             🧪 Testläge aktivt - ingen faktisk betalning kommer att ske
           </div>
         )}
+        {!isTestMode && price < 10 && (
+          <div className="bg-blue-100 text-blue-800 p-2 rounded text-sm mt-2">
+            ⚠️ OBS! Detta är ett minimalt testbelopp för verifiering av betalflödet ({price.toFixed(2)} kr)
+          </div>
+        )}
       </div>
       
       <div className="bg-gray-50 p-6 rounded-lg border">
         <div className="space-y-3">
           <div className="flex justify-between">
             <span className="font-medium">Digital handbok för {name}</span>
-            <span>995 kr</span>
+            <span>{price.toFixed(2)} kr</span>
           </div>
           <div className="flex justify-between text-gray-500 text-sm">
             <span>Subdomän</span>
@@ -86,7 +112,7 @@ export function WizardStepFive() {
           <div className="border-t my-3"></div>
           <div className="flex justify-between font-semibold">
             <span>Totalt</span>
-            <span>995 kr</span>
+            <span>{price.toFixed(2)} kr</span>
           </div>
         </div>
         
