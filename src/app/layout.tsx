@@ -117,6 +117,7 @@ export default function RootLayout({
         {/* Load critical utilities before anything else */}
         <Script src="/cross-domain-storage.js" strategy="beforeInteractive" />
         <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
+        <Script src="/js-fallback.js" strategy="beforeInteractive" />
         
         {/* Emergency script to handle loading issues */}
         <script dangerouslySetInnerHTML={{ __html: `
@@ -190,6 +191,50 @@ export default function RootLayout({
                   document.addEventListener('DOMContentLoaded', fixStaticResources);
                 } else {
                   fixStaticResources();
+                }
+                
+                // Fix JS-filer som returnerar HTML istället för JavaScript
+                const fixJsResources = () => {
+                  // Specifika problematiska filer som rapporterats
+                  const problematicFiles = [
+                    'main-app-6cb4d4205dbe6682.js',
+                    'not-found-c44b5e0471063abc.js',
+                    '1684-dd509a3db56295d1.js',
+                    'layout-0c33b245aae4c126.js',
+                    '851-c6952f3282869f27.js', 
+                    '6874-19a86d48fe6904b6.js',
+                    'page-deedaeca2a6f4416.js',
+                    '4bd1b696-6406cd3a0eb1deaf.js',
+                    'webpack-59fcb2c1b9dd853e.js',
+                    '792-f5f0dba6c4a6958b.js'
+                  ];
+                  
+                  // Hitta och fixa script-taggar för problematiska filer
+                  document.querySelectorAll('script[src]').forEach(script => {
+                    const src = script.getAttribute('src');
+                    if (!src) return;
+                    
+                    const isProblematic = problematicFiles.some(file => src.includes(file));
+                    const needsRewrite = src.includes('-') && !src.includes('https://handbok.org');
+                    
+                    if (isProblematic || needsRewrite) {
+                      // Rewrite the URL to use the main domain
+                      const newSrc = src.startsWith('/') 
+                        ? 'https://handbok.org' + src 
+                        : src.includes('://') ? src : 'https://handbok.org/' + src;
+                      
+                      // Sätt upp ett attribut för att visa att detta har fixats
+                      script.setAttribute('data-fixed', 'true');
+                      script.setAttribute('src', newSrc);
+                    }
+                  });
+                };
+                
+                // Kör JS-fix direkt och när DOM är laddad
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', fixJsResources);
+                } else {
+                  fixJsResources();
                 }
               }
               

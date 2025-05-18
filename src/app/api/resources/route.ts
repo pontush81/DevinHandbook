@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * This API route serves as a proxy for fetching static resources across subdomains
  * to avoid CORS and redirect issues when accessing resources like CSS, JS, and fonts.
  * 
- * Version: 3.0
+ * Version: 3.1
  */
 
 // Map of minimal fallbacks for critical resource types
@@ -56,8 +56,25 @@ const CACHE_DURATIONS = {
   other: 3600    // Other: 1 hour
 };
 
+// Known problematic files that need special handling
+const PROBLEMATIC_FILES = [
+  'main-app-6cb4d4205dbe6682.js',
+  'not-found-c44b5e0471063abc.js',
+  '1684-dd509a3db56295d1.js',
+  'layout-0c33b245aae4c126.js',
+  '851-c6952f3282869f27.js', 
+  '6874-19a86d48fe6904b6.js',
+  'page-deedaeca2a6f4416.js',
+  '4bd1b696-6406cd3a0eb1deaf.js',
+  'webpack-59fcb2c1b9dd853e.js',
+  '792-f5f0dba6c4a6958b.js',
+  '569ce4b8f30dc480-s.p.woff2',
+  '93f479601ee12b01-s.p.woff2'
+];
+
 // Helper to get content type based on path
 function getContentType(path: string): string {
+  // Exact matchers for known file extensions
   if (path.endsWith('.css')) return 'text/css';
   if (path.endsWith('.js')) return 'application/javascript';
   if (path.endsWith('.woff2')) return 'font/woff2';
@@ -70,6 +87,19 @@ function getContentType(path: string): string {
   if (path.endsWith('.ico')) return 'image/x-icon';
   if (path.endsWith('.json')) return 'application/json';
   
+  // Pattern matching for richer detection of font files
+  if (path.includes('-s.p.woff2') || path.match(/[a-f0-9]{16}\.woff2$/i)) {
+    return 'font/woff2';
+  }
+  
+  // Pattern matching for Next.js hashed bundle files
+  if (path.match(/[a-f0-9]{8}-[a-f0-9]{16}\.js$/i) || 
+      path.match(/[a-f0-9]{16}\.js$/i) || 
+      path.includes('-app-') || 
+      path.includes('-page-')) {
+    return 'application/javascript';
+  }
+  
   // Default content type
   return 'application/octet-stream';
 }
@@ -77,8 +107,8 @@ function getContentType(path: string): string {
 // Helper to get resource type category
 function getResourceType(path: string): 'css' | 'js' | 'font' | 'image' | 'other' {
   if (path.endsWith('.css')) return 'css';
-  if (path.endsWith('.js')) return 'js';
-  if (path.match(/\.(woff2?|ttf|otf|eot)$/i)) return 'font';
+  if (path.endsWith('.js') || path.match(/[a-f0-9]{8}-[a-f0-9]{16}\.js$/i)) return 'js';
+  if (path.match(/\.(woff2?|ttf|otf|eot)$/i) || path.includes('-s.p.woff2')) return 'font';
   if (path.match(/\.(png|jpe?g|gif|svg|webp|ico)$/i)) return 'image';
   return 'other';
 }
@@ -87,6 +117,11 @@ function getResourceType(path: string): 'css' | 'js' | 'font' | 'image' | 'other
 function getCacheDuration(path: string): number {
   const resourceType = getResourceType(path);
   return CACHE_DURATIONS[resourceType] || CACHE_DURATIONS.other;
+}
+
+// Helper to check if a file is known to be problematic
+function isProblematicFile(path: string): boolean {
+  return PROBLEMATIC_FILES.some(file => path.includes(file));
 }
 
 // Helper to create a fallback response
@@ -166,6 +201,28 @@ export async function GET(req: NextRequest) {
     );
   }
   
+  // Special case for handling specific font files that are often problematic
+  if (path.endsWith('.woff2') || path.includes('-s.p.woff2')) {
+    const isFontKnownProblematic = isProblematicFile(path);
+    
+    if (isFontKnownProblematic) {
+      console.log(`Known problematic font detected: ${path}, using direct fallback`);
+      
+      // Explicit full URL creation for fonts
+      const fontPath = path.startsWith('/') ? path : `/${path}`;
+      const directFontUrl = `https://handbok.org${fontPath}`;
+      
+      return new Response(null, {
+        status: 307, // Temporary redirect
+        headers: {
+          'Location': directFontUrl,
+          'Cache-Control': 'no-cache',
+          'X-Font-Redirect': 'true'
+        }
+      });
+    }
+  }
+  
   // Check cache first (before tracking proxy count)
   const cacheKey = path;
   if (resourceCache.has(cacheKey)) {
@@ -186,6 +243,25 @@ export async function GET(req: NextRequest) {
         },
       });
     }
+  }
+  
+  // Special case for JS files that are known to be problematic
+  if (path.endsWith('.js') && isProblematicFile(path)) {
+    console.log(`Known problematic JS file detected: ${path}, using direct URL`);
+    
+    // Create direct URL to the main domain
+    const jsPath = path.startsWith('/') ? path : `/${path}`;
+    const directJsUrl = `https://handbok.org${jsPath}`;
+    
+    return new Response(null, {
+      status: 307, // Temporary redirect
+      headers: {
+        'Location': directJsUrl,
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/javascript',
+        'X-JS-Redirect': 'true'
+      }
+    });
   }
   
   // Track proxy requests to detect loops
@@ -217,7 +293,7 @@ export async function GET(req: NextRequest) {
     
     const response = await fetch(resourceUrl, {
       headers: {
-        'User-Agent': 'Handbok-Resource-Proxy/3.0',
+        'User-Agent': 'Handbok-Resource-Proxy/3.1',
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate, br',
         'Connection': 'keep-alive',
@@ -237,20 +313,56 @@ export async function GET(req: NextRequest) {
       return createFallbackResponse(path);
     }
     
+    // Check if the response is HTML when it should be a different type (happens on error pages)
+    const contentType = response.headers.get('content-type') || '';
+    const isExpectedJs = path.endsWith('.js') && !contentType.includes('javascript');
+    const isHtmlResponse = contentType.includes('text/html');
+    
+    if (isExpectedJs && isHtmlResponse) {
+      console.error(`Received HTML instead of JS for ${path} - proxying directly from main domain`);
+      
+      // Create a redirect to the main domain
+      const jsPath = path.startsWith('/') ? path : `/${path}`;
+      const directJsUrl = `https://handbok.org${jsPath}`;
+      
+      return new Response(null, {
+        status: 307, // Temporary redirect
+        headers: {
+          'Location': directJsUrl,
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/javascript',
+          'X-Error-Redirect': 'true'
+        }
+      });
+    }
+    
     // Get the content type from the response or infer it from the path
-    let contentType = response.headers.get('content-type');
-    if (!contentType) {
-      contentType = getContentType(path);
+    let responseContentType = response.headers.get('content-type');
+    if (!responseContentType || responseContentType.includes('text/html')) {
+      // If we received HTML for a non-HTML resource, use the correct content type
+      responseContentType = getContentType(path);
     }
     
     // Get the response body as an array buffer for binary data support
     const arrayBuffer = await response.arrayBuffer();
     
+    // Check if we got HTML content for a non-HTML file (error page)
+    const responseText = new TextDecoder().decode(arrayBuffer.slice(0, 100));
+    const containsHtmlStart = responseText.trim().toLowerCase().startsWith('<!doctype html>') || 
+                             responseText.trim().toLowerCase().startsWith('<html');
+    
+    if (containsHtmlStart && !path.endsWith('.html')) {
+      console.error(`Received HTML content for non-HTML resource: ${path}`);
+      
+      // Provide appropriate fallback
+      return createFallbackResponse(path);
+    }
+    
     // Cache the response in memory (only if it's not too large)
     if (arrayBuffer.byteLength < 1024 * 1024) { // Don't cache items larger than 1MB
       resourceCache.set(cacheKey, {
         data: arrayBuffer,
-        type: contentType,
+        type: responseContentType,
         time: Date.now()
       });
       
@@ -264,7 +376,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': responseContentType,
         'Cache-Control': `public, max-age=${getCacheDuration(path)}`,
         'Access-Control-Allow-Origin': '*',
         'Cross-Origin-Resource-Policy': 'cross-origin',

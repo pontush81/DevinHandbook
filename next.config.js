@@ -21,22 +21,27 @@ const nextConfig = {
           ],
           destination: 'https://handbok.org/_next/static/css/:path*',
         },
-        // Hantera JS-filer direkt
+        // Hantera JS-filer direkt - ny exakt match för chunks
         {
           source: '/_next/static/chunks/:path*',
           has: [
             {
               type: 'host',
               value: '(?<subdomain>[^.]+).handbok.org',
-            },
-            // Prevents redirect loops
-            {
-              type: 'header',
-              key: 'referer',
-              value: '(?!.*handbok\\.org).*',
             }
           ],
           destination: 'https://handbok.org/_next/static/chunks/:path*',
+        },
+        // Hantera JS-filer direkt - ny specificerad match för namngivna JS filer
+        {
+          source: '/_next/static/:path*.js',
+          has: [
+            {
+              type: 'host',
+              value: '(?<subdomain>[^.]+).handbok.org',
+            }
+          ],
+          destination: 'https://handbok.org/_next/static/:path*.js',
         },
         // Hantera media-filer (font, etc) direkt
         {
@@ -54,6 +59,17 @@ const nextConfig = {
             }
           ],
           destination: 'https://handbok.org/_next/static/media/:path*',
+        },
+        // Explicit handling för woff2 fonts med exakt mönster
+        {
+          source: '/_next/static/media/:filename.woff2',
+          has: [
+            {
+              type: 'host',
+              value: '(?<subdomain>[^.]+).handbok.org',
+            }
+          ],
+          destination: 'https://handbok.org/_next/static/media/:filename.woff2',
         },
         // Proxy endpoint for fonts with wildcards to handle any hash in filename
         {
@@ -147,14 +163,26 @@ const nextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
         ],
       },
-      // För JavaScript-filer specifikt
+      // För JavaScript-filer specifikt - ny striktare MIME-type
+      {
+        source: '/_next/static/:path*.js',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' }
+        ],
+      },
+      // För JavaScript chunks specifikt - ny exakt match
       {
         source: '/_next/static/chunks/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' }
         ],
       },
       // För font-filer - explicit content-type
@@ -174,6 +202,17 @@ const nextConfig = {
           { key: 'Content-Type', value: 'font/woff2' },
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
+        ],
+      },
+      // Explicit regel för specifika problemfiler som rapporteras
+      {
+        source: '/:path*-:hash.js',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Content-Type', value: 'application/javascript; charset=UTF-8' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' }
         ],
       },
       // För statiska sidor och hjälpfiler
