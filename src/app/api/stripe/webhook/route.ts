@@ -23,7 +23,10 @@ export async function POST(req: NextRequest) {
       const { subdomain, handbookName } = session.metadata || {};
       
       if (subdomain && handbookName) {
-        await createHandbookInSupabase(handbookName, subdomain);
+        const finalSubdomain = isTestMode ? `test.${subdomain}` : subdomain;
+        
+        console.log(`Creating handbook with name: ${handbookName}, subdomain: ${finalSubdomain}`);
+        await createHandbookInSupabase(handbookName, finalSubdomain);
       }
     }
 

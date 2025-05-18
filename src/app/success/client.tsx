@@ -10,9 +10,33 @@ export default function SuccessClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [redirectCountdown, setRedirectCountdown] = useState(5);
+  const [isTestMode, setIsTestMode] = useState(false);
   
   const handbookName = searchParams.get('handbook_name');
   const subdomain = searchParams.get('subdomain');
+  
+  useEffect(() => {
+    // Check if we're in test mode
+    const checkTestMode = async () => {
+      try {
+        const response = await fetch('/api/stripe/check-mode');
+        const data = await response.json();
+        setIsTestMode(data.isTestMode);
+      } catch (e) {
+        console.error('Failed to check test mode:', e);
+        // Default to false if check fails
+        setIsTestMode(false);
+      }
+    };
+    
+    checkTestMode();
+  }, []);
+  
+  // Compute the final subdomain with test. prefix if in test mode
+  const getFinalSubdomain = () => {
+    if (!subdomain) return '';
+    return isTestMode ? `test.${subdomain}` : subdomain;
+  };
   
   useEffect(() => {
     if (!handbookName || !subdomain) {
@@ -30,8 +54,8 @@ export default function SuccessClient() {
         setRedirectCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
-            // Omdirigera till den nyskapade handboken
-            window.location.href = `https://${subdomain}.handbok.org`;
+            // Omdirigera till den nyskapade handboken med test prefix om i testläge
+            window.location.href = `https://${getFinalSubdomain()}.handbok.org`;
             return 0;
           }
           return prev - 1;
@@ -42,7 +66,7 @@ export default function SuccessClient() {
     }, 3000);
     
     return () => clearTimeout(loadingTimer);
-  }, [handbookName, subdomain]);
+  }, [handbookName, subdomain, isTestMode]);
   
   if (isLoading) {
     return (
@@ -76,6 +100,8 @@ export default function SuccessClient() {
     );
   }
   
+  const finalSubdomain = getFinalSubdomain();
+  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
@@ -92,14 +118,21 @@ export default function SuccessClient() {
           Din handbok för {handbookName} har skapats och är nu tillgänglig.
         </p>
         
+        {isTestMode && (
+          <div className="bg-yellow-50 p-3 rounded-md mb-4 text-yellow-800 text-sm">
+            <p className="font-medium">Testläge aktivt</p>
+            <p>Detta är en testhandbok skapad i testmiljö.</p>
+          </div>
+        )}
+        
         <div className="bg-gray-50 p-4 rounded-md mb-6">
           <p className="text-center">
             Din handbok finns på:
             <a 
-              href={`https://${subdomain}.handbok.org`} 
+              href={`https://${finalSubdomain}.handbok.org`} 
               className="block mt-2 font-medium text-blue-600 hover:underline"
             >
-              {subdomain}.handbok.org
+              {finalSubdomain}.handbok.org
             </a>
           </p>
           <p className="text-center mt-3 text-gray-600">
@@ -109,7 +142,7 @@ export default function SuccessClient() {
         
         <div className="flex justify-center space-x-4">
           <a 
-            href={`https://${subdomain}.handbok.org`} 
+            href={`https://${finalSubdomain}.handbok.org`} 
             className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
           >
             Gå till din handbok nu
