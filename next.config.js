@@ -26,7 +26,7 @@ const nextConfig = {
     return [];
   },
   
-  // Redirects för test.staging.handbok.org
+  // Redirects för subdomäner
   async redirects() {
     return [
       // För test.staging.handbok.org -> staging.handbok.org/handbook/test
@@ -39,6 +39,18 @@ const nextConfig = {
           },
         ],
         destination: 'https://staging.handbok.org/handbook/test/:path*',
+        permanent: false,
+      },
+      // För test.{subdomain}.handbok.org -> www.handbok.org/handbook/{subdomain}
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'test.{subdomain}.handbok.org',
+          },
+        ],
+        destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
         permanent: false,
       }
     ];
