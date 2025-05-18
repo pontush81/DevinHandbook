@@ -4,7 +4,7 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        // Hantera subdomän-routing utan middleware
+        // Hantera subdomän-routing utan middleware för besökare
         {
           source: '/:path*',
           has: [
@@ -13,7 +13,18 @@ const nextConfig = {
               value: '(?<subdomain>[^.]+).handbok.org',
             },
           ],
-          destination: '/handbook/:subdomain/:path*',
+          destination: '/create-handbook',  // Dirigera till femstegsguiden
+        },
+        // Alternativ för API-anrop via subdomäner
+        {
+          source: '/api/:path*',
+          has: [
+            {
+              type: 'host',
+              value: '(?<subdomain>[^.]+).handbok.org',
+            },
+          ],
+          destination: '/api/:path*',  // Låt API-anrop gå till rätt endpoint
         },
       ],
     };
