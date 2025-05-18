@@ -11,7 +11,7 @@
   <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
   <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin">
   
-  <!-- Meta refresh sätts med JavaScript för att undvika cacheproblem -->
+  <!-- Direkt meta refresh för test.handbok.org -->
   <script>
     (function() {
       const hostname = window.location.hostname;
@@ -115,10 +115,8 @@
           document.getElementById('manual-link').href = redirectUrl;
           document.getElementById('manual-link').textContent = 'Gå till Handbok.org';
           
-          // Använd JavaScript för omdirigering med fördröjning för att meta refresh ska hinna aktiveras
-          setTimeout(function() {
-            window.location.href = redirectUrl;
-          }, 100);
+          // Direkt omdirigering
+          window.location.href = redirectUrl;
         } else {
           // För övriga subdomäner
           const redirectUrl = 'https://handbok.org/handbook/' + subdomain;
@@ -129,10 +127,8 @@
           document.getElementById('manual-link').href = redirectUrl;
           document.getElementById('manual-link').textContent = 'Öppna ' + subdomain + ' handbok';
           
-          // Använd JavaScript för omdirigering med fördröjning för att meta refresh ska hinna aktiveras
-          setTimeout(function() {
-            window.location.href = redirectUrl;
-          }, 100);
+          // Direkt omdirigering
+          window.location.href = redirectUrl;
         }
       } else {
         // På huvuddomänen
