@@ -18,10 +18,13 @@ export const isTestMode = !isProduction;
 
 /**
  * Stripe-instans som konfigureras baserat på miljö
+ * Med säkerhetskontroll för om nyckeln finns
  */
-export const stripe = new Stripe(stripeSecretKey!, {
-  apiVersion: '2025-04-30.basil',
-});
+export const stripe = stripeSecretKey 
+  ? new Stripe(stripeSecretKey, {
+      apiVersion: '2025-04-30.basil',
+    })
+  : null as any; // För att undvika byggfel under utveckling
 
 export const createCheckoutSession = async (
   handbookName: string,
@@ -29,6 +32,11 @@ export const createCheckoutSession = async (
   successUrl: string,
   cancelUrl: string
 ) => {
+  // Säkerhetskontroll att Stripe är initierat
+  if (!stripe) {
+    throw new Error("Stripe not initialized. Missing API key.");
+  }
+  
   // Använd ett mycket litet belopp för testning i produktion
   // HANDBOOK_PRICE är i öre, alltså 300 = 3 kronor (Stripe's minimumgräns)
   const priceAmount = Number(process.env.HANDBOOK_PRICE) || 300; // Default till 3 kr om ingen miljövariabel finns
@@ -65,6 +73,11 @@ export const constructEventFromPayload = async (
   signature: string,
   webhookSecret?: string
 ) => {
+  // Säkerhetskontroll att Stripe är initierat
+  if (!stripe) {
+    throw new Error("Stripe not initialized. Missing API key.");
+  }
+  
   // Använd rätt webhook-nyckel baserat på miljö
   return stripe.webhooks.constructEvent(
     payload, 

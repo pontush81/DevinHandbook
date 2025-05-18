@@ -50,14 +50,25 @@ export default function RootLayout({
               // Kontrollera om vi är på en subdomän
               const currentDomain = window.location.hostname;
               const isSubdomain = currentDomain.split('.').length > 2 && 
-                                 currentDomain.endsWith('.handbok.org') &&
+                                 (currentDomain.endsWith('.handbok.org') || 
+                                  currentDomain.endsWith('.dev.handbok.org')) &&
                                  currentDomain !== 'www.handbok.org' &&
-                                 currentDomain !== 'handbok.org';
+                                 currentDomain !== 'handbok.org' &&
+                                 currentDomain !== 'dev.handbok.org';
               
               if (isSubdomain) {
-                // Omdirigera direkt till huvuddomänen med subdomänen som parameter
-                const subdomain = currentDomain.split('.')[0];
-                window.location.href = 'https://handbok.org/handbook/' + subdomain;
+                const parts = currentDomain.split('.');
+                const subdomain = parts[0];
+                
+                // Skippa redirects för test-subdomäner (både i produktion och staging)
+                if (subdomain === 'test') return;
+                
+                // Bestäm måldomän baserat på om vi är på staging (dev.handbok.org) eller produktion
+                const isStaging = currentDomain.includes('dev.handbok.org');
+                const targetDomain = isStaging ? 'https://dev.handbok.org' : 'https://handbok.org';
+                
+                // För övriga subdomäner, dirigera till {domän}/handbook/{subdomain}
+                window.location.href = targetDomain + '/handbook/' + subdomain;
               }
             })();
           `}

@@ -21,9 +21,39 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Ingen omskrivning av URL:er, låt allt gå till sin standard destination
+  // Inga omskrivningar
   async rewrites() {
     return [];
+  },
+  
+  // Redirects för test-subdomän i både produktion och staging
+  async redirects() {
+    return [
+      // För produktion: test.handbok.org -> handbok.org
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'test.handbok.org',
+          },
+        ],
+        destination: 'https://handbok.org',
+        permanent: false,
+      },
+      // För staging: test.dev.handbok.org -> dev.handbok.org
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'test.dev.handbok.org',
+          },
+        ],
+        destination: 'https://dev.handbok.org',
+        permanent: false,
+      }
+    ];
   },
   
   // Enkla headers för alla filer
