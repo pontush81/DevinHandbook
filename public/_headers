@@ -2,7 +2,11 @@
 /*
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey
+  Access-Control-Allow-Credentials: true
+  Cross-Origin-Resource-Policy: cross-origin
+  Cross-Origin-Opener-Policy: unsafe-none
+  Cross-Origin-Embedder-Policy: unsafe-none
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
 
@@ -11,6 +15,7 @@
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, OPTIONS
   Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
 
 # Headers för filer i public-mappen
 /static/*
@@ -22,4 +27,67 @@
 /_next/static/media/*.woff2
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, OPTIONS
-  Cache-Control: public, max-age=31536000, immutable 
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
+
+/_next/static/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
+  
+/_next/static/css/*
+  Access-Control-Allow-Origin: *
+  Content-Type: text/css; charset=UTF-8
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
+  
+/_next/static/chunks/*
+  Access-Control-Allow-Origin: *
+  Content-Type: application/javascript; charset=UTF-8
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
+  X-Content-Type-Options: nosniff
+
+/_next/static/media/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
+
+/*.woff2
+  Access-Control-Allow-Origin: *
+  Content-Type: font/woff2
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: cross-origin
+
+/storage-bridge.html
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+  Cross-Origin-Opener-Policy: unsafe-none
+  Cross-Origin-Embedder-Policy: unsafe-none
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/auth-bridge.html
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+  Cross-Origin-Opener-Policy: unsafe-none
+  Cross-Origin-Embedder-Policy: unsafe-none
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/cross-domain-storage.js
+  Access-Control-Allow-Origin: *
+  Content-Type: application/javascript; charset=UTF-8
+  Cross-Origin-Resource-Policy: cross-origin
+  Cache-Control: no-cache, must-revalidate
+
+/static-resource-fix.js
+  Access-Control-Allow-Origin: *
+  Content-Type: application/javascript; charset=UTF-8
+  Cross-Origin-Resource-Policy: cross-origin
+  Cache-Control: no-cache, must-revalidate
+
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Client-Info, apikey
+  Access-Control-Allow-Credentials: true
+  Cache-Control: no-store, max-age=0 

@@ -893,4 +893,122 @@
   } else {
     init();
   }
+})();
+
+// Static Resource Fix - helps with cross-domain resource loading
+(function() {
+  const isSubdomain = window.location.hostname.split('.').length > 2 && 
+                      window.location.hostname.indexOf('handbok.org') > -1;
+                      
+  if (!isSubdomain) return; // Only run on subdomains
+  
+  // Fix for font and static resources
+  function fixStaticResources() {
+    // Fix for font files
+    document.querySelectorAll('link[rel="preload"][as="font"]').forEach(link => {
+      const href = link.getAttribute('href');
+      if (href && (href.includes('.woff2') || href.includes('.woff') || href.includes('.ttf'))) {
+        const mainDomainUrl = `https://handbok.org${href}`;
+        link.setAttribute('href', mainDomainUrl);
+      }
+    });
+    
+    // Fix for CSS files
+    document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+      const href = link.getAttribute('href');
+      if (href && href.startsWith('/_next/')) {
+        const mainDomainUrl = `https://handbok.org${href}`;
+        link.setAttribute('href', mainDomainUrl);
+      }
+    });
+    
+    // Fix for script files
+    document.querySelectorAll('script[src]').forEach(script => {
+      const src = script.getAttribute('src');
+      if (src && src.startsWith('/_next/')) {
+        const mainDomainUrl = `https://handbok.org${src}`;
+        script.setAttribute('src', mainDomainUrl);
+      }
+    });
+  }
+  
+  // Safe local storage access
+  function createSafeStorage() {
+    let memoryStorage = {};
+    
+    const safeStorage = {
+      getItem: function(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch (e) {
+          console.warn('LocalStorage access failed, using memory storage', e);
+          return memoryStorage[key] || null;
+        }
+      },
+      setItem: function(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {
+          console.warn('LocalStorage access failed, using memory storage', e);
+          memoryStorage[key] = value;
+        }
+      },
+      removeItem: function(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn('LocalStorage access failed, using memory storage', e);
+          delete memoryStorage[key];
+        }
+      }
+    };
+    
+    // Replace localStorage access
+    try {
+      Object.defineProperty(window, 'safeLocalStorage', { 
+        value: safeStorage,
+        writable: false
+      });
+    } catch (e) {
+      console.error('Failed to define safeLocalStorage', e);
+    }
+  }
+  
+  // Fix for favicon
+  function fixFavicon() {
+    const favicon = document.querySelector('link[rel="icon"]');
+    if (favicon) {
+      favicon.href = 'https://handbok.org/favicon.ico';
+    } else {
+      const newFavicon = document.createElement('link');
+      newFavicon.rel = 'icon';
+      newFavicon.href = 'https://handbok.org/favicon.ico';
+      document.head.appendChild(newFavicon);
+    }
+  }
+  
+  // Run fixes once DOM is loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      fixStaticResources();
+      createSafeStorage();
+      fixFavicon();
+    });
+  } else {
+    fixStaticResources();
+    createSafeStorage();
+    fixFavicon();
+  }
+  
+  // Observe DOM changes to fix any dynamically added resources
+  if (window.MutationObserver) {
+    const observer = new MutationObserver(function(mutations) {
+      fixStaticResources();
+    });
+    
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  }
 })(); 

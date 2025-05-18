@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Script from 'next/script';
+import Head from 'next/head'
 
 // Configure fonts with better cross-domain support
 const geistSans = Geist({
@@ -33,8 +34,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sv">
+    <html lang="sv" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="/favicon.ico" />
+        <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+        <meta httpEquiv="Cross-Origin-Embedder-Policy" content="unsafe-none" />
+        <meta httpEquiv="Cross-Origin-Opener-Policy" content="unsafe-none" />
+        <meta httpEquiv="Cross-Origin-Resource-Policy" content="cross-origin" />
+        
+        {/* Resource fix script for cross-domain resources */}
+        <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
+        
         {/* Inline critical CSS för att förhindra FOUC och garantera grundläggande styling */}
         <style dangerouslySetInnerHTML={{ __html: `
           /* Critical CSS for base styling - will always load */
