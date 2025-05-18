@@ -5,10 +5,19 @@
  * och omdirigerar misslyckade förfrågningar via vår proxy.
  */
 (function() {
+  // Kör bara i webbläsaren, inte på server
+  if (typeof window === 'undefined') return;
+  
   console.log('[Static Resource Fix] Initializing...');
 
   // Här lagrar vi resurser som redan har omriktats för att undvika loopar
   const processedUrls = new Set();
+  
+  // URL till vår proxy-endpoint
+  const PROXY_ENDPOINT = '/api/proxy-static';
+  
+  // Lista över resurser som vi har försökt fixa
+  const attemptedFixes = new Set();
   
   // Funktion för att få en absolut URL
   function getAbsoluteUrl(url) {
@@ -205,4 +214,142 @@
   if (!window.__STATIC_RESOURCE_FIX_LOADED__) {
     window.__STATIC_RESOURCE_FIX = init();
   }
+
+  // Intercepta fetch-anrop för att hantera CORS-fel för Next.js statiska resurser
+  const originalFetch = window.fetch;
+  window.fetch = async function(resource, options) {
+    // Försök med normalt anrop först
+    try {
+      return await originalFetch(resource, options);
+    } catch (error) {
+      // Om det är ett CORS-fel och resursen är från handbok.org
+      const url = resource.toString();
+      if ((error.message && error.message.includes('CORS')) || error.name === 'TypeError') {
+        if (
+          url.includes('handbok.org/_next/') &&
+          !attemptedFixes.has(url) &&
+          (url.includes('/static/media/') || url.includes('/static/css/') || url.includes('/static/chunks/'))
+        ) {
+          console.log('Intercepting CORS error for: ' + url);
+          attemptedFixes.add(url);
+          
+          // Extrahera path från URL
+          const urlObj = new URL(url);
+          const path = urlObj.pathname;
+          
+          // Använd vår proxy istället
+          const proxyUrl = PROXY_ENDPOINT + '?path=' + encodeURIComponent(path);
+          console.log('Redirecting to proxy: ' + proxyUrl);
+          return originalFetch(proxyUrl, options);
+        }
+      }
+      
+      // Kasta om felet om vi inte kunde hantera det
+      throw error;
+    }
+  };
+  
+  // Mutation Observer för att detektera och fixa CSS-länkar med CORS-fel
+  function setupMutationObserver() {
+    if (!window.MutationObserver) return;
+    
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList') {
+          Array.from(mutation.addedNodes).forEach(function(node) {
+            // Fixa link-element (CSS)
+            if (node.nodeName === 'LINK' && node.rel === 'stylesheet') {
+              const linkElement = node;
+              const originalHref = linkElement.href;
+              
+              if (originalHref && originalHref.includes('handbok.org/_next/static/css/') && !attemptedFixes.has(originalHref)) {
+                // Fixa CORS för CSS-filer
+                linkElement.addEventListener('error', function(e) {
+                  if (!attemptedFixes.has(originalHref)) {
+                    attemptedFixes.add(originalHref);
+                    const path = new URL(originalHref).pathname;
+                    const proxyUrl = PROXY_ENDPOINT + '?path=' + encodeURIComponent(path);
+                    console.log('Fixing CSS CORS issue: ' + originalHref + ' -> ' + proxyUrl);
+                    linkElement.href = proxyUrl;
+                  }
+                });
+              }
+            }
+          });
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+  
+  // Fixa font-fel genom att övervaka console errors
+  function fixFontLoading() {
+    // Lyssna på console errors från fonter
+    const originalConsoleError = console.error;
+    console.error = function() {
+      const args = Array.from(arguments);
+      const errorMsg = args.join(' ');
+      if (
+        errorMsg.includes('Access to font') && 
+        errorMsg.includes('has been blocked by CORS policy')
+      ) {
+        const match = errorMsg.match(/at ['"]([^'"]+)['"]/);
+        if (match && match[1]) {
+          const fontUrl = match[1];
+          if (!attemptedFixes.has(fontUrl) && fontUrl.includes('handbok.org/_next/static/media/')) {
+            attemptedFixes.add(fontUrl);
+            
+            // Extrahera path och skapa proxy-URL
+            const path = new URL(fontUrl).pathname;
+            const proxyUrl = PROXY_ENDPOINT + '?path=' + encodeURIComponent(path);
+            
+            console.log('Fixing font CORS issue: ' + fontUrl + ' -> ' + proxyUrl);
+            
+            // Skapa en ny style tag med uppdaterade font-sources
+            const style = document.createElement('style');
+            style.textContent = 
+              '@font-face {' +
+              '  font-family: "__font_fixed";' +
+              '  src: url("' + proxyUrl + '") format("woff2");' +
+              '  font-display: swap;' +
+              '}';
+            document.head.appendChild(style);
+          }
+        }
+      }
+      originalConsoleError.apply(console, args);
+    };
+  }
+  
+  // Initiera våra fixar
+  function init() {
+    console.log('Initializing static resource CORS fix');
+    setupMutationObserver();
+    fixFontLoading();
+    
+    // Lyssna på DOMContentLoaded för att hantera tidiga CSS-laddningar
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        // Fixa existerande stilar som redan har laddats
+        document.querySelectorAll('link[rel="stylesheet"]').forEach(function(link) {
+          const href = link.href;
+          if (href && href.includes('handbok.org/_next/static/css/') && !attemptedFixes.has(href)) {
+            link.addEventListener('error', function() {
+              if (!attemptedFixes.has(href)) {
+                attemptedFixes.add(href);
+                const path = new URL(href).pathname;
+                const proxyUrl = PROXY_ENDPOINT + '?path=' + encodeURIComponent(path);
+                console.log('Fixing initial CSS CORS issue: ' + href + ' -> ' + proxyUrl);
+                link.href = proxyUrl;
+              }
+            });
+          }
+        });
+      });
+    }
+  }
+  
+  // Starta vår lösning när scriptet laddat
+  init();
 })(); 

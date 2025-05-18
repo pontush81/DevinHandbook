@@ -6,84 +6,65 @@ export const runtime = 'edge';
  * Denna endpoint fungerar som en proxy för statiska resurser för att lösa CORS-problem.
  * Den tar en URL som query-parameter och returnerar resursens innehåll med rätt CORS-headers.
  */
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const url = searchParams.get('url');
-  
-  // Logga för felsökning
-  console.log(`[Static Proxy] Requested URL: ${url}`);
-  
-  if (!url) {
-    return NextResponse.json({ error: 'Missing URL parameter' }, { status: 400 });
-  }
-  
+export async function GET(req: NextRequest) {
   try {
-    // Kontrollera så att URL:en är rimlig, tillåt endast vissa domäner
-    const parsedUrl = new URL(url);
-    const allowedDomains = [
-      'handbok.org',
-      'www.handbok.org',
-      'test.handbok.org',
-      'hej.handbok.org',
-      'devin-handbook.vercel.app',
-    ];
+    // Extrahera sökvägen från URL
+    const url = new URL(req.url);
+    const path = url.searchParams.get('path');
     
-    // Verifiera att URL:en är för Next.js statiska resurser eller inom tillåtna domäner
-    if (!parsedUrl.pathname.startsWith('/_next/') && 
-        !parsedUrl.pathname.startsWith('/static/') &&
-        !allowedDomains.some(domain => parsedUrl.hostname.includes(domain) || parsedUrl.hostname.endsWith('vercel.app'))) {
-      return NextResponse.json({ error: 'Invalid URL domain or resource type' }, { status: 403 });
+    if (!path) {
+      return new NextResponse('Missing path parameter', { status: 400 });
     }
+
+    // Fullständig URL till den statiska resursen
+    const resourceUrl = `https://handbok.org${path}`;
     
-    // Hämta den statiska resursen
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    console.log(`Proxying request for: ${resourceUrl}`);
     
-    const resourceResponse = await fetch(url, {
-      method: 'GET',
+    // Hämta resursen
+    const response = await fetch(resourceUrl, {
       headers: {
-        'Accept': '*/*',
-        'User-Agent': 'StaticResourceProxy/1.0',
-        'Cache-Control': 'no-cache',
+        'User-Agent': req.headers.get('user-agent') || 'Next.js Static Proxy',
       },
-      signal: controller.signal,
-      cache: 'no-store',
     });
     
-    clearTimeout(timeoutId);
+    if (!response.ok) {
+      console.error(`Failed to fetch resource: ${resourceUrl}, Status: ${response.status}`);
+      return new NextResponse(`Failed to fetch resource: ${response.statusText}`, { 
+        status: response.status 
+      });
+    }
+
+    // Skapa en buffer från response
+    const buffer = await response.arrayBuffer();
     
-    // Om resursen inte kunde hämtas
-    if (!resourceResponse.ok) {
-      console.error(`[Static Proxy] Failed to fetch: ${url}, status: ${resourceResponse.status}`);
-      return NextResponse.json({
-        error: `Failed to fetch resource: ${resourceResponse.status} ${resourceResponse.statusText}`,
-        url
-      }, { status: resourceResponse.status });
+    // Bestäm Content-Type baserat på filtyp
+    let contentType = response.headers.get('content-type') || 'application/octet-stream';
+    if (path.endsWith('.woff2')) {
+      contentType = 'font/woff2';
+    } else if (path.endsWith('.woff')) {
+      contentType = 'font/woff';
+    } else if (path.endsWith('.ttf')) {
+      contentType = 'font/ttf';
+    } else if (path.endsWith('.css')) {
+      contentType = 'text/css';
+    } else if (path.endsWith('.js')) {
+      contentType = 'application/javascript';
     }
     
-    // Extrahera Content-Type från originalsvaret
-    const contentType = resourceResponse.headers.get('Content-Type') || 'application/octet-stream';
-    const resourceContent = await resourceResponse.arrayBuffer();
-    
-    // Skapa ett nytt svar med innehållet och rätt CORS-headers
-    const response = new NextResponse(resourceContent, {
+    // Skapa Response med korrekt headers för CORS
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Cross-Origin-Resource-Policy': 'cross-origin',
-      }
+      },
     });
-    
-    return response;
   } catch (error) {
-    console.error(`[Static Proxy] Error proxying resource: ${error.message}`);
-    return NextResponse.json({
-      error: `Error fetching resource: ${error.message}`,
-      url
-    }, { status: 500 });
+    console.error('Error proxying static resource:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
@@ -98,4 +79,4 @@ export async function OPTIONS(request: NextRequest) {
       'Access-Control-Max-Age': '86400',
     }
   });
-} 
+}
