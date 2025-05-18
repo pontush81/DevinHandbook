@@ -1,16 +1,15 @@
 /**
- * Static Resource Fix - Ultra-förenklad version
+ * Ultra-enkelt redirect script för subdomäner
  */
 (function() {
-  // Kontrollera om vi är på en subdomän
+  // Baserat på domänen: omdirigera från alla subdomäner till huvuddomänen
   const currentDomain = window.location.hostname;
-  const isSubdomain = currentDomain.split('.').length > 2 && 
-                     currentDomain.endsWith('.handbok.org') &&
-                     currentDomain !== 'www.handbok.org' &&
-                     currentDomain !== 'handbok.org';
   
-  // Om vi är på en subdomän, omdirigera till huvuddomänen med subdomännamnet som parameter
-  if (isSubdomain) {
+  // Om vi är på en subdomän av handbok.org
+  if (currentDomain.endsWith('.handbok.org') && 
+       currentDomain !== 'www.handbok.org' && 
+       currentDomain !== 'handbok.org') {
+    
     const subdomain = currentDomain.split('.')[0];
     window.location.href = 'https://handbok.org/handbook/' + subdomain;
   }

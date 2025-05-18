@@ -43,8 +43,8 @@ export default function RootLayout({
         <meta httpEquiv="Cross-Origin-Opener-Policy" content="unsafe-none" />
         <meta httpEquiv="Cross-Origin-Resource-Policy" content="cross-origin" />
         
-        {/* Nödlösning för subdomäner - ladda hela sidan från huvuddomänen */}
-        <Script id="subdomain-handler" strategy="beforeInteractive">
+        {/* Enkel omdirigering för subdomäner - utan att försöka vara smart */}
+        <Script id="subdomain-redirect" strategy="beforeInteractive">
           {`
             (function() {
               // Kontrollera om vi är på en subdomän
@@ -55,41 +55,33 @@ export default function RootLayout({
                                  currentDomain !== 'handbok.org';
               
               if (isSubdomain) {
-                // Extrahera subdomännamnet
+                // Omdirigera direkt till huvuddomänen med subdomänen som parameter
                 const subdomain = currentDomain.split('.')[0];
-                
-                // Skapa en direkt omdirigering istället för iframe
                 window.location.href = 'https://handbok.org/handbook/' + subdomain;
               }
-              
-              // Säker hantering av localStorage oavsett domän
-              const memoryStorage = {};
-              
-              // Global lagringslösning som försöker använda localStorage men faller tillbaka på minne om det inte går
+            })();
+          `}
+        </Script>
+        
+        {/* Minimal local storage fallback */}
+        <Script id="safe-storage" strategy="beforeInteractive">
+          {`
+            if (typeof window !== 'undefined') {
               window.safeStorage = {
                 getItem: function(key) {
-                  try {
-                    return localStorage.getItem(key);
-                  } catch(e) {
-                    return memoryStorage[key] || null;
-                  }
+                  try { return localStorage.getItem(key); } 
+                  catch(e) { return null; }
                 },
                 setItem: function(key, value) {
-                  try {
-                    localStorage.setItem(key, value);
-                  } catch(e) {
-                    memoryStorage[key] = value;
-                  }
+                  try { localStorage.setItem(key, value); } 
+                  catch(e) { /* silently fail */ }
                 },
                 removeItem: function(key) {
-                  try {
-                    localStorage.removeItem(key);
-                  } catch(e) {
-                    delete memoryStorage[key];
-                  }
+                  try { localStorage.removeItem(key); } 
+                  catch(e) { /* silently fail */ }
                 }
               };
-            })();
+            }
           `}
         </Script>
         
@@ -318,14 +310,6 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>{children}</AuthProvider>
-        
-        {/* Storage bridge iframe for cross-domain storage access */}
-        <iframe 
-          src="https://handbok.org/storage-bridge.html" 
-          style={{ display: 'none', width: 0, height: 0, position: 'absolute' }} 
-          title="Storage Bridge" 
-          aria-hidden="true"
-        />
       </body>
     </html>
   );
