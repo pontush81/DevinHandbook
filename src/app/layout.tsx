@@ -35,6 +35,22 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <head>
+        {/* Förladda fonts via proxy för att förhindra CORS-problem på subdomäner */}
+        <link 
+          rel="preload" 
+          href="/api/proxy-static?path=/_next/static/media/569ce4b8f30dc480-s.p.woff2" 
+          as="font" 
+          type="font/woff2" 
+          crossOrigin="anonymous" 
+        />
+        <link 
+          rel="preload" 
+          href="/api/proxy-static?path=/_next/static/media/93f479601ee12b01-s.p.woff2" 
+          as="font" 
+          type="font/woff2" 
+          crossOrigin="anonymous" 
+        />
+
         {/* Fallback font styles to ensure text displays immediately */}
         <style dangerouslySetInnerHTML={{ __html: `
           /* Fallback fonts that will be used if Google Fonts fail to load */
@@ -52,6 +68,23 @@ export default function RootLayout({
             font-weight: 400;
             font-display: swap;
             src: local('Courier New');
+          }
+          
+          /* Font-face overrides för att använda vår proxy */
+          @font-face {
+            font-family: 'Geist';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url('/api/proxy-static?path=/_next/static/media/569ce4b8f30dc480-s.p.woff2') format('woff2');
+          }
+          
+          @font-face {
+            font-family: 'Geist Mono';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url('/api/proxy-static?path=/_next/static/media/93f479601ee12b01-s.p.woff2') format('woff2');
           }
           
           :root {
@@ -122,7 +155,33 @@ export default function RootLayout({
           `}
         </Script>
         
-        {/* Ladda in static-resource-fix.js för CORS-problem med statiska resurser */}
+        {/* Font CORS fix med högsta prioritet */}
+        <Script id="font-cors-fix" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            if (typeof window === 'undefined') return;
+            console.log('Inline Font CORS Fix - Initializing');
+            
+            // Direkt fix för de kända fontfilerna
+            document.addEventListener('DOMContentLoaded', function() {
+              var style = document.createElement('style');
+              style.textContent = 
+                '@font-face {' +
+                '  font-family: "Geist";' +
+                '  src: url("/api/proxy-static?path=/_next/static/media/569ce4b8f30dc480-s.p.woff2") format("woff2");' +
+                '  font-display: swap;' +
+                '}' +
+                '@font-face {' +
+                '  font-family: "Geist Mono";' +
+                '  src: url("/api/proxy-static?path=/_next/static/media/93f479601ee12b01-s.p.woff2") format("woff2");' +
+                '  font-display: swap;' +
+                '}';
+              document.head.appendChild(style);
+              console.log('Inline font fix applied');
+            });
+          })();
+        `}} />
+        
+        {/* Huvudfixskriptet laddas med högre prioritet */}
         <Script id="static-resource-fix" src="/static-resource-fix.js" strategy="beforeInteractive" />
       </head>
       <body
