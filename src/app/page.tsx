@@ -38,6 +38,15 @@ export default async function HomePage() {
     if (!handbook) {
       return <div>Handbok saknas</div>;
     }
+    // Filtrera sektioner och sidor på is_published
+    const publishedSections = (handbook.sections || []).filter((section: any) => section.is_published !== false);
+    publishedSections.forEach((section: any) => {
+      section.pages = (section.pages || []).filter((page: any) => page.is_published !== false);
+    });
+    console.log('SSR: publishedSections', JSON.stringify(publishedSections));
+    if (publishedSections.length === 0) {
+      return <div>Handboken saknar innehåll eller är inte publicerad.</div>;
+    }
     return (
       <div className="min-h-screen bg-white">
         <header className="bg-white border-b">
@@ -52,7 +61,7 @@ export default async function HomePage() {
             <div className="md:col-span-1">
               <nav className="space-y-1 sticky top-8">
                 <h2 className="font-medium mb-4">Innehåll</h2>
-                {(handbook.sections || []).map((section: Section) => (
+                {publishedSections.map((section: Section) => (
                   <a
                     key={section.id}
                     href={`#section-${section.id}`}
@@ -65,7 +74,7 @@ export default async function HomePage() {
             </div>
             {/* Content */}
             <div className="md:col-span-3 space-y-12">
-              {(handbook.sections || []).map((section: Section) => (
+              {publishedSections.map((section: Section) => (
                 <section key={section.id} id={`section-${section.id}`} className="space-y-6">
                   <h2 className="text-2xl font-semibold">{section.title}</h2>
                   <p className="text-gray-500">{section.description}</p>
