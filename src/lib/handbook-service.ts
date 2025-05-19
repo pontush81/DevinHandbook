@@ -52,7 +52,7 @@ export async function createHandbookWithSectionsAndPages(
     console.log('[Handbook] Skickar sektion till Supabase:', {
       title: section.title,
       description: section.description,
-      order_index: sectionOrder,
+      order: sectionOrder,
       handbook_id: handbookObj.id,
     });
     const { data: createdSectionRaw, error: sectionError } = await supabase
@@ -60,7 +60,7 @@ export async function createHandbookWithSectionsAndPages(
       .insert({
         title: section.title,
         description: section.description,
-        order_index: sectionOrder,
+        order: sectionOrder,
         handbook_id: handbookObj.id,
       })
       .select()
@@ -74,7 +74,7 @@ export async function createHandbookWithSectionsAndPages(
       console.error('Section insert payload:', {
         title: section.title,
         description: section.description,
-        order_index: sectionOrder,
+        order: sectionOrder,
         handbook_id: handbookObj.id,
       });
       console.error('Handbook context:', {
@@ -123,7 +123,7 @@ export async function createHandbookWithSectionsAndPages(
       console.log('[Handbook] Skickar sida till Supabase:', {
         title: page.title,
         content: page.content,
-        order_index: pageOrder,
+        order: pageOrder,
         section_id: createdSection.id,
         slug,
       });
@@ -132,7 +132,7 @@ export async function createHandbookWithSectionsAndPages(
         .insert({
           title: page.title,
           content: page.content,
-          order_index: pageOrder,
+          order: pageOrder,
           section_id: createdSection.id,
           slug,
         });
@@ -142,7 +142,7 @@ export async function createHandbookWithSectionsAndPages(
         console.error('Page insert payload:', {
           title: page.title,
           content: page.content,
-          order_index: pageOrder,
+          order: pageOrder,
           section_id: createdSection.id,
           slug,
         });

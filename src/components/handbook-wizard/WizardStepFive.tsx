@@ -98,6 +98,15 @@ export function WizardStepFive() {
     }
   };
   
+  useEffect(() => {
+    if (handbookCreated) {
+      const timeout = setTimeout(() => {
+        window.location.href = `https://${subdomain}.handbok.org`;
+      }, 2000); // 2 sekunder
+      return () => clearTimeout(timeout);
+    }
+  }, [handbookCreated, subdomain]);
+  
   return (
     <div className="space-y-6">
       <div className="space-y-2">
