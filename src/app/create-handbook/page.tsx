@@ -30,18 +30,17 @@ export default function CreateHandbook() {
   };
   
   return (
-    <div className="max-w-4xl mx-auto p-6 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Skapa digital handbok</h1>
-        <p className="text-gray-500 mt-2">
-          Följ stegen nedan för att skapa en skräddarsydd digital handbok för din bostadsrättsförening.
-        </p>
-      </div>
-      
-      <div className="bg-white p-6 rounded-lg border shadow-sm">
-        {renderStep()}
-        <WizardNavigation totalSteps={5} />
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
+      <main className="w-full max-w-2xl mx-auto bg-white rounded-3xl p-8 md:p-12 flex flex-col gap-8 shadow-none border border-gray-100">
+        <div className="mb-2 text-center">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">Skapa digital handbok</h1>
+          <p className="text-gray-500 text-lg max-w-xl mx-auto">Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.</p>
+        </div>
+        <div className="w-full flex flex-col gap-8">
+          {renderStep()}
+          <WizardNavigation totalSteps={5} />
+        </div>
+      </main>
     </div>
   );
 }
