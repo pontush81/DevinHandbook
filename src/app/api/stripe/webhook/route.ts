@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       
+      // Logga all metadata från Stripe-sessionen
+      console.log("[Stripe Webhook] Mottagen session.metadata:", session.metadata);
+      
       const { subdomain, handbookName } = session.metadata || {};
       
       if (subdomain && handbookName) {

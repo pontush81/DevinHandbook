@@ -50,6 +50,9 @@ export function WizardStepFive() {
     setError(null);
     
     try {
+      // Lägg till loggning för att se exakt vad som skickas
+      console.log("[Stripe Checkout] Skickar handbookData till backend:", handbookData);
+
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
