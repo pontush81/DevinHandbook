@@ -1,4 +1,4 @@
-"use client";
+// "use client"; // TA BORT DENNA RAD
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
