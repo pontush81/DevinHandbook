@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handbok.org</title>
+  
+  <!-- CORS headers och säkerhetsåtgärder -->
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
+  <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin">
+  
+  <!-- Direkt meta refresh för alla subdomäner -->
+  <script>
+    (function() {
+      const hostname = window.location.hostname;
+      
+      // Bestäm om vi är i staging eller produktion
+      const isStaging = hostname.includes('staging.handbok.org');
+      
+      // Kontrollera om vi är på en subdomän
+      if ((hostname.endsWith('.handbok.org') && 
+           hostname !== 'www.handbok.org' && 
+           hostname !== 'handbok.org' &&
+           hostname !== 'staging.handbok.org') || 
+          (hostname.endsWith('.staging.handbok.org'))) {
+        
+        let subdomain;
+        let targetDomain;
+        
+        if (hostname.endsWith('.staging.handbok.org')) {
+          // Format: subdomain.staging.handbok.org -> staging.handbok.org/handbook/subdomain
+          subdomain = hostname.split('.')[0];
+          targetDomain = 'https://staging.handbok.org';
+        } else if (isStaging) {
+          // Om vi är på staging.handbok.org eller en subdomain direkt under staging.handbok.org
+          subdomain = hostname.split('.')[0];
+          targetDomain = 'https://staging.handbok.org';
+        } else {
+          // Format: subdomain.handbok.org -> www.handbok.org/handbook/subdomain
+          subdomain = hostname.split('.')[0];
+          targetDomain = 'https://www.handbok.org';
+        }
+        
+        // För alla subdomäner
+        const metaRefresh = document.createElement('meta');
+        metaRefresh.httpEquiv = 'refresh';
+        // metaRefresh.content = '0;url=' + targetDomain + '/handbook/' + subdomain;
+        document.head.appendChild(metaRefresh);
+        
+        console.log('Meta refresh satt för: ' + subdomain + ' till ' + targetDomain);
+      }
+    })();
+  </script>
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .loading {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top-color: #3498db;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .btn {
+      display: inline-block;
+      background: #3498db;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="loading"></div>
+    <h1 id="title">Handbok.org</h1>
+    <p id="message">Den digitala plattformen för bostadsrättsföreningar.</p>
+    <a href="https://www.handbok.org" class="btn" id="manual-link">Gå till huvudsidan</a>
+  </div>
+
+  <script>
+    (function() {
+      const hostname = window.location.hostname;
+      
+      // Bestäm om vi är i staging eller produktion
+      const isStaging = hostname.includes('staging.handbok.org');
+      
+      // Uppdatera UI baserat på aktuell domän
+      if ((hostname.endsWith('.handbok.org') && 
+           hostname !== 'www.handbok.org' && 
+           hostname !== 'handbok.org' &&
+           hostname !== 'staging.handbok.org') || 
+          (hostname.endsWith('.staging.handbok.org'))) {
+        
+        let subdomain;
+        let mainDomain;
+        
+        if (hostname.endsWith('.staging.handbok.org')) {
+          // Format: subdomain.staging.handbok.org -> staging.handbok.org/handbook/subdomain
+          subdomain = hostname.split('.')[0];
+          mainDomain = 'https://staging.handbok.org';
+        } else if (isStaging) {
+          // Om vi är på staging.handbok.org eller en subdomain direkt under staging.handbok.org
+          subdomain = hostname.split('.')[0];
+          mainDomain = 'https://staging.handbok.org';
+        } else {
+          // Format: subdomain.handbok.org -> www.handbok.org/handbook/subdomain
+          subdomain = hostname.split('.')[0];
+          mainDomain = 'https://www.handbok.org';
+        }
+        
+        // För alla subdomäner
+        const redirectUrl = mainDomain + '/handbook/' + subdomain;
+        
+        // Uppdatera UI med subdomän-information
+        document.getElementById('title').textContent = subdomain.toUpperCase();
+        document.getElementById('message').textContent = 'Omdirigerar till ' + subdomain + ' handbok...';
+        document.getElementById('manual-link').href = redirectUrl;
+        document.getElementById('manual-link').textContent = 'Öppna ' + subdomain + ' handbok';
+        
+        // Kommentera ut eller ta bort redirect till /handbook/[subdomain]
+        // window.location.href = redirectUrl;
+      } else if (hostname === 'handbok.org') {
+        // Om vi är på huvuddomänen utan www, omdirigera till www
+        window.location.href = 'https://www.handbok.org';
+      }
+    })();
+  </script>
+</body>
+</html> 
