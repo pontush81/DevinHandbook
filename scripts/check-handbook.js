@@ -14,7 +14,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function checkHandbook() {
-  const subdomain = process.argv[2] || 'abc';
+  const subdomain = process.argv[2] || 'boa';
   console.log(`Checking for handbook with subdomain "${subdomain}"...`);
   console.log(`Using Supabase URL: ${supabaseUrl.substring(0, 15)}...`);
 
@@ -52,6 +52,23 @@ async function checkHandbook() {
         if (sections.length > 0) {
           console.log('Sections:');
           console.log(JSON.stringify(sections, null, 2));
+        }
+      }
+
+      // Now check pages for each section
+      for (const section of sections) {
+        console.log(`\nFetching pages for section: ${section.title}`);
+        const { data: pages, error: pagesError } = await supabase
+          .from('pages')
+          .select('*')
+          .eq('section_id', section.id);
+        if (pagesError) {
+          console.error('Error fetching pages:', pagesError);
+        } else {
+          console.log(`Found ${pages.length} page(s)`);
+          if (pages.length > 0) {
+            console.log(JSON.stringify(pages, null, 2));
+          }
         }
       }
     }
