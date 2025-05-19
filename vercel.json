@@ -1,29 +1,19 @@
 {
   "rewrites": [
     {
-      "source": "/:path*",
+      "source": "/:path((?!api/).*)",
       "has": [
         {
           "type": "host",
-          "value": "test.handbok.org"
+          "value": "pear.handbok.org"
         }
       ],
-      "destination": "https://www.handbok.org/handbook/test/:path*"
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "test.{subdomain}.handbok.org"
-        }
-      ],
-      "destination": "https://www.handbok.org/handbook/:subdomain/:path*"
+      "destination": "https://www.handbok.org/handbook/pear/:path*"
     }
   ],
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/:path((?!api/).*)",
       "has": [
         {
           "type": "host",
@@ -31,18 +21,6 @@
         }
       ],
       "destination": "https://www.handbok.org/:path*",
-      "permanent": false
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "{subdomain}.handbok.org",
-          "regex": "(?!www)([a-z0-9\\-]+)\\.handbok\\.org"
-        }
-      ],
-      "destination": "https://www.handbok.org/handbook/:subdomain/:path*",
       "permanent": false
     }
   ],

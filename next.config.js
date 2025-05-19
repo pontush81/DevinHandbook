@@ -21,19 +21,20 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Skapa faktiska omskrivningar för test-subdomän
+  // Skapar omskrivningar för subdomäner
   async rewrites() {
     return [
-      // Skriv om trafik från test.handbok.org -> www.handbok.org/handbook/test
+      // Skriv om alla subdomäner till www.handbok.org/handbook/[subdomain]
+      // MEN undanta API-anrop
       {
-        source: '/:path*',
+        source: '/:path((?!api/).*)',
         has: [
           {
             type: 'host',
-            value: 'test.handbok.org',
+            value: ':subdomain.handbok.org',
           },
         ],
-        destination: 'https://www.handbok.org/handbook/test/:path*',
+        destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
       },
     ];
   },
@@ -41,35 +42,13 @@ const nextConfig = {
   // Redirects för subdomäner
   async redirects() {
     return [
-      // För test.staging.handbok.org -> staging.handbok.org/handbook/test
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'test.staging.handbok.org',
-          },
-        ],
-        destination: 'https://staging.handbok.org/handbook/test/:path*',
-        permanent: false,
-      },
-      
-      // Hantera test.{subdomain}.handbok.org -> www.handbok.org/handbook/{subdomain}
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'test.{subdomain}.handbok.org',
-          },
-        ],
-        destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
-        permanent: false,
-      },
+      // För staging.handbok.org behövs ingen omdirigering
+      // Tidigare redirect för staging.handbok.org har tagits bort för att undvika redirect-loop
       
       // Grundläggande handbok.org -> www.handbok.org
+      // Men undanta API-anrop
       {
-        source: '/:path*',
+        source: '/:path((?!api/).*)',
         has: [
           {
             type: 'host',

@@ -55,24 +55,9 @@ export default function RootLayout({
               // Bestäm om vi är i staging eller produktion
               const isStaging = currentDomain.includes('staging.handbok.org') || 
                                 currentDomain.endsWith('.staging.handbok.org');
-                                
-              // Handle special case for test.*.handbok.org subdomains
-              if (currentDomain.startsWith('test.') && (
-                  currentDomain.endsWith('.handbok.org') || 
-                  currentDomain.endsWith('.staging.handbok.org')
-              )) {
-                // Extract actual subdomain (format: test.subdomain.handbok.org -> subdomain)
-                const parts = currentDomain.split('.');
-                // For test.subdomain.handbok.org, the actual subdomain is parts[1]
-                const subdomain = parts[1];
-                
-                // Bestäm måldomän baserat på miljö
-                const targetDomain = isStaging ? 'https://staging.handbok.org' : 'https://www.handbok.org';
-                
-                // Redirect to the handbook with the correct path
-                window.location.href = targetDomain + '/handbook/' + subdomain;
-                return;
-              }
+              
+              // Undvik omdirigering för API-anrop
+              const isApiCall = window.location.pathname.startsWith('/api/');
               
               // Handle normal subdomains
               const isSubdomain = currentDomain.split('.').length > 2 && 
@@ -81,7 +66,7 @@ export default function RootLayout({
                                  currentDomain !== 'handbok.org' &&
                                  currentDomain !== 'staging.handbok.org';
               
-              if (isSubdomain) {
+              if (!isApiCall && isSubdomain) {
                 const parts = currentDomain.split('.');
                 const subdomain = parts[0];
                 
