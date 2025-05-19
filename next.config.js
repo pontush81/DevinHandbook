@@ -42,22 +42,18 @@ const nextConfig = {
   // Redirects för subdomäner
   async redirects() {
     return [
-      // För staging.handbok.org behövs ingen omdirigering
-      // Tidigare redirect för staging.handbok.org har tagits bort för att undvika redirect-loop
-      
-      // Grundläggande handbok.org -> www.handbok.org
-      // Men undanta API-anrop
+      // Endast apex-domänen ska redirectas till www
       {
-        source: '/:path((?!api/).*)',
+        source: '/:path*',
         has: [
           {
             type: 'host',
             value: 'handbok.org',
-          }
+          },
         ],
         destination: 'https://www.handbok.org/:path*',
-        permanent: false,
-      }
+        permanent: true,
+      },
     ];
   },
   
