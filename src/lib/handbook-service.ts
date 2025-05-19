@@ -29,12 +29,16 @@ export async function createHandbookWithSectionsAndPages(
     .sort((a, b) => a.order - b.order);
 
   for (const section of activeSections) {
+    let sectionOrder = typeof section.order === 'number' && !isNaN(section.order) ? section.order : 0;
+    if (sectionOrder === 0 && (typeof section.order !== 'number' || isNaN(section.order))) {
+      console.warn(`[Handbook] Sektion '${section.title}' saknar giltigt order-värde, defaultar till 0.`);
+    }
     const { data: createdSection, error: sectionError } = await supabase
       .from('sections')
       .insert({
         title: section.title,
         description: section.description,
-        order_index: section.order,
+        order_index: sectionOrder,
         handbook_id: handbook.id,
       })
       .select()
@@ -46,12 +50,16 @@ export async function createHandbookWithSectionsAndPages(
     }
 
     for (const page of section.pages) {
+      let pageOrder = typeof page.order === 'number' && !isNaN(page.order) ? page.order : 0;
+      if (pageOrder === 0 && (typeof page.order !== 'number' || isNaN(page.order))) {
+        console.warn(`[Handbook] Sida '${page.title}' saknar giltigt order-värde, defaultar till 0.`);
+      }
       const { error: pageError } = await supabase
         .from('pages')
         .insert({
           title: page.title,
           content: page.content,
-          order_index: page.order,
+          order_index: pageOrder,
           section_id: createdSection.id,
         });
 
