@@ -9,6 +9,12 @@ export async function createHandbookWithSectionsAndPages(
 ) {
   const supabase = getServiceSupabase();
   
+  // Kontrollera obligatoriska fält för handbooks
+  if (!name || typeof name !== 'string' || !subdomain || typeof subdomain !== 'string') {
+    console.error('[Handbook] Saknar obligatoriskt fält (name eller subdomain) vid skapande av handbok:', { name, subdomain });
+    throw new Error('Obligatoriskt fält saknas vid skapande av handbok.');
+  }
+
   const { data: handbook, error: handbookError } = await supabase
     .from('handbooks')
     .insert({
@@ -18,11 +24,6 @@ export async function createHandbookWithSectionsAndPages(
     })
     .select()
     .single();
-
-  if (handbookError) {
-    console.error('Error creating handbook:', handbookError);
-    throw handbookError;
-  }
 
   let handbookObj = Array.isArray(handbook) ? handbook[0] : handbook;
   if (!handbookObj || !handbookObj.id) {
@@ -35,9 +36,18 @@ export async function createHandbookWithSectionsAndPages(
     .sort((a, b) => a.order - b.order);
 
   for (const section of activeSections) {
+    // Kontrollera obligatoriska fält för sections
+    if (!section.title || typeof section.title !== 'string') {
+      console.error('[Handbook] Sektion saknar obligatoriskt fält (title):', section);
+      continue;
+    }
     let sectionOrder = typeof section.order === 'number' && !isNaN(section.order) ? section.order : 0;
     if (sectionOrder === 0 && (typeof section.order !== 'number' || isNaN(section.order))) {
       console.warn(`[Handbook] Sektion '${section.title}' saknar giltigt order-värde, defaultar till 0.`);
+    }
+    if (!handbookObj.id) {
+      console.error('[Handbook] Saknar handbook_id vid skapande av sektion:', section);
+      continue;
     }
     console.log('[Handbook] Skickar sektion till Supabase:', {
       title: section.title,
@@ -68,10 +78,38 @@ export async function createHandbookWithSectionsAndPages(
     }
 
     for (const page of section.pages) {
+      // Kontrollera obligatoriska fält för pages
+      if (!page.title || typeof page.title !== 'string') {
+        console.error('[Handbook] Sida saknar obligatoriskt fält (title):', page);
+        continue;
+      }
       let pageOrder = typeof page.order === 'number' && !isNaN(page.order) ? page.order : 0;
       if (pageOrder === 0 && (typeof page.order !== 'number' || isNaN(page.order))) {
         console.warn(`[Handbook] Sida '${page.title}' saknar giltigt order-värde, defaultar till 0.`);
       }
+      let slug = page.slug;
+      if (!slug && page.title) {
+        slug = page.title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-');
+      }
+      if (!slug) {
+        console.error('[Handbook] Sida saknar obligatoriskt fält (slug):', page);
+        continue;
+      }
+      if (!createdSection.id) {
+        console.error('[Handbook] Saknar section_id vid skapande av sida:', page);
+        continue;
+      }
+      console.log('[Handbook] Skickar sida till Supabase:', {
+        title: page.title,
+        content: page.content,
+        order_index: pageOrder,
+        section_id: createdSection.id,
+        slug,
+      });
       const { error: pageError } = await supabase
         .from('pages')
         .insert({
@@ -79,10 +117,18 @@ export async function createHandbookWithSectionsAndPages(
           content: page.content,
           order_index: pageOrder,
           section_id: createdSection.id,
+          slug,
         });
 
       if (pageError) {
         console.error('Error creating page:', pageError);
+        console.error('Page insert payload:', {
+          title: page.title,
+          content: page.content,
+          order_index: pageOrder,
+          section_id: createdSection.id,
+          slug,
+        });
       }
     }
   }
