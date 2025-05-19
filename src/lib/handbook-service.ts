@@ -24,6 +24,11 @@ export async function createHandbookWithSectionsAndPages(
     throw handbookError;
   }
 
+  if (!handbook || !handbook.id) {
+    console.error('[Handbook] Misslyckades med att skapa handbok eller saknar id:', handbook);
+    throw new Error('Misslyckades med att skapa handbok eller saknar id. Avbryter.');
+  }
+
   const activeSections = template.sections
     .filter(section => section.isActive)
     .sort((a, b) => a.order - b.order);
