@@ -33,6 +33,12 @@ export async function createHandbookWithSectionsAndPages(
     if (sectionOrder === 0 && (typeof section.order !== 'number' || isNaN(section.order))) {
       console.warn(`[Handbook] Sektion '${section.title}' saknar giltigt order-värde, defaultar till 0.`);
     }
+    console.log('[Handbook] Skickar sektion till Supabase:', {
+      title: section.title,
+      description: section.description,
+      order_index: sectionOrder,
+      handbook_id: handbook.id,
+    });
     const { data: createdSection, error: sectionError } = await supabase
       .from('sections')
       .insert({
@@ -46,6 +52,12 @@ export async function createHandbookWithSectionsAndPages(
 
     if (sectionError) {
       console.error('Error creating section:', sectionError);
+      console.error('Section insert payload:', {
+        title: section.title,
+        description: section.description,
+        order_index: sectionOrder,
+        handbook_id: handbook.id,
+      });
       continue;
     }
 
