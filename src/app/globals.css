@@ -169,8 +169,6 @@ button, .btn, a.btn {
   font-weight: 500 !important;
   border-radius: 9999px !important;
   padding: 0.7em 1.5em !important;
-  background: #fff !important;
-  color: #2563eb !important;
   border: 2px solid #2563eb !important;
   transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s !important;
   box-shadow: 0 1px 4px 0 rgba(0,0,0,0.03) !important;
