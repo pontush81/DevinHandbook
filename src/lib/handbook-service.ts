@@ -55,7 +55,7 @@ export async function createHandbookWithSectionsAndPages(
       order_index: sectionOrder,
       handbook_id: handbookObj.id,
     });
-    const { data: createdSection, error: sectionError } = await supabase
+    const { data: createdSectionRaw, error: sectionError } = await supabase
       .from('sections')
       .insert({
         title: section.title,
@@ -65,6 +65,9 @@ export async function createHandbookWithSectionsAndPages(
       })
       .select()
       .single();
+
+    // Hantera både array och objekt från Supabase
+    const createdSection = Array.isArray(createdSectionRaw) ? createdSectionRaw[0] : createdSectionRaw;
 
     if (sectionError) {
       console.error('Error creating section:', sectionError);
