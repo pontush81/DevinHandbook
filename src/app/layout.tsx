@@ -43,46 +43,6 @@ export default function RootLayout({
         <meta httpEquiv="Cross-Origin-Opener-Policy" content="unsafe-none" />
         <meta httpEquiv="Cross-Origin-Resource-Policy" content="cross-origin" />
         
-        {/* Enkel omdirigering för subdomäner - utan att försöka vara smart */}
-        {/* OBS: För att test.subdomain.handbok.org ska fungera korrekt krävs rätt DNS-konfiguration
-                 Se documentation/dns-config/cloudflare-config.md för konfigurationsdetaljer */}
-        <Script id="subdomain-redirect" strategy="beforeInteractive">
-          {`
-            (function() {
-              // Kontrollera om vi är på en subdomän
-              const currentDomain = window.location.hostname;
-              
-              // Bestäm om vi är i staging eller produktion
-              const isStaging = currentDomain.includes('staging.handbok.org') || 
-                                currentDomain.endsWith('.staging.handbok.org');
-              
-              // Undvik omdirigering för API-anrop
-              const isApiCall = window.location.pathname.startsWith('/api/');
-              
-              // Handle normal subdomains
-              const isSubdomain = currentDomain.split('.').length > 2 && 
-                                 (currentDomain.endsWith('.handbok.org')) &&
-                                 currentDomain !== 'www.handbok.org' &&
-                                 currentDomain !== 'handbok.org' &&
-                                 currentDomain !== 'staging.handbok.org';
-              
-              if (!isApiCall && isSubdomain) {
-                const parts = currentDomain.split('.');
-                const subdomain = parts[0];
-                
-                // Bestäm måldomän baserat på miljö
-                const targetDomain = isStaging ? 'https://staging.handbok.org' : 'https://www.handbok.org';
-                
-                // För subdomäner, dirigera till {domän}/handbook/{subdomain}
-                window.location.href = targetDomain + '/handbook/' + subdomain;
-              } else if (currentDomain === 'handbok.org') {
-                // Omdirigera handbok.org -> www.handbok.org
-                window.location.href = 'https://www.handbok.org' + window.location.pathname;
-              }
-            })();
-          `}
-        </Script>
-        
         {/* Minimal local storage fallback */}
         <Script id="safe-storage" strategy="beforeInteractive">
           {`

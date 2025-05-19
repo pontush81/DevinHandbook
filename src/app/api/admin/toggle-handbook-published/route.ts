@@ -18,9 +18,8 @@ async function toggleHandbookPublished(id: string, published: boolean) {
     
     if (error) throw error;
     
-    if (data.subdomain) {
-      revalidatePath(`/handbook/${data.subdomain}`);
-    }
+    // Kommentera ut eller ta bort revalidatePath(`/handbook/${data.subdomain}`)
+    // revalidatePath(`/handbook/${data.subdomain}`);
     
     return { success: true, data };
   } catch (error: unknown) {

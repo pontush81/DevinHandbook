@@ -154,6 +154,7 @@ export async function createHandbookWithSectionsAndPages(
 }
 
 export async function getHandbookBySubdomain(subdomain: string) {
+  console.log('[getHandbookBySubdomain] subdomain:', subdomain);
   const supabase = getServiceSupabase();
   
   const { data: handbook, error: handbookError } = await supabase
@@ -163,9 +164,10 @@ export async function getHandbookBySubdomain(subdomain: string) {
     .single();
 
   if (handbookError) {
-    console.error('Error fetching handbook:', handbookError);
+    console.error('[getHandbookBySubdomain] Error fetching handbook:', handbookError);
     return null;
   }
+  console.log('[getHandbookBySubdomain] handbook:', handbook);
 
   const { data: sections, error: sectionsError } = await supabase
     .from('sections')
@@ -174,9 +176,10 @@ export async function getHandbookBySubdomain(subdomain: string) {
     .order('order_index');
 
   if (sectionsError) {
-    console.error('Error fetching sections:', sectionsError);
+    console.error('[getHandbookBySubdomain] Error fetching sections:', sectionsError);
     return { ...handbook, sections: [] };
   }
+  console.log('[getHandbookBySubdomain] sections:', sections);
 
   interface SectionWithPages {
     id: string;
@@ -204,9 +207,10 @@ export async function getHandbookBySubdomain(subdomain: string) {
       .order('order_index');
 
     if (pagesError) {
-      console.error('Error fetching pages:', pagesError);
+      console.error('[getHandbookBySubdomain] Error fetching pages:', pagesError);
       sectionsWithPages.push({ ...section, pages: [] });
     } else {
+      console.log(`[getHandbookBySubdomain] pages for section ${section.id}:`, pages);
       sectionsWithPages.push({ ...section, pages: pages || [] });
     }
   }

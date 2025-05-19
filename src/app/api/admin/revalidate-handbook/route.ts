@@ -3,7 +3,8 @@ import { revalidatePath } from 'next/cache';
 
 async function revalidateHandbook(subdomain: string) {
   try {
-    revalidatePath(`/handbook/${subdomain}`);
+    // Kommentera ut eller ta bort revalidatePath(`/handbook/${subdomain}`)
+    // revalidatePath(`/handbook/${subdomain}`);
     return { success: true };
   } catch (error: unknown) {
     console.error('Error revalidating handbook:', error);

@@ -49,8 +49,8 @@
     targetDomain = 'https://www.handbok.org';
   }
   
-  // För alla subdomäner - gå till handboken
-  window.location.href = targetDomain + '/handbook/' + subdomain;
+  // Kommentera ut eller ta bort redirect till /handbook/[subdomain]
+  // window.location.href = targetDomain + '/handbook/' + subdomain;
   
   // 2. Fixa font-fel om omdirigering misslyckas
   document.addEventListener('DOMContentLoaded', function() {

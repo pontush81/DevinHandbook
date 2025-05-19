@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       },
       database: databaseStatus,
       middleware: {
-        rewrite: subdomain ? `/handbook/${subdomain}` : null
+        // rewrite: subdomain ? `/handbook/${subdomain}` : null
       },
       handbook: handbookInfo,
       deployment: {

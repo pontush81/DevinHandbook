@@ -71,7 +71,7 @@ export default function NotFound() {
                 if (window.location.search.includes('debug=1')) {
                   console.log('Debug parameter detected, redirecting to debug page');
                   setTimeout(() => {
-                    window.location.href = '/debug.html';
+                    // window.location.href = '/debug.html';
                   }, 1000);
                 }
               }

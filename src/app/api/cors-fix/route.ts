@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
       console.log('Intercepting fetch for:', url);
       
       // Skapa proxy-URL
-      const proxyUrl = '/api/resources?path=' + encodeURIComponent(new URL(url, window.location.href).pathname);
-      console.log('Redirecting through proxy:', proxyUrl);
+      // const proxyUrl = '/api/resources?path=' + encodeURIComponent(new URL(url, window.location.href).pathname);
+      console.log('Redirecting through proxy:', url);
       
-      return originalFetch(proxyUrl, options);
+      return originalFetch(url, options);
     }
     
     // Annars, använd original fetch

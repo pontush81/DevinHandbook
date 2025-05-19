@@ -46,7 +46,7 @@
         // För alla subdomäner
         const metaRefresh = document.createElement('meta');
         metaRefresh.httpEquiv = 'refresh';
-        metaRefresh.content = '0;url=' + targetDomain + '/handbook/' + subdomain;
+        // metaRefresh.content = '0;url=' + targetDomain + '/handbook/' + subdomain;
         document.head.appendChild(metaRefresh);
         
         console.log('Meta refresh satt för: ' + subdomain + ' till ' + targetDomain);
@@ -144,8 +144,8 @@
         document.getElementById('manual-link').href = redirectUrl;
         document.getElementById('manual-link').textContent = 'Öppna ' + subdomain + ' handbok';
         
-        // Direkt omdirigering
-        window.location.href = redirectUrl;
+        // Kommentera ut eller ta bort redirect till /handbook/[subdomain]
+        // window.location.href = redirectUrl;
       } else if (hostname === 'handbok.org') {
         // Om vi är på huvuddomänen utan www, omdirigera till www
         window.location.href = 'https://www.handbok.org';
