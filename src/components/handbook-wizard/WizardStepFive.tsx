@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
+import { CheckCircle2, Loader2 } from 'lucide-react';
 
 export function WizardStepFive() {
   const { name, subdomain, template } = useHandbookStore();
@@ -10,6 +11,7 @@ export function WizardStepFive() {
   const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
   const [price, setPrice] = useState<number>(995); // Default pris i kr
   const [handbookCreated, setHandbookCreated] = useState<string | null>(null);
+  const [progressStep, setProgressStep] = useState<'idle' | 'preparing' | 'creating' | 'done'>('idle');
   
   const handbookData = useMemo(() => ({
     name,
@@ -50,6 +52,7 @@ export function WizardStepFive() {
     setIsLoading(true);
     setError(null);
     setHandbookCreated(null);
+    setProgressStep('preparing');
     try {
       // Lägg till loggning för att se exakt vad som skickas
       console.log("[Stripe Checkout] Skickar handbookData till backend:", handbookData);
@@ -69,6 +72,7 @@ export function WizardStepFive() {
           setError('Det gick inte att skapa betalsessionen. Försök igen senare.');
         }
         setIsLoading(false);
+        setProgressStep('idle');
         return;
       }
       
@@ -76,6 +80,7 @@ export function WizardStepFive() {
       
       // Om vi får success: true och handbookId men ingen sessionUrl, så har vi hoppat över Stripe
       if (data.success && data.handbookId && !data.sessionUrl) {
+        setProgressStep('creating');
         setHandbookCreated(data.handbookId);
         setIsTestMode(true); // Visa testläge om vi hoppat över Stripe
         setIsLoading(false);
@@ -83,6 +88,7 @@ export function WizardStepFive() {
       }
       
       if (!data.sessionUrl) {
+        setProgressStep('idle');
         throw new Error('Failed to create checkout session');
       }
       
@@ -93,6 +99,7 @@ export function WizardStepFive() {
     } catch (err: unknown) {
       console.error('Error creating checkout session:', err);
       setError('Det gick inte att skapa betalsessionen. Försök igen senare.');
+      setProgressStep('idle');
     } finally {
       setIsLoading(false);
     }
@@ -100,6 +107,7 @@ export function WizardStepFive() {
   
   useEffect(() => {
     if (handbookCreated) {
+      setProgressStep('done');
       const timeout = setTimeout(() => {
         window.location.href = `https://${subdomain}.handbok.org`;
       }, 2000); // 2 sekunder
@@ -163,10 +171,34 @@ export function WizardStepFive() {
         
         {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-md text-sm">{error}</div>}
         
+        {/* Progress/animation status */}
+        {(progressStep === 'preparing' || progressStep === 'creating' || progressStep === 'done') && (
+          <div className="mb-4 flex flex-col items-center justify-center gap-2">
+            {progressStep === 'preparing' && (
+              <>
+                <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+                <span className="text-blue-700 text-sm">Förbereder betalning...</span>
+              </>
+            )}
+            {progressStep === 'creating' && (
+              <>
+                <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+                <span className="text-blue-700 text-sm">Handboken skapas...</span>
+              </>
+            )}
+            {progressStep === 'done' && (
+              <>
+                <CheckCircle2 className="text-green-600 w-8 h-8" />
+                <span className="text-green-700 text-sm font-medium">Handboken klar! Du skickas vidare...</span>
+              </>
+            )}
+          </div>
+        )}
+        
         <button 
           className="w-full mt-6 bg-black text-white py-3 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleCheckout}
-          disabled={isLoading || !!handbookCreated}
+          disabled={isLoading || !!handbookCreated || progressStep !== 'idle'}
         >
           {isLoading ? 'Förbereder betalning...' : 'Gå vidare till betalning'}
         </button>
