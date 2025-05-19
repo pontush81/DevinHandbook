@@ -9,7 +9,7 @@ interface Section {
   id: string;
   title: string;
   description: string;
-  order: number;
+  order_index: number;
   handbook_id: string;
   pages: Page[];
 }
@@ -18,7 +18,7 @@ interface Page {
   id: string;
   title: string;
   content: string;
-  order: number;
+  order_index: number;
   section_id: string;
 }
 
@@ -31,6 +31,7 @@ export default async function HomePage() {
     let handbook = null;
     try {
       handbook = await getHandbookBySubdomain(subdomain);
+      console.log('SSR: handbook', JSON.stringify(handbook));
     } catch (error) {
       return <div>Fel vid laddning av handbok</div>;
     }
