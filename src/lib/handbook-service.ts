@@ -74,7 +74,21 @@ export async function createHandbookWithSectionsAndPages(
         order_index: sectionOrder,
         handbook_id: handbookObj.id,
       });
+      console.error('Handbook context:', {
+        handbook_id: handbookObj.id,
+        handbook_title: handbookObj.title,
+      });
+      // Extra loggning och skydd: skapa aldrig sidor om sektionen inte skapades
+      console.error('[Handbook] Skapar INTE sidor för denna sektion eftersom sektionen inte kunde skapas:', section);
       continue;
+    }
+    if (!createdSection || !createdSection.id) {
+      // Extra skydd: skapa aldrig sidor om sektionen saknar id
+      console.error('[Handbook] Kunde inte skapa sektion, hoppar över sidor:', { createdSection, section });
+      continue;
+    }
+    else {
+      console.log('[Handbook] Sektion skapad med id:', createdSection?.id, 'för handbok:', handbookObj.id);
     }
 
     for (const page of section.pages) {
