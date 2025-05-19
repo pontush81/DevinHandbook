@@ -34,7 +34,7 @@ export async function createHandbookWithSectionsAndPages(
       .insert({
         title: section.title,
         description: section.description,
-        order: section.order,
+        order_index: section.order,
         handbook_id: handbook.id,
       })
       .select()
@@ -51,7 +51,7 @@ export async function createHandbookWithSectionsAndPages(
         .insert({
           title: page.title,
           content: page.content,
-          order: page.order,
+          order_index: page.order,
           section_id: createdSection.id,
         });
 
