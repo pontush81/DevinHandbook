@@ -1,29 +1,5 @@
 // "use client"; // TA BORT DENNA RAD
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getHandbookBySubdomain } from '@/lib/handbook-service';
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import { headers } from 'next/headers';
-
-interface Section {
-  id: string;
-  title: string;
-  description: string;
-  order: number;
-  handbook_id: string;
-  pages: Page[];
-}
-
-interface Page {
-  id: string;
-  title: string;
-  content: string;
-  order: number;
-  section_id: string;
-}
-
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
