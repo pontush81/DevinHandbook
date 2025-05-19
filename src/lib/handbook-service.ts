@@ -12,7 +12,7 @@ export async function createHandbookWithSectionsAndPages(
   const { data: handbook, error: handbookError } = await supabase
     .from('handbooks')
     .insert({
-      name,
+      title: name,
       subdomain,
       published: true,
     })
