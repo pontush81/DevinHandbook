@@ -24,6 +24,7 @@ interface Page {
 
 export default async function HomePage() {
   const host = headers().get('host') || '';
+  console.log('SSR HOST:', host);
   const match = host.match(/^([a-z0-9-]+)\.handbok\.org$/);
   const subdomain = match ? match[1] : null;
 
