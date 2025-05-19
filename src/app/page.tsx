@@ -2,57 +2,126 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getHandbookBySubdomain } from '@/lib/handbook-service';
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import { headers } from 'next/headers';
 
-export default function HomePage() {
-  const router = useRouter();
-  const [subdomain, setSubdomain] = useState<string | null>(null);
-  const [currentSubdomain, setCurrentSubdomain] = useState<string | null>(null);
+interface Section {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  handbook_id: string;
+  pages: Page[];
+}
 
-  useEffect(() => {
-    // Kontrollera om användaren kommer från en subdomän
-    const hostname = window.location.hostname;
-    const isDevelopment = hostname === 'localhost';
-    const isVercel = hostname.includes('vercel.app');
-    const isMainDomain = hostname === 'handbok.org' || hostname === 'www.handbok.org';
-    
-    if (!isDevelopment && !isVercel && !isMainDomain) {
-      // Extrahera subdomän från hostname
-      const parts = hostname.split('.');
-      if (parts.length >= 3) {
-        const extractedSubdomain = parts[0];
-        setCurrentSubdomain(extractedSubdomain);
-        
-        // Vi sparar subdomänen men redirectar INTE längre
-        // Detta gör att vi kan visa en anpassad startsida för varje subdomän
-      }
+interface Page {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+  section_id: string;
+}
+
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  // Hämta host på serversidan
+  const host = headers().get('host') || '';
+  const match = host.match(/^([a-z0-9-]+)\.handbok\.org$/);
+  const subdomain = match ? match[1] : null;
+
+  if (subdomain && subdomain !== 'www') {
+    // Rendera handboken direkt på root
+    let handbook = null;
+    try {
+      handbook = await getHandbookBySubdomain(subdomain);
+    } catch (error) {
+      console.error('Error fetching handbook:', error);
+      return (
+        <div className="min-h-screen bg-white p-8">
+          <h1 className="text-2xl font-bold">Handbook Viewer</h1>
+          <p className="text-red-500">
+            Det gick inte att ladda handboken just nu. Försök igen senare.
+          </p>
+          <p className="text-gray-500 mt-4">Subdomain: {subdomain}</p>
+        </div>
+      );
     }
-  }, []);
-
-  // Anpassa rubriken baserat på subdomän
-  const getTitle = () => {
-    if (currentSubdomain) {
-      return `Välkommen till ${currentSubdomain.toUpperCase()}`;
+    if (!handbook) {
+      return (
+        <div className="min-h-screen bg-white p-8">
+          <h1 className="text-2xl font-bold">Handbook Not Found</h1>
+          <p>Handboken "{subdomain}" kunde inte hittas.</p>
+        </div>
+      );
     }
-    return "Välkommen till Handbok.org";
-  };
+    return (
+      <div className="min-h-screen bg-white">
+        <header className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h1 className="text-3xl font-bold">{handbook.title}</h1>
+            <p className="text-gray-500">Digital handbok</p>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Sidebar */}
+            <div className="md:col-span-1">
+              <nav className="space-y-1 sticky top-8">
+                <h2 className="font-medium mb-4">Innehåll</h2>
+                {(handbook.sections || []).map((section: Section) => (
+                  <a
+                    key={section.id}
+                    href={`#section-${section.id}`}
+                    className="block p-2 text-sm hover:bg-gray-50 rounded"
+                  >
+                    {section.title}
+                  </a>
+                ))}
+              </nav>
+            </div>
+            {/* Content */}
+            <div className="md:col-span-3 space-y-12">
+              {(handbook.sections || []).map((section: Section) => (
+                <section key={section.id} id={`section-${section.id}`} className="space-y-6">
+                  <h2 className="text-2xl font-semibold">{section.title}</h2>
+                  <p className="text-gray-500">{section.description}</p>
+                  <div className="space-y-8">
+                    {(section.pages || []).map((page: Page) => (
+                      <div key={page.id} className="space-y-2">
+                        <h3 className="text-xl font-medium">{page.title}</h3>
+                        <div className="prose prose-sm max-w-none">
+                          <ReactMarkdown>{page.content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </main>
+        <footer className="bg-gray-50 border-t py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
+            Powered by <span className="font-medium">Handbok.org</span>
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
-  const getSubtitle = () => {
-    if (currentSubdomain) {
-      return `Skapa en digital handbok för ${currentSubdomain}`;
-    }
-    return "Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.";
-  };
-
+  // Annars: rendera vanliga startsidan
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
       <div className="max-w-2xl w-full bg-white p-8 rounded-lg shadow-sm">
         <h1 className="text-3xl font-bold mb-6">
-          {getTitle()}
+          Välkommen till Handbok.org
         </h1>
         <p className="text-gray-600 mb-8">
-          {getSubtitle()}
+          Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.
         </p>
-        
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
           <a 
             href="/create-handbook" 
@@ -60,32 +129,22 @@ export default function HomePage() {
           >
             Skapa ny handbok
           </a>
-          
           <div className="border rounded-md p-4">
             <h2 className="font-semibold mb-2">Öppna befintlig handbok</h2>
-            <div className="flex">
+            <form action="/view" method="get" className="flex">
               <input 
                 type="text" 
+                name="company"
                 placeholder="Ange namn på förening" 
                 className="flex-1 px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-black"
-                onChange={e => setSubdomain(e.target.value)}
-                onKeyPress={e => {
-                  if (e.key === 'Enter' && subdomain) {
-                    router.push(`/view?company=${subdomain}`);
-                  }
-                }}
               />
               <button 
                 className="bg-gray-200 px-4 py-2 rounded-r-md hover:bg-gray-300"
-                onClick={() => {
-                  if (subdomain) {
-                    router.push(`/view?company=${subdomain}`);
-                  }
-                }}
+                type="submit"
               >
                 Visa
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>
