@@ -32,7 +32,7 @@ export default async function HomePage() {
   const match = host.match(/^([a-z0-9-]+)\.handbok\.org$/);
   const subdomain = match ? match[1] : null;
 
-  if (subdomain && subdomain !== 'www') {
+  if (subdomain && subdomain !== 'www' && subdomain !== 'staging') {
     // Rendera handboken direkt på root
     let handbook = null;
     try {
