@@ -9,6 +9,7 @@ export function WizardStepFive() {
   const [error, setError] = useState<string | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
   const [price, setPrice] = useState<number>(995); // Default pris i kr
+  const [handbookCreated, setHandbookCreated] = useState<string | null>(null);
   
   const handbookData = useMemo(() => ({
     name,
@@ -48,7 +49,7 @@ export function WizardStepFive() {
   const handleCheckout = async () => {
     setIsLoading(true);
     setError(null);
-    
+    setHandbookCreated(null);
     try {
       // Lägg till loggning för att se exakt vad som skickas
       console.log("[Stripe Checkout] Skickar handbookData till backend:", handbookData);
@@ -61,7 +62,25 @@ export function WizardStepFive() {
         body: JSON.stringify({ handbookData }),
       });
       
+      if (!response.ok) {
+        if (response.status === 409) {
+          setError('Subdomänen är redan upptagen. Välj ett annat namn.');
+        } else {
+          setError('Det gick inte att skapa betalsessionen. Försök igen senare.');
+        }
+        setIsLoading(false);
+        return;
+      }
+      
       const data = await response.json();
+      
+      // Om vi får success: true och handbookId men ingen sessionUrl, så har vi hoppat över Stripe
+      if (data.success && data.handbookId && !data.sessionUrl) {
+        setHandbookCreated(data.handbookId);
+        setIsTestMode(true); // Visa testläge om vi hoppat över Stripe
+        setIsLoading(false);
+        return;
+      }
       
       if (!data.sessionUrl) {
         throw new Error('Failed to create checkout session');
@@ -99,6 +118,20 @@ export function WizardStepFive() {
       </div>
       
       <div className="bg-gray-50 p-6 rounded-lg border">
+        {/* Visa lyckat meddelande om handboken skapats direkt utan Stripe */}
+        {handbookCreated && (
+          <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md text-sm">
+            ✅ Handboken har skapats direkt i testläge!<br />
+            <a
+              href={`https://${subdomain}.handbok.org`}
+              className="underline text-green-800"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Gå till din handbok
+            </a>
+          </div>
+        )}
         <div className="space-y-3">
           <div className="flex justify-between">
             <span className="font-medium">Digital handbok för {name}</span>
@@ -124,7 +157,7 @@ export function WizardStepFive() {
         <button 
           className="w-full mt-6 bg-black text-white py-3 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleCheckout}
-          disabled={isLoading}
+          disabled={isLoading || !!handbookCreated}
         >
           {isLoading ? 'Förbereder betalning...' : 'Gå vidare till betalning'}
         </button>
