@@ -24,7 +24,8 @@ export async function createHandbookWithSectionsAndPages(
     throw handbookError;
   }
 
-  if (!handbook || !handbook.id) {
+  let handbookObj = Array.isArray(handbook) ? handbook[0] : handbook;
+  if (!handbookObj || !handbookObj.id) {
     console.error('[Handbook] Misslyckades med att skapa handbok eller saknar id:', handbook);
     throw new Error('Misslyckades med att skapa handbok eller saknar id. Avbryter.');
   }
@@ -42,7 +43,7 @@ export async function createHandbookWithSectionsAndPages(
       title: section.title,
       description: section.description,
       order_index: sectionOrder,
-      handbook_id: handbook.id,
+      handbook_id: handbookObj.id,
     });
     const { data: createdSection, error: sectionError } = await supabase
       .from('sections')
@@ -50,7 +51,7 @@ export async function createHandbookWithSectionsAndPages(
         title: section.title,
         description: section.description,
         order_index: sectionOrder,
-        handbook_id: handbook.id,
+        handbook_id: handbookObj.id,
       })
       .select()
       .single();
@@ -61,7 +62,7 @@ export async function createHandbookWithSectionsAndPages(
         title: section.title,
         description: section.description,
         order_index: sectionOrder,
-        handbook_id: handbook.id,
+        handbook_id: handbookObj.id,
       });
       continue;
     }
@@ -86,7 +87,7 @@ export async function createHandbookWithSectionsAndPages(
     }
   }
 
-  return handbook.id;
+  return handbookObj.id;
 }
 
 export async function getHandbookBySubdomain(subdomain: string) {
