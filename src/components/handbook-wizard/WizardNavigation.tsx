@@ -36,18 +36,16 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
         <button
           onClick={goToNextStep}
           disabled={!canGoNext()}
-          className={`px-4 py-2 rounded-md ${
-            !canGoNext()
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-black text-white hover:bg-gray-800"
-          }`}
+          className={`px-4 py-2 rounded-md transition-colors duration-150 font-semibold shadow-sm
+            ${!canGoNext()
+              ? "bg-blue-100 text-blue-300 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-300"}
+          `}
         >
           Nästa
         </button>
       );
     }
-    
-    // På sista steget visar vi en tom div istället
     return <div className="w-24"></div>;
   };
   
@@ -58,31 +56,27 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
       .map((_, index) => (
         <div
           key={index}
-          className={`w-2 h-2 rounded-full ${
-            index === currentStep ? "bg-black" : "bg-gray-300"
-          }`}
+          className={`w-2 h-2 rounded-full transition-colors duration-150
+            ${index === currentStep ? "bg-blue-600" : "bg-blue-100"}
+          `}
         />
       ));
   };
   
   return (
-    <div className="flex justify-between mt-8">
+    <div className="flex flex-col sm:flex-row justify-between items-center mt-8 gap-4">
       <button
         onClick={goToPrevStep}
         disabled={currentStep === 0}
-        className={`px-4 py-2 rounded-md ${
-          currentStep === 0
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-            : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-        }`}
+        className={`px-4 py-2 rounded-md font-semibold transition-colors duration-150 shadow-sm
+          ${currentStep === 0
+            ? "bg-blue-100 text-blue-300 cursor-not-allowed"
+            : "bg-blue-50 text-blue-700 hover:bg-blue-100 focus:ring-2 focus:ring-blue-300"}
+        `}
       >
         Föregående
       </button>
-      
-      <div className="flex items-center gap-1">
-        {renderStepIndicators()}
-      </div>
-      
+      <div className="flex items-center gap-2">{renderStepIndicators()}</div>
       {renderNextButton()}
     </div>
   );

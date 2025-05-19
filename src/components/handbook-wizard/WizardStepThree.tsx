@@ -33,15 +33,15 @@ export function WizardStepThree() {
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Sections sidebar */}
-        <div className="md:col-span-1 space-y-3 border-r pr-4">
-          <h3 className="font-medium text-sm mb-2">Sektioner</h3>
+        <div className="md:col-span-1 space-y-3 border-r pr-4 border-blue-100 bg-blue-50 rounded-md md:rounded-none">
+          <h3 className="font-medium text-sm mb-2 text-blue-800">Sektioner</h3>
           {template.sections
             .filter(section => section.isActive)
             .map((section) => (
               <div 
                 key={section.id} 
-                className={`text-sm cursor-pointer p-2 rounded ${
-                  activeSection === section.id ? 'bg-gray-100' : 'hover:bg-gray-50'
+                className={`text-sm cursor-pointer p-2 rounded transition-colors duration-150 ${
+                  activeSection === section.id ? 'bg-blue-100 text-blue-900 font-semibold' : 'hover:bg-blue-50 text-blue-700'
                 }`}
                 onClick={() => {
                   setActiveSection(section.id);
@@ -58,34 +58,34 @@ export function WizardStepThree() {
           {currentSection && (
             <>
               <div className="space-y-3">
-                <label className="text-sm font-medium">Sektionsrubrik</label>
+                <label className="text-sm font-medium text-blue-800">Sektionsrubrik</label>
                 <input
                   type="text"
                   value={currentSection.title}
                   onChange={(e) => updateSectionTitle(currentSection.id, e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
                 />
                 
-                <label className="text-sm font-medium">Sektionsbeskrivning</label>
+                <label className="text-sm font-medium text-blue-800">Sektionsbeskrivning</label>
                 <input
                   type="text"
                   value={currentSection.description}
                   onChange={(e) => updateSectionDescription(currentSection.id, e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
                 />
               </div>
               
               {/* Pages tabs */}
               <div className="space-y-3">
-                <div className="flex items-center border-b">
+                <div className="flex flex-wrap items-center border-b border-blue-100">
                   {currentSection.pages.map((page) => (
                     <button
                       key={page.id}
                       onClick={() => setActivePage(page.id)}
-                      className={`py-2 px-4 ${
+                      className={`py-2 px-4 transition-colors duration-150 text-sm font-medium focus:outline-none ${
                         activePage === page.id 
-                          ? 'border-b-2 border-primary font-medium' 
-                          : 'text-gray-500'
+                          ? 'border-b-2 border-blue-600 text-blue-900 bg-blue-50' 
+                          : 'text-blue-700 hover:bg-blue-50'
                       }`}
                     >
                       {page.title}
@@ -95,18 +95,18 @@ export function WizardStepThree() {
                 
                 {currentPage && (
                   <div className="space-y-3">
-                    <label className="text-sm font-medium">Sidrubrik</label>
+                    <label className="text-sm font-medium text-blue-800">Sidrubrik</label>
                     <input
                       type="text"
                       value={currentPage.title}
                       onChange={(e) => updatePageTitle(currentSection.id, currentPage.id, e.target.value)}
-                      className="w-full px-3 py-2 border rounded-md"
+                      className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
                     />
                     
                     <div className="flex justify-end mb-2">
                       <button
                         onClick={() => setShowPreview(!showPreview)}
-                        className="text-sm text-gray-500 hover:text-gray-700"
+                        className="text-sm text-blue-600 hover:text-blue-800 underline"
                       >
                         {showPreview ? 'Visa redigerare' : 'Visa förhandsgranskning'}
                       </button>
@@ -116,11 +116,11 @@ export function WizardStepThree() {
                       <textarea
                         value={currentPage.content}
                         onChange={(e) => updatePageContent(currentSection.id, currentPage.id, e.target.value)}
-                        className="w-full h-64 px-3 py-2 border rounded-md font-mono text-sm"
+                        className="w-full h-64 px-3 py-2 border border-blue-200 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
                         placeholder="Skriv innehåll här (använd Markdown för formatering)"
                       />
                     ) : (
-                      <div className="w-full h-64 p-4 border rounded-md overflow-auto bg-gray-50">
+                      <div className="w-full h-64 p-4 border border-blue-100 rounded-md overflow-auto bg-blue-50">
                         <ReactMarkdown>{currentPage.content}</ReactMarkdown>
                       </div>
                     )}

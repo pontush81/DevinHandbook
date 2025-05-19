@@ -73,7 +73,7 @@ export function WizardStepOne() {
       
       <div className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium">
+          <label htmlFor="name" className="text-sm font-medium text-blue-800">
             Föreningens namn
           </label>
           <input
@@ -82,30 +82,30 @@ export function WizardStepOne() {
             value={name}
             onChange={handleNameChange}
             placeholder="Brf Solgården"
-            className="w-full px-3 py-2 border rounded-md"
+            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
           />
           {nameError && <p className="text-red-500 text-sm">{nameError}</p>}
         </div>
         
         <div className="space-y-2">
-          <label htmlFor="subdomain" className="text-sm font-medium">
+          <label htmlFor="subdomain" className="text-sm font-medium text-blue-800">
             Subdomän
           </label>
-          <div className="flex items-center">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center">
             <input
               id="subdomain"
               type="text"
               value={subdomain}
               onChange={handleSubdomainChange}
               placeholder="solgarden"
-              className="flex-1 px-3 py-2 border rounded-l-md"
+              className="flex-1 px-3 py-2 border border-blue-200 rounded-t-md sm:rounded-l-md sm:rounded-t-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
             />
-            <span className="px-3 py-2 bg-gray-100 border border-l-0 rounded-r-md text-gray-500">
+            <span className="px-3 py-2 bg-blue-50 border border-l-0 border-blue-200 rounded-b-md sm:rounded-r-md sm:rounded-b-none text-blue-700 text-sm">
               .handbok.org
             </span>
           </div>
           {subdomainError && <p className="text-red-500 text-sm">{subdomainError}</p>}
-          <p className="text-gray-500 text-sm">
+          <p className="text-blue-700 text-xs">
             Din handbok kommer att vara tillgänglig på https://{subdomain || "dinforening"}.handbok.org
           </p>
         </div>

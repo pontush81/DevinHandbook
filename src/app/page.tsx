@@ -23,7 +23,7 @@ interface Page {
 }
 
 export default async function HomePage() {
-  const host = headers().get('host') || '';
+  const host = (await headers()).get('host') || '';
   console.log('SSR HOST:', host);
   const match = host.match(/^([a-z0-9-]+)\.handbok\.org$/);
   const subdomain = match ? match[1] : null;
@@ -103,42 +103,26 @@ export default async function HomePage() {
     );
   }
 
-  // Rendera startsidan för huvuddomän/staging
+  // Ny modern, luftig startsida
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-2xl w-full bg-white p-8 rounded-lg shadow-sm">
-        <h1 className="text-3xl font-bold mb-6">
-          Välkommen till Handbok.org
-        </h1>
-        <p className="text-gray-600 mb-8">
-          Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.
-        </p>
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-          <a 
-            href="/create-handbook" 
-            className="bg-black text-white px-6 py-4 rounded-md text-center hover:bg-gray-800 transition"
-          >
-            Skapa ny handbok
-          </a>
-          <div className="border rounded-md p-4">
-            <h2 className="font-semibold mb-2">Öppna befintlig handbok</h2>
-            <form action="/view" method="get" className="flex">
-              <input 
-                type="text" 
-                name="company"
-                placeholder="Ange namn på förening" 
-                className="flex-1 px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-              <button 
-                className="bg-gray-200 px-4 py-2 rounded-r-md hover:bg-gray-300"
-                type="submit"
-              >
-                Visa
-              </button>
-            </form>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
+      <main className="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-xl p-10 flex flex-col gap-8 items-center">
+        <div className="w-full text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">Välkommen till Handbok.org</h1>
+          <p className="text-lg text-gray-600 mb-8">Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.</p>
         </div>
-      </div>
+        <a href="/create-handbook" className="w-full block text-center bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-full py-4 transition mb-2 shadow-sm">Skapa ny handbok</a>
+        <form action="/view" method="get" className="w-full flex flex-col md:flex-row gap-2 items-center justify-center">
+          <input
+            type="text"
+            name="company"
+            placeholder="Ange namn på förening"
+            className="flex-1 px-4 py-3 rounded-full border border-gray-200 bg-[#f7f8fa] text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+            autoComplete="off"
+          />
+          <button type="submit" className="px-6 py-3 rounded-full bg-white border-2 border-blue-600 text-blue-600 font-semibold text-base hover:bg-blue-50 hover:border-blue-700 transition shadow-sm">Visa</button>
+        </form>
+      </main>
     </div>
   );
 }

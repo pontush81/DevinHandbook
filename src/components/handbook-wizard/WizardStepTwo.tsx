@@ -17,24 +17,24 @@ export function WizardStepTwo() {
       
       <div className="space-y-3">
         {template.sections.map((section) => (
-          <div key={section.id} className="flex items-start gap-3 p-3 border rounded-md">
+          <div key={section.id} className="flex flex-col sm:flex-row items-start gap-3 p-3 border border-blue-100 rounded-md bg-blue-50">
             <div className="flex items-center h-5 mt-1">
               <input
                 type="checkbox"
                 id={section.id}
                 checked={section.isActive}
                 onChange={() => toggleSectionActive(section.id)}
-                className="w-4 h-4 border rounded bg-background"
+                className="w-4 h-4 border border-blue-300 rounded bg-blue-50 focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <div className="flex-1 space-y-1">
               <label 
                 htmlFor={section.id} 
-                className="text-sm font-medium cursor-pointer"
+                className="text-sm font-medium text-blue-900 cursor-pointer"
               >
                 {section.title}
               </label>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-blue-700">
                 {section.description}
               </p>
             </div>
