@@ -1,37 +1,41 @@
-// "use client"; // TA BORT DENNA RAD
+import { headers } from 'next/headers';
+import { getHandbookBySubdomain } from '@/lib/handbook-service';
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export const dynamic = 'force-dynamic';
 
+interface Section {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  handbook_id: string;
+  pages: Page[];
+}
+
+interface Page {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+  section_id: string;
+}
+
 export default async function HomePage() {
-  // Hämta host på serversidan
   const host = headers().get('host') || '';
   const match = host.match(/^([a-z0-9-]+)\.handbok\.org$/);
   const subdomain = match ? match[1] : null;
 
   if (subdomain && subdomain !== 'www' && subdomain !== 'staging') {
-    // Rendera handboken direkt på root
     let handbook = null;
     try {
       handbook = await getHandbookBySubdomain(subdomain);
     } catch (error) {
-      console.error('Error fetching handbook:', error);
-      return (
-        <div className="min-h-screen bg-white p-8">
-          <h1 className="text-2xl font-bold">Handbook Viewer</h1>
-          <p className="text-red-500">
-            Det gick inte att ladda handboken just nu. Försök igen senare.
-          </p>
-          <p className="text-gray-500 mt-4">Subdomain: {subdomain}</p>
-        </div>
-      );
+      return <div>Fel vid laddning av handbok</div>;
     }
     if (!handbook) {
-      return (
-        <div className="min-h-screen bg-white p-8">
-          <h1 className="text-2xl font-bold">Handbook Not Found</h1>
-          <p>Handboken "{subdomain}" kunde inte hittas.</p>
-        </div>
-      );
+      return <div>Handbok saknas</div>;
     }
     return (
       <div className="min-h-screen bg-white">
@@ -88,7 +92,7 @@ export default async function HomePage() {
     );
   }
 
-  // Annars: rendera vanliga startsidan
+  // Rendera startsidan för huvuddomän/staging
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
       <div className="max-w-2xl w-full bg-white p-8 rounded-lg shadow-sm">
