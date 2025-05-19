@@ -52,7 +52,7 @@ export async function createHandbookWithSectionsAndPages(
     console.log('[Handbook] Skickar sektion till Supabase:', {
       title: section.title,
       description: section.description,
-      order: sectionOrder,
+      order_index: sectionOrder,
       handbook_id: handbookObj.id,
     });
     const { data: createdSectionRaw, error: sectionError } = await supabase
@@ -60,7 +60,7 @@ export async function createHandbookWithSectionsAndPages(
       .insert({
         title: section.title,
         description: section.description,
-        order: sectionOrder,
+        order_index: sectionOrder,
         handbook_id: handbookObj.id,
       })
       .select()
@@ -74,7 +74,7 @@ export async function createHandbookWithSectionsAndPages(
       console.error('Section insert payload:', {
         title: section.title,
         description: section.description,
-        order: sectionOrder,
+        order_index: sectionOrder,
         handbook_id: handbookObj.id,
       });
       console.error('Handbook context:', {
@@ -123,7 +123,7 @@ export async function createHandbookWithSectionsAndPages(
       console.log('[Handbook] Skickar sida till Supabase:', {
         title: page.title,
         content: page.content,
-        order: pageOrder,
+        order_index: pageOrder,
         section_id: createdSection.id,
         slug,
       });
@@ -132,7 +132,7 @@ export async function createHandbookWithSectionsAndPages(
         .insert({
           title: page.title,
           content: page.content,
-          order: pageOrder,
+          order_index: pageOrder,
           section_id: createdSection.id,
           slug,
         });
@@ -142,7 +142,7 @@ export async function createHandbookWithSectionsAndPages(
         console.error('Page insert payload:', {
           title: page.title,
           content: page.content,
-          order: pageOrder,
+          order_index: pageOrder,
           section_id: createdSection.id,
           slug,
         });
@@ -171,7 +171,7 @@ export async function getHandbookBySubdomain(subdomain: string) {
     .from('sections')
     .select('*')
     .eq('handbook_id', handbook.id)
-    .order('order');
+    .order('order_index');
 
   if (sectionsError) {
     console.error('Error fetching sections:', sectionsError);
@@ -182,14 +182,14 @@ export async function getHandbookBySubdomain(subdomain: string) {
     id: string;
     title: string;
     description: string;
-    order: number;
+    order_index: number;
     handbook_id: string;
     created_at: string;
     pages: {
       id: string;
       title: string;
       content: string;
-      order: number;
+      order_index: number;
       section_id: string;
     }[];
   }
@@ -201,7 +201,7 @@ export async function getHandbookBySubdomain(subdomain: string) {
       .from('pages')
       .select('*')
       .eq('section_id', section.id)
-      .order('order');
+      .order('order_index');
 
     if (pagesError) {
       console.error('Error fetching pages:', pagesError);
