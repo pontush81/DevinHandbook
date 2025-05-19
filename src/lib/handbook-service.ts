@@ -163,21 +163,22 @@ export async function getHandbookBySubdomain(subdomain: string) {
     .eq('subdomain', subdomain)
     .single();
 
-  if (handbookError) {
+  const handbookObj = Array.isArray(handbook) ? handbook[0] : handbook;
+  if (handbookError || !handbookObj || !handbookObj.id) {
     console.error('[getHandbookBySubdomain] Error fetching handbook:', handbookError);
     return null;
   }
-  console.log('[getHandbookBySubdomain] handbook:', handbook);
+  console.log('[getHandbookBySubdomain] handbook:', handbookObj);
 
   const { data: sections, error: sectionsError } = await supabase
     .from('sections')
     .select('*')
-    .eq('handbook_id', handbook.id)
+    .eq('handbook_id', handbookObj.id)
     .order('order_index');
 
   if (sectionsError) {
     console.error('[getHandbookBySubdomain] Error fetching sections:', sectionsError);
-    return { ...handbook, sections: [] };
+    return { ...handbookObj, sections: [] };
   }
   console.log('[getHandbookBySubdomain] sections:', sections);
 
@@ -215,7 +216,7 @@ export async function getHandbookBySubdomain(subdomain: string) {
     }
   }
 
-  return { ...handbook, sections: sectionsWithPages };
+  return { ...handbookObj, sections: sectionsWithPages };
 }
 
 export async function revalidateHandbook(subdomain: string) {
