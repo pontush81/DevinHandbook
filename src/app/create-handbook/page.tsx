@@ -15,7 +15,7 @@ export default function CreateHandbook() {
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <WizardStepOne />;
+        return <WizardStepOne showTabs={false} />;
       case 1:
         return <WizardStepTwo />;
       case 2:
