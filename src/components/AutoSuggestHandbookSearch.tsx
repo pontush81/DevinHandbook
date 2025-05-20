@@ -55,7 +55,7 @@ export default function AutoSuggestHandbookSearch() {
         onFocus={() => { if (results.length > 0) setShowDropdown(true); }}
         onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
         onKeyDown={handleKeyDown}
-        placeholder="Sök efter förening eller subdomän..."
+        placeholder="Sök efter förening..."
         className="flex-1 px-4 py-3 rounded-full border border-gray-200 bg-[#f7f8fa] text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition w-full"
         autoComplete="off"
         aria-label="Sök förening"
