@@ -1,5 +1,5 @@
 import React from "react";
-import HandbookHeader from '@/components/HandbookHeader';
+import HandbookHeaderClient from '@/components/HandbookHeaderClient';
 
 export default function CreateHandbookLayout({
   children,
@@ -8,7 +8,7 @@ export default function CreateHandbookLayout({
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <HandbookHeader />
+      <HandbookHeaderClient />
       <main>
         {children}
       </main>
