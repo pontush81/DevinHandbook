@@ -36,7 +36,7 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       
       onDataChange();
     } catch (err: unknown) {
-      console.error("Error setting user as admin:", err);
+      console.error("Error setting user as superadmin:", err);
       setError(err instanceof Error ? err.message : "Kunde inte uppdatera användarroll");
     } finally {
       setIsProcessing(null);
@@ -88,7 +88,7 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                       disabled={isProcessing === user.id}
                       className="text-black hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isProcessing === user.id ? 'Uppdaterar...' : 'Gör till admin'}
+                      {isProcessing === user.id ? 'Uppdaterar...' : 'Gör till superadmin'}
                     </button>
                   </td>
                 </tr>

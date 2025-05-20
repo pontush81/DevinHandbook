@@ -12,23 +12,23 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    
     const supabase = getServiceSupabase();
     
-    const { data, error } = await supabase.auth.admin.updateUserById(
-      userId,
-      { app_metadata: { roles: ['admin'] } }
-    );
+    // Uppdatera is_superadmin i profiles-tabellen
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ is_superadmin: true })
+      .eq('id', userId);
     
-    if (error) {
-      throw error;
+    if (profileError) {
+      throw profileError;
     }
     
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error('Error setting user as admin:', error);
+    console.error('Error setting user as superadmin:', error);
     return NextResponse.json(
-      { error: 'Failed to set user as admin' },
+      { error: 'Failed to set user as superadmin' },
       { status: 500 }
     );
   }

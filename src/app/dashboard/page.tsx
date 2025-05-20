@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSuperadmin, setIsSuperadmin] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -27,18 +28,42 @@ export default function DashboardPage() {
     }
   }, [user, isLoading, router]);
 
+  useEffect(() => {
+    const fetchSuperadmin = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_superadmin")
+        .eq("id", user.id)
+        .single();
+      if (!error && data && data.is_superadmin) {
+        setIsSuperadmin(true);
+      } else {
+        setIsSuperadmin(false);
+      }
+    };
+    if (user) {
+      fetchSuperadmin();
+    }
+  }, [user]);
+
   const fetchHandbooks = useCallback(async () => {
     try {
       setIsLoadingHandbooks(true);
-      
-      const { data, error } = await supabase
-        .from("handbooks")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-      
+      let data, error;
+      if (isSuperadmin) {
+        ({ data, error } = await supabase
+          .from("handbooks")
+          .select("*")
+          .order("created_at", { ascending: false }));
+      } else {
+        ({ data, error } = await supabase
+          .from("handbooks")
+          .select("*")
+          .eq("user_id", user?.id)
+          .order("created_at", { ascending: false }));
+      }
       if (error) throw error;
-      
       setHandbooks(data || []);
     } catch (err: unknown) {
       console.error("Error fetching handbooks:", err);
@@ -46,13 +71,13 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingHandbooks(false);
     }
-  }, [user?.id]);
+  }, [user?.id, isSuperadmin]);
 
   useEffect(() => {
     if (user) {
       fetchHandbooks();
     }
-  }, [user, fetchHandbooks]);
+  }, [user, fetchHandbooks, isSuperadmin]);
 
   if (isLoading) {
     return (

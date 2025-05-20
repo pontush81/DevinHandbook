@@ -24,29 +24,45 @@ interface User {
 }
 
 export default function AdminDashboardPage() {
-  const { user, isLoading, hasRole } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'handbooks' | 'users'>('handbooks');
+  const [isSuperadmin, setIsSuperadmin] = useState<boolean>(false);
 
   useEffect(() => {
+    const checkSuperadmin = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_superadmin")
+        .eq("id", user.id)
+        .single();
+      
+      if (!error && data && data.is_superadmin) {
+        setIsSuperadmin(true);
+      } else {
+        router.push("/dashboard");
+      }
+    };
+
     if (!isLoading) {
       if (!user) {
         router.push("/login");
-      } else if (!hasRole("admin")) {
-        router.push("/dashboard");
       } else {
-        fetchData();
+        checkSuperadmin();
       }
     }
-  }, [user, isLoading, router, hasRole]);
+  }, [user, isLoading, router]);
 
   const fetchData = async () => {
     try {
       setIsLoadingData(true);
+      
+      if (!isSuperadmin) return;
       
       const { data: handbooksData, error: handbooksError } = await supabase
         .from("handbooks")
@@ -77,7 +93,7 @@ export default function AdminDashboardPage() {
       }
     } catch (err: unknown) {
       console.error("Error fetching data:", err);
-      setError("Kunde inte hämta data. Kontrollera att du har admin-behörighet.");
+      setError("Kunde inte hämta data. Kontrollera att du har superadmin-behörighet.");
     } finally {
       setIsLoadingData(false);
     }
