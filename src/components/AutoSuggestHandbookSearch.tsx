@@ -22,7 +22,7 @@ export default function AutoSuggestHandbookSearch() {
       fetch(`/api/search-handbooks?q=${encodeURIComponent(query)}`, { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
-          setResults(data.results || []);
+          setResults(data.results || data.handbooks || []);
           setShowDropdown(true);
         })
         .finally(() => setLoading(false));
@@ -46,7 +46,7 @@ export default function AutoSuggestHandbookSearch() {
   };
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative overflow-hidden">
       <input
         ref={inputRef}
         type="text"
@@ -61,13 +61,12 @@ export default function AutoSuggestHandbookSearch() {
         aria-label="Sök förening"
       />
       {showDropdown && results.length > 0 && (
-        <ul className="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl mt-2 shadow-2xl z-10 max-h-80 overflow-auto overflow-hidden p-0">
+        <ul className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl rounded-t-none mt-0 shadow-2xl z-10 max-h-80 overflow-auto p-0">
           {results.map((r, i) => (
             <li
               key={r.id}
               className={`w-full block flex items-start gap-3 px-5 py-3 cursor-pointer transition-colors select-none
-                ${i === selectedIndex ? `bg-blue-100 text-blue-900 shadow ${i === 0 ? 'rounded-t-xl' : ''} ${i === results.length - 1 ? 'rounded-b-xl' : ''}` : 'hover:bg-blue-50'}
-              `}
+                ${i === selectedIndex ? `bg-blue-100 text-blue-900 shadow ${i === 0 ? 'rounded-t-xl' : ''} ${i === results.length - 1 ? 'rounded-b-xl' : ''}` : 'hover:bg-blue-50'}`}
               onMouseDown={() => handleSelect(r.subdomain)}
               onMouseEnter={() => setSelectedIndex(i)}
             >
@@ -81,7 +80,7 @@ export default function AutoSuggestHandbookSearch() {
         </ul>
       )}
       {showDropdown && query.length >= 2 && results.length === 0 && !loading && (
-        <div className="absolute left-0 right-0 bg-white border border-gray-200 rounded-xl mt-2 shadow-2xl z-10 px-6 py-6 text-gray-500 text-center flex flex-col items-center gap-2">
+        <div className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl rounded-t-none mt-0 shadow-2xl z-10 px-6 py-6 text-gray-500 text-center flex flex-col items-center gap-2">
           <ExclamationCircleIcon className="h-7 w-7 text-gray-300 mb-1" />
           <span>Ingen förening hittades</span>
         </div>
