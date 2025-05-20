@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Menu, X } from 'lucide-react';
+import HandbookHeader from '@/components/HandbookHeader';
 
 interface HandbookPage {
   id: string;
@@ -48,17 +49,20 @@ export default function HandbookClient({ handbook }: { handbook: Handbook }) {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
+      <HandbookHeader />
+      {/* Mobil menyknapp, om du vill ha kvar den kan du flytta den till HandbookHeader eller här under */}
+      {/*
       <header className="sticky top-0 z-30 bg-white/95 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-lg tracking-tight text-gray-900">Digital handbok</span>
           </div>
-          {/* Mobil menyknapp */}
           <button className="md:hidden ml-2 p-2 rounded hover:bg-gray-100 text-gray-700" onClick={() => setSidebarOpen(true)} aria-label="Öppna meny">
             <Menu className="w-6 h-6" />
           </button>
         </div>
       </header>
+      */}
       <div className="flex-1 flex flex-col md:flex-row max-w-6xl mx-auto w-full">
         {/* Sidebar */}
         <aside className="hidden md:block md:w-56 border-r border-gray-100 py-10 pr-6 mr-6">

@@ -10,14 +10,15 @@ export async function GET(request: NextRequest) {
   }
   const { data, error } = await supabase
     .from('handbooks')
-    .select('id, name, subdomain')
-    .ilike('name', `%${q}%`)
-    .or(`subdomain.ilike.%${q}%`)
+    .select('id, title, subdomain')
+    .or(`title.ilike.%${q}%,subdomain.ilike.%${q}%`)
     .eq('published', true)
-    .order('name')
+    .order('title')
     .limit(10);
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[search-handbooks] Supabase error:', error);
+    console.error('[search-handbooks] Query param q:', q);
+    return NextResponse.json({ error: error.message, details: error }, { status: 500 });
   }
   return NextResponse.json({ results: data });
 } 

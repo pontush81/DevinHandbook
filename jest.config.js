@@ -9,13 +9,14 @@ module.exports = {
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   // Förhindra att Jest behandlar Next.js interna filer
   transformIgnorePatterns: [
-    '/node_modules/(?!.*.mjs$)'
+    '/node_modules/(?!.*.mjs$)',
+    "/node_modules/(?!(react-markdown|remark-gfm|unified|bail|trough|vfile|micromark|mdast-util-to-string)/)"
   ],
   // Ignorera Next.js specifika filer i tester
   modulePathIgnorePatterns: [
     "<rootDir>/.next/"
   ],
-  // Använd jest-environment-jsdom för tester
+  // Använd jest-environment-jsdom för testers
   testEnvironmentOptions: {
     url: "http://localhost/",
   },
