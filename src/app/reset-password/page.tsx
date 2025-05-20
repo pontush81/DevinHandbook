@@ -11,25 +11,37 @@ export default function ResetPasswordPage() {
         <h2 className="text-2xl font-bold mb-4 text-center">Återställ lösenord</h2>
         <Auth
           supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
+          appearance={{
+            theme: ThemeSupa,
+            variables: {
+              brand: '#2563eb',
+              brandAccent: '#1d4ed8',
+              brandButtonText: '#fff'
+            }
+          }}
           providers={[]}
           view="forgotten_password"
           localization={{
             variables: {
               forgotten_password: {
                 email_label: "E-post",
+                email_input_placeholder: "Ange din e-postadress",
                 button_label: "Skicka återställningslänk",
                 link_text: "Tillbaka till inloggning"
               },
               sign_in: {
                 email_label: "E-post",
+                email_input_placeholder: "Ange din e-postadress",
                 password_label: "Lösenord",
+                password_input_placeholder: "Ange ditt lösenord",
                 button_label: "Logga in",
                 link_text: "Har du inget konto? Skapa konto"
               },
               sign_up: {
                 email_label: "E-post",
+                email_input_placeholder: "Ange din e-postadress",
                 password_label: "Lösenord",
+                password_input_placeholder: "Ange ditt lösenord",
                 button_label: "Skapa konto",
                 link_text: "Har du redan ett konto? Logga in"
               }

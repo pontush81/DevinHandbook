@@ -8,8 +8,24 @@ const HandbookHeader: React.FC = () => {
   const { user, signOut, isLoading } = useAuth();
   const pathname = usePathname();
 
-  // Döljer användarinfo på publika flows
-  const isPublicFlow = pathname === '/create-handbook' || pathname?.includes('/create-handbook');
+  // Döljer headern helt på create-handbook-flödet
+  if (pathname === '/create-handbook' || pathname?.includes('/create-handbook')) {
+    return (
+      <nav aria-label="Huvudmeny" className="flex justify-end items-center py-4 px-6 border-b bg-white">
+        {!user && (
+          <Link
+            href="/login"
+            className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm focus:outline focus:outline-2 focus:outline-blue-300 focus:text-white active:text-white"
+            aria-label="Logga in"
+            data-testid="login-link"
+            prefetch={true}
+          >
+            Logga in
+          </Link>
+        )}
+      </nav>
+    );
+  }
 
   if (isLoading) return null;
 
@@ -17,7 +33,7 @@ const HandbookHeader: React.FC = () => {
     <nav aria-label="Huvudmeny" className="flex justify-between items-center py-4 px-6 border-b bg-white">
       <div className="font-bold text-lg">Digital Handbok</div>
       <div>
-        {user && !isPublicFlow ? (
+        {user ? (
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-700">{user.email}</span>
             {user.app_metadata?.roles && (
@@ -32,7 +48,7 @@ const HandbookHeader: React.FC = () => {
               Logga ut
             </button>
           </div>
-        ) : !user && !isPublicFlow ? (
+        ) : (
           <Link
             href="/login"
             className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm focus:outline focus:outline-2 focus:outline-blue-300 focus:text-white active:text-white"
@@ -42,7 +58,7 @@ const HandbookHeader: React.FC = () => {
           >
             Logga in
           </Link>
-        ) : null}
+        )}
       </div>
     </nav>
   );

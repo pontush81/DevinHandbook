@@ -25,18 +25,23 @@ export default function SignupPage() {
             variables: {
               sign_up: {
                 email_label: "E-post",
+                email_input_placeholder: "Ange din e-postadress",
                 password_label: "Lösenord",
+                password_input_placeholder: "Ange ditt lösenord",
                 button_label: "Skapa konto",
                 link_text: "Har du redan ett konto? Logga in"
               },
               sign_in: {
                 email_label: "E-post",
+                email_input_placeholder: "Ange din e-postadress",
                 password_label: "Lösenord",
+                password_input_placeholder: "Ange ditt lösenord",
                 button_label: "Logga in",
                 link_text: "Har du inget konto? Skapa konto"
               },
               forgotten_password: {
                 email_label: "E-post",
+                email_input_placeholder: "Ange din e-postadress",
                 button_label: "Skicka återställningslänk",
                 link_text: "Tillbaka till inloggning"
               }
