@@ -1,114 +1,53 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { SignInForm } from "@/components/auth/SignInForm";
+import { SignUpForm } from "@/components/auth/SignUpForm";
 import { useHandbookStore } from "@/lib/store/handbook-store";
-import { createSubdomainFromName } from "@/lib/utils";
 
 export function WizardStepOne() {
-  const { name, subdomain, setName, setSubdomain } = useHandbookStore();
-  const [nameError, setNameError] = useState("");
-  const [subdomainError, setSubdomainError] = useState("");
-  const [subdomainManuallyEdited, setSubdomainManuallyEdited] = useState(false);
-  const initialRender = useRef(true);
-  
-  const validateSubdomain = (value: string) => {
-    if (!value) {
-      setSubdomainError("Subdomän krävs");
-      return false;
-    }
-    
-    const subdomainRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-    if (!subdomainRegex.test(value)) {
-      setSubdomainError("Subdomän får endast innehålla små bokstäver, siffror och bindestreck. Den får inte börja eller sluta med bindestreck.");
-      return false;
-    }
-    
-    setSubdomainError("");
-    return true;
-  };
-  
-  const validateName = (value: string) => {
-    if (!value) {
-      setNameError("Föreningens namn krävs");
-      return false;
-    }
-    
-    setNameError("");
-    return true;
-  };
-  
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setName(value);
-    validateName(value);
-  };
-  
-  const handleSubdomainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSubdomain(value);
-    setSubdomainManuallyEdited(true);
-    validateSubdomain(value);
-  };
-  
-  useEffect(() => {
-    if (initialRender.current) {
-      initialRender.current = false;
-      return;
-    }
-    
-    if (name && !subdomainManuallyEdited) {
-      const suggestedSubdomain = createSubdomainFromName(name);
-      setSubdomain(suggestedSubdomain);
-    }
-  }, [name, setSubdomain, subdomainManuallyEdited]);
-  
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold">Skapa din förenings digitala handbok</h2>
-        <p className="text-gray-500">
-          Börja med att ange din förenings namn och välj en subdomän för din handbok.
-        </p>
+  const { user, isLoading } = useAuth();
+  const { setCurrentStep } = useHandbookStore();
+  const [tab, setTab] = useState<"signup" | "login">("signup");
+
+  if (isLoading) {
+    return <div className="text-center py-12">Laddar...</div>;
+  }
+
+  if (user) {
+    return (
+      <div className="space-y-6 text-center">
+        <h2 className="text-2xl font-bold">Du är inloggad</h2>
+        <p className="text-gray-600 mb-4">Du är inloggad som <span className="font-semibold">{user.email}</span>.</p>
+        <button
+          className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition"
+          onClick={() => setCurrentStep(1)}
+        >
+          Gå vidare
+        </button>
       </div>
-      
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium text-blue-800">
-            Föreningens namn
-          </label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={handleNameChange}
-            placeholder="Brf Solgården"
-            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-          />
-          {nameError && <p className="text-red-500 text-sm">{nameError}</p>}
-        </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="subdomain" className="text-sm font-medium text-blue-800">
-            Subdomän
-          </label>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center">
-            <input
-              id="subdomain"
-              type="text"
-              value={subdomain}
-              onChange={handleSubdomainChange}
-              placeholder="solgarden"
-              className="flex-1 px-3 py-2 border border-blue-200 rounded-t-md sm:rounded-l-md sm:rounded-t-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-            />
-            <span className="px-3 py-2 bg-blue-50 border border-l-0 border-blue-200 rounded-b-md sm:rounded-r-md sm:rounded-b-none text-blue-700 text-sm">
-              .handbok.org
-            </span>
-          </div>
-          {subdomainError && <p className="text-red-500 text-sm">{subdomainError}</p>}
-          <p className="text-blue-700 text-xs">
-            Din handbok kommer att vara tillgänglig på https://{subdomain || "dinforening"}.handbok.org
-          </p>
-        </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-md mx-auto space-y-6">
+      <div className="flex justify-center gap-4 mb-6">
+        <button
+          className={`px-4 py-2 rounded-t-md font-semibold border-b-2 transition-colors duration-150 ${tab === "signup" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-blue-600"}`}
+          onClick={() => setTab("signup")}
+        >
+          Skapa konto
+        </button>
+        <button
+          className={`px-4 py-2 rounded-t-md font-semibold border-b-2 transition-colors duration-150 ${tab === "login" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-blue-600"}`}
+          onClick={() => setTab("login")}
+        >
+          Logga in
+        </button>
+      </div>
+      <div className="bg-white p-6 rounded-b-md border border-t-0 border-gray-200 shadow-sm">
+        {tab === "signup" ? <SignUpForm /> : <SignInForm />}
       </div>
     </div>
   );

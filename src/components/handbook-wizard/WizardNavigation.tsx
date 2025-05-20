@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface WizardNavigationProps {
   totalSteps: number;
@@ -9,9 +10,13 @@ interface WizardNavigationProps {
 
 export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
   const { currentStep, setCurrentStep, name, subdomain } = useHandbookStore();
+  const { user } = useAuth();
   
   const canGoNext = () => {
     if (currentStep === 0) {
+      return !!user;
+    }
+    if (currentStep === 1) {
       return name.trim() !== "" && subdomain.trim() !== "";
     }
     return true;
