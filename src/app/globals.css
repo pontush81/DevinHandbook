@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import url('https://fonts.googleapis.com/css2?family=Shadows+Into+Light&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
-@import "@fontsource/instrument-sans/variable.css";
+@import "@fontsource/instrument-sans/index.css";
 
 @custom-variant dark (&:is(.dark *));
 
