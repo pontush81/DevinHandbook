@@ -2,13 +2,14 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { SignInForm } from "@/components/auth/SignInForm";
-import { SignUpForm } from "@/components/auth/SignUpForm";
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
+import { supabase } from "@/lib/supabase";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 
 export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
   const { user, isLoading, signOut } = useAuth();
-  const { setCurrentStep, currentStep } = useHandbookStore();
+  const { setCurrentStep } = useHandbookStore();
   const [tab, setTab] = useState<"signup" | "login">("signup");
   const [showForm, setShowForm] = useState(false);
 
@@ -61,7 +62,61 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
         </div>
       )}
       <div className="bg-white p-6 rounded-b-md border border-t-0 border-gray-200 shadow-sm">
-        {tab === "signup" ? <SignUpForm showLoginLink={false} /> : <SignInForm showSignupLink={false} />}
+        {tab === "signup" ? (
+          <Auth
+            supabaseClient={supabase}
+            appearance={{ theme: ThemeSupa }}
+            providers={[]}
+            view="sign_up"
+            localization={{
+              variables: {
+                sign_up: {
+                  email_label: "E-post",
+                  password_label: "Lösenord",
+                  button_label: "Skapa konto",
+                  link_text: "Har du redan ett konto? Logga in"
+                },
+                sign_in: {
+                  email_label: "E-post",
+                  password_label: "Lösenord",
+                  button_label: "Logga in",
+                  link_text: "Har du inget konto? Skapa konto"
+                },
+                forgotten_password: {
+                  link_text: "Glömt lösenord?"
+                }
+              }
+            }}
+            redirectTo={typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined}
+          />
+        ) : (
+          <Auth
+            supabaseClient={supabase}
+            appearance={{ theme: ThemeSupa }}
+            providers={[]}
+            view="sign_in"
+            localization={{
+              variables: {
+                sign_in: {
+                  email_label: "E-post",
+                  password_label: "Lösenord",
+                  button_label: "Logga in",
+                  link_text: "Har du inget konto? Skapa konto"
+                },
+                sign_up: {
+                  email_label: "E-post",
+                  password_label: "Lösenord",
+                  button_label: "Skapa konto",
+                  link_text: "Har du redan ett konto? Logga in"
+                },
+                forgotten_password: {
+                  link_text: "Glömt lösenord?"
+                }
+              }
+            }}
+            redirectTo={typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined}
+          />
+        )}
       </div>
     </div>
   );
