@@ -8,16 +8,20 @@ import { supabase } from "@/lib/supabase";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 
 export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
-  const { user, isLoading, signOut } = useAuth();
-  const { setCurrentStep } = useHandbookStore();
-  const [tab, setTab] = useState<"signup" | "login">("signup");
-  const [showForm, setShowForm] = useState(false);
+  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { setCurrentStep, currentStep } = useHandbookStore();
+  const [tab, setTab] = useState<"signup" | "login" | "reset">("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  if (isLoading) {
+  if (authLoading) {
     return <div className="text-center py-12">Laddar...</div>;
   }
 
-  if (user && !showForm) {
+  if (currentStep === 0 && user) {
     return (
       <div className="space-y-6 text-center">
         <h2 className="text-2xl font-bold">Du är inloggad</h2>
@@ -33,7 +37,6 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
             className="text-sm text-blue-600 underline mt-2"
             onClick={async () => {
               await signOut();
-              setShowForm(true);
             }}
           >
             Byt konto
@@ -43,113 +46,127 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
     );
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    if (tab === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setError(error.message);
+      else setSuccess("Registrering lyckades! Kontrollera din e-post för bekräftelse.");
+    } else if (tab === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setError("Fel e-post eller lösenord.");
+    } else if (tab === "reset") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) setError(error.message);
+      else setSuccess("Återställningslänk skickad till din e-post.");
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
       {showTabs && (
         <div className="flex justify-center gap-4 mb-6">
           <button
             className={`px-4 py-2 rounded-t-md font-semibold border-b-2 transition-colors duration-150 ${tab === "signup" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-blue-600"}`}
-            onClick={() => setTab("signup")}
+            onClick={() => { setTab("signup"); setError(null); setSuccess(null); }}
+            type="button"
           >
             Skapa konto
           </button>
           <button
             className={`px-4 py-2 rounded-t-md font-semibold border-b-2 transition-colors duration-150 ${tab === "login" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-blue-600"}`}
-            onClick={() => setTab("login")}
+            onClick={() => { setTab("login"); setError(null); setSuccess(null); }}
+            type="button"
           >
             Logga in
           </button>
         </div>
       )}
-      <div className="bg-white p-6 rounded-b-md border border-t-0 border-gray-200 shadow-sm">
-        {tab === "signup" ? (
-          <Auth
-            supabaseClient={supabase}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                brand: '#2563eb',
-                brandAccent: '#1d4ed8',
-                brandButtonText: '#fff',
-                messageSuccessBackground: '#2563eb',
-                messageSuccessText: '#fff',
-                inputBorder: '#2563eb',
-                inputLabelText: '#2563eb'
-              }
-            }}
-            providers={[]}
-            view="sign_up"
-            localization={{
-              variables: {
-                sign_up: {
-                  email_label: "E-post",
-                  email_input_placeholder: "Ange din e-postadress",
-                  password_label: "Lösenord",
-                  password_input_placeholder: "Ange ditt lösenord",
-                  button_label: "Skapa konto",
-                  link_text: "Har du redan ett konto? Logga in"
-                },
-                sign_in: {
-                  email_label: "E-post",
-                  email_input_placeholder: "Ange din e-postadress",
-                  password_label: "Lösenord",
-                  password_input_placeholder: "Ange ditt lösenord",
-                  button_label: "Logga in",
-                  link_text: "Har du inget konto? Skapa konto"
-                },
-                forgotten_password: {
-                  email_label: "E-post",
-                  email_input_placeholder: "Ange din e-postadress",
-                  button_label: "Skicka återställningslänk",
-                  link_text: "Tillbaka till inloggning"
-                }
-              }
-            }}
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-b-md border border-t-0 border-gray-200 shadow-sm space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-blue-800 mb-1">E-post</label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+            placeholder="Ange din e-postadress"
+            autoComplete="email"
           />
-        ) : (
-          <Auth
-            supabaseClient={supabase}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                brand: '#2563eb',
-                brandAccent: '#1d4ed8',
-                brandButtonText: '#fff',
-                messageSuccessBackground: '#2563eb',
-                messageSuccessText: '#fff',
-                inputBorder: '#2563eb',
-                inputLabelText: '#2563eb'
-              }
-            }}
-            providers={[]}
-            view="sign_in"
-            localization={{
-              variables: {
-                sign_up: {
-                  email_label: "E-post",
-                  email_input_placeholder: "Ange din e-postadress",
-                  password_label: "Lösenord",
-                  password_input_placeholder: "Ange ditt lösenord",
-                  button_label: "Skapa konto",
-                  link_text: "Har du redan ett konto? Logga in"
-                },
-                sign_in: {
-                  email_label: "E-post",
-                  email_input_placeholder: "Ange din e-postadress",
-                  password_label: "Lösenord",
-                  password_input_placeholder: "Ange ditt lösenord",
-                  button_label: "Logga in",
-                  link_text: "Har du inget konto? Skapa konto"
-                },
-                forgotten_password: {
-                  email_label: "E-post",
-                  email_input_placeholder: "Ange din e-postadress",
-                  button_label: "Skicka återställningslänk",
-                  link_text: "Tillbaka till inloggning"
-                }
-              }
-            }}
-          />
+        </div>
+        {tab !== "reset" && (
+          <div>
+            <label className="block text-sm font-medium text-blue-800 mb-1">Lösenord</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+              placeholder="Ange ditt lösenord"
+              autoComplete={tab === "signup" ? "new-password" : "current-password"}
+            />
+          </div>
+        )}
+        {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
+        {success && <div className="text-green-700 text-sm mt-2">{success}</div>}
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+          disabled={loading}
+        >
+          {tab === "signup" && (loading ? "Skapar konto..." : "Skapa konto")}
+          {tab === "login" && (loading ? "Loggar in..." : "Logga in")}
+          {tab === "reset" && (loading ? "Skickar..." : "Skicka återställningslänk")}
+        </button>
+        {tab === "login" && (
+          <div className="text-center mt-2">
+            <a
+              role="button"
+              tabIndex={0}
+              className="text-sm text-blue-600 underline bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer hover:text-blue-800"
+              onClick={e => { e.preventDefault(); setTab("reset"); setError(null); setSuccess(null); }}
+            >
+              Glömt lösenord?
+            </a>
+          </div>
+        )}
+      </form>
+      <div className="text-center mt-4 flex flex-col gap-2">
+        {tab === "signup" && (
+          <a
+            role="button"
+            tabIndex={0}
+            className="text-sm text-blue-600 underline bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer hover:text-blue-800"
+            onClick={e => { e.preventDefault(); setTab("login"); setError(null); setSuccess(null); }}
+          >
+            Har du redan ett konto? Logga in
+          </a>
+        )}
+        {tab === "login" && (
+          <a
+            role="button"
+            tabIndex={0}
+            className="text-sm text-blue-600 underline bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer hover:text-blue-800"
+            onClick={e => { e.preventDefault(); setTab("signup"); setError(null); setSuccess(null); }}
+          >
+            Har du inget konto? Skapa konto
+          </a>
+        )}
+        {tab === "reset" && (
+          <a
+            role="button"
+            tabIndex={0}
+            className="text-sm text-blue-600 underline bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer hover:text-blue-800"
+            onClick={e => { e.preventDefault(); setTab("login"); setError(null); setSuccess(null); }}
+          >
+            Tillbaka till inloggning
+          </a>
         )}
       </div>
     </div>
