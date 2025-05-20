@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Menu, X } from 'lucide-react';
 
 interface Page {
   id: string;
@@ -45,7 +45,7 @@ const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => 
           </div>
           {/* Mobil menyknapp */}
           <button className="md:hidden ml-2 p-2 rounded hover:bg-gray-100 text-gray-700" onClick={() => setSidebarOpen(true)} aria-label="Öppna meny">
-            <Bars3Icon className="w-7 h-7" />
+            <Menu className="w-7 h-7" />
           </button>
         </div>
       </header>
@@ -73,7 +73,7 @@ const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => 
               <div className="flex items-center justify-between mb-6">
                 <span className="font-bold text-gray-900 text-lg">Innehåll</span>
                 <button onClick={() => setSidebarOpen(false)} className="p-2 rounded hover:bg-gray-100">
-                  <XMarkIcon className="w-6 h-6 text-gray-700" />
+                  <X className="w-6 h-6 text-gray-700" />
                 </button>
               </div>
               <nav className="space-y-1">

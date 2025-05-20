@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Menu, X } from 'lucide-react';
 import HomeHandbookClient from './HomeHandbookClient';
 
 export const dynamic = 'force-dynamic';
