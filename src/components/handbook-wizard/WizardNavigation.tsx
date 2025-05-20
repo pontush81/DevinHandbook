@@ -70,19 +70,20 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
   
   return (
     <div className="flex flex-col sm:flex-row justify-between items-center mt-8 gap-4">
-      <button
-        onClick={goToPrevStep}
-        disabled={currentStep === 0}
-        className={`px-4 py-2 rounded-md font-semibold transition-colors duration-150 shadow-sm
-          ${currentStep === 0
-            ? "bg-blue-100 text-blue-300 cursor-not-allowed"
-            : "bg-blue-50 text-blue-700 hover:bg-blue-100 focus:ring-2 focus:ring-blue-300"}
-        `}
-      >
-        Föregående
-      </button>
+      {currentStep > 0 ? (
+        <button
+          onClick={goToPrevStep}
+          className={`px-4 py-2 rounded-md font-semibold transition-colors duration-150 shadow-sm
+            bg-blue-50 text-blue-700 hover:bg-blue-100 focus:ring-2 focus:ring-blue-300
+          `}
+        >
+          Föregående
+        </button>
+      ) : (
+        <div className="w-24"></div>
+      )}
       <div className="flex items-center gap-2">{renderStepIndicators()}</div>
-      {renderNextButton()}
+      {(currentStep !== 0 || user) ? renderNextButton() : <div className="w-24"></div>}
     </div>
   );
 }
