@@ -140,6 +140,7 @@ h1, .h1 {
   line-height: 1.15;
   color: #18181b;
   margin-bottom: 1.5rem;
+  font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
 }
 h2, .h2 {
   font-size: 2rem;
@@ -148,9 +149,7 @@ h2, .h2 {
   line-height: 1.2;
   color: #18181b;
   margin-bottom: 1.2rem;
-  font-family: 'Indie Flower', cursive;
-  font-weight: 400;
-  letter-spacing: 0.01em;
+  font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
 }
 h3, .h3 {
   font-size: 1.3rem;
@@ -159,9 +158,7 @@ h3, .h3 {
   line-height: 1.3;
   color: #18181b;
   margin-bottom: 1rem;
-  font-family: 'Indie Flower', cursive;
-  font-weight: 400;
-  letter-spacing: 0.01em;
+  font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
 }
 p, li {
   color: #444;

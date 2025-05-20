@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
+// Alla handböcker och deras innehåll ska använda 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif som font-family för rubriker, brödtext och UI-element.
+
 export interface Page {
   id: string;
   title: string;

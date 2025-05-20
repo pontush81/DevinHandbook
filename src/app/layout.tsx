@@ -63,14 +63,14 @@ export default function RootLayout({
           body {
             background-color: #ffffff;
             color: #333333;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
             margin: 0;
             padding: 0;
             line-height: 1.5;
           }
           
           /* Base typography */
-          h1, h2, h3, h4, h5, h6 { margin-top: 1.5rem; margin-bottom: 1rem; color: #111; }
+          h1, h2, h3, h4, h5, h6 { margin-top: 1.5rem; margin-bottom: 1rem; color: #111; font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif; }
           h1 { font-size: 2.25rem; font-weight: 700; }
           h2 { font-size: 1.75rem; font-weight: 600; }
           h3 { font-size: 1.5rem; font-weight: 600; }
@@ -87,6 +87,7 @@ export default function RootLayout({
             border-radius: 0.25rem;
             cursor: pointer;
             font-size: 1rem;
+            font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
           }
           button:hover, .btn:hover {
             background: #1d4ed8;
@@ -97,6 +98,7 @@ export default function RootLayout({
             border-radius: 0.25rem;
             font-size: 1rem;
             line-height: 1.5;
+            font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
           }
           
           /* Layout */
@@ -129,6 +131,7 @@ export default function RootLayout({
             border: 1px solid #ffeeba;
             border-radius: 4px;
             font-size: 14px;
+            font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
           }
         `}} />
         
