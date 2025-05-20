@@ -11,24 +11,34 @@ export default function LoginPage() {
         <h2 className="text-2xl font-bold mb-4 text-center">Logga in</h2>
         <Auth
           supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
+          appearance={{
+            theme: ThemeSupa,
+            variables: {
+              brand: '#2563eb',
+              brandAccent: '#1d4ed8',
+              brandButtonText: '#fff'
+            }
+          }}
           providers={[]}
+          view="sign_in"
           localization={{
             variables: {
               sign_in: {
                 email_label: "E-post",
                 password_label: "Lösenord",
                 button_label: "Logga in",
-                link_text: "Har du redan ett konto? Logga in"
+                link_text: "Har du inget konto? Skapa konto"
               },
               sign_up: {
                 email_label: "E-post",
                 password_label: "Lösenord",
                 button_label: "Skapa konto",
-                link_text: "Har du inget konto? Skapa konto"
+                link_text: "Har du redan ett konto? Logga in"
               },
               forgotten_password: {
-                link_text: "Glömt lösenord?"
+                email_label: "E-post",
+                button_label: "Skicka återställningslänk",
+                link_text: "Tillbaka till inloggning"
               }
             }
           }}

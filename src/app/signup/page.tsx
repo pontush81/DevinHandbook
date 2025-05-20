@@ -11,7 +11,14 @@ export default function SignupPage() {
         <h2 className="text-2xl font-bold mb-4 text-center">Skapa konto</h2>
         <Auth
           supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
+          appearance={{
+            theme: ThemeSupa,
+            variables: {
+              brand: '#2563eb',
+              brandAccent: '#1d4ed8',
+              brandButtonText: '#fff'
+            }
+          }}
           providers={[]}
           view="sign_up"
           localization={{
@@ -29,7 +36,9 @@ export default function SignupPage() {
                 link_text: "Har du inget konto? Skapa konto"
               },
               forgotten_password: {
-                link_text: "Glömt lösenord?"
+                email_label: "E-post",
+                button_label: "Skicka återställningslänk",
+                link_text: "Tillbaka till inloggning"
               }
             }
           }}
