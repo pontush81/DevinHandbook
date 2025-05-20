@@ -70,7 +70,11 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
               variables: {
                 brand: '#2563eb',
                 brandAccent: '#1d4ed8',
-                brandButtonText: '#fff'
+                brandButtonText: '#fff',
+                messageSuccessBackground: '#2563eb',
+                messageSuccessText: '#fff',
+                inputBorder: '#2563eb',
+                inputLabelText: '#2563eb'
               }
             }}
             providers={[]}
@@ -102,7 +106,11 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
               variables: {
                 brand: '#2563eb',
                 brandAccent: '#1d4ed8',
-                brandButtonText: '#fff'
+                brandButtonText: '#fff',
+                messageSuccessBackground: '#2563eb',
+                messageSuccessText: '#fff',
+                inputBorder: '#2563eb',
+                inputLabelText: '#2563eb'
               }
             }}
             providers={[]}
