@@ -11,7 +11,7 @@ export default function TestUI() {
   }, []);
   
   return (
-    <div className="flex flex-col min-h-screen p-8" style={{ fontFamily: 'Inter, Helvetica Neue, Arial, Helvetica, sans-serif' }}>
+    <div className="flex flex-col min-h-screen p-8" style={{ fontFamily: 'Instrument Sans, Helvetica Neue, Arial, Helvetica, sans-serif' }}>
       <header className="py-4 border-b mb-8">
         <h1 className="text-2xl font-bold text-blue-600">Handbok.org - Testmiljö</h1>
         <p className="text-gray-600">Du är på {host} - testversionen av Handbok.org</p>

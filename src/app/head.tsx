@@ -10,7 +10,7 @@ export default function Head() {
       <style dangerouslySetInnerHTML={{ __html: `
         /* Grundläggande stilar som garanterat laddas */
         body {
-          font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+          font-family: 'Instrument Sans', 'Helvetica Neue', Arial, Helvetica, sans-serif;
           line-height: 1.5;
           color: #333;
           margin: 0;
@@ -19,7 +19,7 @@ export default function Head() {
           margin: 0 auto;
         }
         a { color: #2563eb; }
-        h1, h2, h3 { color: #111; font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif; }
+        h1, h2, h3 { color: #111; font-family: 'Instrument Sans', 'Helvetica Neue', Arial, Helvetica, sans-serif; }
         
         /* Stilar för de vanligaste komponenterna */
         button, .btn, input[type="button"], input[type="submit"] {
@@ -30,7 +30,7 @@ export default function Head() {
           border-radius: 0.25rem;
           font-weight: 500;
           cursor: pointer;
-          font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+          font-family: 'Instrument Sans', 'Helvetica Neue', Arial, Helvetica, sans-serif;
         }
         input, textarea, select {
           padding: 0.5rem;
@@ -38,7 +38,7 @@ export default function Head() {
           border-radius: 0.25rem;
           width: 100%;
           max-width: 30rem;
-          font-family: 'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+          font-family: 'Instrument Sans', 'Helvetica Neue', Arial, Helvetica, sans-serif;
         }
         
         /* Hjälpklasser för layout */
