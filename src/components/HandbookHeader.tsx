@@ -1,9 +1,14 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 const HandbookHeader: React.FC = () => {
   const { user, signOut, isLoading } = useAuth();
+  const pathname = usePathname();
+
+  // Döljer användarinfo på publika flows
+  const isPublicFlow = pathname === '/create-handbook' || pathname?.includes('/create-handbook');
 
   if (isLoading) return null;
 
@@ -11,7 +16,7 @@ const HandbookHeader: React.FC = () => {
     <nav aria-label="Huvudmeny" className="flex justify-between items-center py-4 px-6 border-b bg-white">
       <div className="font-bold text-lg">Digital Handbok</div>
       <div>
-        {user ? (
+        {user && !isPublicFlow ? (
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-700">{user.email}</span>
             {user.app_metadata?.roles && (
@@ -26,7 +31,7 @@ const HandbookHeader: React.FC = () => {
               Logga ut
             </button>
           </div>
-        ) : (
+        ) : !user && !isPublicFlow ? (
           <Link
             href="/login"
             className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
@@ -36,7 +41,7 @@ const HandbookHeader: React.FC = () => {
           >
             Logga in
           </Link>
-        )}
+        ) : null}
       </div>
     </nav>
   );
