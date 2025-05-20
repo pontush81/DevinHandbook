@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export function SignInForm() {
+export function SignInForm({ showSignupLink = true }: { showSignupLink?: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +80,14 @@ export function SignInForm() {
           </button>
         </div>
 
+        {showSignupLink && (
+          <div className="text-sm text-center">
+            Har du inget konto?{" "}
+            <Link href="/register" className="text-black hover:underline">
+              Skapa konto
+            </Link>
+          </div>
+        )}
         <div className="text-sm text-center">
           <Link href="/reset-password" className="text-black hover:underline">
             Glömt lösenord?

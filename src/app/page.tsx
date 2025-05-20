@@ -63,8 +63,10 @@ export default async function HomePage() {
           <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">Välkommen till Handbok.org</h1>
           <p className="text-lg text-gray-600 mb-8">Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.</p>
         </div>
-        <a href="/create-handbook" className="w-full block text-center bg-blue-600 hover:bg-blue-700 !text-white opacity-100 text-lg font-semibold rounded-full py-4 transition mb-2 shadow-sm">Skapa ny handbok</a>
-        <AutoSuggestHandbookSearch />
+        <div className="w-full flex flex-col gap-4">
+          <a href="/create-handbook" className="w-full text-center bg-blue-600 hover:bg-blue-700 !text-white opacity-100 text-lg font-semibold rounded-full py-4 transition mb-0 shadow-sm">Skapa ny handbok</a>
+          <AutoSuggestHandbookSearch />
+        </div>
       </main>
     </div>
   );
