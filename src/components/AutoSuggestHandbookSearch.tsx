@@ -14,11 +14,12 @@ export default function AutoSuggestHandbookSearch() {
     if (query.length < 2) {
       setResults([]);
       setShowDropdown(false);
+      setLoading(false);
       return;
     }
     setLoading(true);
     const timeout = setTimeout(() => {
-      fetch(`/api/search-handbooks?q=${encodeURIComponent(query)}`)
+      fetch(`/api/search-handbooks?q=${encodeURIComponent(query)}`, { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
           setResults(data.results || []);
@@ -85,7 +86,11 @@ export default function AutoSuggestHandbookSearch() {
           <span>Ingen förening hittades</span>
         </div>
       )}
-      {loading && <div className="absolute right-4 top-3 text-gray-400 animate-spin">⏳</div>}
+      {loading && (
+        <div className="absolute right-4 top-3">
+          <span className="inline-block w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+        </div>
+      )}
     </div>
   );
 } 

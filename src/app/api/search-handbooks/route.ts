@@ -20,5 +20,14 @@ export async function GET(request: NextRequest) {
     console.error('[search-handbooks] Query param q:', q);
     return NextResponse.json({ error: error.message, details: error }, { status: 500 });
   }
-  return NextResponse.json({ results: data });
+  return NextResponse.json(
+    { results: data },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    }
+  );
 } 
