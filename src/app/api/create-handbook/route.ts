@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 
 export async function POST(request: NextRequest) {
   // Verify API key for security (optional in development)
@@ -65,25 +66,13 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
     
-    // Create the handbook
-    const { data: handbook, error: handbookError } = await supabase
-      .from('handbooks')
-      .insert({
-        title,
-        subdomain,
-        published: true
-      })
-      .select()
-      .single();
-      
-    if (handbookError) {
-      console.error('Error creating handbook:', handbookError);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Failed to create handbook',
-        details: handbookError.message
-      }, { status: 500 });
-    }
+    // Hämta userId från request/session om möjligt
+    let userId = null;
+    // Om du har ett sätt att hämta userId från session eller JWT, gör det här
+    // t.ex. userId = getUserIdFromRequest(request);
+
+    // Skapa handboken
+    const handbookId = await createHandbookWithSectionsAndPages(title, subdomain, /* template */ { sections: [] }, userId);
     
     // Create default welcome section
     const { data: section, error: sectionError } = await supabase
@@ -92,7 +81,7 @@ export async function POST(request: NextRequest) {
         title: 'Welcome',
         description: 'Welcome to this handbook',
         order: 0,
-        handbook_id: handbook.id
+        handbook_id: handbookId
       })
       .select()
       .single();
@@ -122,7 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       message: 'Handbook created successfully',
-      handbook_id: handbook.id,
+      handbook_id: handbookId,
       subdomain,
       url: `https://${subdomain}.handbok.org`
     }, { status: 201 });

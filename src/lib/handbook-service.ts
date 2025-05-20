@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache';
 export async function createHandbookWithSectionsAndPages(
   name: string,
   subdomain: string,
-  template: HandbookTemplate
+  template: HandbookTemplate,
+  userId: string
 ) {
   const supabase = getServiceSupabase();
   
@@ -29,6 +30,20 @@ export async function createHandbookWithSectionsAndPages(
   if (!handbookObj || !handbookObj.id) {
     console.error('[Handbook] Misslyckades med att skapa handbok eller saknar id:', handbook);
     throw new Error('Misslyckades med att skapa handbok eller saknar id. Avbryter.');
+  }
+
+  // NYTT: Lägg till skaparen som admin i handbook_permissions
+  if (userId) {
+    const { error: permError } = await supabase
+      .from('handbook_permissions')
+      .insert({
+        handbook_id: handbookObj.id,
+        user_id: userId,
+        role: 'admin',
+      });
+    if (permError) {
+      console.error('[Handbook] Kunde inte lägga till skaparen i handbook_permissions:', permError);
+    }
   }
 
   const activeSections = template.sections

@@ -222,6 +222,151 @@ export default function EditHandbookClient({
     }
   };
 
+  // --- Permissions-komponent ---
+  const PermissionsSection: React.FC<{ handbookId: string }> = ({ handbookId }) => {
+    const [permissions, setPermissions] = useState<any[]>([]);
+    const [email, setEmail] = useState("");
+    const [role, setRole] = useState<'editor' | 'viewer'>("editor");
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+    const fetchPermissions = useCallback(async () => {
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase
+        .from("handbook_permissions")
+        .select("id, role, user_id, profiles: user_id (email)")
+        .eq("handbook_id", handbookId);
+      if (error) setError("Kunde inte hämta behörigheter");
+      setPermissions(data || []);
+      setLoading(false);
+    }, [handbookId]);
+
+    useEffect(() => {
+      fetchPermissions();
+    }, [fetchPermissions]);
+
+    const handleInvite = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setSuccess(null);
+      setLoading(true);
+      const res = await fetch("/api/handbook/add-permission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handbookId, email, role }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess("Redaktör/läsare tillagd!");
+        setEmail("");
+        fetchPermissions();
+      } else {
+        setError(data.message || "Kunde inte lägga till redaktör/läsare");
+      }
+      setLoading(false);
+      setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+    };
+
+    const handleRemove = async (userId: string) => {
+      setError(null);
+      setSuccess(null);
+      setLoading(true);
+      const res = await fetch("/api/handbook/remove-permission", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handbookId, userId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess("Behörighet borttagen!");
+        fetchPermissions();
+      } else {
+        setError(data.message || "Kunde inte ta bort behörighet");
+      }
+      setLoading(false);
+      setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+    };
+
+    const handleRoleChange = async (userId: string, newRole: 'editor' | 'viewer') => {
+      setUpdatingId(userId);
+      setError(null);
+      setSuccess(null);
+      const res = await fetch("/api/handbook/update-permission", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handbookId, userId, role: newRole }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess("Roll uppdaterad!");
+        fetchPermissions();
+      } else {
+        setError(data.message || "Kunde inte uppdatera roll");
+      }
+      setUpdatingId(null);
+      setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+    };
+
+    return (
+      <section className="mt-12 p-6 bg-white rounded-xl shadow border">
+        <h3 className="text-lg font-semibold mb-2">Redaktörer & behörigheter</h3>
+        {success && <div className="mb-2 p-2 bg-green-100 text-green-700 rounded">{success}</div>}
+        {error && <div className="mb-2 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
+        <form onSubmit={handleInvite} className="flex gap-2 items-center mb-4">
+          <input
+            type="email"
+            placeholder="E-post"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            className="border rounded px-2 py-1"
+          />
+          <select value={role} onChange={e => setRole(e.target.value as any)} className="border rounded px-2 py-1">
+            <option value="editor">Redaktör</option>
+            <option value="viewer">Läsare</option>
+          </select>
+          <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded" disabled={loading}>Bjud in</button>
+        </form>
+        <div>
+          <h4 className="font-medium mb-1">Nuvarande behörigheter:</h4>
+          {loading ? (
+            <div>Laddar...</div>
+          ) : permissions.length === 0 ? (
+            <div>Inga redaktörer/läsare tillagda ännu.</div>
+          ) : (
+            <ul className="divide-y">
+              {permissions.map((perm) => (
+                <li key={perm.id} className="py-2 flex justify-between items-center">
+                  <span>{perm.profiles?.email || perm.user_id}</span>
+                  <select
+                    value={perm.role}
+                    onChange={e => handleRoleChange(perm.user_id, e.target.value as 'editor' | 'viewer')}
+                    className="ml-2 px-2 py-0.5 rounded border text-xs"
+                    disabled={updatingId === perm.user_id}
+                  >
+                    <option value="editor">Redaktör</option>
+                    <option value="viewer">Läsare</option>
+                  </select>
+                  <button
+                    onClick={() => handleRemove(perm.user_id)}
+                    className="ml-4 text-xs text-red-600 hover:underline"
+                    disabled={loading}
+                  >
+                    Ta bort
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    );
+  };
+  // --- SLUT permissions-komponent ---
+
   if (isLoading || isLoadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -422,6 +567,7 @@ export default function EditHandbookClient({
             </div>
           </div>
         </div>
+        <PermissionsSection handbookId={id} />
       </main>
     </div>
   );

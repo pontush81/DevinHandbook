@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
         const finalSubdomain = isTestMode ? `test.${subdomain}` : subdomain;
         
         console.log(`Creating handbook with name: ${handbookName}, subdomain: ${finalSubdomain}`);
-        await createHandbookInSupabase(handbookName, finalSubdomain);
+        const userId = null; // TODO: Hämta userId om möjligt
+        await createHandbookInSupabase(handbookName, finalSubdomain, userId);
       }
     }
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function createHandbookInSupabase(name: string, subdomain: string) {
+async function createHandbookInSupabase(name: string, subdomain: string, userId: string | null) {
   try {
     const defaultTemplate = {
       sections: [
@@ -62,7 +63,7 @@ async function createHandbookInSupabase(name: string, subdomain: string) {
       ]
     };
     
-    return await createHandbookWithSectionsAndPages(name, subdomain, defaultTemplate);
+    return await createHandbookWithSectionsAndPages(name, subdomain, defaultTemplate, userId);
   } catch (error: unknown) {
     console.error('Error creating handbook in Supabase:', error);
     throw error;
