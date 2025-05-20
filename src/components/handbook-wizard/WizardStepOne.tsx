@@ -7,25 +7,37 @@ import { SignUpForm } from "@/components/auth/SignUpForm";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 
 export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
-  const { user, isLoading } = useAuth();
-  const { setCurrentStep } = useHandbookStore();
+  const { user, isLoading, signOut } = useAuth();
+  const { setCurrentStep, currentStep } = useHandbookStore();
   const [tab, setTab] = useState<"signup" | "login">("signup");
+  const [showForm, setShowForm] = useState(false);
 
   if (isLoading) {
     return <div className="text-center py-12">Laddar...</div>;
   }
 
-  if (user) {
+  if (user && !showForm) {
     return (
       <div className="space-y-6 text-center">
         <h2 className="text-2xl font-bold">Du är inloggad</h2>
         <p className="text-gray-600 mb-4">Du är inloggad som <span className="font-semibold">{user.email}</span>.</p>
-        <button
-          className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition"
-          onClick={() => setCurrentStep(1)}
-        >
-          Gå vidare
-        </button>
+        <div className="flex flex-col gap-2 items-center">
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition"
+            onClick={() => setCurrentStep(1)}
+          >
+            Gå vidare
+          </button>
+          <button
+            className="text-sm text-blue-600 underline mt-2"
+            onClick={async () => {
+              await signOut();
+              setShowForm(true);
+            }}
+          >
+            Byt konto
+          </button>
+        </div>
       </div>
     );
   }
