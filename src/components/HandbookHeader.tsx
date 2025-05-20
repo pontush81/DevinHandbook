@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -34,7 +35,7 @@ const HandbookHeader: React.FC = () => {
         ) : !user && !isPublicFlow ? (
           <Link
             href="/login"
-            className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
+            className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm focus:outline focus:outline-2 focus:outline-blue-300 focus:text-white active:text-white"
             aria-label="Logga in"
             data-testid="login-link"
             prefetch={true}
