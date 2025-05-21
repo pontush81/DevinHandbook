@@ -8,10 +8,25 @@ import { WizardStepThree } from "@/components/handbook-wizard/WizardStepThree";
 import { WizardStepFour } from "@/components/handbook-wizard/WizardStepFour";
 import { WizardStepFive } from "@/components/handbook-wizard/WizardStepFive";
 import { WizardNavigation } from "@/components/handbook-wizard/WizardNavigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CreateHandbook() {
+  const { user, isLoading } = useAuth();
   const { currentStep } = useHandbookStore();
   
+  // Visa loader om auth-status är oklar
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div>Laddar...</div></div>;
+  }
+
+  // Redirecta till login om användaren inte är inloggad
+  if (!user) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    return null;
+  }
+
   const renderStep = () => {
     switch (currentStep) {
       case 0:
