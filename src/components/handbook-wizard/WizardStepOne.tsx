@@ -55,7 +55,13 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
     setEmailAlreadyExists(false);
     setLoading(true);
     if (tab === "signup") {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/create-handbook` : undefined,
+        },
+      });
       if (error) {
         if (
           error.code === "user_already_exists" ||
@@ -79,7 +85,9 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError("Fel e-post eller lösenord.");
     } else if (tab === "reset") {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/create-handbook` : undefined,
+      });
       if (error) setError(error.message);
       else setSuccess("Återställningslänk skickad till din e-post.");
     }
@@ -88,24 +96,6 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
-      {showTabs && (
-        <div className="flex justify-center gap-4 mb-6">
-          <button
-            className={`px-4 py-2 rounded-t-md font-semibold border-b-2 transition-colors duration-150 ${tab === "signup" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-blue-600"}`}
-            onClick={() => { setTab("signup"); setError(null); setSuccess(null); }}
-            type="button"
-          >
-            Skapa konto
-          </button>
-          <button
-            className={`px-4 py-2 rounded-t-md font-semibold border-b-2 transition-colors duration-150 ${tab === "login" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-blue-600"}`}
-            onClick={() => { setTab("login"); setError(null); setSuccess(null); }}
-            type="button"
-          >
-            Logga in
-          </button>
-        </div>
-      )}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-b-md border border-t-0 border-gray-200 shadow-sm space-y-4">
         <div>
           <label className="block text-sm font-medium text-blue-800 mb-1">E-post</label>
@@ -193,7 +183,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
             className="text-sm text-blue-600 underline bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer hover:text-blue-800"
             onClick={e => { e.preventDefault(); setTab("signup"); setError(null); setSuccess(null); }}
           >
-            Har du inget konto? Skapa konto
+            Registrera konto
           </a>
         )}
         {tab === "reset" && (
