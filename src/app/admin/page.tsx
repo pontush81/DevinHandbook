@@ -17,7 +17,7 @@ interface Handbook {
   subdomain: string;
   created_at: string;
   published: boolean;
-  user_id: string;
+  owner_id: string;
 }
 
 interface User {

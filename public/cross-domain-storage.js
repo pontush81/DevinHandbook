@@ -20,116 +20,87 @@
   const isApiCall = window.location.pathname.startsWith('/api/');
   
   // Om vi är på en subdomän av handbok.org eller staging.handbok.org
-  // och det INTE är ett API-anrop och inte är huvuddomänerna
-  if (!isApiCall && ((currentDomain.endsWith('.handbok.org') && 
-       currentDomain !== 'www.handbok.org' && 
-       currentDomain !== 'handbok.org' &&
-       currentDomain !== 'staging.handbok.org') || 
-      (currentDomain.endsWith('.staging.handbok.org') &&
-       currentDomain !== 'staging.handbok.org'))) {
-    
-    let subdomain;
-    let targetDomain;
-    
-    if (currentDomain.endsWith('.staging.handbok.org')) {
-      // Format: subdomain.staging.handbok.org -> staging.handbok.org/handbook/subdomain
-      subdomain = currentDomain.split('.')[0];
-      targetDomain = 'https://staging.handbok.org';
-    } else if (isStaging) {
-      // Om vi är på staging.handbok.org eller en subdomain direkt under staging.handbok.org
-      subdomain = currentDomain.split('.')[0];
-      targetDomain = 'https://staging.handbok.org';
-    } else {
-      // Format: subdomain.handbok.org -> www.handbok.org/handbook/subdomain
-      subdomain = currentDomain.split('.')[0];
-      targetDomain = 'https://www.handbok.org';
-    }
-    
-    // Kommentera ut eller ta bort redirect till /handbook/[subdomain]
-    // window.location.href = targetDomain + '/handbook/' + subdomain;
-    return;
-  }
+  // och det INTE är ett API-anrop och inte i en iframe
+  const isSubdomain = (currentDomain.endsWith('handbok.org') && currentDomain !== 'handbok.org' && currentDomain !== 'staging.handbok.org');
   
-  // Enkel in-memory lagring som fallback
+  // Skapa en memory-baserad localStorage-ersättning
   const memoryStorage = {};
   
-  // Kontrollera om localStorage är tillgängligt
-  let localStorageAvailable = false;
-  try {
-    const testKey = '__test_storage__';
-    window.localStorage.setItem(testKey, 'test');
-    window.localStorage.removeItem(testKey);
-    localStorageAvailable = true;
-  } catch (e) {
-    console.warn('localStorage är inte tillgängligt. Använder in-memory lagring istället.', e);
-    localStorageAvailable = false;
-  }
-  
-  // Specialhantering för iframe-kontext
-  const iframeUnsafe = isInIframe && !localStorageAvailable;
-  
-  // Logga diagnostik
-  if (iframeUnsafe) {
-    console.log('Iframe-kontext detekterad utan localStorage-åtkomst. Använder säker fallback.');
-  }
-  
-  // Publik API - använd samma interface som localStorage
-  window.safeStorage = {
-    getItem: function(key) {
-      if (localStorageAvailable) {
-        try {
-          return localStorage.getItem(key);
-        } catch(e) {
-          console.warn('Kunde inte läsa från localStorage:', e);
-          return memoryStorage[key] || null;
-        }
+  // Fixa API-anrop som använder user_id istället för owner_id
+  // Detta är en patch för att fånga upp klientsidans requests innan de når servern
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init) {
+    // Hantera URL:er som strings eller Request-objekt
+    let url = input;
+    if (input instanceof Request) {
+      url = input.url;
+    }
+    
+    // Om URL:en innehåller user_id=eq, ändra det till owner_id=eq
+    if (typeof url === 'string' && url.includes('user_id=eq')) {
+      url = url.replace('user_id=eq', 'owner_id=eq');
+      if (input instanceof Request) {
+        // Skapa en ny Request med den ändrade URL:en
+        const newRequest = new Request(url, input);
+        return originalFetch(newRequest, init);
+      } else {
+        // Använd den ändrade URL:en direkt
+        return originalFetch(url, init);
       }
-      return memoryStorage[key] || null;
+    }
+    
+    // För alla andra anrop, skicka vidare till original fetch
+    return originalFetch(input, init);
+  };
+  
+  // Skapa safe storage for både vanlig och iframe-användning
+  const safeStorage = {
+    getItem: function(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        console.log('localStorage error, using memory storage:', e);
+        return memoryStorage[key] || null;
+      }
     },
     setItem: function(key, value) {
-      if (localStorageAvailable) {
-        try {
-          localStorage.setItem(key, value);
-          // Synka även till minnet för konsistens
-          memoryStorage[key] = value;
-          return;
-        } catch(e) {
-          console.warn('Kunde inte skriva till localStorage:', e);
-        }
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.log('localStorage error, using memory storage:', e);
+        memoryStorage[key] = value;
       }
-      memoryStorage[key] = value;
     },
     removeItem: function(key) {
-      if (localStorageAvailable) {
-        try {
-          localStorage.removeItem(key);
-        } catch(e) {
-          console.warn('Kunde inte ta bort från localStorage:', e);
-        }
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.log('localStorage error, using memory storage:', e);
+        delete memoryStorage[key];
       }
-      delete memoryStorage[key];
     },
     clear: function() {
-      if (localStorageAvailable) {
-        try {
-          localStorage.clear();
-        } catch(e) {
-          console.warn('Kunde inte rensa localStorage:', e);
-        }
-      }
-      
-      // Rensa minnet
-      for (let key in memoryStorage) {
-        delete memoryStorage[key];
+      try {
+        localStorage.clear();
+      } catch (e) {
+        console.log('localStorage error, using memory storage:', e);
+        Object.keys(memoryStorage).forEach(key => {
+          delete memoryStorage[key];
+        });
       }
     }
   };
   
-  // Sätt upp synonymer för bakåtkompatibilitet
-  window.safeLocalStorage = window.safeStorage;
+  // Tillgängliggör safe storage globalt
+  window.safeStorage = safeStorage;
   
-  // Rapportera status för diagnostik
-  console.log('Säker lagringshantering initierad. localStorage ' + 
-    (localStorageAvailable ? 'tillgänglig' : 'otillgänglig') + 
-    (isInIframe ? ' (iframe-kontext)' : ''));
+  // Om vi behöver redirecta, gör det nu
+  if (isSubdomain && !isApiCall && !isInIframe) {
+    // Spara nuvarande URL för att kunna återvända
+    try {
+      safeStorage.setItem('redirect_after_login', window.location.href);
+    } catch (e) {
+      console.error('Kunde inte spara redirect URL:', e);
+    }
+  }
 })(); 

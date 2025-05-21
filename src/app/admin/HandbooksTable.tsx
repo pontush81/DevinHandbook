@@ -12,7 +12,7 @@ interface Handbook {
   subdomain: string;
   created_at: string;
   published: boolean;
-  user_id: string;
+  owner_id: string;
 }
 
 interface HandbooksTableProps {
@@ -140,7 +140,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                     </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {handbook.user_id}
+                    {handbook.owner_id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-3">
