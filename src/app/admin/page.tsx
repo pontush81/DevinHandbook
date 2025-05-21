@@ -9,6 +9,7 @@ import { HandbooksTable } from "./HandbooksTable";
 import { UsersTable } from "./UsersTable";
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { checkIsSuperAdmin } from "@/lib/user-utils";
 
 interface Handbook {
   id: string;
@@ -38,15 +39,20 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const checkSuperadmin = async () => {
       if (!user) return;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("is_superadmin")
-        .eq("id", user.id)
-        .single();
-      
-      if (!error && data && data.is_superadmin) {
-        setIsSuperadmin(true);
-      } else {
+      try {
+        const isSuperAdmin = await checkIsSuperAdmin(
+          supabase, 
+          user.id, 
+          user.email || ''
+        );
+        
+        if (isSuperAdmin) {
+          setIsSuperadmin(true);
+        } else {
+          router.push("/dashboard");
+        }
+      } catch (error) {
+        console.error("Error checking superadmin status:", error);
         router.push("/dashboard");
       }
     };

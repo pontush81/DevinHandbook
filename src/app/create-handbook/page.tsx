@@ -5,6 +5,7 @@ import { useHandbookStore } from "@/lib/store/handbook-store";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { checkIsSuperAdmin } from "@/lib/user-utils";
 
 interface Handbook {
   id: string;
@@ -30,12 +31,18 @@ export default function CreateHandbook() {
   useEffect(() => {
     const fetchSuperadmin = async () => {
       if (!user) return;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("is_superadmin")
-        .eq("id", user.id)
-        .single();
-      setIsSuperadmin(!error && data && data.is_superadmin);
+      try {
+        // Använd den nya hjälpfunktionen som säkerställer att profilen finns
+        const isSuperAdmin = await checkIsSuperAdmin(
+          supabase, 
+          user.id, 
+          user.email || ''
+        );
+        setIsSuperadmin(isSuperAdmin);
+      } catch (error) {
+        console.error("Error checking superadmin status:", error);
+        setIsSuperadmin(false);
+      }
     };
     if (user) fetchSuperadmin();
   }, [user]);
@@ -47,7 +54,7 @@ export default function CreateHandbook() {
       const { data, error } = await supabase
         .from("handbooks")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
       setHandbooks(data || []);
       setIsLoadingHandbooks(false);

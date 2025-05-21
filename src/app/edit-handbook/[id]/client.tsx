@@ -79,7 +79,7 @@ export default function EditHandbookClient({
         .from("handbooks")
         .select("*")
         .eq("id", id)
-        .eq("user_id", user?.id)
+        .eq("owner_id", user?.id)
         .single();
       
       if (handbookError) throw handbookError;
