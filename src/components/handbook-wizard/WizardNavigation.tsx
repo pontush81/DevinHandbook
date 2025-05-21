@@ -12,6 +12,11 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
   const { currentStep, setCurrentStep, name, subdomain } = useHandbookStore();
   const { user } = useAuth();
   
+  // Visa inte navigationen på inloggningssteget
+  if (currentStep === 0) {
+    return null;
+  }
+  
   const canGoNext = () => {
     if (currentStep === 0) {
       return !!user;
