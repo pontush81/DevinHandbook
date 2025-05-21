@@ -11,26 +11,33 @@ function AuthCallbackContent() {
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
-    const accessToken = searchParams.get("access_token") || window.location.hash.match(/access_token=([^&]+)/)?.[1];
-    if (!accessToken) {
+    // Hämta tokens från URL-hash
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#", "?"));
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
+
+    if (!access_token || !refresh_token) {
       setStatus("error");
       setMessage("Ingen access token hittades. Prova att logga in igen eller klicka på länken i mailet.");
       return;
     }
-    supabase.auth.getUser(accessToken)
-      .then(({ data, error }) => {
-        if (error || !data.user) {
+
+    // Sätt sessionen i Supabase-klienten
+    supabase.auth.setSession({ access_token, refresh_token })
+      .then(({ error }) => {
+        if (error) {
           setStatus("error");
           setMessage("Kunde inte logga in. Prova igen eller kontakta support.");
         } else {
           setStatus("success");
           setMessage("E-post bekräftad! Du loggas nu in...");
           setTimeout(() => {
-            router.replace("/dashboard");
+            router.replace("/create-handbook");
           }, 1500);
         }
       });
-  }, [router, searchParams]);
+  }, [router]);
 
   if (status === "loading") {
     return <div className="text-center py-12">Verifierar länk...</div>;
