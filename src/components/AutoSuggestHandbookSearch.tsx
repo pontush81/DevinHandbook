@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { BookOpenIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { Input } from '@/components/ui/input';
 
 export default function AutoSuggestHandbookSearch() {
   const [query, setQuery] = useState('');
@@ -47,7 +48,7 @@ export default function AutoSuggestHandbookSearch() {
 
   return (
     <div className="w-full relative overflow-hidden">
-      <input
+      <Input
         ref={inputRef}
         type="text"
         value={query}

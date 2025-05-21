@@ -5,6 +5,15 @@ export default function Head() {
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <meta charSet="utf-8" />
       <meta name="description" content="Skapa en digital handbok för din bostadsrättsförening" />
+      <meta property="og:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
+      <meta property="og:description" content="Skapa en digital handbok för din bostadsrättsförening" />
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content="https://handbok.org" />
+      <meta property="og:image" content="https://handbok.org/og-image.png" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
+      <meta name="twitter:description" content="Skapa en digital handbok för din bostadsrättsförening" />
+      <meta name="twitter:image" content="https://handbok.org/og-image.png" />
       
       {/* Nödfalls-CSS som laddas direkt i head */}
       <style dangerouslySetInnerHTML={{ __html: `

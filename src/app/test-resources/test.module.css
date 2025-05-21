@@ -7,18 +7,18 @@
 
 /* Style for success status */
 .success {
-  color: green;
+  color: var(--success, #198754); /* fallback to green if not themed */
   font-weight: bold;
 }
 
 /* Style for failure status */
 .failed {
-  color: red;
+  color: var(--destructive, #dc3545); /* fallback to red if not themed */
   font-weight: bold;
 }
 
 /* Style for pending status */
 .pending {
-  color: orange;
+  color: var(--warning, #fd7e14); /* fallback to orange if not themed */
   font-style: italic;
 } 

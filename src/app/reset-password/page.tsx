@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
+    <div className="flex flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-sm">
         <h2 className="text-2xl font-bold mb-4 text-center">Återställ lösenord</h2>
         <Auth

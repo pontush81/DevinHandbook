@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function DnsTest() {
   const [host, setHost] = useState('');
@@ -157,26 +158,24 @@ export default function DnsTest() {
             )}
             
             <div className="mt-6 flex flex-wrap gap-4 justify-center">
-              <button
+              <Button
                 onClick={fetchDiagnosticData}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className=""
               >
                 Uppdatera diagnostik
-              </button>
-              
-              <button
+              </Button>
+              <Button
                 onClick={testNewSubdomain}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className=""
               >
                 Testa slumpmässig subdomän
-              </button>
-              
-              <button
+              </Button>
+              <Button
                 onClick={testSubdomainApi}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                className=""
               >
                 Testa subdomän API
-              </button>
+              </Button>
             </div>
             
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">

@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 import { CheckCircle2, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function WizardStepFive() {
   const { name, subdomain, template } = useHandbookStore();
@@ -195,13 +196,13 @@ export function WizardStepFive() {
           </div>
         )}
         
-        <button 
+        <Button 
           className="w-full mt-6 bg-black text-white py-3 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleCheckout}
           disabled={isLoading || !!handbookCreated || progressStep !== 'idle'}
         >
           {isLoading ? 'Förbereder betalning...' : 'Gå vidare till betalning'}
-        </button>
+        </Button>
         
         <p className="text-xs text-gray-500 mt-4 text-center">
           Efter betalning kommer din handbok att vara tillgänglig på{" "}

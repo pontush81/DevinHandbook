@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export default function TestSubdomains() {
   const [name, setName] = useState('');
@@ -85,12 +87,11 @@ export default function TestSubdomains() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">Handbokens namn</label>
-            <input
+            <Input
               type="text"
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
               placeholder="Min Testförening"
               required
             />
@@ -99,16 +100,16 @@ export default function TestSubdomains() {
           <div>
             <label htmlFor="subdomain" className="block text-sm font-medium text-gray-700">Subdomän</label>
             <div className="mt-1 flex rounded-md shadow-sm">
-              <input
+              <Input
                 type="text"
                 id="subdomain"
                 value={subdomain}
                 onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-                className="block w-full border border-gray-300 rounded-l-md px-3 py-2"
                 placeholder="min-test"
                 required
                 pattern="[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?"
                 title="Subdomänen får endast innehålla små bokstäver, siffror och bindestreck. Den får inte börja eller sluta med bindestreck."
+                className="rounded-l-md"
               />
               <span className="inline-flex items-center px-3 py-2 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500">
                 .handbok.org
@@ -119,13 +120,13 @@ export default function TestSubdomains() {
             </p>
           </div>
           
-          <button
+          <Button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+            className="w-full"
           >
             {isLoading ? 'Skapar...' : 'Skapa testhandbok'}
-          </button>
+          </Button>
         </form>
         
         {result && (

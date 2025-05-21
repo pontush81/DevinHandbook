@@ -1,5 +1,6 @@
 import React from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { MainLayout } from '@/components/layout/MainLayout';
 
 export default function CreateHandbookLayout({
   children,
@@ -8,11 +9,9 @@ export default function CreateHandbookLayout({
 }) {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gray-50">
-        <main>
-          {children}
-        </main>
-      </div>
+      <MainLayout variant="app" showAuth={false}>
+        {children}
+      </MainLayout>
     </AuthProvider>
   );
 }

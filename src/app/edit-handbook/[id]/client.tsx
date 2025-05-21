@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import FileUploader from "@/components/file-upload/FileUploader";
 import ReactMarkdown from "react-markdown";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Handbook {
   id: string;
@@ -316,19 +321,23 @@ export default function EditHandbookClient({
         {success && <div className="mb-2 p-2 bg-green-100 text-green-700 rounded">{success}</div>}
         {error && <div className="mb-2 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
         <form onSubmit={handleInvite} className="flex gap-2 items-center mb-4">
-          <input
+          <Input
             type="email"
             placeholder="E-post"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            className="border rounded px-2 py-1"
           />
-          <select value={role} onChange={e => setRole(e.target.value as any)} className="border rounded px-2 py-1">
-            <option value="editor">Redaktör</option>
-            <option value="viewer">Läsare</option>
-          </select>
-          <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded" disabled={loading}>Bjud in</button>
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="editor">Redaktör</SelectItem>
+              <SelectItem value="viewer">Läsare</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button type="submit" disabled={loading}>Bjud in</Button>
         </form>
         <div>
           <h4 className="font-medium mb-1">Nuvarande behörigheter:</h4>
@@ -341,22 +350,27 @@ export default function EditHandbookClient({
               {permissions.map((perm) => (
                 <li key={perm.id} className="py-2 flex justify-between items-center">
                   <span>{perm.profiles?.email || perm.user_id}</span>
-                  <select
+                  <Select
                     value={perm.role}
-                    onChange={e => handleRoleChange(perm.user_id, e.target.value as 'editor' | 'viewer')}
-                    className="ml-2 px-2 py-0.5 rounded border text-xs"
+                    onValueChange={value => handleRoleChange(perm.user_id, value as 'editor' | 'viewer')}
                     disabled={updatingId === perm.user_id}
                   >
-                    <option value="editor">Redaktör</option>
-                    <option value="viewer">Läsare</option>
-                  </select>
-                  <button
+                    <SelectTrigger className="ml-2 w-28 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="editor">Redaktör</SelectItem>
+                      <SelectItem value="viewer">Läsare</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
                     onClick={() => handleRemove(perm.user_id)}
                     className="ml-4 text-xs text-red-600 hover:underline"
                     disabled={loading}
+                    variant="link"
                   >
                     Ta bort
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -369,30 +383,34 @@ export default function EditHandbookClient({
 
   if (isLoading || isLoadingData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
-      </div>
+      <MainLayout variant="app" showAuth={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+        </div>
+      </MainLayout>
     );
   }
 
   if (!handbook) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Handbok hittades inte</h1>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
-          >
-            Tillbaka till dashboard
-          </button>
+      <MainLayout variant="app" showAuth={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Handbok hittades inte</h1>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
+            >
+              Tillbaka till dashboard
+            </button>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <MainLayout variant="app" showAuth={false}>
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div>
@@ -419,7 +437,6 @@ export default function EditHandbookClient({
           </div>
         </div>
       </header>
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="p-4 bg-red-50 text-red-600 rounded-md mb-6">
@@ -445,16 +462,13 @@ export default function EditHandbookClient({
                     <ul className="space-y-1 pl-4">
                       {section.pages.map((page) => (
                         <li key={page.id}>
-                          <button
+                          <Button
                             onClick={() => handleSelectPage(section.id, page.id)}
-                            className={`text-sm hover:text-black w-full text-left ${
-                              selectedPageId === page.id
-                                ? "text-black font-medium"
-                                : "text-gray-500"
-                            }`}
+                            variant={selectedPageId === page.id ? 'secondary' : 'ghost'}
+                            className={`text-sm w-full text-left ${selectedPageId === page.id ? 'text-black font-medium' : 'text-gray-500'}`}
                           >
                             {page.title}
-                          </button>
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -471,34 +485,26 @@ export default function EditHandbookClient({
                 <>
                   <div className="flex items-center justify-between border-b p-4">
                     <div className="flex space-x-4">
-                      <button
+                      <Button
                         onClick={() => setIsPreview(false)}
-                        className={`text-sm ${
-                          !isPreview
-                            ? "text-black font-medium"
-                            : "text-gray-500 hover:text-black"
-                        }`}
+                        className={`text-sm ${!isPreview ? "text-black font-medium" : "text-gray-500 hover:text-black"}`}
                       >
                         Redigera
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => setIsPreview(true)}
-                        className={`text-sm ${
-                          isPreview
-                            ? "text-black font-medium"
-                            : "text-gray-500 hover:text-black"
-                        }`}
+                        className={`text-sm ${isPreview ? "text-black font-medium" : "text-gray-500 hover:text-black"}`}
                       >
                         Förhandsgranska
-                      </button>
+                      </Button>
                     </div>
-                    <button
+                    <Button
                       onClick={handleSavePage}
                       disabled={isSaving}
                       className="bg-black text-white px-4 py-1 text-sm rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSaving ? "Sparar..." : "Spara"}
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="p-4">
@@ -508,11 +514,10 @@ export default function EditHandbookClient({
                       </div>
                     ) : (
                       <>
-                        <textarea
+                        <Textarea
+                          className="block w-full mb-2 border px-2 py-1 rounded"
                           value={editingContent}
                           onChange={(e) => setEditingContent(e.target.value)}
-                          className="w-full h-64 p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-black font-mono text-sm"
-                          placeholder="Skriv innehåll här (Markdown-formatering stöds)"
                         />
                         
                         <div className="mt-4">
@@ -569,6 +574,6 @@ export default function EditHandbookClient({
         </div>
         <PermissionsSection handbookId={id} />
       </main>
-    </div>
+    </MainLayout>
   );
 }

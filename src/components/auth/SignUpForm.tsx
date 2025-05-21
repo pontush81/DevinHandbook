@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }) {
   const [email, setEmail] = useState("");
@@ -59,13 +61,12 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             E-post
           </label>
-          <input
+          <Input
             id="email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
           />
         </div>
 
@@ -73,13 +74,12 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Lösenord
           </label>
-          <input
+          <Input
             id="password"
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
           />
         </div>
 
@@ -87,13 +87,12 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
             Bekräfta lösenord
           </label>
-          <input
+          <Input
             id="confirmPassword"
             type="password"
             required
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-black focus:border-black"
           />
         </div>
 
@@ -110,13 +109,13 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
         )}
 
         <div>
-          <button
+          <Button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex justify-center"
           >
-            {isLoading ? "Registrerar..." : "Registrera"}
-          </button>
+            {isLoading ? "Skapar konto..." : "Skapa konto"}
+          </Button>
         </div>
 
         {showLoginLink && (

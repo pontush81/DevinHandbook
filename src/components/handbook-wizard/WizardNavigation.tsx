@@ -3,6 +3,7 @@
 import React from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from '@/components/ui/button';
 
 interface WizardNavigationProps {
   totalSteps: number;
@@ -76,14 +77,12 @@ export function WizardNavigation({ totalSteps }: WizardNavigationProps) {
   return (
     <div className="flex flex-col sm:flex-row justify-between items-center mt-8 gap-4">
       {currentStep > 0 ? (
-        <button
+        <Button
           onClick={goToPrevStep}
-          className={`px-4 py-2 rounded-md font-semibold transition-colors duration-150 shadow-sm
-            bg-blue-50 text-blue-700 hover:bg-blue-100 focus:ring-2 focus:ring-blue-300
-          `}
+          className="px-4 py-2 rounded-md font-semibold transition-colors duration-150 shadow-sm bg-blue-50 text-blue-700 hover:bg-blue-100 focus:ring-2 focus:ring-blue-300"
         >
           Föregående
-        </button>
+        </Button>
       ) : (
         <div className="w-24"></div>
       )}

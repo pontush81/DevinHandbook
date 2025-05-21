@@ -2,6 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert } from '@/components/ui/alert';
 
 interface Handbook {
   id: string;
@@ -83,9 +86,9 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
   return (
     <>
       {error && (
-        <div className="px-6 py-4 bg-red-50 text-red-600 text-sm">
+        <Alert variant="destructive" className="mb-4">
           {error}
-        </div>
+        </Alert>
       )}
     
       <div className="overflow-x-auto">
@@ -132,15 +135,9 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                     {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        handbook.published
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
+                    <Badge variant={handbook.published ? 'success' : 'secondary'}>
                       {handbook.published ? "Publicerad" : "Utkast"}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {handbook.user_id}
@@ -161,14 +158,14 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                       >
                         Redigera
                       </Link>
-                      <button
+                      <Button
                         onClick={() => revalidateHandbook(handbook.subdomain)}
                         disabled={isProcessing === handbook.subdomain}
                         className="text-black hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isProcessing === handbook.subdomain ? 'Uppdaterar...' : 'Uppdatera cache'}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => toggleHandbookPublished(handbook.id, !handbook.published)}
                         disabled={isProcessing === handbook.id}
                         className={`${handbook.published ? 'text-red-600' : 'text-green-600'} hover:underline disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -176,7 +173,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                         {isProcessing === handbook.id 
                           ? (handbook.published ? 'Avpublicerar...' : 'Publicerar...') 
                           : (handbook.published ? 'Avpublicera' : 'Publicera')}
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

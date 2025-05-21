@@ -5,6 +5,9 @@ import ReactMarkdown from 'react-markdown';
 import { Menu, X } from 'lucide-react';
 import HomeHandbookClient from './HomeHandbookClient';
 import AutoSuggestHandbookSearch from "@/components/AutoSuggestHandbookSearch";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,17 +60,21 @@ export default async function HomePage() {
 
   // Ny modern, luftig startsida
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
-      <main className="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-xl p-10 flex flex-col gap-8 items-center">
-        <div className="w-full text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">Välkommen till Handbok.org</h1>
-          <p className="text-lg text-gray-600 mb-8">Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.</p>
-        </div>
-        <div className="w-full flex flex-col gap-4">
-          <a href="/create-handbook" className="w-full text-center bg-blue-600 hover:bg-blue-700 !text-white opacity-100 text-lg font-semibold rounded-full py-4 transition mb-0 shadow-sm">Skapa ny handbok</a>
-          <AutoSuggestHandbookSearch />
-        </div>
-      </main>
-    </div>
+    <MainLayout variant="landing">
+      <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
+        <main className="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-xl p-10 flex flex-col gap-8 items-center">
+          <div className="w-full text-center">
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">Välkommen till Handbok.org</h1>
+            <p className="text-lg text-gray-600 mb-8">Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.</p>
+          </div>
+          <div className="w-full flex flex-col gap-4">
+            <Button asChild variant="default" className="w-full text-lg font-semibold rounded-full py-4 mb-0 shadow-sm">
+              <a href="/create-handbook">Skapa ny handbok</a>
+            </Button>
+            <AutoSuggestHandbookSearch />
+          </div>
+        </main>
+      </div>
+    </MainLayout>
   );
 }

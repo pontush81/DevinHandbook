@@ -7,6 +7,7 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/lib/supabase";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 import { useRouter } from "next/navigation";
+import { Button } from '@/components/ui/button';
 
 export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTab }: { showTabs?: boolean, tab?: 'signup' | 'login' | 'reset', setTab?: (tab: 'signup' | 'login' | 'reset') => void }) {
   const { user, isLoading: authLoading, signOut } = useAuth();
@@ -143,25 +144,25 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
         {tab === "login" && registrationSuccess && (
           <div className="text-green-700 text-sm mb-2">{registrationSuccess}</div>
         )}
-        <button
+        <Button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+          className="w-full py-2 px-4 rounded-md font-semibold transition disabled:opacity-50"
           disabled={loading}
         >
           {tab === "signup" && (loading ? "Skapar konto..." : "Skapa konto")}
           {tab === "login" && (loading ? "Loggar in..." : "Logga in")}
           {tab === "reset" && (loading ? "Skickar..." : "Skicka återställningslänk")}
-        </button>
+        </Button>
         {tab === "login" && (
           <div className="text-center mt-2">
-            <a
-              role="button"
-              tabIndex={0}
-              className="text-sm text-blue-600 underline bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer hover:text-blue-800"
-              onClick={e => { e.preventDefault(); setTab("reset"); setError(null); setSuccess(null); }}
+            <Button
+              type="button"
+              variant="link"
+              className="text-sm"
+              onClick={e => { setTab("reset"); setError(null); setSuccess(null); }}
             >
               Glömt lösenord?
-            </a>
+            </Button>
           </div>
         )}
       </form>

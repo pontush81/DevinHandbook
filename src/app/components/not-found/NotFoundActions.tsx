@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@/components/ui/button';
 
 export default function NotFoundActions() {
   const handleApplyCorsfix = () => {
@@ -10,11 +11,12 @@ export default function NotFoundActions() {
   };
 
   return (
-    <button 
+    <Button 
       onClick={handleApplyCorsfix}
+      variant="link"
       className="text-blue-600 hover:underline text-sm inline-flex items-center"
     >
       <span className="mr-1">→</span> Applicera CORS-fix direkt
-    </button>
+    </Button>
   );
 } 

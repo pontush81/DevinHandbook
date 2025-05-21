@@ -1,4 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { X } from "lucide-react";
+import Link from 'next/link';
 
 const BANNER_KEY = 'handbook_onboarding_banner_dismissed';
 
@@ -23,19 +27,27 @@ export default function HandbookOnboardingBanner() {
   if (!visible) return null;
 
   return (
-    <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-md shadow mb-6 flex items-center justify-between animate-fade-in">
-      <div>
-        <div className="font-semibold text-lg mb-1">🎉 Välkommen till din digitala handbok!</div>
-        <div className="text-sm">
-          Din handbok är nu klar och du kan börja redigera innehållet direkt.<br />
-          <ul className="list-disc ml-5 mt-1">
-            <li>Klicka på <b>Redigera</b> för att anpassa sektioner och sidor.</li>
-            <li>Bjud in styrelsemedlemmar eller boende under <b>Användare</b>.</li>
-            <li>Behöver du hjälp? <a href="/documentation" className="underline text-blue-700">Läs vår dokumentation</a> eller <a href="/contact" className="underline text-blue-700">kontakta supporten</a>.</li>
+    <Alert variant="info" className="mb-6 pr-12 relative">
+      <AlertTitle className="text-lg">🎉 Välkommen till din digitala handbok!</AlertTitle>
+      <AlertDescription>
+        <div className="mt-2">
+          Din handbok är nu klar och du kan börja redigera innehållet direkt.
+          <ul className="list-disc ml-5 mt-2 space-y-1">
+            <li>Klicka på <strong>Redigera</strong> för att anpassa sektioner och sidor.</li>
+            <li>Bjud in styrelsemedlemmar eller boende under <strong>Användare</strong>.</li>
+            <li>Behöver du hjälp? <Link href="/documentation" className="underline font-medium">Läs vår dokumentation</Link> eller <Link href="/contact" className="underline font-medium">kontakta supporten</Link>.</li>
           </ul>
         </div>
-      </div>
-      <button onClick={handleClose} className="ml-4 text-blue-700 hover:text-blue-900 font-bold text-xl" aria-label="Stäng">&times;</button>
-    </div>
+      </AlertDescription>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute right-2 top-2"
+        onClick={handleClose}
+        aria-label="Stäng"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </Alert>
   );
 } 

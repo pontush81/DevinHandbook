@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 export default function SuccessClient() {
   const searchParams = useSearchParams();
@@ -83,84 +84,90 @@ export default function SuccessClient() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
-        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
-          <h1 className="text-2xl font-bold mb-6 text-center">Förbereder din handbok...</h1>
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+      <MainLayout variant="landing" showAuth={false}>
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
+          <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
+            <h1 className="text-2xl font-bold mb-6 text-center">Förbereder din handbok...</h1>
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+            </div>
+            <p className="mt-6 text-center text-gray-500">
+              Vi sätter upp din handbok. Detta kan ta upp till en minut.
+            </p>
           </div>
-          <p className="mt-6 text-center text-gray-500">
-            Vi sätter upp din handbok. Detta kan ta upp till en minut.
-          </p>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
-        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
-          <h1 className="text-2xl font-bold mb-4 text-center">Något gick fel</h1>
-          <p className="text-red-600 mb-6 text-center">{error}</p>
-          <div className="flex justify-center">
-            <Link href="/" className="px-4 py-2 bg-black text-white rounded-md">
-              Gå till startsidan
-            </Link>
+      <MainLayout variant="landing" showAuth={false}>
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
+          <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
+            <h1 className="text-2xl font-bold mb-4 text-center">Något gick fel</h1>
+            <p className="text-red-600 mb-6 text-center">{error}</p>
+            <div className="flex justify-center">
+              <Link href="/" className="px-4 py-2 bg-black text-white rounded-md">
+                Gå till startsidan
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   const finalSubdomain = getFinalSubdomain();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+    <MainLayout variant="landing" showAuth={false}>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
+        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
           </div>
-        </div>
-        <h1 className="text-2xl font-bold mb-2 text-center">Betalningen lyckades!</h1>
-        <p className="text-center text-gray-500 mb-6">
-          Din handbok för {handbookName} har skapats och är nu tillgänglig.
-        </p>
-        {isTestMode && (
-          <div className="bg-yellow-50 p-3 rounded-md mb-4 text-yellow-800 text-sm">
-            <p className="font-medium">Testläge aktivt</p>
-            <p>Detta är en testhandbok skapad i testmiljö.</p>
+          <h1 className="text-2xl font-bold mb-2 text-center">Betalningen lyckades!</h1>
+          <p className="text-center text-gray-500 mb-6">
+            Din handbok för {handbookName} har skapats och är nu tillgänglig.
+          </p>
+          {isTestMode && (
+            <div className="bg-yellow-50 p-3 rounded-md mb-4 text-yellow-800 text-sm">
+              <p className="font-medium">Testläge aktivt</p>
+              <p>Detta är en testhandbok skapad i testmiljö.</p>
+            </div>
+          )}
+          <div className="bg-gray-50 p-4 rounded-md mb-6">
+            <p className="text-center">
+              Din handbok finns på:
+              <a 
+                href={`https://${finalSubdomain}.handbok.org`} 
+                className="block mt-2 font-medium text-blue-600 hover:underline"
+              >
+                {finalSubdomain}.handbok.org
+              </a>
+            </p>
+            <p className="text-center mt-3 text-gray-600">
+              Du kommer att omdirigeras automatiskt om {redirectCountdown} sekunder
+            </p>
           </div>
-        )}
-        <div className="bg-gray-50 p-4 rounded-md mb-6">
-          <p className="text-center">
-            Din handbok finns på:
+          <div className="flex justify-center space-x-4">
             <a 
               href={`https://${finalSubdomain}.handbok.org`} 
-              className="block mt-2 font-medium text-blue-600 hover:underline"
+              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
             >
-              {finalSubdomain}.handbok.org
+              Gå till din handbok nu
             </a>
-          </p>
-          <p className="text-center mt-3 text-gray-600">
-            Du kommer att omdirigeras automatiskt om {redirectCountdown} sekunder
-          </p>
-        </div>
-        <div className="flex justify-center space-x-4">
-          <a 
-            href={`https://${finalSubdomain}.handbok.org`} 
-            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
-          >
-            Gå till din handbok nu
-          </a>
-          <Link href="/" className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
-            Tillbaka till startsidan
-          </Link>
+            <Link href="/" className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+              Tillbaka till startsidan
+            </Link>
+          </div>
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

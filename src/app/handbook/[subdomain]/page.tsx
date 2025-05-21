@@ -9,6 +9,7 @@ import HandbookOnboardingBanner from '@/components/HandbookOnboardingBanner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Section {
   id: string;
@@ -190,57 +191,46 @@ export default async function HandbookPage({ params }: Props) {
   }
 
   return (
-    <>
-      <HandbookHeader />
-      <div className="min-h-screen bg-white">
-        <HandbookOnboardingBanner />
-        <header className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <h1 className="text-3xl font-bold">{handbook.title}</h1>
-            <p className="text-gray-500">Digital handbok</p>
-          </div>
-        </header>
-        
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Sidebar */}
-            <div className="md:col-span-1">
-              <nav className="space-y-1 sticky top-8">
-                <h2 className="font-medium mb-4">Innehåll</h2>
-                {(handbook.sections || []).map((section: Section) => (
-                  <a
-                    key={section.id}
-                    href={`#section-${section.id}`}
-                    className="block p-2 text-sm hover:bg-gray-50 rounded"
-                  >
-                    {section.title}
-                  </a>
-                ))}
-              </nav>
-            </div>
-            
-            {/* Content */}
-            <div className="md:col-span-3 space-y-12">
+    <MainLayout variant="app" showAuth={false} sections={handbook.sections.map((s: Section) => ({ id: s.id, title: s.title }))}>
+      <HandbookOnboardingBanner />
+      <header className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h1 className="text-3xl font-bold">{handbook.title}</h1>
+          <p className="text-gray-500">Digital handbok</p>
+        </div>
+      </header>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Sidebar */}
+          <div className="md:col-span-1">
+            <nav className="space-y-1 sticky top-8">
+              <h2 className="font-medium mb-4">Innehåll</h2>
               {(handbook.sections || []).map((section: Section) => (
-                <section key={section.id} id={`section-${section.id}`} className="space-y-6">
-                  <SectionEditor section={section} />
-                  <div className="space-y-8">
-                    {(section.pages || []).map((page: Page) => (
-                      <PageEditor key={page.id} page={page} />
-                    ))}
-                  </div>
-                </section>
+                <a
+                  key={section.id}
+                  href={`#section-${section.id}`}
+                  className="block p-2 text-sm hover:bg-gray-50 rounded"
+                >
+                  {section.title}
+                </a>
               ))}
-            </div>
+            </nav>
           </div>
-        </main>
-        
-        <footer className="bg-gray-50 border-t py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
-            Powered by <span className="font-medium">Handbok.org</span>
+          {/* Content */}
+          <div className="md:col-span-3 space-y-12">
+            {(handbook.sections || []).map((section: Section) => (
+              <section key={section.id} id={`section-${section.id}`} className="space-y-6">
+                <SectionEditor section={section} />
+                <div className="space-y-8">
+                  {(section.pages || []).map((page: Page) => (
+                    <PageEditor key={page.id} page={page} />
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
-        </footer>
-      </div>
-    </>
+        </div>
+      </main>
+    </MainLayout>
   );
 } 
