@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { checkIsSuperAdmin } from "@/lib/user-utils";
+import { CreateHandbookForm } from "@/components/handbook-wizard/CreateHandbookForm";
 
 interface Handbook {
   id: string;
@@ -99,10 +100,11 @@ export default function CreateHandbook() {
           <h1 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">Skapa digital handbok</h1>
           <p className="text-gray-500 text-lg max-w-xl mx-auto">Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.</p>
         </div>
-        {/* Wizard-flödet kan döljas eller tas bort helt om du vill */}
-        {/* <WizardStepOne showTabs={false} /> ... */}
-        <div className="text-center mt-8">
-          <p className="text-gray-500">Endast superadmin eller användare utan handbok kan skapa en ny handbok.</p>
+        
+        {user && <CreateHandbookForm userId={user.id} />}
+        
+        <div className="text-center mt-4">
+          <p className="text-gray-500 text-sm">Endast superadmin eller användare utan handbok kan skapa en ny handbok.</p>
         </div>
       </main>
     </div>
