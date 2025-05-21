@@ -19,10 +19,10 @@ export default function CreateHandbook() {
     return <div className="min-h-screen flex items-center justify-center"><div>Laddar...</div></div>;
   }
 
-  // Redirecta till login om användaren inte är inloggad
+  // Redirecta till signup om användaren inte är inloggad
   if (!user) {
     if (typeof window !== "undefined") {
-      window.location.href = "/login";
+      window.location.href = "/signup";
     }
     return null;
   }
