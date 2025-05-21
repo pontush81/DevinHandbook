@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'signup' | 'login' | 'reset'>('signup');
   const router = useRouter();
 
   useEffect(() => {
@@ -38,11 +39,14 @@ export default function SignupPage() {
     );
   }
 
+  let heading = 'Registrera konto';
+  if (tab === 'login' || tab === 'reset') heading = 'Logga in';
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-sm">
-        <h2 className="text-2xl font-bold mb-4 text-center">Registrera konto</h2>
-        <WizardStepOne showTabs={true} />
+        <h2 className="text-2xl font-bold mb-4 text-center">{heading}</h2>
+        <WizardStepOne showTabs={true} tab={tab} setTab={setTab} />
       </div>
     </div>
   );

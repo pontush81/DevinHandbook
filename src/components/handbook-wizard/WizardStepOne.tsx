@@ -8,10 +8,12 @@ import { supabase } from "@/lib/supabase";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 import { useRouter } from "next/navigation";
 
-export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
+export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTab }: { showTabs?: boolean, tab?: 'signup' | 'login' | 'reset', setTab?: (tab: 'signup' | 'login' | 'reset') => void }) {
   const { user, isLoading: authLoading, signOut } = useAuth();
   const { setCurrentStep, currentStep } = useHandbookStore();
-  const [tab, setTab] = useState<"signup" | "login" | "reset">("signup");
+  const [internalTab, internalSetTab] = useState<'signup' | 'login' | 'reset'>('signup');
+  const tab = propTab ?? internalTab;
+  const setTab = propSetTab ?? internalSetTab;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
