@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase";
 import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
 
 export default function LoginPage() {
