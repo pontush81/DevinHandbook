@@ -129,7 +129,7 @@ export async function createHandbookViaProxy(name: string, subdomain: string, us
       .insert([{
         name,
         subdomain,
-        user_id: userId || null,
+        owner_id: userId || null,
         published: true
       }])
       .select('id')
