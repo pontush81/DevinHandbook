@@ -181,7 +181,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
             className="text-sm text-blue-600 underline bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer hover:text-blue-800"
             onClick={e => { e.preventDefault(); setTab("signup"); setError(null); setSuccess(null); }}
           >
-            Registrera konto
+            Har du inget konto? Registrera konto
           </a>
         )}
         {tab === "reset" && (
