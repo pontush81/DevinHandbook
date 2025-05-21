@@ -17,6 +17,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [registrationSuccess, setRegistrationSuccess] = useState<string | null>(null);
+  const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
 
   if (authLoading) {
     return <div className="text-center py-12">Laddar...</div>;
@@ -51,11 +52,25 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setEmailAlreadyExists(false);
     setLoading(true);
     if (tab === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) setError(error.message);
-      else {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        if (
+          error.code === "user_already_exists" ||
+          error.code === "email_exists"
+        ) {
+          setEmailAlreadyExists(true);
+          setError("E-postadressen är redan registrerad. Vill du logga in istället?");
+        } else {
+          setError(error.message);
+        }
+      } else if (!data.user && !data.session) {
+        setRegistrationSuccess("Registrering pågår. Kontrollera din e-post för bekräftelse.");
+        setTab("login");
+        setSuccess(null);
+      } else {
         setRegistrationSuccess("Registrering lyckades! Kontrollera din e-post för bekräftelse.");
         setTab("login");
         setSuccess(null);
@@ -118,7 +133,22 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
             />
           </div>
         )}
-        {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
+        {error && (
+          <div className="text-red-600 text-sm mt-2">
+            {error}
+            {emailAlreadyExists && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="text-blue-600 underline hover:text-blue-800 text-sm bg-transparent p-0 m-0 font-normal shadow-none w-auto cursor-pointer"
+                  onClick={() => { setTab("login"); setError(null); setSuccess(null); setEmailAlreadyExists(false); }}
+                >
+                  Gå till inloggning
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {success && <div className="text-green-700 text-sm mt-2">{success}</div>}
         {tab === "login" && registrationSuccess && (
           <div className="text-green-700 text-sm mb-2">{registrationSuccess}</div>
