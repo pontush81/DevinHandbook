@@ -2,6 +2,7 @@
  * Användarrelaterade hjälpfunktioner för att hantera profiles
  */
 import { SupabaseClient } from '@supabase/supabase-js';
+import { getServiceSupabase } from '@/lib/supabase';
 
 /**
  * Säkerställer att en användarprofil finns i profiles-tabellen.
@@ -28,7 +29,11 @@ export async function ensureUserProfile(
     // Om profilen inte finns, skapa den
     if (fetchError || !profile) {
       console.log(`[ensureUserProfile] Skapar profil för användare ${userId}`);
-      const { error: insertError } = await supabase
+      
+      // Använd service-klienten för att kringgå RLS och undvika rekursion
+      const serviceClient = getServiceSupabase();
+      
+      const { error: insertError } = await serviceClient
         .from('profiles')
         .insert({
           id: userId,
