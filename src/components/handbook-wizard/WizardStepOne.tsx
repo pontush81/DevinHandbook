@@ -16,6 +16,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState<string | null>(null);
 
   if (authLoading) {
     return <div className="text-center py-12">Laddar...</div>;
@@ -54,7 +55,11 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
     if (tab === "signup") {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setError(error.message);
-      else setSuccess("Registrering lyckades! Kontrollera din e-post för bekräftelse.");
+      else {
+        setRegistrationSuccess("Registrering lyckades! Kontrollera din e-post för bekräftelse.");
+        setTab("login");
+        setSuccess(null);
+      }
     } else if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError("Fel e-post eller lösenord.");
@@ -115,6 +120,9 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
         )}
         {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
         {success && <div className="text-green-700 text-sm mt-2">{success}</div>}
+        {tab === "login" && registrationSuccess && (
+          <div className="text-green-700 text-sm mb-2">{registrationSuccess}</div>
+        )}
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition disabled:opacity-50"
