@@ -1,3 +1,4 @@
+"use client";
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
