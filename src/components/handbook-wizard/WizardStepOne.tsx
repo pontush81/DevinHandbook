@@ -59,7 +59,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
         email,
         password,
         options: {
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/create-handbook` : undefined,
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
         },
       });
       if (error) {
@@ -86,7 +86,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
       if (error) setError("Fel e-post eller lösenord.");
     } else if (tab === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/create-handbook` : undefined,
+        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
       });
       if (error) setError(error.message);
       else setSuccess("Återställningslänk skickad till din e-post.");
