@@ -31,12 +31,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
         <h2 className="text-2xl font-bold">Du är inloggad</h2>
         <p className="text-gray-600 mb-4">Du är inloggad som <span className="font-semibold">{user.email}</span>.</p>
         <div className="flex flex-col gap-2 items-center">
-          <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition"
-            onClick={() => setCurrentStep(1)}
-          >
-            Gå vidare
-          </button>
+          <span className="text-blue-700">Du kan gå till din handbok via dashboard eller menyn.</span>
           <button
             className="text-sm text-blue-600 underline mt-2"
             onClick={async () => {

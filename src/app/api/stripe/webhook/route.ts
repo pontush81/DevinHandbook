@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { constructEventFromPayload, isTestMode } from '@/lib/stripe';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
+import { defaultHandbookTemplate } from '@/lib/templates/handbook-template';
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,27 +44,7 @@ export async function POST(req: NextRequest) {
 
 async function createHandbookInSupabase(name: string, subdomain: string, userId: string | null) {
   try {
-    const defaultTemplate = {
-      sections: [
-        {
-          id: "welcome",
-          title: "Välkommen till föreningen",
-          description: "Information om föreningen och området",
-          order: 0,
-          isActive: true,
-          pages: [
-            {
-              id: "welcome-page",
-              title: "Välkommen",
-              content: "# Välkommen till föreningen\n\nHär hittar du all information du behöver som boende.",
-              order: 0
-            }
-          ]
-        }
-      ]
-    };
-    
-    return await createHandbookWithSectionsAndPages(name, subdomain, defaultTemplate, userId);
+    return await createHandbookWithSectionsAndPages(name, subdomain, defaultHandbookTemplate, userId);
   } catch (error: unknown) {
     console.error('Error creating handbook in Supabase:', error);
     throw error;

@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     // Kolla om access_token och refresh_token finns i URL-hashen
@@ -14,18 +16,29 @@ export default function LoginPage() {
     const access_token = params.get("access_token");
     const refresh_token = params.get("refresh_token");
 
-    if (access_token && refresh_token) {
-      supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+    async function handleLoginRedirect() {
+      if (access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
         if (!error) {
-          window.location.replace("/create-handbook");
+          // Hämta användarens handböcker
+          const { data, error: handbooksError } = await supabase
+            .from("handbooks")
+            .select("subdomain")
+            .order("created_at", { ascending: false });
+          if (!handbooksError && data && data.length > 0) {
+            window.location.replace(`https://${data[0].subdomain}.handbok.org`);
+          } else {
+            router.replace("/dashboard");
+          }
         } else {
           setLoading(false);
         }
-      });
-    } else {
-      setLoading(false);
+      } else {
+        setLoading(false);
+      }
     }
-  }, []);
+    handleLoginRedirect();
+  }, [router]);
 
   if (loading) {
     return (

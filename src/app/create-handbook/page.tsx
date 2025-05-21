@@ -1,49 +1,90 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
-import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
-import { WizardStepTwo } from "@/components/handbook-wizard/WizardStepTwo";
-import { WizardStepThree } from "@/components/handbook-wizard/WizardStepThree";
-import { WizardStepFour } from "@/components/handbook-wizard/WizardStepFour";
-import { WizardStepFive } from "@/components/handbook-wizard/WizardStepFive";
-import { WizardNavigation } from "@/components/handbook-wizard/WizardNavigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+
+interface Handbook {
+  id: string;
+  name: string;
+  subdomain: string;
+  created_at: string;
+  published: boolean;
+}
 
 export default function CreateHandbook() {
   const { user, isLoading } = useAuth();
-  const { currentStep } = useHandbookStore();
-  
-  // Visa loader om auth-status är oklar
-  if (isLoading) {
+  const router = useRouter();
+  const [handbooks, setHandbooks] = useState<Handbook[]>([]);
+  const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/signup");
+    }
+  }, [user, isLoading, router]);
+
+  useEffect(() => {
+    const fetchSuperadmin = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_superadmin")
+        .eq("id", user.id)
+        .single();
+      setIsSuperadmin(!error && data && data.is_superadmin);
+    };
+    if (user) fetchSuperadmin();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchHandbooks = async () => {
+      if (!user) return;
+      setIsLoadingHandbooks(true);
+      const { data, error } = await supabase
+        .from("handbooks")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setHandbooks(data || []);
+      setIsLoadingHandbooks(false);
+    };
+    if (user) fetchHandbooks();
+  }, [user]);
+
+  useEffect(() => {
+    if (!isLoadingHandbooks && handbooks.length > 0 && !isSuperadmin) {
+      // Redirecta till första handboken
+      router.push(`https://${handbooks[0].subdomain}.handbok.org`);
+    }
+  }, [isLoadingHandbooks, handbooks, isSuperadmin, router]);
+
+  if (isLoading || isLoadingHandbooks) {
     return <div className="min-h-screen flex items-center justify-center"><div>Laddar...</div></div>;
   }
 
-  // Redirecta till signup om användaren inte är inloggad
-  if (!user) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/signup";
-    }
-    return null;
+  if (handbooks.length > 0 && !isSuperadmin) {
+    // Visa info om att handbok redan finns (fallback om redirect inte hinner)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
+        <main className="w-full max-w-2xl mx-auto bg-white rounded-3xl p-8 md:p-12 flex flex-col gap-8 shadow-none border border-gray-100 text-center">
+          <h1 className="text-3xl font-bold mb-2">Du har redan en handbok</h1>
+          <p className="text-gray-500 text-lg mb-6">Du kan redigera eller visa din handbok nedan.</p>
+          <a
+            href={`https://${handbooks[0].subdomain}.handbok.org`}
+            className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition"
+          >
+            Gå till din handbok
+          </a>
+        </main>
+      </div>
+    );
   }
 
-  const renderStep = () => {
-    switch (currentStep) {
-      case 0:
-        return <WizardStepOne showTabs={false} />;
-      case 1:
-        return <WizardStepTwo />;
-      case 2:
-        return <WizardStepThree />;
-      case 3:
-        return <WizardStepFour />;
-      case 4:
-        return <WizardStepFive />;
-      default:
-        return <WizardStepOne />;
-    }
-  };
-  
+  // Endast superadmin eller användare utan handbok får skapa ny handbok
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
       <main className="w-full max-w-2xl mx-auto bg-white rounded-3xl p-8 md:p-12 flex flex-col gap-8 shadow-none border border-gray-100">
@@ -51,9 +92,10 @@ export default function CreateHandbook() {
           <h1 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">Skapa digital handbok</h1>
           <p className="text-gray-500 text-lg max-w-xl mx-auto">Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.</p>
         </div>
-        <div className="w-full flex flex-col gap-8">
-          {renderStep()}
-          <WizardNavigation totalSteps={5} />
+        {/* Wizard-flödet kan döljas eller tas bort helt om du vill */}
+        {/* <WizardStepOne showTabs={false} /> ... */}
+        <div className="text-center mt-8">
+          <p className="text-gray-500">Endast superadmin eller användare utan handbok kan skapa en ny handbok.</p>
         </div>
       </main>
     </div>

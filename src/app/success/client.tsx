@@ -11,10 +11,11 @@ export default function SuccessClient() {
   const [error, setError] = useState<string | null>(null);
   const [redirectCountdown, setRedirectCountdown] = useState(5);
   const [isTestMode, setIsTestMode] = useState(false);
-  
-  const handbookName = searchParams.get('handbook_name');
-  const subdomain = searchParams.get('subdomain');
-  
+  const [handbookName, setHandbookName] = useState<string | null>(null);
+  const [subdomain, setSubdomain] = useState<string | null>(null);
+
+  const sessionId = searchParams.get('session_id');
+
   useEffect(() => {
     // Check if we're in test mode
     const checkTestMode = async () => {
@@ -24,50 +25,62 @@ export default function SuccessClient() {
         setIsTestMode(data.isTestMode);
       } catch (e) {
         console.error('Failed to check test mode:', e);
-        // Default to false if check fails
         setIsTestMode(false);
       }
     };
-    
     checkTestMode();
   }, []);
-  
+
+  // Hämta metadata från backend om session_id finns
+  useEffect(() => {
+    if (!sessionId) {
+      setError('Ingen session_id hittades i URL:en.');
+      setIsLoading(false);
+      return;
+    }
+    const fetchSession = async () => {
+      try {
+        const res = await fetch(`/api/stripe/session?session_id=${encodeURIComponent(sessionId)}`);
+        const data = await res.json();
+        if (data.error) {
+          setError(data.error);
+          setIsLoading(false);
+          return;
+        }
+        setHandbookName(data.metadata.handbookName || null);
+        setSubdomain(data.metadata.subdomain || null);
+        setIsLoading(false);
+      } catch (e: any) {
+        setError('Kunde inte hämta sessionens metadata.');
+        setIsLoading(false);
+      }
+    };
+    fetchSession();
+  }, [sessionId]);
+
   // Compute the final subdomain with test. prefix if in test mode
   const getFinalSubdomain = () => {
     if (!subdomain) return '';
     return isTestMode ? `test.${subdomain}` : subdomain;
   };
-  
+
   useEffect(() => {
-    if (!handbookName || !subdomain) {
-      setError('Information om handboken saknas');
-      setIsLoading(false);
-      return;
-    }
-    
-    // Simulera laddningstid medan handboken skapas
-    const loadingTimer = setTimeout(() => {
-      setIsLoading(false);
-      
+    if (!isLoading && !error && handbookName && subdomain) {
       // Starta nedräkning för omdirigering
       const countdownInterval = setInterval(() => {
         setRedirectCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
-            // Omdirigera till den nyskapade handboken med test prefix om i testläge
             window.location.href = `https://${getFinalSubdomain()}.handbok.org`;
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-      
       return () => clearInterval(countdownInterval);
-    }, 3000);
-    
-    return () => clearTimeout(loadingTimer);
-  }, [handbookName, subdomain, isTestMode]);
-  
+    }
+  }, [isLoading, error, handbookName, subdomain, isTestMode]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
@@ -83,7 +96,7 @@ export default function SuccessClient() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
@@ -99,9 +112,9 @@ export default function SuccessClient() {
       </div>
     );
   }
-  
+
   const finalSubdomain = getFinalSubdomain();
-  
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-sm">
@@ -112,19 +125,16 @@ export default function SuccessClient() {
             </svg>
           </div>
         </div>
-        
         <h1 className="text-2xl font-bold mb-2 text-center">Betalningen lyckades!</h1>
         <p className="text-center text-gray-500 mb-6">
           Din handbok för {handbookName} har skapats och är nu tillgänglig.
         </p>
-        
         {isTestMode && (
           <div className="bg-yellow-50 p-3 rounded-md mb-4 text-yellow-800 text-sm">
             <p className="font-medium">Testläge aktivt</p>
             <p>Detta är en testhandbok skapad i testmiljö.</p>
           </div>
         )}
-        
         <div className="bg-gray-50 p-4 rounded-md mb-6">
           <p className="text-center">
             Din handbok finns på:
@@ -139,7 +149,6 @@ export default function SuccessClient() {
             Du kommer att omdirigeras automatiskt om {redirectCountdown} sekunder
           </p>
         </div>
-        
         <div className="flex justify-center space-x-4">
           <a 
             href={`https://${finalSubdomain}.handbok.org`} 
