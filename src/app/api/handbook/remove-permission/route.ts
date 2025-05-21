@@ -12,7 +12,7 @@ export async function DELETE(request: NextRequest) {
     .from('handbook_permissions')
     .delete()
     .eq('handbook_id', handbookId)
-    .eq('user_id', userId);
+    .eq('owner_id', userId);
 
   if (error) {
     return NextResponse.json({ success: false, message: 'Kunde inte ta bort rättighet' }, { status: 500 });

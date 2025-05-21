@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest) {
     .from('handbook_permissions')
     .update({ role })
     .eq('handbook_id', handbookId)
-    .eq('user_id', userId);
+    .eq('owner_id', userId);
 
   if (error) {
     return NextResponse.json({ success: false, message: 'Kunde inte uppdatera roll' }, { status: 500 });

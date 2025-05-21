@@ -37,7 +37,7 @@ export async function createHandbookWithSectionsAndPages(
       .from('handbook_permissions')
       .insert({
         handbook_id: handbookObj.id,
-        user_id: userId,
+        owner_id: userId,
         role: 'admin',
       });
     if (permError) {

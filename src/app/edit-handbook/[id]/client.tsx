@@ -242,7 +242,7 @@ export default function EditHandbookClient({
       setError(null);
       const { data, error } = await supabase
         .from("handbook_permissions")
-        .select("id, role, user_id, profiles: user_id (email)")
+        .select("id, role, owner_id, profiles: owner_id (email)")
         .eq("handbook_id", handbookId);
       if (error) setError("Kunde inte hämta behörigheter");
       setPermissions(data || []);
@@ -349,11 +349,11 @@ export default function EditHandbookClient({
             <ul className="divide-y">
               {permissions.map((perm) => (
                 <li key={perm.id} className="py-2 flex justify-between items-center">
-                  <span>{perm.profiles?.email || perm.user_id}</span>
+                  <span>{perm.profiles?.email || perm.owner_id}</span>
                   <Select
                     value={perm.role}
-                    onValueChange={value => handleRoleChange(perm.user_id, value as 'editor' | 'viewer')}
-                    disabled={updatingId === perm.user_id}
+                    onValueChange={value => handleRoleChange(perm.owner_id, value as 'editor' | 'viewer')}
+                    disabled={updatingId === perm.owner_id}
                   >
                     <SelectTrigger className="ml-2 w-28 text-xs">
                       <SelectValue />
@@ -364,7 +364,7 @@ export default function EditHandbookClient({
                     </SelectContent>
                   </Select>
                   <Button
-                    onClick={() => handleRemove(perm.user_id)}
+                    onClick={() => handleRemove(perm.owner_id)}
                     className="ml-4 text-xs text-red-600 hover:underline"
                     disabled={loading}
                     variant="link"

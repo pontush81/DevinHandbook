@@ -17,6 +17,39 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.handbok.org'),
 };
 
+// Säker localStorage-hantering
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    try { 
+      if (typeof window !== 'undefined' && window.safeStorage) {
+        return window.safeStorage.getItem(key);
+      }
+      return localStorage.getItem(key); 
+    }
+    catch { return null; }
+  },
+  setItem: (key: string, value: string): void => {
+    try { 
+      if (typeof window !== 'undefined' && window.safeStorage) {
+        window.safeStorage.setItem(key, value);
+        return;
+      }
+      localStorage.setItem(key, value); 
+    }
+    catch { /* fail silently */ }
+  },
+  removeItem: (key: string): void => {
+    try { 
+      if (typeof window !== 'undefined' && window.safeStorage) {
+        window.safeStorage.removeItem(key);
+        return;
+      }
+      localStorage.removeItem(key); 
+    }
+    catch { /* fail silently */ }
+  }
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

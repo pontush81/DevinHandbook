@@ -1,10 +1,13 @@
 /**
  * Förenklad ersättning för cross-domain storage
  * 
- * Istället för att använda en iframe för cross-domain storage access, 
- * använder vi en enkel in-memory fallback och omdirigerar för subdomäner.
+ * Hanterar både direktåtkomst och fallback för localStorage
+ * för att lösa problem med "Access to storage is not allowed from this context" i iframes
  */
 (function() {
+  // Detektera om vi är i en iframe
+  const isInIframe = window !== window.parent;
+  
   // Kontrollera om vi är på en subdomän
   const currentDomain = window.location.hostname;
   
@@ -50,37 +53,83 @@
   // Enkel in-memory lagring som fallback
   const memoryStorage = {};
   
+  // Kontrollera om localStorage är tillgängligt
+  let localStorageAvailable = false;
+  try {
+    const testKey = '__test_storage__';
+    window.localStorage.setItem(testKey, 'test');
+    window.localStorage.removeItem(testKey);
+    localStorageAvailable = true;
+  } catch (e) {
+    console.warn('localStorage är inte tillgängligt. Använder in-memory lagring istället.', e);
+    localStorageAvailable = false;
+  }
+  
+  // Specialhantering för iframe-kontext
+  const iframeUnsafe = isInIframe && !localStorageAvailable;
+  
+  // Logga diagnostik
+  if (iframeUnsafe) {
+    console.log('Iframe-kontext detekterad utan localStorage-åtkomst. Använder säker fallback.');
+  }
+  
   // Publik API - använd samma interface som localStorage
   window.safeStorage = {
     getItem: function(key) {
-      try {
-        return localStorage.getItem(key);
-      } catch(e) {
-        return memoryStorage[key] || null;
+      if (localStorageAvailable) {
+        try {
+          return localStorage.getItem(key);
+        } catch(e) {
+          console.warn('Kunde inte läsa från localStorage:', e);
+          return memoryStorage[key] || null;
+        }
       }
+      return memoryStorage[key] || null;
     },
     setItem: function(key, value) {
-      try {
-        localStorage.setItem(key, value);
-      } catch(e) {
-        memoryStorage[key] = value;
+      if (localStorageAvailable) {
+        try {
+          localStorage.setItem(key, value);
+          // Synka även till minnet för konsistens
+          memoryStorage[key] = value;
+          return;
+        } catch(e) {
+          console.warn('Kunde inte skriva till localStorage:', e);
+        }
       }
+      memoryStorage[key] = value;
     },
     removeItem: function(key) {
-      try {
-        localStorage.removeItem(key);
-      } catch(e) {
-        delete memoryStorage[key];
+      if (localStorageAvailable) {
+        try {
+          localStorage.removeItem(key);
+        } catch(e) {
+          console.warn('Kunde inte ta bort från localStorage:', e);
+        }
       }
+      delete memoryStorage[key];
     },
     clear: function() {
-      try {
-        localStorage.clear();
-      } catch(e) {
-        for (let key in memoryStorage) {
-          delete memoryStorage[key];
+      if (localStorageAvailable) {
+        try {
+          localStorage.clear();
+        } catch(e) {
+          console.warn('Kunde inte rensa localStorage:', e);
         }
+      }
+      
+      // Rensa minnet
+      for (let key in memoryStorage) {
+        delete memoryStorage[key];
       }
     }
   };
+  
+  // Sätt upp synonymer för bakåtkompatibilitet
+  window.safeLocalStorage = window.safeStorage;
+  
+  // Rapportera status för diagnostik
+  console.log('Säker lagringshantering initierad. localStorage ' + 
+    (localStorageAvailable ? 'tillgänglig' : 'otillgänglig') + 
+    (isInIframe ? ' (iframe-kontext)' : ''));
 })(); 

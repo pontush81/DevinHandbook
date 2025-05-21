@@ -17,6 +17,11 @@ declare global {
       setSession: (token: string) => boolean;
       clearSession: () => boolean;
     };
+    safeStorage?: {
+      getItem: (key: string) => string | null;
+      setItem: (key: string, value: string) => boolean;
+      removeItem: (key: string) => boolean;
+    };
   }
 }
 
@@ -74,6 +79,36 @@ const getSafeAuthSession = () => {
     console.error('Error retrieving auth session:', e);
     return null;
   }
+};
+
+// Försök hämta sessionen från localStorage
+const getSessionFromStorage = () => {
+  try {
+    // Försök först med safeStorage om det finns
+    if (typeof window !== 'undefined' && window.safeStorage) {
+      const sessionStr = window.safeStorage.getItem('supabase.auth.token');
+      if (sessionStr) {
+        console.log('Retrieved session from safeStorage');
+        return JSON.parse(sessionStr);
+      }
+    }
+    
+    // Fallback to direct localStorage in try-catch
+    if (typeof window !== 'undefined') {
+      try {
+        const sessionStr = localStorage.getItem('supabase.auth.token');
+        if (sessionStr) {
+          console.log('Retrieved session from localStorage directly');
+          return JSON.parse(sessionStr);
+        }
+      } catch (e) {
+        console.warn('Could not access localStorage directly', e);
+      }
+    }
+  } catch (error) {
+    console.error('Error retrieving session from storage:', error);
+  }
+  return null;
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

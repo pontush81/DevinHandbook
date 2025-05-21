@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = getServiceSupabase();
 
-  // 1. Hämta user_id för e-postadressen
+  // 1. Hämta användarens ID för e-postadressen
   const { data: user, error: userError } = await supabase
     .from('profiles')
     .select('id')
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     .from('handbook_permissions')
     .insert({
       handbook_id: handbookId,
-      user_id: user.id,
+      owner_id: user.id,
       role,
     });
 

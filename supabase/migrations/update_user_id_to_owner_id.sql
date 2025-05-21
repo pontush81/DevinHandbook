@@ -2,6 +2,10 @@
 ALTER TABLE handbooks 
   RENAME COLUMN user_id TO owner_id;
 
+-- Uppdatera även handbook_permissions-tabellen om den har user_id
+ALTER TABLE handbook_permissions
+  RENAME COLUMN user_id TO owner_id;
+
 -- Uppdatera RLS-policies för att använda owner_id istället för user_id
 DROP POLICY IF EXISTS "Handbooks are viewable by owners" ON handbooks;
 CREATE POLICY "Handbooks are viewable by owners" 
@@ -12,6 +16,16 @@ DROP POLICY IF EXISTS "Handbooks are updatable by owners" ON handbooks;
 CREATE POLICY "Handbooks are updatable by owners" 
   ON handbooks FOR UPDATE 
   USING (auth.uid() = owner_id);
+
+-- Uppdatera permissions-policies om de finns
+DROP POLICY IF EXISTS "Permissions viewable by handbook owners" ON handbook_permissions;
+CREATE POLICY "Permissions viewable by handbook owners"
+  ON handbook_permissions FOR SELECT
+  USING (
+    auth.uid() IN (
+      SELECT owner_id FROM handbooks WHERE id = handbook_id
+    )
+  );
 
 -- Skapa funktioner för att hantera användarkonvertering till profiles
 CREATE OR REPLACE FUNCTION public.create_profile_for_new_user()

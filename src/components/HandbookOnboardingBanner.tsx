@@ -4,27 +4,30 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { X } from "lucide-react";
 import Link from 'next/link';
 
-const BANNER_KEY = 'handbook_onboarding_banner_dismissed';
-
 export default function HandbookOnboardingBanner() {
-  const [visible, setVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Visa bannern bara om den inte är stängd tidigare
-    if (typeof window !== 'undefined') {
-      const dismissed = localStorage.getItem(BANNER_KEY);
-      setVisible(!dismissed);
+    // Check if the banner has been dismissed
+    const BANNER_KEY = 'handbook_onboarding_dismissed';
+    const dismissed = typeof window !== 'undefined' && window.safeStorage 
+      ? window.safeStorage.getItem(BANNER_KEY)
+      : null;
+    
+    if (!dismissed) {
+      setIsVisible(true);
     }
   }, []);
 
-  const handleClose = () => {
-    setVisible(false);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(BANNER_KEY, '1');
+  const handleDismiss = () => {
+    setIsVisible(false);
+    const BANNER_KEY = 'handbook_onboarding_dismissed';
+    if (typeof window !== 'undefined' && window.safeStorage) {
+      window.safeStorage.setItem(BANNER_KEY, '1');
     }
   };
 
-  if (!visible) return null;
+  if (!isVisible) return null;
 
   return (
     <Alert variant="info" className="mb-6 pr-12 relative">
@@ -43,7 +46,7 @@ export default function HandbookOnboardingBanner() {
         variant="ghost"
         size="icon"
         className="absolute right-2 top-2"
-        onClick={handleClose}
+        onClick={handleDismiss}
         aria-label="Stäng"
       >
         <X className="h-4 w-4" />
