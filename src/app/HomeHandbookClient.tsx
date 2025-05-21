@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Menu, X } from 'lucide-react';
+import HandbookHeader from "@/components/HandbookHeader";
 
 interface Page {
   id: string;
@@ -37,6 +38,7 @@ const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   return (
     <div className="min-h-screen bg-[#f7f8fa] flex flex-col items-center justify-center px-2">
+      <HandbookHeader />
       {/* Sticky header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-100 w-full">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
