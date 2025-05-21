@@ -6,6 +6,7 @@ import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/lib/supabase";
 import { useHandbookStore } from "@/lib/store/handbook-store";
+import { useRouter } from "next/navigation";
 
 export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
   const { user, isLoading: authLoading, signOut } = useAuth();
@@ -18,6 +19,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
   const [success, setSuccess] = useState<string | null>(null);
   const [registrationSuccess, setRegistrationSuccess] = useState<string | null>(null);
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
+  const router = useRouter();
 
   if (authLoading) {
     return <div className="text-center py-12">Laddar...</div>;
@@ -84,6 +86,7 @@ export function WizardStepOne({ showTabs = true }: { showTabs?: boolean }) {
     } else if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError("Fel e-post eller lösenord.");
+      else router.push("/create-handbook");
     } else if (tab === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
