@@ -58,20 +58,22 @@ export default async function HomePage() {
     return <HomeHandbookClient handbook={{ ...handbook, sections: publishedSections }} />;
   }
 
-  // Ny modern, luftig startsida
+  // Ny modern, luftig startsida med reducerad toppmarginal
   return (
-    <MainLayout variant="landing">
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
-        <main className="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-xl p-10 flex flex-col gap-8 items-center">
+    <MainLayout variant="landing" showHeader={false}>
+      <div className="min-h-screen bg-gray-50 px-4 py-6">
+        <main className="w-full max-w-xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8 md:p-10 flex flex-col gap-8 mt-8">
           <div className="w-full text-center">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">Välkommen till Handbok.org</h1>
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-5 tracking-tight">Välkommen till Handbok.org</h1>
             <p className="text-lg text-gray-600 mb-8">Den digitala plattformen för bostadsrättsföreningar att skapa och dela handböcker.</p>
           </div>
-          <div className="w-full flex flex-col gap-4">
-            <Button asChild variant="default" className="w-full text-lg font-semibold rounded-full py-4 mb-0 shadow-sm">
+          <div className="w-full flex flex-col gap-6">
+            <Button asChild variant="default" className="w-full h-14 text-lg font-medium rounded-lg py-4 mb-0">
               <a href="/create-handbook">Skapa ny handbok</a>
             </Button>
-            <AutoSuggestHandbookSearch />
+            <div className="w-full">
+              <AutoSuggestHandbookSearch />
+            </div>
           </div>
         </main>
       </div>
