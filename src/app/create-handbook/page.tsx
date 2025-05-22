@@ -115,12 +115,6 @@ export default function CreateHandbook() {
             {user && <CreateHandbookForm userId={user.id} />}
           </CardContent>
         </Card>
-        
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-500">
-            Endast superadmin eller användare utan handbok kan skapa en ny handbok.
-          </p>
-        </div>
       </div>
     </div>
   );

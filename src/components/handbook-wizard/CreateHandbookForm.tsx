@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface CreateHandbookFormProps {
   userId: string;
@@ -17,7 +17,77 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
+  const [isSubdomainAvailable, setIsSubdomainAvailable] = useState<boolean | null>(null);
   const router = useRouter();
+  const checkSubdomainTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Konvertera handbokens namn till en lämplig subdomän
+  const convertToSubdomain = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[åä]/g, 'a')
+      .replace(/[ö]/g, 'o')
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/--+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  // Auto-fylla subdomän när namnet ändras
+  useEffect(() => {
+    if (name) {
+      const suggestedSubdomain = convertToSubdomain(name);
+      setSubdomain(suggestedSubdomain);
+    }
+  }, [name]);
+
+  // Kontrollera om subdomänen är tillgänglig
+  useEffect(() => {
+    const checkSubdomainAvailability = async (value: string) => {
+      if (!value) {
+        setIsSubdomainAvailable(null);
+        return;
+      }
+
+      setIsCheckingSubdomain(true);
+      try {
+        const { data: existingHandbook } = await supabase
+          .from('handbooks')
+          .select('id')
+          .eq('subdomain', value)
+          .maybeSingle();
+
+        setIsSubdomainAvailable(!existingHandbook);
+      } catch (error) {
+        console.error('Error checking subdomain:', error);
+        setIsSubdomainAvailable(null);
+      } finally {
+        setIsCheckingSubdomain(false);
+      }
+    };
+
+    // Avbryt tidigare timeout
+    if (checkSubdomainTimeout.current) {
+      clearTimeout(checkSubdomainTimeout.current);
+    }
+
+    // Skapa en ny timeout för att kontrollera subdomänen efter en kort fördröjning
+    if (subdomain) {
+      checkSubdomainTimeout.current = setTimeout(() => {
+        checkSubdomainAvailability(subdomain);
+      }, 500);
+    } else {
+      setIsSubdomainAvailable(null);
+    }
+
+    // Rensa timeout när komponenten avmonteras
+    return () => {
+      if (checkSubdomainTimeout.current) {
+        clearTimeout(checkSubdomainTimeout.current);
+      }
+    };
+  }, [subdomain]);
 
   const handleSubdomainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove disallowed characters and convert to lowercase
@@ -42,7 +112,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     }
 
     if (!subdomain.trim()) {
-      setError('Vänligen ange en subdomän för handboken');
+      setError('Vänligen ange en adress för handboken');
       setIsLoading(false);
       return;
     }
@@ -50,7 +120,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     // Validate subdomain format
     const subdomainRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
     if (!subdomainRegex.test(subdomain)) {
-      setError('Subdomänen får endast innehålla små bokstäver, siffror och bindestreck');
+      setError('Adressen får endast innehålla små bokstäver, siffror och bindestreck');
       setIsLoading(false);
       return;
     }
@@ -64,7 +134,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         .maybeSingle();
 
       if (existingHandbook) {
-        setError(`Subdomänen "${subdomain}" är redan upptagen. Vänligen välj en annan.`);
+        setError(`Adressen "${subdomain}.handbok.org" är redan upptagen. Vänligen välj en annan.`);
         setIsLoading(false);
         return;
       }
@@ -152,7 +222,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
 
         <div>
           <label htmlFor="subdomain" className="block text-sm font-medium text-gray-700 mb-1">
-            Subdomän
+            Adressen till din handbok blir:
           </label>
           <div className="flex items-center">
             <Input
@@ -161,14 +231,30 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
               value={subdomain}
               onChange={handleSubdomainChange}
               placeholder="min-forening"
-              className="w-full"
+              className={`w-full ${isSubdomainAvailable === true ? 'border-green-500' : isSubdomainAvailable === false ? 'border-red-500' : ''}`}
               disabled={isLoading}
             />
             <span className="ml-2 text-gray-500">.handbok.org</span>
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            Detta blir adressen till din handbok, t.ex. min-forening.handbok.org
-          </p>
+          
+          <div className="mt-1">
+            {isCheckingSubdomain ? (
+              <div className="flex items-center text-sm text-gray-500">
+                <Loader2 size={14} className="mr-1 animate-spin" />
+                Kontrollerar tillgänglighet...
+              </div>
+            ) : isSubdomainAvailable === true ? (
+              <div className="flex items-center text-sm text-green-600">
+                <CheckCircle2 size={14} className="mr-1" />
+                Denna adress är tillgänglig!
+              </div>
+            ) : isSubdomainAvailable === false ? (
+              <div className="flex items-center text-sm text-red-600">
+                <AlertCircle size={14} className="mr-1" />
+                Denna adress är upptagen. Vänligen välj en annan.
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -189,7 +275,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       <Button
         type="submit"
         className="w-full"
-        disabled={isLoading}
+        disabled={isLoading || isSubdomainAvailable === false}
       >
         {isLoading ? 'Skapar handbok...' : 'Skapa handbok'}
       </Button>
