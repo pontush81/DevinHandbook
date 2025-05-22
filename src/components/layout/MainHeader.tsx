@@ -47,7 +47,9 @@ export function MainHeader({ variant = 'landing', showAuth = true, sections, nav
     <header className="bg-white shadow-sm sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div className="flex items-center">
-          {/* Removed Handbok.org link */}
+          <Link href="/" className="text-xl font-bold text-blue-600">
+            Handbok.org
+          </Link>
         </div>
 
         {variant === 'landing' && (
@@ -97,7 +99,20 @@ export function MainHeader({ variant = 'landing', showAuth = true, sections, nav
         )}
 
         <div className="flex items-center space-x-4">
-          {/* Removed "Skapa handbok" button */}
+          {showAuth && (
+            <>
+              {pathname !== '/login' && pathname !== '/signup' && (
+                <>
+                  <Button asChild variant="outline">
+                    <Link href="/login">Logga in</Link>
+                  </Button>
+                  <Button asChild className="hidden sm:inline-flex">
+                    <Link href="/create-handbook?new=true">Skapa handbok</Link>
+                  </Button>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     </header>

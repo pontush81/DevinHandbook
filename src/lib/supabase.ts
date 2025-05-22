@@ -119,8 +119,6 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         console.error('Fetch-försök', retryCount + 1, 'misslyckades:', lastError);
         console.error('Feldetaljer:', lastError);
         
-        // Vi låter Supabase sköta sessionshanteringen via cookies
-        // Ingen manuell hantering av tokens här längre
         if (response.status === 401) {
           console.log('401 Unauthorized - Supabase hanterar sessions via cookies');
         }
@@ -153,34 +151,38 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   return window.fetch(input, init);
 };
 
-// Skapa en Supabase-klient för klientsidan
+// Skapa en Supabase-klient för klientsidan med ENDAST cookies
 export const supabase = createClient<Database>(
   supabaseUrl,
   supabaseAnonKey,
   {
     auth: {
-      autoRefreshToken: true, 
+      autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
-      // Mer omfattande cookie-konfiguration för att säkerställa att refresh tokens hanteras korrekt
+      // Konfigurera cookies för optimal cross-domain kompatibilitet
       cookieOptions: {
-        name: 'sb-auth', // Standardnamn som Supabase använder
-        lifetime: 60 * 60 * 24 * 7, // 7 dagar
+        name: 'sb-auth',
+        lifetime: 60 * 60 * 24 * 7,
         domain: process.env.NODE_ENV === 'production' ? '.handbok.org' : undefined,
         path: '/',
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
-        httpOnly: true // Ändrad till true för att förhindra JavaScript-åtkomst och därmed förhindra att någon tar bort dem
+        httpOnly: false // Tillåt JavaScript att läsa för att underlätta debugging
       },
-      // Använd vår säkra memory-storage istället för browser storage
-      storage: memoryStorage,
-      storageKey: 'supabase.auth.token'
+      // Inaktivera alla inbyggda localStorage-operationer
+      persistSession: true,
+      // VIKTIGT: Helt inaktivera lokal lagring
+      localStorage: {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {}
+      }
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,
     },
-    // Lägg till debug läge för att se vad som händer
     debug: process.env.NODE_ENV !== 'production'
   }
 );

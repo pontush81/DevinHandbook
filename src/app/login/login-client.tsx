@@ -62,24 +62,23 @@ export default function LoginClient() {
             setUser(sessionUser);
             setRedirecting(true);
             
-            // Hämta användarens handböcker
-            const { data, error: handbooksError } = await supabase
-              .from("handbooks")
-              .select("subdomain")
-              .order("created_at", { ascending: false });
-              
-            if (!handbooksError && data && data.length > 0) {
-              // Ge tid för sessionen att etableras helt innan omdirigering
-              setTimeout(() => {
-                // Använd window.location.href istället för replace för vissa webbläsare
+            // Ge mycket mer tid för cookies att sparas innan vi gör någon omdirigering
+            setTimeout(async () => {
+              // Hämta användarens handböcker
+              const { data, error: handbooksError } = await supabase
+                .from("handbooks")
+                .select("subdomain")
+                .order("created_at", { ascending: false });
+                
+              if (!handbooksError && data && data.length > 0) {
+                console.log("Omdirigerar till användarens handbok:", data[0].subdomain);
+                // Använd window.location.href för full sidomladdning
                 window.location.href = `https://${data[0].subdomain}.handbok.org`;
-              }, 500);
-            } else {
-              // Ge lite tid för sessionen att etableras innan omdirigering
-              setTimeout(() => {
-                router.push("/dashboard");
-              }, 500);
-            }
+              } else {
+                console.log("Omdirigerar till dashboard...");
+                window.location.href = "/dashboard";
+              }
+            }, 1500);
           }
         } else {
           // Kontrollera om användaren redan är inloggad
@@ -88,24 +87,24 @@ export default function LoginClient() {
           
           if (currentUser) {
             setRedirecting(true);
-            // Hämta användarens handböcker
-            const { data, error: handbooksError } = await supabase
-              .from("handbooks")
-              .select("subdomain")
-              .order("created_at", { ascending: false });
-              
-            if (!handbooksError && data && data.length > 0) {
-              // Ge tid för sessionen att etableras helt innan omdirigering
-              setTimeout(() => {
-                // Använd window.location.href istället för replace för vissa webbläsare
+            
+            // Ge mycket mer tid för cookies att sparas innan vi gör någon omdirigering
+            setTimeout(async () => {
+              // Hämta användarens handböcker
+              const { data, error: handbooksError } = await supabase
+                .from("handbooks")
+                .select("subdomain")
+                .order("created_at", { ascending: false });
+                
+              if (!handbooksError && data && data.length > 0) {
+                console.log("Omdirigerar till användarens handbok:", data[0].subdomain);
+                // Använd window.location.href för full sidomladdning
                 window.location.href = `https://${data[0].subdomain}.handbok.org`;
-              }, 500);
-            } else {
-              // Ge lite tid för sessionen att etableras innan omdirigering
-              setTimeout(() => {
-                router.push("/dashboard");
-              }, 500);
-            }
+              } else {
+                console.log("Omdirigerar till dashboard...");
+                window.location.href = "/dashboard";
+              }
+            }, 1500);
           }
         }
       } catch (error) {

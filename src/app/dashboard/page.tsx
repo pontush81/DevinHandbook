@@ -28,7 +28,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/login");
+      console.log("Ingen användare hittad, kontrollerar om det finns en aktiv session...");
+      
+      // Gör en extra kontroll mot Supabase för att se om det finns en aktiv session
+      // innan vi omdirigerar användaren
+      const checkSessionStatus = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            console.log("Ingen aktiv session hittad, omdirigerar till login");
+            window.location.href = "/login";
+          } else {
+            console.log("Session hittad men ingen user i AuthContext, försöker ladda om sidan");
+            window.location.reload();
+          }
+        } catch (error) {
+          console.error("Fel vid kontroll av session:", error);
+          window.location.href = "/login";
+        }
+      };
+      
+      checkSessionStatus();
     }
   }, [user, isLoading, router]);
 

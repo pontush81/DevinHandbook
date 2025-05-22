@@ -50,7 +50,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button asChild size="lg">
-                  <Link href="/create">Skapa handbok</Link>
+                  <Link href="/create-handbook?new=true">Skapa handbok</Link>
                 </Button>
                 <Button variant="outline" size="lg" asChild>
                   <Link href="/documentation">Läs mer</Link>
@@ -259,7 +259,7 @@ export default function LandingPage() {
             <div className="mt-8 flex justify-center">
               <div className="inline-flex rounded-md shadow">
                 <Button asChild>
-                  <Link href="/create-handbook">
+                  <Link href="/create-handbook?new=true">
                     Skapa handbok nu
                   </Link>
                 </Button>

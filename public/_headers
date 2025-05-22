@@ -72,11 +72,6 @@
   Cross-Origin-Embedder-Policy: unsafe-none
   Cache-Control: no-cache, no-store, must-revalidate
 
-/cross-domain-storage.js
-  Access-Control-Allow-Origin: *
-  Content-Type: application/javascript; charset=UTF-8
-  Cross-Origin-Resource-Policy: cross-origin
-  Cache-Control: no-cache, must-revalidate
 
 /static-resource-fix.js
   Access-Control-Allow-Origin: *

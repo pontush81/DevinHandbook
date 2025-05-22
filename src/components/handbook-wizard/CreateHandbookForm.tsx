@@ -216,11 +216,11 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         }
       }
 
-      setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras till din handbok...`);
+      setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras...`);
       
-      // Redirect to the handbook after a short delay
+      // Redirect back to create-handbook page to show all handbooks instead of directly to the new handbook
       setTimeout(() => {
-        router.push(`https://${subdomain}.handbok.org`);
+        router.push(`/create-handbook`);
       }, 2000);
     } catch (error) {
       console.error('Error creating handbook:', error);
