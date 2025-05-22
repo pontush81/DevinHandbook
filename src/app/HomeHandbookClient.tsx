@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Menu } from 'lucide-react';
+import { Menu, BookOpen, Settings, Info, Users, FileText } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { MainLayout } from '@/components/layout/MainLayout';
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Page {
   id: string;
@@ -41,7 +42,30 @@ interface HomeHandbookClientProps {
   handbook: Handbook;
 }
 
+// Hjälpfunktion för att rendera ikon baserat på sektionsnamn
+const getSectionIcon = (title: string) => {
+  const lowerTitle = title.toLowerCase();
+  
+  if (lowerTitle.includes('välkommen')) return <Info className="h-5 w-5 text-blue-500" />;
+  if (lowerTitle.includes('kontakt') || lowerTitle.includes('styrelse')) return <Users className="h-5 w-5 text-green-500" />;
+  if (lowerTitle.includes('stadgar') || lowerTitle.includes('årsredovisning')) return <FileText className="h-5 w-5 text-purple-500" />;
+  if (lowerTitle.includes('regler') || lowerTitle.includes('reglerna')) return <Settings className="h-5 w-5 text-orange-500" />;
+  
+  // Default icon
+  return <BookOpen className="h-5 w-5 text-gray-500" />;
+};
+
 const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => {
+  // Hitta välkomstsektionen (vanligtvis den första)
+  const welcomeSection = handbook.sections.find(s => 
+    s.title.toLowerCase().includes('välkommen') || s.order_index === 0
+  );
+  
+  // Övriga sektioner
+  const otherSections = handbook.sections.filter(s => 
+    s.id !== (welcomeSection?.id || '')
+  );
+  
   return (
     <MainLayout 
       variant="app" 
@@ -49,10 +73,37 @@ const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => 
       sections={handbook.sections.map((s) => ({ id: s.id, title: s.title }))}
     >
       <main className="w-full max-w-5xl mx-auto px-6 py-8">
-        {handbook.sections.map((section: Section) => (
-          <section key={section.id} id={`section-${section.id}`} className="mb-12">
-            <h2 className="text-2xl font-semibold mb-6">{section.title}</h2>
-            <div className="prose max-w-none">
+        {/* Välkomstsektion med anpassad layout */}
+        {welcomeSection && (
+          <div className="mb-12">
+            <h1 className="text-3xl font-bold mb-4">{welcomeSection.title}</h1>
+            <div className="prose max-w-none mb-6 text-lg text-gray-700">
+              <ReactMarkdown>{welcomeSection.description}</ReactMarkdown>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6 mt-8">
+              {welcomeSection.pages.map((page: Page) => (
+                <Card key={page.id} className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <CardContent className="pt-6">
+                    <h3 className="text-xl font-medium mb-3">{page.title}</h3>
+                    <div className="prose max-w-none">
+                      <ReactMarkdown>{page.content}</ReactMarkdown>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Övriga sektioner */}
+        {otherSections.map((section: Section) => (
+          <section key={section.id} id={`section-${section.id}`} className="mb-12 pt-6 border-t border-gray-200">
+            <div className="flex items-center gap-2 mb-4">
+              {getSectionIcon(section.title)}
+              <h2 className="text-2xl font-semibold">{section.title}</h2>
+            </div>
+            <div className="prose max-w-none mb-6">
               <ReactMarkdown>{section.description}</ReactMarkdown>
             </div>
             {section.pages.map((page: Page) => (

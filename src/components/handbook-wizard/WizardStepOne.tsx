@@ -59,7 +59,7 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
         email,
         password,
         options: {
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
         },
       });
       if (error) {
@@ -87,7 +87,7 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
       else router.push("/create-handbook");
     } else if (tab === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
+        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
       });
       if (error) setError(error.message);
       else setSuccess("Återställningslänk skickad till din e-post.");

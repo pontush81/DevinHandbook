@@ -34,6 +34,8 @@
     "dotenv": "^16.5.0",
     "estree-util-is-identifier-name": "^2.1.0",
     "hast-util-to-jsx-runtime": "^2.3.6",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "lucide-react": "^0.510.0",
     "next": "^15.3.2",
     "next-client-cookies": "^2.1.0",

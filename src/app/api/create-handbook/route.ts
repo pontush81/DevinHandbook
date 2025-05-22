@@ -74,13 +74,29 @@ export async function POST(request: NextRequest) {
     // Skapa handboken
     const handbookId = await createHandbookWithSectionsAndPages(title, subdomain, /* template */ { sections: [] }, userId);
     
+    // Om userId finns, säkerställ att användaren är admin för handboken
+    if (userId) {
+      const { error: permError } = await supabase
+        .from('handbook_permissions')
+        .insert({
+          handbook_id: handbookId,
+          owner_id: userId,
+          role: 'admin',
+        });
+        
+      if (permError) {
+        console.error('[API] Kunde inte lägga till skaparen som admin:', permError);
+        // Fortsätt ändå, vi har åtminstone skapat handboken
+      }
+    }
+    
     // Create default welcome section
     const { data: section, error: sectionError } = await supabase
       .from('sections')
       .insert({
-        title: 'Welcome',
-        description: 'Welcome to this handbook',
-        order: 0,
+        title: 'Välkommen',
+        description: 'Välkommen till föreningens digitala handbok! Här hittar du all viktig information om ditt boende och föreningen.',
+        order_index: 0,
         handbook_id: handbookId
       })
       .select()
@@ -96,15 +112,31 @@ export async function POST(request: NextRequest) {
       const { error: pageError } = await supabase
         .from('pages')
         .insert({
-          title: 'Welcome',
-          content: `# Welcome to ${title}\n\nThis is the start page for your handbook.`,
-          order: 0,
-          section_id: section.id
+          title: 'Om föreningen',
+          content: `# Om vår förening\n\nHär finner du grundläggande information om ${title}, inklusive historia, vision och kontaktuppgifter.\n\n## Fakta om föreningen\n\n- **Bildad år:** [Årtal]\n- **Antal lägenheter:** [Antal]\n- **Adress:** [Föreningens adress]\n- **Organisationsnummer:** [Org.nr]`,
+          order_index: 0,
+          section_id: section.id,
+          slug: 'om-foreningen'
         });
         
       if (pageError) {
         console.error('Error creating page:', pageError);
         // Continue anyway
+      }
+      
+      // Skapa en ytterligare sida för nya medlemmar
+      const { error: secondPageError } = await supabase
+        .from('pages')
+        .insert({
+          title: 'För nya medlemmar',
+          content: `# Information för nya medlemmar\n\nDetta avsnitt innehåller praktisk information som är särskilt användbar för dig som är ny medlem i föreningen.\n\n## Viktigt att känna till\n\n- Styrelsen håller möten regelbundet\n- Felanmälan görs via [metod för felanmälan]\n- I denna handbok hittar du svar på många vanliga frågor om boendet`,
+          order_index: 1,
+          section_id: section.id,
+          slug: 'for-nya-medlemmar'
+        });
+        
+      if (secondPageError) {
+        console.error('Error creating second page:', secondPageError);
       }
     }
     

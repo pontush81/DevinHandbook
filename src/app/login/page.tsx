@@ -3,11 +3,28 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle2 } from "lucide-react";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const verified = searchParams.get("verified");
+  const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
+
+  useEffect(() => {
+    // Kolla om e-posten är verifierad via URL-parametern
+    if (verified === "true") {
+      setShowVerifiedMessage(true);
+      // Automatiskt ta bort meddelandet efter 10 sekunder
+      const timer = setTimeout(() => {
+        setShowVerifiedMessage(false);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [verified]);
 
   useEffect(() => {
     // Kolla om access_token och refresh_token finns i URL-hashen
@@ -52,6 +69,17 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
       <div className="max-w-md w-full">
         
+        {/* Success Message */}
+        {showVerifiedMessage && (
+          <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <AlertTitle className="text-green-800">E-post verifierad!</AlertTitle>
+            <AlertDescription className="text-green-700">
+              Ditt konto har verifierats. Du kan nu logga in med dina uppgifter.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -63,7 +91,7 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <WizardStepOne showTabs={true} />
+        <WizardStepOne showTabs={true} tab="login" />
       </div>
     </div>
   );

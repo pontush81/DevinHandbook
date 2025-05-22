@@ -26,21 +26,21 @@ export const defaultHandbookTemplate: HandbookTemplate = {
   sections: [
     {
       id: uuidv4(),
-      title: "Välkommen till föreningen",
-      description: "Introduktion och välkomstinformation för nya medlemmar",
+      title: "Välkommen",
+      description: "Välkommen till föreningens digitala handbok! Här hittar du all viktig information om ditt boende och föreningen.",
       order: 1,
       isActive: true,
       pages: [
         {
           id: uuidv4(),
           title: "Om föreningen",
-          content: "# Om vår förening\n\nVälkommen till vår bostadsrättsförening! Här hittar du information om föreningens historia, vision och värderingar.",
+          content: "# Om vår förening\n\nHär finner du grundläggande information om vår bostadsrättsförening, inklusive historia, vision och kontaktuppgifter.\n\n## Fakta om föreningen\n\n- **Bildad år:** [Årtal]\n- **Antal lägenheter:** [Antal]\n- **Adress:** [Föreningens adress]\n- **Organisationsnummer:** [Org.nr]\n\nVår förening strävar efter att skapa en trivsam boendemiljö med god gemenskap och ekonomisk stabilitet. Vi uppmuntrar alla medlemmar att engagera sig i föreningens angelägenheter.",
           order: 1,
         },
         {
           id: uuidv4(),
-          title: "Välkomstinformation",
-          content: "# Välkommen som ny medlem\n\nHär hittar du viktig information som ny medlem i föreningen, inklusive praktiska tips och kontaktuppgifter.",
+          title: "För nya medlemmar",
+          content: "# Information för nya medlemmar\n\nDetta avsnitt innehåller praktisk information som är särskilt användbar för dig som är ny medlem i föreningen.\n\n## Viktigt att känna till\n\n- Styrelsen håller möten regelbundet och årsstämma hålls vanligtvis i [månad].\n- Felanmälan görs via [metod för felanmälan].\n- I denna handbok hittar du svar på många vanliga frågor om boendet.\n\n## Första tiden i föreningen\n\nVi rekommenderar att du bekantar dig med föreningens stadgar och trivselregler. Ta gärna kontakt med dina grannar och styrelsen om du har frågor om föreningen eller fastigheten.",
           order: 2,
         }
       ]
