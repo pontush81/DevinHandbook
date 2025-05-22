@@ -33,6 +33,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
     "estree-util-is-identifier-name": "^2.1.0",
+    "framer-motion": "^12.12.1",
     "hast-util-to-jsx-runtime": "^2.3.6",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",

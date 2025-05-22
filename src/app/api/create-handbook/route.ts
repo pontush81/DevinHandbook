@@ -1,160 +1,168 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
+import { supabase } from "@/lib/supabase";
+import { getAdminClient } from "@/lib/supabase";
+import { ensureUserProfile } from "@/lib/user-utils";
 
-export async function POST(request: NextRequest) {
-  // Verify API key for security (optional in development)
-  const authHeader = request.headers.get('authorization');
-  const apiKey = process.env.ADMIN_API_KEY || 'handbok-secret-key';
-  
-  // Simple API key check - improve this in production
-  if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== apiKey) {
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Unauthorized' 
-    }, { status: 401 });
-  }
-  
+export async function POST(req: NextRequest) {
   try {
-    // Parse the request body
-    const requestBody = await request.json();
-    const subdomain = requestBody.subdomain;
-    // Support both 'title' and 'name' for backwards compatibility
-    const title = requestBody.title || requestBody.name;
-    
-    // Validate required fields
-    if (!subdomain || !title) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Missing required fields: subdomain and title are required' 
-      }, { status: 400 });
+    const { name, subdomain, user_id } = await req.json();
+
+    // Verifiera indata
+    if (!name || !subdomain || !user_id) {
+      return NextResponse.json(
+        { error: "Namn, subdomän och användar-ID krävs" },
+        { status: 400 }
+      );
     }
-    
-    // Validate subdomain format (lowercase letters, numbers, hyphens)
-    const subdomainRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-    if (!subdomainRegex.test(subdomain)) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid subdomain format' 
-      }, { status: 400 });
-    }
-    
-    const supabase = getServiceSupabase();
-    
-    // Check if handbook with this subdomain already exists
+
+    // Kontrollera om subdomänen redan används
     const { data: existingHandbook, error: checkError } = await supabase
-      .from('handbooks')
-      .select('id')
-      .eq('subdomain', subdomain)
+      .from("handbooks")
+      .select("id")
+      .eq("subdomain", subdomain)
       .maybeSingle();
-      
+
     if (checkError) {
-      console.error('Error checking for existing handbook:', checkError);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Database error when checking existing handbook',
-        details: checkError.message
-      }, { status: 500 });
+      console.error("Fel vid kontroll av subdomän:", checkError);
+      return NextResponse.json(
+        { error: "Kunde inte kontrollera subdomän" },
+        { status: 500 }
+      );
     }
-    
+
     if (existingHandbook) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'A handbook with this subdomain already exists',
-        handbook_id: existingHandbook.id,
-        subdomain
-      }, { status: 409 });
+      return NextResponse.json(
+        { error: "Denna subdomän är redan tagen" },
+        { status: 409 }
+      );
     }
-    
-    // Hämta userId från request/session om möjligt
-    let userId = null;
-    // Om du har ett sätt att hämta userId från session eller JWT, gör det här
-    // t.ex. userId = getUserIdFromRequest(request);
+
+    // Skapa handbok med admin client för att kringgå RLS
+    const adminClient = getAdminClient();
+
+    // Säkerställ att användaren har en profil
+    const { data: userCheck } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("id", user_id)
+      .maybeSingle();
+
+    if (!userCheck) {
+      // Hämta användarens e-post för att skapa profil
+      const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(user_id);
+
+      if (userError || !userData?.user) {
+        console.error("Kunde inte hämta användardata:", userError);
+        return NextResponse.json(
+          { error: "Kunde inte verifiera användaren" },
+          { status: 500 }
+        );
+      }
+
+      // Skapa användarprofil om den inte finns
+      await ensureUserProfile(supabase, user_id, userData.user.email || "");
+    }
 
     // Skapa handboken
-    const handbookId = await createHandbookWithSectionsAndPages(title, subdomain, /* template */ { sections: [] }, userId);
-    
-    // Om userId finns, säkerställ att användaren är admin för handboken
-    if (userId) {
-      const { error: permError } = await supabase
-        .from('handbook_permissions')
-        .insert({
-          handbook_id: handbookId,
-          owner_id: userId,
-          role: 'admin',
-        });
-        
-      if (permError) {
-        console.error('[API] Kunde inte lägga till skaparen som admin:', permError);
-        // Fortsätt ändå, vi har åtminstone skapat handboken
-      }
-    }
-    
-    // Create default welcome section
-    const { data: section, error: sectionError } = await supabase
-      .from('sections')
+    const { data: handbook, error: createError } = await adminClient
+      .from("handbooks")
       .insert({
-        title: 'Välkommen',
-        description: 'Välkommen till föreningens digitala handbok! Här hittar du all viktig information om ditt boende och föreningen.',
-        order_index: 0,
-        handbook_id: handbookId
+        name,
+        subdomain,
+        user_id,
+        published: true,
+        created_at: new Date().toISOString(),
       })
-      .select()
+      .select("id")
       .single();
-      
+
+    if (createError) {
+      console.error("Fel vid skapande av handbok:", createError);
+      return NextResponse.json(
+        { error: "Kunde inte skapa handbok" },
+        { status: 500 }
+      );
+    }
+
+    // Tilldela admin-roll till användaren
+    const { error: membershipError } = await adminClient
+      .from("handbook_members")
+      .insert({
+        handbook_id: handbook.id,
+        user_id,
+        role: "admin", // Explicit sätt rollen till admin
+        created_at: new Date().toISOString(),
+      });
+
+    if (membershipError) {
+      console.error("Fel vid tilldelning av admin-roll:", membershipError);
+      // Vi fortsätter ändå eftersom handboken har skapats
+      // Alternativt kan vi ta bort handboken och returnera ett fel
+    }
+
+    // Skapa en initial sektion
+    const { data: section, error: sectionError } = await adminClient
+      .from("sections")
+      .insert({
+        handbook_id: handbook.id,
+        title: "Välkommen",
+        description: "Grundläggande information om föreningen",
+        order: 1,
+        created_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
     if (sectionError) {
-      console.error('Error creating section:', sectionError);
-      // Continue anyway, we at least created the handbook
+      console.error("Fel vid skapande av sektion:", sectionError);
+      // Fortsätt ändå
     }
-    
-    // Create default welcome page if section was created
+
+    // Skapa standardsidor om sektionen skapades
     if (section) {
-      const { error: pageError } = await supabase
-        .from('pages')
-        .insert({
-          title: 'Om föreningen',
-          content: `# Om vår förening\n\nHär finner du grundläggande information om ${title}, inklusive historia, vision och kontaktuppgifter.\n\n## Fakta om föreningen\n\n- **Bildad år:** [Årtal]\n- **Antal lägenheter:** [Antal]\n- **Adress:** [Föreningens adress]\n- **Organisationsnummer:** [Org.nr]`,
-          order_index: 0,
+      const defaultPages = [
+        {
           section_id: section.id,
-          slug: 'om-foreningen'
-        });
-        
-      if (pageError) {
-        console.error('Error creating page:', pageError);
-        // Continue anyway
-      }
-      
-      // Skapa en ytterligare sida för nya medlemmar
-      const { error: secondPageError } = await supabase
-        .from('pages')
-        .insert({
-          title: 'För nya medlemmar',
-          content: `# Information för nya medlemmar\n\nDetta avsnitt innehåller praktisk information som är särskilt användbar för dig som är ny medlem i föreningen.\n\n## Viktigt att känna till\n\n- Styrelsen håller möten regelbundet\n- Felanmälan görs via [metod för felanmälan]\n- I denna handbok hittar du svar på många vanliga frågor om boendet`,
-          order_index: 1,
+          title: "Om föreningen",
+          content: `# Om vår förening\n\nHär finner du grundläggande information om vår bostadsrättsförening, inklusive historia, vision och kontaktuppgifter.\n\n## Fakta om föreningen\n\n* **Bildad år:** [Årtal]\n* **Antal lägenheter:** [Antal]\n* **Adress:** [Föreningens adress]\n* **Organisationsnummer:** [Org.nr]\n\nVår förening strävar efter att skapa en trivsam boendemiljö med god gemenskap och ekonomisk stabilitet. Vi uppmuntrar alla medlemmar att engagera sig i föreningens angelägenheter.`,
+          order: 1,
+          created_at: new Date().toISOString(),
+        },
+        {
           section_id: section.id,
-          slug: 'for-nya-medlemmar'
-        });
-        
-      if (secondPageError) {
-        console.error('Error creating second page:', secondPageError);
+          title: "För nya medlemmar",
+          content: `# Information för nya medlemmar\n\nDetta avsnitt innehåller praktisk information som är särskilt användbar för dig som är ny medlem i föreningen.\n\n## Viktigt att känna till\n\n* Styrelsen håller möten regelbundet och årsstämma hålls vanligtvis i [månad].\n* Felanmälan görs via [metod för felanmälan].\n* I denna handbok hittar du svar på många vanliga frågor om boendet.\n\n## Första tiden i föreningen\n\nVi rekommenderar att du bekantar dig med föreningens stadgar och trivselregler. Ta gärna kontakt med dina grannar och styrelsen om du har frågor om föreningen eller fastigheten.`,
+          order: 2,
+          created_at: new Date().toISOString(),
+        },
+      ];
+
+      for (const page of defaultPages) {
+        const { error: pageError } = await adminClient
+          .from("pages")
+          .insert(page);
+
+        if (pageError) {
+          console.error("Fel vid skapande av sida:", pageError);
+          // Fortsätt ändå
+        }
       }
     }
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Handbook created successfully',
-      handbook_id: handbookId,
+
+    // Returnera handbok-ID och subdomän
+    return NextResponse.json({
+      id: handbook.id,
       subdomain,
-      url: `https://${subdomain}.handbok.org`
-    }, { status: 201 });
-    
+      url: `https://${subdomain}.handbok.org`,
+    });
   } catch (error) {
-    console.error('Unexpected error creating handbook:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Internal server error',
-      details: error.message
-    }, { status: 500 });
+    console.error("Oväntat fel vid skapande av handbok:", error);
+    return NextResponse.json(
+      { error: "Ett oväntat fel inträffade" },
+      { status: 500 }
+    );
   }
 }
 
