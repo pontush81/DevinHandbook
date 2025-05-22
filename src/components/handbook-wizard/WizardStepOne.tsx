@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { Button } from '@/components/ui/button';
 
 export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTab }: { showTabs?: boolean, tab?: 'signup' | 'login' | 'reset', setTab?: (tab: 'signup' | 'login' | 'reset') => void }) {
-  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { setCurrentStep, currentStep } = useHandbookStore();
   const [internalTab, internalSetTab] = useState<'signup' | 'login' | 'reset'>('signup');
   const tab = propTab ?? internalTab;
@@ -25,27 +25,7 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
   const router = useRouter();
 
   if (authLoading) {
-    return <div className="text-center py-12">Laddar...</div>;
-  }
-
-  if (currentStep === 0 && user) {
-    return (
-      <div className="bg-white rounded-lg p-8 shadow-lg border border-gray-100 space-y-6 text-center">
-        <h2 className="text-2xl font-bold">Du är inloggad</h2>
-        <p className="text-gray-600 mb-4">Du är inloggad som <span className="font-semibold">{user.email}</span>.</p>
-        <div className="flex flex-col gap-2 items-center">
-          <span className="text-blue-700">Du kan gå till din handbok via dashboard eller menyn.</span>
-          <button
-            className="text-sm text-blue-600 underline mt-2"
-            onClick={async () => {
-              await signOut();
-            }}
-          >
-            Byt konto
-          </button>
-        </div>
-      </div>
-    );
+    return <div className="text-center py-4">Laddar...</div>;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,7 +64,7 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
     } else if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError("Fel e-post eller lösenord.");
-      else router.push("/create-handbook");
+      else router.push("/dashboard");
     } else if (tab === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,

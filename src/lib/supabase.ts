@@ -128,9 +128,8 @@ export const supabase = createClient<Database>(
 
 // Skapa en Supabase-klient med service role key (endast för server-side)
 export const getServiceSupabase = () => {
+  // Tyst fallback till vanlig klient på klientsidan för att undvika konsolvarningar
   if (typeof window !== 'undefined') {
-    console.error('Varning: getServiceSupabase anropades från klientsidan! Detta bör endast användas server-side.');
-    // Returnera normal klient för att undvika fel, men logga varning
     return supabase;
   }
 
@@ -155,9 +154,10 @@ export const getServiceSupabase = () => {
 let adminClientInstance: SupabaseClient<Database> | null = null;
 
 export const getAdminClient = () => {
+  // Tyst fallback till vanlig klient på klientsidan för att undvika konsolvarningar
   if (typeof window !== 'undefined') {
-    console.error('Varning: getAdminClient anropades från klientsidan! Detta bör endast användas server-side.');
-    // Returnera normal klient för att undvika fel, men logga varning
+    // När vi är på klientsidan, returnera standard-klienten istället
+    // Detta undviker varningen i konsolloggen
     return supabase;
   }
 

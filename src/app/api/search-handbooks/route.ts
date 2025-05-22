@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   const supabase = getServiceSupabase();
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get('q') || '').trim();
   
   if (!q || q.length < 2) {
-    return NextResponse.json({ results: [] });
+    return NextResponse.json({ results: [] }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
   }
   
   console.log('Söker efter handböcker med:', q);
@@ -24,13 +33,24 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('[search-handbooks] Supabase error:', error);
       console.error('[search-handbooks] Query param q:', q);
-      return NextResponse.json({ error: error.message, details: error }, { status: 500 });
+      return NextResponse.json(
+        { error: error.message, details: error }, 
+        { 
+          status: 500,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          }
+        }
+      );
     }
     
-    console.log('Hittade resultat:', data?.length || 0);
+    const results = Array.isArray(data) ? data : [];
+    console.log('Hittade resultat:', results.length);
     
     return NextResponse.json(
-      { results: data },
+      { results },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -42,8 +62,15 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error('[search-handbooks] Unexpected error:', err);
     return NextResponse.json(
-      { error: 'Unexpected error during search', details: err },
-      { status: 500 }
+      { error: 'Ett oväntat fel uppstod vid sökning', details: err },
+      { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      }
     );
   }
 } 

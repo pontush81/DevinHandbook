@@ -116,9 +116,6 @@ export default async function HomePage() {
                 </p>
                 <div className="space-y-4">
                   <AutoSuggestHandbookSearch />
-                  <Button variant="outline" className="w-full h-12">
-                    Sök förening
-                  </Button>
                 </div>
               </CardContent>
             </Card>
