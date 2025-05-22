@@ -47,13 +47,7 @@ export function MainHeader({ variant = 'landing', showAuth = true, sections, nav
     <header className="bg-white shadow-sm sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div className="flex items-center">
-          <Link 
-            href="/landing" 
-            className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition-colors"
-            aria-label="Handbok.org startsida"
-          >
-            Handbok.org
-          </Link>
+          {/* Removed Handbok.org link */}
         </div>
 
         {variant === 'landing' && (
@@ -103,13 +97,7 @@ export function MainHeader({ variant = 'landing', showAuth = true, sections, nav
         )}
 
         <div className="flex items-center space-x-4">
-          {showAuth && (
-            <Button asChild variant="default">
-              <Link href="/create-handbook">
-                Skapa handbok
-              </Link>
-            </Button>
-          )}
+          {/* Removed "Skapa handbok" button */}
         </div>
       </div>
     </header>
