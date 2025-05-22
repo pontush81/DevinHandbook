@@ -60,7 +60,7 @@ export default async function HomePage() {
 
   // Ny modern, luftig startsida med reducerad toppmarginal
   return (
-    <MainLayout variant="landing" showHeader={false}>
+    <MainLayout variant="landing" showHeader={false} noWhiteTop={true}>
       <div className="min-h-screen bg-gray-50 px-4 py-6">
         <main className="w-full max-w-xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8 md:p-10 flex flex-col gap-8 mt-8">
           <div className="w-full text-center">

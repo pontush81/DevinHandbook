@@ -9,7 +9,7 @@ export default function CreateHandbookLayout({
 }) {
   return (
     <AuthProvider>
-      <MainLayout variant="app" showAuth={false}>
+      <MainLayout variant="app" showAuth={false} noWhiteTop={true} showHeader={false}>
         {children}
       </MainLayout>
     </AuthProvider>

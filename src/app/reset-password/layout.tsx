@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 export default function ResetPasswordLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
-      <MainLayout variant="landing" showAuth={false}>
+      <MainLayout variant="landing" showAuth={false} noWhiteTop={true} showHeader={false}>
         {children}
       </MainLayout>
     </AuthProvider>

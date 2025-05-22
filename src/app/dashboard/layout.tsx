@@ -4,7 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <MainLayout variant="app" showAuth={false}>
+      <MainLayout variant="app" showAuth={false} noWhiteTop={true} showHeader={false}>
         {children}
       </MainLayout>
     </AuthProvider>
