@@ -1,21 +1,17 @@
-import type { Metadata } from "next";
+"use client";
+
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Script from 'next/script';
-import Head from 'next/head'
+import SessionResetNotice from "@/components/SessionResetNotice";
+import AuthDiagnosticsPanel from "@/components/AuthDiagnosticsPanel";
 
 const inter = Inter({
   subsets: ["latin"],
   display: 'swap',
   variable: '--font-inter',
 });
-
-export const metadata: Metadata = {
-  title: "Handbok.org - Digital handbok för bostadsrättsföreningar",
-  description: "Skapa en digital handbok för din bostadsrättsförening",
-  metadataBase: new URL('https://www.handbok.org'),
-};
 
 // Säker localStorage-hantering
 const safeLocalStorage = {
@@ -58,6 +54,8 @@ export default function RootLayout({
   return (
     <html lang="sv" suppressHydrationWarning className={inter.className}>
       <head>
+        <title>Handbok.org - Digital handbok för bostadsrättsföreningar</title>
+        <meta name="description" content="Skapa en digital handbok för din bostadsrättsförening" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
         <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
@@ -249,47 +247,36 @@ export default function RootLayout({
           {`
             (function() {
               try {
-                // Skapa en global memory-storage som kan användas om localStorage är blockerad
                 if (typeof window !== 'undefined') {
-                  window.__memoryStorage = {};
+                  // In-memory fallback för session-data
+                  window.memoryStorage = {};
                   
-                  // Testa localStorage
-                  let localStorageBlocked = false;
+                  // Local Storage test
+                  let canUseLocalStorage = false;
                   try {
-                    localStorage.setItem('__test_storage', '1');
-                    localStorage.removeItem('__test_storage');
-                  } catch(e) {
-                    localStorageBlocked = true;
-                    console.warn('localStorage är blockerad, använder memory-fallback');
+                    localStorage.setItem('test', 'test');
+                    localStorage.removeItem('test');
+                    canUseLocalStorage = true;
+                  } catch (e) {
+                    console.warn('localStorage är blockerad eller ej tillgänglig:', e);
                   }
                   
-                  // Om localStorage är blockerad, skapa en global AuthContext-hjälpare
-                  if (localStorageBlocked && !window.safeStorage) {
-                    window.safeStorage = {
-                      getItem: function(key) {
-                        return window.__memoryStorage[key] || null;
-                      },
-                      setItem: function(key, value) {
-                        window.__memoryStorage[key] = value;
-                        return true;
-                      },
-                      removeItem: function(key) {
-                        delete window.__memoryStorage[key];
-                        return true;
-                      }
-                    };
+                  if (!canUseLocalStorage) {
+                    console.info('Använder memory storage som fallback för localStorage');
                   }
                 }
               } catch(e) {
-                console.error('Error in AuthContext fallback script:', e);
+                console.error('Fel vid localStorage-kontroll:', e);
               }
             })();
           `}
         </Script>
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         <AuthProvider>
+          <SessionResetNotice />
           {children}
+          <AuthDiagnosticsPanel />
         </AuthProvider>
       </body>
     </html>

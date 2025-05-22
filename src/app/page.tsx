@@ -1,3 +1,5 @@
+"use client";
+
 import { headers } from 'next/headers';
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import HomeHandbookClient from './HomeHandbookClient';
@@ -28,37 +30,11 @@ interface Page {
   section_id: string;
 }
 
-export default async function HomePage() {
-  const host = (await headers()).get('host') || '';
-  console.log('SSR HOST:', host);
-  const match = host.match(/^([a-z0-9-]+)\.handbok\.org$/);
-  const subdomain = match ? match[1] : null;
-
-  if (subdomain && subdomain !== 'www' && subdomain !== 'staging') {
-    let handbook = null;
-    try {
-      handbook = await getHandbookBySubdomain(subdomain);
-      console.log('SSR: handbook', JSON.stringify(handbook));
-    } catch (error) {
-      return <div>Fel vid laddning av handbok</div>;
-    }
-    if (!handbook) {
-      return <div>Handbok saknas</div>;
-    }
-    // Filtrera sektioner och sidor på is_published
-    const publishedSections = (handbook.sections || []).filter((section: any) => section.is_published !== false);
-    publishedSections.forEach((section: any) => {
-      section.pages = (section.pages || []).filter((page: any) => page.is_published !== false);
-    });
-    console.log('SSR: publishedSections', JSON.stringify(publishedSections));
-    if (publishedSections.length === 0) {
-      return <div>Handboken saknar innehåll eller är inte publicerad.</div>;
-    }
-    // Skicka data till client component
-    return <HomeHandbookClient handbook={{ ...handbook, sections: publishedSections }} />;
-  }
-
-  // Ny modern, luftig startsida
+export default function HomePage() {
+  // Vi kan inte använda server-side headers med "use client"
+  // Detta behöver omarbetas för att fungera på klientsidan
+  
+  // För tillfället, visa bara startsidan
   return (
     <MainLayout variant="landing" showHeader={false} noWhiteTop={true}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -66,7 +42,7 @@ export default async function HomePage() {
           
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <Badge variant="secondary" className="mb-6 bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Badge variant="outline" className="mb-6">
               ✨ Ny plattform för bostadsrättsföreningar
             </Badge>
             
@@ -96,8 +72,8 @@ export default async function HomePage() {
                 <p className="text-gray-600 mb-6">
                   Starta din första handbok och börja dokumentera rutiner och information.
                 </p>
-                <Button asChild className="w-full" size="lg">
-                  <a href="/create-handbook?new=true">Skapa ny handbok</a>
+                <Button className="w-full" size="lg" onClick={() => window.location.href = '/create-handbook?new=true'}>
+                  Skapa ny handbok
                 </Button>
               </CardContent>
             </Card>
@@ -114,8 +90,8 @@ export default async function HomePage() {
                 <p className="text-gray-600 mb-6">
                   Sök efter din bostadsrättsförening och få tillgång till er handbok.
                 </p>
-                <Button asChild className="w-full" size="lg">
-                  <a href="/search">Sök efter förening</a>
+                <Button className="w-full" size="lg" onClick={() => window.location.href = '/search'}>
+                  Sök efter förening
                 </Button>
               </CardContent>
             </Card>

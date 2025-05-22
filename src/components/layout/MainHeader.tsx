@@ -72,8 +72,8 @@ export function MainHeader({ variant = 'landing', showAuth = true, sections, nav
         {variant === 'app' && sections && sections.length > 0 && (
           <div className="md:hidden">
             <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+              <SheetTrigger>
+                <Button variant="ghost" size="sm">
                   <Menu className="h-6 w-6" />
                   <span className="sr-only">Öppna meny</span>
                 </Button>
@@ -103,10 +103,10 @@ export function MainHeader({ variant = 'landing', showAuth = true, sections, nav
             <>
               {pathname !== '/login' && pathname !== '/signup' && (
                 <>
-                  <Button asChild variant="outline">
+                  <Button variant="outline">
                     <Link href="/login">Logga in</Link>
                   </Button>
-                  <Button asChild className="hidden sm:inline-flex">
+                  <Button className="hidden sm:inline-flex">
                     <Link href="/create-handbook?new=true">Skapa handbok</Link>
                   </Button>
                 </>
