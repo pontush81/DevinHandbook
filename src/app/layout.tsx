@@ -88,6 +88,9 @@ export default function RootLayout({
         {/* Resource fix script for cross-domain resources */}
         <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
         
+        {/* Auth storage fallback script */}
+        <Script src="/auth-storage-fallback.js" strategy="beforeInteractive" />
+        
         {/* Inline critical CSS för att förhindra FOUC och garantera grundläggande styling */}
         <style dangerouslySetInnerHTML={{ __html: `` }} />
         

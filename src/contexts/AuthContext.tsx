@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
-import { logDiagnostic, snapshotSession, snapshotCookies } from "@/lib/auth-diagnostics";
+import { logDiagnostic, snapshotSession, snapshotCookies, logStorageAccess } from "@/lib/auth-diagnostics";
 
 type AuthContextType = {
   user: User | null;
@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authErrorShown, setAuthErrorShown] = useState(false);
   const router = useRouter();
 
   // Funktion för att skapa användarprofil om den inte finns
@@ -80,37 +81,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Initiera session från Supabase
   useEffect(() => {
     const setData = async () => {
+      setIsLoading(true);
+      
       try {
-        // Använd Supabase's inbyggda getSession istället för localStorage/cookies
-        logDiagnostic('auth', 'Kontrollerar initial session...');
-        const { data: { session: freshSession }, error: sessionError } = await supabase.auth.getSession();
+        // Logga storage-status vid start
+        logStorageAccess();
         
-        if (sessionError) {
-          console.error('Fel vid hämtning av session:', sessionError);
-          logDiagnostic('error', 'Fel vid hämtning av initial session', { error: sessionError });
+        // Hämta aktuell session
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Fel vid hämtning av session:', error);
+          logDiagnostic('error', 'Fel vid hämtning av initial session', { error: error });
           setSession(null);
           setUser(null);
-        } else if (freshSession) {
+        } else if (currentSession) {
           logDiagnostic('session', 'Hittade aktiv session', {
-            userId: freshSession.user?.id,
-            expiresAt: freshSession.expires_at ? new Date(freshSession.expires_at * 1000).toISOString() : 'unknown'
+            userId: currentSession.user?.id,
+            expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
           });
           console.log('Hittade aktiv session från Supabase', {
-            userId: freshSession.user?.id,
-            expiresAt: freshSession.expires_at ? new Date(freshSession.expires_at * 1000).toISOString() : 'unknown'
+            userId: currentSession.user?.id,
+            expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
           });
           
           // Ta snapshot av sessionen för diagnostik
-          snapshotSession(freshSession);
+          snapshotSession(currentSession);
           
-          setSession(freshSession);
-          setUser(freshSession.user);
+          setSession(currentSession);
+          setUser(currentSession.user);
           
           // Säkerställ att användarprofilen finns
-          if (freshSession.user.id && freshSession.user.email) {
-            createUserProfileIfNeeded(freshSession.user.id, freshSession.user.email);
+          if (currentSession.user.id && currentSession.user.email) {
+            createUserProfileIfNeeded(currentSession.user.id, currentSession.user.email);
           }
         } else {
           logDiagnostic('session', 'Ingen aktiv session hittades');
@@ -130,13 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
     
-    // För att säkerställa att cookies har laddats korrekt, vänta lite innan vi försöker hämta session
-    const timeout = setTimeout(() => {
-      setData();
-    }, 800); // Ökad till 800ms för att ge browsern mycket mer tid för cookies
-    
-    // Rensa timeout när komponenten avmonteras
-    return () => clearTimeout(timeout);
+    setData();
   }, [createUserProfileIfNeeded]);
 
   // Separat useEffect för lyssnare för att undvika race conditions
@@ -158,6 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         logDiagnostic('auth', 'User signed in or token refreshed');
         console.log('User signed in or token refreshed');
+        
+        // Logga storage-status efter inloggning eller token refresh
+        logStorageAccess();
         
         // Ta snapshot av session för diagnostik
         if (session) {
@@ -216,106 +219,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     
     // Hantera auth-fel via custom event
-    const handleAuthError = (event: Event) => {
-      try {
-        const customEvent = event as CustomEvent;
-        handleAuthErrors(customEvent.detail?.error || customEvent.detail);
-      } catch (e) {
-        console.error('Fel vid hantering av auth error event:', e);
+    const handleAuthError = (event: CustomEvent) => {
+      // Undvik att visa flera auth-felmeddelanden
+      if (authErrorShown) return;
+
+      const errorMessage = event.detail?.message || 'Ett autentiseringsfel inträffade';
+      
+      // Kontrollera specifikt för refresh token fel
+      const isRefreshTokenError = errorMessage.includes('refresh_token_not_found') || 
+                                 errorMessage.includes('Invalid Refresh Token');
+      
+      if (isRefreshTokenError) {
+        logDiagnostic('error', 'Refresh token fel upptäckt', { errorMessage });
+        
+        // Rensa session state
+        setSession(null);
+        setUser(null);
+        
+        // Visa ett meddelande till användaren och omdirigera efter bekräftelse
+        setAuthErrorShown(true);
+        const confirmRelogin = window.confirm(
+          'Din session har gått ut. Klicka OK för att logga in igen.'
+        );
+        
+        if (confirmRelogin) {
+          // Rensa eventuella tokens innan vi navigerar till login
+          try {
+            supabase.auth.signOut();
+          } catch (e) {
+            // Ignorera eventuella fel vid utloggning
+          }
+          
+          // Navigera till login-sidan
+          router.push('/login');
+        }
+      } else {
+        // Hantera andra typer av auth-fel
+        console.error('Auth error:', errorMessage);
+        logDiagnostic('error', 'Auth error', { errorMessage });
       }
     };
-    
-    // Försök att registrera onError-event om det finns, annars använd vanlig event listener
-    let errorUnsubscribe: any = null;
-    
-    try {
-      // Försök använda onError om det finns (vissa Supabase-versioner stödjer detta)
-      if (typeof supabase.auth.onError === 'function') {
-        // @ts-ignore - Ignorera typfel för äldre Supabase-versioner
-        errorUnsubscribe = supabase.auth.onError((error: any) => {
-          try {
-            handleAuthErrors(error);
-          } catch (e) {
-            console.error('Fel i onError-hanterare:', e);
-          }
-        });
-        console.log('Registrerade supabase.auth.onError - API tillgängligt');
-      } else {
-        // Fallback: lägg till global event listener för auth-fel
-        if (typeof window !== 'undefined') {
-          window.addEventListener('supabase.auth.error', handleAuthError);
-          console.log('Registrerade event listener för supabase.auth.error');
-        }
-      }
-    } catch (e) {
-      console.error('Fel vid registrering av auth error hanterare:', e);
-      // Fallback: lägg till global event listener för auth-fel om något går fel
-      if (typeof window !== 'undefined') {
-        window.addEventListener('supabase.auth.error', handleAuthError);
-        console.log('Fallback: Registrerade event listener för supabase.auth.error');
-      }
+
+    // Lyssna på auth error event från Supabase
+    if (typeof window !== 'undefined') {
+      window.addEventListener('supabase.auth.error', handleAuthError as EventListener);
     }
-    
-    // Periodiskt kontrollera att sessionen fortfarande är aktiv
-    const sessionCheck = setInterval(async () => {
-      if (session) {
-        try {
-          // Använd ett begränsat antal försök för sessionskontroll
-          const checkWithRetry = async (maxRetries = 2) => {
-            for (let i = 0; i < maxRetries; i++) {
-              try {
-                const { data, error } = await supabase.auth.getSession();
-                
-                if (error) {
-                  // Hantera felet med vår gemensamma funktion
-                  handleAuthErrors(error);
-                  
-                  // Om det är ett nätverksfel, försök igen
-                  if (error.message?.includes('network') || error.message?.includes('connection')) {
-                    console.warn(`Nätverksfel vid sessionskontroll (försök ${i+1}/${maxRetries}):`, error.message);
-                    if (i < maxRetries - 1) {
-                      // Vänta innan nästa försök (500ms första gången, 1000ms andra)
-                      await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
-                      continue;
-                    }
-                  }
-                  
-                  // Permanent sessionsfel
-                  console.warn('Sessionsfel vid periodisk kontroll:', error.message);
-                  setSession(null);
-                  setUser(null);
-                  return;
-                }
-                
-                if (!data.session) {
-                  console.warn('Session försvann vid periodisk kontroll - ingen session hittades');
-                  setSession(null);
-                  setUser(null);
-                }
-                
-                // Lyckad kontroll, avbryt retry-loop
-                return;
-              } catch (err) {
-                console.error(`Oväntat fel vid sessionskontroll (försök ${i+1}/${maxRetries}):`, err);
-                if (i === maxRetries - 1) {
-                  // Vid upprepade fel, hantera graciöst utan att logga ut användaren
-                  // Vi försöker igen vid nästa intervallkontroll
-                  return;
-                }
-                // Vänta innan nästa försök
-                await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
-              }
-            }
-          };
-          
-          await checkWithRetry();
-        } catch (err) {
-          // Yttre catch - bör aldrig nås på grund av inre try/catch
-          console.error('Kritiskt fel vid sessionskontroll:', err);
-        }
-      }
-    }, 30000); // Kontrollera var 30:e sekund
-    
+
     return () => {
       // Städa upp auth-lyssnare
       if (authListener && authListener.subscription) {
@@ -323,16 +272,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Städa upp error-lyssnare
-      if (errorUnsubscribe && errorUnsubscribe.subscription) {
-        errorUnsubscribe.subscription.unsubscribe();
-      } else if (typeof window !== 'undefined') {
-        // Alternativt ta bort event listener
-        window.removeEventListener('supabase.auth.error', handleAuthError);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('supabase.auth.error', handleAuthError as EventListener);
       }
-      
-      clearInterval(sessionCheck);
     };
-  }, [createUserProfileIfNeeded, session, handleAuthErrors]);
+  }, [router, authErrorShown]);
 
   // Implementera de olika auth-funktionerna
   const signIn = async (email: string, password: string) => {

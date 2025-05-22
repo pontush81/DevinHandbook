@@ -191,6 +191,64 @@ export function snapshotSession(session: Partial<Session> | null) {
 }
 
 /**
+ * Loggar information om storage-åtkomst för att underlätta felsökning
+ */
+export function logStorageAccess() {
+  if (!DEBUG_SESSION) return;
+
+  try {
+    // Kontrollera tillgängliga storage-lösningar
+    const storageInfo = {
+      localStorage: typeof localStorage !== 'undefined',
+      sessionStorage: typeof sessionStorage !== 'undefined',
+      safeStorage: typeof window !== 'undefined' && !!window.safeStorage,
+      memoryStorage: typeof window !== 'undefined' && !!window.memoryStorage,
+      hasCookies: typeof document !== 'undefined' && document.cookie.includes('sb-')
+    };
+
+    // Kontrollera om tokens finns i olika lagringsalternativ
+    if (typeof window !== 'undefined') {
+      let tokenInfo: Record<string, any> = {};
+      
+      // Kontrollera localStorage
+      try {
+        tokenInfo.localStorage = {
+          hasRefreshToken: !!localStorage.getItem('sb-refresh-token'),
+          hasAccessToken: !!localStorage.getItem('sb-access-token'),
+          hasAuthToken: !!localStorage.getItem('supabase.auth.token')
+        };
+      } catch (e) {
+        tokenInfo.localStorage = { error: e.message };
+      }
+      
+      // Kontrollera safeStorage
+      if (window.safeStorage) {
+        tokenInfo.safeStorage = {
+          hasRefreshToken: !!window.safeStorage.getItem('sb-refresh-token'),
+          hasAccessToken: !!window.safeStorage.getItem('sb-access-token'),
+          hasAuthToken: !!window.safeStorage.getItem('supabase.auth.token')
+        };
+      }
+      
+      // Kontrollera memoryStorage
+      if (window.memoryStorage) {
+        tokenInfo.memoryStorage = {
+          hasRefreshToken: !!window.memoryStorage['sb-refresh-token'],
+          hasAccessToken: !!window.memoryStorage['sb-access-token'],
+          hasAuthToken: !!window.memoryStorage['supabase.auth.token']
+        };
+      }
+      
+      logDiagnostic('storage', 'Storage tillgänglighet', { storageInfo, tokenInfo });
+    } else {
+      logDiagnostic('storage', 'Storage tillgänglighet (server)', { storageInfo });
+    }
+  } catch (e) {
+    logDiagnostic('error', 'Fel vid kontroll av storage', { error: e.message });
+  }
+}
+
+/**
  * Starta kontinuerlig polling av diagnostikdata
  */
 export function startDiagnosticPolling() {
@@ -337,4 +395,8 @@ export function exportDiagnosticData() {
   };
   
   return JSON.stringify(data, null, 2);
-} 
+}
+
+// Backward compatibility aliases
+export const getDiagnosticLogs = getDiagnosticEvents;
+export const clearDiagnosticLogs = clearDiagnosticEvents; 

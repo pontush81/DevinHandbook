@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { startDiagnosticPolling, getDiagnosticEvents, clearDiagnosticEvents, exportDiagnosticData, snapshotCookies, snapshotSession } from '@/lib/auth-diagnostics';
+import { startDiagnosticPolling, getDiagnosticEvents, clearDiagnosticEvents, exportDiagnosticData, snapshotCookies, snapshotSession, getDiagnosticLogs, clearDiagnosticLogs, logStorageAccess } from '@/lib/auth-diagnostics';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from "@/lib/supabase";
 
 // Filter-funktioner för diagnostikevents
 const filterEvents = (events: any[], type?: string) => {
@@ -143,12 +144,25 @@ export default function AuthDiagnosticsPanel() {
         </Tabs>
 
         <CardFooter className="pt-2 flex justify-between">
-          <div>
+          <div className="flex flex-wrap gap-2 mb-2">
+            <Button variant="outline" size="sm" onClick={() => {
+              setEvents(getDiagnosticEvents());
+              if (session) snapshotSession(session);
+              snapshotCookies();
+            }}>
+              Uppdatera
+            </Button>
             <Button variant="outline" size="sm" onClick={() => clearDiagnosticEvents()}>
               Rensa
             </Button>
-            <Button variant="outline" size="sm" className="ml-2" onClick={handleExport}>
+            <Button variant="outline" size="sm" onClick={handleExport}>
               Exportera
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => snapshotCookies()}>
+              Kontrollera Cookies
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => logStorageAccess()}>
+              Kontrollera Lagring
             </Button>
           </div>
           <div className="flex items-center">
@@ -159,17 +173,6 @@ export default function AuthDiagnosticsPanel() {
               onChange={() => setAutoRefresh(!autoRefresh)}
               className="mr-2"
             />
-            <Button
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                setEvents(getDiagnosticEvents());
-                if (session) snapshotSession(session);
-                snapshotCookies();
-              }}
-            >
-              Uppdatera
-            </Button>
           </div>
         </CardFooter>
       </Card>
