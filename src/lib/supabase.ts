@@ -120,12 +120,8 @@ export const supabase = createClient<Database>(
         secure: process.env.NODE_ENV === 'production',
         httpOnly: false // Tillåt JavaScript att läsa för att underlätta debugging
       },
-      // Säkerställ att vi bara använder cookies och aldrig localStorage
-      storage: {
-        getItem: () => null,
-        setItem: () => {},
-        removeItem: () => {}
-      }
+      // Helt inaktivera storage för att undvika storage-fel
+      storage: null
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,

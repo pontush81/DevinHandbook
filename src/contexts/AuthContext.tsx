@@ -6,26 +6,6 @@ import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
 
-declare global {
-  interface Window {
-    safeLocalStorage?: {
-      getItem: (key: string) => string | null;
-      setItem: (key: string, value: string) => boolean;
-      removeItem: (key: string) => boolean;
-    };
-    supabaseStorage?: {
-      getSession: () => string | null;
-      setSession: (token: string) => boolean;
-      clearSession: () => boolean;
-    };
-    safeStorage?: {
-      getItem: (key: string) => string | null;
-      setItem: (key: string, value: string) => boolean;
-      removeItem: (key: string) => boolean;
-    };
-  }
-}
-
 type AuthContextType = {
   user: User | null;
   session: Session | null;
@@ -52,8 +32,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Vi använder nu cookies för sessionshantering
-// Inga manuella token-helpers behövs längre
+// Vi använder nu ENDAST cookies för sessionshantering via Supabase
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -111,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // För att säkerställa att cookies har laddats korrekt, vänta lite innan vi försöker hämta session
     const timeout = setTimeout(() => {
       setData();
-    }, 300); // Ökad till 300ms för att ge browsern mer tid
+    }, 800); // Ökad till 800ms för att ge browsern mycket mer tid för cookies
     
     // Rensa timeout när komponenten avmonteras
     return () => clearTimeout(timeout);
@@ -173,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       clearInterval(sessionCheck);
     };
-  }, [createUserProfileIfNeeded]);
+  }, [createUserProfileIfNeeded, session]);
 
   // Implementera de olika auth-funktionerna
   const signIn = async (email: string, password: string) => {
