@@ -104,7 +104,25 @@ export default function SignupClient() {
   }
 
   let heading = 'Registrera konto';
-  if (tab === 'login' || tab === 'reset') heading = 'Logga in';
+  let description = 'Skapa ditt konto för att komma igång med Handbok.org';
+  
+  if (tab === 'login') {
+    heading = 'Logga in';
+    description = 'Logga in för att få tillgång till din handbok';
+  } else if (tab === 'reset') {
+    heading = 'Återställ lösenord';
+    description = 'Ange din e-post för att återställa ditt lösenord';
+  }
+
+  // Om användaren försöker byta till login-fliken på /signup-sidan,
+  // skicka dem till /login-sidan istället
+  const handleTabChange = (newTab: 'signup' | 'login' | 'reset') => {
+    if (newTab === 'login') {
+      router.push('/login');
+    } else {
+      setTab(newTab);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
@@ -116,12 +134,12 @@ export default function SignupClient() {
             {heading}
           </h1>
           <p className="text-gray-600">
-            Skapa ditt konto för att komma igång med Handbok.org
+            {description}
           </p>
         </div>
 
         {/* Form */}
-        <WizardStepOne showTabs={true} tab={tab} setTab={setTab} />
+        <WizardStepOne showTabs={true} tab={tab} setTab={handleTabChange} />
         
       </div>
     </div>

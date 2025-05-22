@@ -34,30 +34,25 @@ function AuthCallbackContent() {
           setStatus("success");
           
           // Bestäm redirection baserat på verifieringstyp
-          if (type === "signup" || type === "email") {
-            setMessage("E-post bekräftad! Du dirigeras nu till inloggningssidan...");
-            setTimeout(() => {
-              // Omdirigera till login med meddelande om att verifieringen lyckades
-              router.replace("/login?verified=true");
-            }, 1500);
-          } else if (type === "recovery") {
-            setMessage("Lösenordsåterställning bekräftad! Du dirigeras nu till inloggningssidan...");
+          if (type === "recovery") {
+            // För lösenordsåterställning, gå till reset-password
+            setMessage("Lösenordsåterställning bekräftad! Du dirigeras nu till lösenordsåterställning...");
             setTimeout(() => {
               router.replace("/reset-password");
             }, 1500);
           } else {
-            // Om användaren redan är inloggad, dirigera till startsidan för inloggade
-            setMessage("Autentisering lyckades! Du dirigeras nu...");
+            // För alla andra typer (inkl. signup, email eller ospecificerat), gå till login med verified=true
+            setMessage("E-post bekräftad! Du dirigeras nu till inloggningssidan...");
             setTimeout(() => {
-              // Kontrollera om användaren har handböcker
-              checkForHandbooks(data.session.user.id);
+              // Omdirigera till login med meddelande om att verifieringen lyckades
+              router.replace("/login?verified=true&from=email_confirmation");
             }, 1500);
           }
         }
       });
   }, [router]);
   
-  // Funktion för att kontrollera om användaren har handböcker
+  // Funktion för att kontrollera om användaren har handböcker (används inte längre i det direkta flödet)
   const checkForHandbooks = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -70,12 +65,12 @@ function AuthCallbackContent() {
         // Om användaren har handböcker, dirigera till den senaste
         window.location.replace(`https://${data[0].subdomain}.handbok.org`);
       } else {
-        // Annars till skapa handbok-sidan
-        router.replace("/create-handbook");
+        // Annars till dashboard (tidigare create-handbook)
+        router.replace("/dashboard");
       }
     } catch (err) {
       console.error("Fel vid hämtning av handböcker:", err);
-      router.replace("/create-handbook");
+      router.replace("/dashboard");
     }
   };
 

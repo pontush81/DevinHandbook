@@ -77,7 +77,33 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg border border-gray-200 shadow-lg space-y-5">
+      {showTabs && (
+        <div className="flex bg-gray-100 rounded-t-lg border border-gray-200 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { setTab("signup"); setError(null); setSuccess(null); }}
+            className={`flex-1 py-3 px-4 text-center font-medium transition ${
+              tab === "signup" 
+                ? "bg-white text-blue-600 border-b-2 border-blue-600" 
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Skapa konto
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTab("login"); setError(null); setSuccess(null); }}
+            className={`flex-1 py-3 px-4 text-center font-medium transition ${
+              (tab === "login" || tab === "reset")
+                ? "bg-white text-blue-600 border-b-2 border-blue-600" 
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Logga in
+          </button>
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className={`bg-white p-8 rounded-lg border border-gray-200 shadow-lg space-y-5 ${showTabs ? "rounded-t-none border-t-0" : ""}`}>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">E-post</label>
           <input

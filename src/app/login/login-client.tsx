@@ -17,6 +17,7 @@ export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const verified = searchParams.get("verified");
+  const fromEmailConfirmation = searchParams.get("from") === "email_confirmation";
   const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
 
   useEffect(() => {
@@ -147,6 +148,16 @@ export default function LoginClient() {
     );
   }
 
+  // Om användaren försöker byta till signup-fliken på /login-sidan, 
+  // skicka dem till /signup-sidan istället
+  const handleTabChange = (newTab: 'signup' | 'login' | 'reset') => {
+    if (newTab === 'signup') {
+      router.push('/signup');
+    } else {
+      // Behåll reset-fliken på login-sidan
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
       <div className="max-w-md w-full">
@@ -155,9 +166,13 @@ export default function LoginClient() {
         {showVerifiedMessage && (
           <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
             <CheckCircle2 className="h-5 w-5 text-green-600" />
-            <AlertTitle className="text-green-800">E-post verifierad!</AlertTitle>
+            <AlertTitle className="text-green-800">
+              {fromEmailConfirmation ? "E-post bekräftad!" : "E-post verifierad!"}
+            </AlertTitle>
             <AlertDescription className="text-green-700">
-              Ditt konto har verifierats. Du kan nu logga in med dina uppgifter.
+              {fromEmailConfirmation 
+                ? "Tack för att du bekräftade din e-postadress. Du kan nu logga in med dina uppgifter för att komma igång."
+                : "Ditt konto har verifierats. Du kan nu logga in med dina uppgifter."}
             </AlertDescription>
           </Alert>
         )}
@@ -173,7 +188,7 @@ export default function LoginClient() {
         </div>
 
         {/* Form */}
-        <WizardStepOne showTabs={true} tab="login" />
+        <WizardStepOne showTabs={true} tab="login" setTab={handleTabChange} />
       </div>
     </div>
   );
