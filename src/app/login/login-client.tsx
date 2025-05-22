@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2 } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function LoginClient() {
   const [loading, setLoading] = useState(true);
@@ -148,16 +148,6 @@ export default function LoginClient() {
     );
   }
 
-  // Om användaren försöker byta till signup-fliken på /login-sidan, 
-  // skicka dem till /signup-sidan istället
-  const handleTabChange = (newTab: 'signup' | 'login' | 'reset') => {
-    if (newTab === 'signup') {
-      router.push('/signup');
-    } else {
-      // Behåll reset-fliken på login-sidan
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
       <div className="max-w-md w-full">
@@ -188,7 +178,7 @@ export default function LoginClient() {
         </div>
 
         {/* Form */}
-        <WizardStepOne showTabs={true} tab="login" setTab={handleTabChange} />
+        <LoginForm showSignupLink={true} />
       </div>
     </div>
   );

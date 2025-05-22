@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
 import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { SignUpForm } from "@/components/auth/SignUpForm";
 
 export default function SignupClient() {
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'signup' | 'login' | 'reset'>('signup');
   const [user, setUser] = useState<User | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
@@ -103,27 +102,6 @@ export default function SignupClient() {
     );
   }
 
-  let heading = 'Registrera konto';
-  let description = 'Skapa ditt konto för att komma igång med Handbok.org';
-  
-  if (tab === 'login') {
-    heading = 'Logga in';
-    description = 'Logga in för att få tillgång till din handbok';
-  } else if (tab === 'reset') {
-    heading = 'Återställ lösenord';
-    description = 'Ange din e-post för att återställa ditt lösenord';
-  }
-
-  // Om användaren försöker byta till login-fliken på /signup-sidan,
-  // skicka dem till /login-sidan istället
-  const handleTabChange = (newTab: 'signup' | 'login' | 'reset') => {
-    if (newTab === 'login') {
-      router.push('/login');
-    } else {
-      setTab(newTab);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
       <div className="max-w-md w-full">
@@ -131,15 +109,15 @@ export default function SignupClient() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {heading}
+            Registrera konto
           </h1>
           <p className="text-gray-600">
-            {description}
+            Skapa ditt konto för att komma igång med Handbok.org
           </p>
         </div>
 
         {/* Form */}
-        <WizardStepOne showTabs={true} tab={tab} setTab={handleTabChange} />
+        <SignUpForm />
         
       </div>
     </div>
