@@ -77,27 +77,36 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
           // Inloggning lyckades, omdirigera direkt till dashboard
           console.log("Inloggning lyckades, omdirigerar till dashboard");
           
-          // Lägg till en kort fördröjning för att säkerställa att cookies har sparats
+          // Ge mer tid för att säkerställa att cookies har sparats
           // och sessionen har etablerats ordentligt
-          setTimeout(() => {
-            // Verifiera igen att vi har en aktiv session innan redirect
-            supabase.auth.getSession().then(({ data: { session } }) => {
+          setTimeout(async () => {
+            try {
+              // Hämta en färsk session
+              const { data: { session } } = await supabase.auth.getSession();
+              
               if (session) {
                 console.log("Verifierad session före redirect:", {
                   hasSession: !!session,
                   userId: session.user?.id,
                   expiresAt: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown'
                 });
+                
+                // Använd Next.js router för omdirigering istället för fönsteromdirigering
+                // Detta håller sessionskontexten bättre mellan sidor
                 router.push("/dashboard");
               } else {
-                console.error("Session saknas vid redirect, försöker igen...");
+                console.error("Session saknas vid redirect, försöker igen med längre fördröjning...");
                 // Om sessionen saknas, försök en gång till med längre fördröjning
                 setTimeout(() => {
                   router.push("/dashboard");
-                }, 1000);
+                }, 1500); // Ökad fördröjning till 1500ms
               }
-            });
-          }, 500); // 500ms fördröjning
+            } catch (err) {
+              console.error("Fel vid sessionskontroll före redirect:", err);
+              // Fortsätt ändå med omdirigering som en fallback
+              router.push("/dashboard");
+            }
+          }, 800); // Ökad primär fördröjning till 800ms
         }
       }
     } catch (err: unknown) {

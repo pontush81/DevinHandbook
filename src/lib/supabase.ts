@@ -5,25 +5,39 @@ import { Database } from '@/types/supabase';
 // Detta löser "Access to storage is not allowed from this context" felet
 class MemoryStorage {
   private data: Record<string, string> = {};
+  private readonly storageName = 'MemoryStorage';
 
   getItem(key: string): string | null {
-    console.log('MemoryStorage: getItem', key);
-    return this.data[key] || null;
+    const value = this.data[key] || null;
+    console.log(`${this.storageName}.getItem('${key}') => ${value ? (value.length > 20 ? value.substring(0, 20) + '...' : value) : 'null'}`);
+    return value;
   }
 
   setItem(key: string, value: string): void {
-    console.log('MemoryStorage: setItem', key);
+    console.log(`${this.storageName}.setItem('${key}', ${value ? (value.length > 20 ? value.substring(0, 20) + '...' : value) : 'null'})`);
     this.data[key] = value;
   }
 
   removeItem(key: string): void {
-    console.log('MemoryStorage: removeItem', key);
+    console.log(`${this.storageName}.removeItem('${key}')`);
     delete this.data[key];
+  }
+
+  // För debugging, logga alla lagrade nycklar
+  debug(): void {
+    console.log(`${this.storageName} innehåll:`, Object.keys(this.data));
   }
 }
 
 // Skapa en global instans så att alla anrop använder samma data
 const memoryStorage = new MemoryStorage();
+
+// Debuglogga lagrade data periodiskt
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  setInterval(() => {
+    memoryStorage.debug();
+  }, 5000);
+}
 
 // Ensure SUPABASE_URL has https:// prefix
 const ensureHttpsPrefix = (url: string) => {

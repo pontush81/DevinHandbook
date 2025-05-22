@@ -101,7 +101,7 @@ export default function DashboardPage() {
             <p className="text-gray-600 mb-4 md:mb-0">Hantera dina digitala handböcker</p>
           </div>
           <Button asChild size="lg" className="shadow-md">
-            <Link href="/create-handbook">
+            <Link href="/create-handbook?new=true">
               Skapa ny handbok
             </Link>
           </Button>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                 Du har inte skapat några handböcker ännu. Kom igång genom att skapa din första handbok.
               </p>
               <Button asChild size="lg">
-                <Link href="/create-handbook">
+                <Link href="/create-handbook?new=true">
                   Skapa din första handbok
                 </Link>
               </Button>

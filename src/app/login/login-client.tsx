@@ -18,7 +18,9 @@ export default function LoginClient() {
   const searchParams = useSearchParams();
   const verified = searchParams.get("verified");
   const fromEmailConfirmation = searchParams.get("from") === "email_confirmation";
+  const registrationSuccess = searchParams.get("registration") === "success";
   const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
+  const [showRegistrationMessage, setShowRegistrationMessage] = useState(false);
 
   useEffect(() => {
     // Kolla om e-posten är verifierad via URL-parametern
@@ -31,6 +33,18 @@ export default function LoginClient() {
       return () => clearTimeout(timer);
     }
   }, [verified]);
+
+  useEffect(() => {
+    // Kolla om användaren kommer från registrering
+    if (registrationSuccess) {
+      setShowRegistrationMessage(true);
+      // Automatiskt ta bort meddelandet efter 10 sekunder
+      const timer = setTimeout(() => {
+        setShowRegistrationMessage(false);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [registrationSuccess]);
 
   useEffect(() => {
     async function checkIfLoggedIn() {
@@ -55,9 +69,16 @@ export default function LoginClient() {
               .order("created_at", { ascending: false });
               
             if (!handbooksError && data && data.length > 0) {
-              window.location.replace(`https://${data[0].subdomain}.handbok.org`);
+              // Ge tid för sessionen att etableras helt innan omdirigering
+              setTimeout(() => {
+                // Använd window.location.href istället för replace för vissa webbläsare
+                window.location.href = `https://${data[0].subdomain}.handbok.org`;
+              }, 500);
             } else {
-              router.replace("/dashboard");
+              // Ge lite tid för sessionen att etableras innan omdirigering
+              setTimeout(() => {
+                router.push("/dashboard");
+              }, 500);
             }
           }
         } else {
@@ -74,9 +95,16 @@ export default function LoginClient() {
               .order("created_at", { ascending: false });
               
             if (!handbooksError && data && data.length > 0) {
-              window.location.replace(`https://${data[0].subdomain}.handbok.org`);
+              // Ge tid för sessionen att etableras helt innan omdirigering
+              setTimeout(() => {
+                // Använd window.location.href istället för replace för vissa webbläsare
+                window.location.href = `https://${data[0].subdomain}.handbok.org`;
+              }, 500);
             } else {
-              router.replace("/dashboard");
+              // Ge lite tid för sessionen att etableras innan omdirigering
+              setTimeout(() => {
+                router.push("/dashboard");
+              }, 500);
             }
           }
         }
@@ -163,6 +191,29 @@ export default function LoginClient() {
               {fromEmailConfirmation 
                 ? "Tack för att du bekräftade din e-postadress. Du kan nu logga in med dina uppgifter för att komma igång."
                 : "Ditt konto har verifierats. Du kan nu logga in med dina uppgifter."}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Registration Success Message */}
+        {showRegistrationMessage && (
+          <Alert className="mb-6 bg-blue-50 border-blue-200 text-blue-800">
+            <CheckCircle2 className="h-5 w-5 text-blue-600" />
+            <AlertTitle className="text-blue-800">
+              Konto skapat!
+            </AlertTitle>
+            <AlertDescription className="text-blue-700">
+              <p>
+                Vi har skickat ett bekräftelsemail till din e-postadress.
+              </p>
+              <p className="mt-2 font-medium">
+                <span className="text-red-600">VIKTIGT:</span> Du måste klicka på länken i mailet 
+                för att aktivera ditt konto innan du kan logga in.
+              </p>
+              <p className="mt-2 text-xs">
+                Kontrollera din skräppost om du inte hittar mailet i inkorgen. Om du fortfarande inte hittar mailet, 
+                kan du försöka logga in och använda "Skicka nytt bekräftelsemail"-funktionen.
+              </p>
             </AlertDescription>
           </Alert>
         )}
