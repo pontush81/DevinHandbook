@@ -83,7 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
           setUser(null);
         } else if (freshSession) {
-          console.log('Hittade aktiv session från Supabase');
+          console.log('Hittade aktiv session från Supabase', {
+            userId: freshSession.user?.id,
+            expiresAt: freshSession.expires_at ? new Date(freshSession.expires_at * 1000).toISOString() : 'unknown'
+          });
           setSession(freshSession);
           setUser(freshSession.user);
           
@@ -109,7 +112,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Lyssna på auth-ändringar
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event);
+      console.log('Auth state change:', event, {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none'
+      });
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         console.log('User signed in or token refreshed');
@@ -117,6 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Uppdatera state
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Validera sessionscookie
+        if (typeof document !== 'undefined') {
+          console.log('Cookie status:', {
+            hasCookies: document.cookie.includes('sb-auth'),
+            cookies: document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith('sb-')).join(', ')
+          });
+        }
         
         // Säkerställ att användarprofilen finns
         if (session?.user?.id && session?.user?.email) {
@@ -131,10 +146,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     
+    // Periodiskt kontrollera att sessionen fortfarande är aktiv
+    const sessionCheck = setInterval(async () => {
+      if (session) {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          console.warn('Session försvann vid periodisk kontroll');
+          setSession(null);
+          setUser(null);
+        }
+      }
+    }, 30000); // Kontrollera var 30:e sekund
+    
     return () => {
       if (authListener && authListener.subscription) {
         authListener.subscription.unsubscribe();
       }
+      clearInterval(sessionCheck);
     };
   }, [router, createUserProfileIfNeeded]);
 

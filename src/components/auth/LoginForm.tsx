@@ -76,7 +76,28 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         } else {
           // Inloggning lyckades, omdirigera direkt till dashboard
           console.log("Inloggning lyckades, omdirigerar till dashboard");
-          router.push("/dashboard");
+          
+          // Lägg till en kort fördröjning för att säkerställa att cookies har sparats
+          // och sessionen har etablerats ordentligt
+          setTimeout(() => {
+            // Verifiera igen att vi har en aktiv session innan redirect
+            supabase.auth.getSession().then(({ data: { session } }) => {
+              if (session) {
+                console.log("Verifierad session före redirect:", {
+                  hasSession: !!session,
+                  userId: session.user?.id,
+                  expiresAt: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown'
+                });
+                router.push("/dashboard");
+              } else {
+                console.error("Session saknas vid redirect, försöker igen...");
+                // Om sessionen saknas, försök en gång till med längre fördröjning
+                setTimeout(() => {
+                  router.push("/dashboard");
+                }, 1000);
+              }
+            });
+          }, 500); // 500ms fördröjning
         }
       }
     } catch (err: unknown) {

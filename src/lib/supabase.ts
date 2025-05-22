@@ -121,7 +121,7 @@ export const supabase = createClient<Database>(
   supabaseAnonKey,
   {
     auth: {
-      autoRefreshToken: true,
+      autoRefreshToken: true, 
       persistSession: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
@@ -133,27 +133,17 @@ export const supabase = createClient<Database>(
         path: '/',
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
-        // Viktigt för CORS och cross-domain-cookies
-        httpOnly: false // Tillåt JavaScript-åtkomst på klientsidan
+        httpOnly: true // Ändrad till true för att förhindra JavaScript-åtkomst och därmed förhindra att någon tar bort dem
       },
-      // Se till att sessionen hämtas från cookies för varje förfrågan
-      storageKey: 'sb-auth-token',
-      storage: {
-        getItem: (key) => {
-          // I produktion-miljö är cookies alltid tillgängliga
-          if (typeof document === 'undefined') return null;
-          // Hämta cookie via document.cookie API
-          const cookies = document.cookie.split(';').map(c => c.trim());
-          const cookie = cookies.find(c => c.startsWith(`${key}=`));
-          return cookie ? cookie.split('=')[1] : null;
-        },
-        setItem: () => {},  // Hanteras av Supabase-klienten
-        removeItem: () => {} // Hanteras av Supabase-klienten
-      }
+      // Användning av autoRefreshToken och persistSession är viktiga för cookie-hantering
+      // men vi behöver inte sätta storageKey eller custom storage
+      storageKey: undefined
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,
     },
+    // Lägg till debug läge för att se vad som händer
+    debug: process.env.NODE_ENV !== 'production'
   }
 );
 
