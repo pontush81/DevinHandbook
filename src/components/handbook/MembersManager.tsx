@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
 import { AlertCircle, UserPlus, Trash2, UserCheck } from "lucide-react";
 
 type MemberRole = "admin" | "editor" | "viewer";
@@ -30,6 +29,14 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{message: string, isError: boolean} | null>(null);
+
+  const showMessage = (message: string, isError: boolean = false) => {
+    setStatusMessage({ message, isError });
+    setTimeout(() => {
+      setStatusMessage(null);
+    }, 3000);
+  };
 
   const fetchMembers = useCallback(async () => {
     setIsLoading(true);
@@ -41,7 +48,6 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
       if (error) throw error;
 
-      // Omforma data för att få e-post från den nästlade profilen
       const formattedMembers = data.map((member) => ({
         id: member.id,
         user_id: member.user_id,
@@ -53,11 +59,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       setMembers(formattedMembers);
     } catch (error) {
       console.error("Fel vid hämtning av medlemmar:", error);
-      toast({
-        title: "Fel",
-        description: "Kunde inte hämta medlemmar. Försök igen senare.",
-        variant: "destructive",
-      });
+      showMessage("Kunde inte hämta medlemmar. Försök igen senare.", true);
     } finally {
       setIsLoading(false);
     }
@@ -85,22 +87,15 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         throw new Error(data.message || "Något gick fel");
       }
 
-      toast({
-        title: "Användare inbjuden",
-        description: `${email} har bjudits in som ${
-          role === "admin" ? "administratör" : role === "editor" ? "redaktör" : "läsare"
-        }.`,
-      });
+      showMessage(`${email} har bjudits in som ${
+        role === "admin" ? "administratör" : role === "editor" ? "redaktör" : "läsare"
+      }.`);
 
       setEmail("");
       fetchMembers();
     } catch (error) {
       console.error("Fel vid inbjudan:", error);
-      toast({
-        title: "Fel",
-        description: error instanceof Error ? error.message : "Kunde inte bjuda in användaren",
-        variant: "destructive",
-      });
+      showMessage(error instanceof Error ? error.message : "Kunde inte bjuda in användaren", true);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,11 +103,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
   const handleUpdateRole = async (memberId: string, userId: string, newRole: MemberRole) => {
     if (userId === currentUserId && newRole !== "admin") {
-      toast({
-        title: "Ej tillåtet",
-        description: "Du kan inte ändra din egen roll från administratör.",
-        variant: "destructive",
-      });
+      showMessage("Du kan inte ändra din egen roll från administratör.", true);
       return;
     }
 
@@ -130,19 +121,11 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         throw new Error(data.message || "Något gick fel");
       }
 
-      toast({
-        title: "Roll uppdaterad",
-        description: "Användarens roll har uppdaterats.",
-      });
-
+      showMessage("Användarens roll har uppdaterats.");
       fetchMembers();
     } catch (error) {
       console.error("Fel vid uppdatering av roll:", error);
-      toast({
-        title: "Fel",
-        description: error instanceof Error ? error.message : "Kunde inte uppdatera rollen",
-        variant: "destructive",
-      });
+      showMessage(error instanceof Error ? error.message : "Kunde inte uppdatera rollen", true);
     } finally {
       setUpdatingId(null);
     }
@@ -150,11 +133,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
   const handleRemoveMember = async (memberId: string, userId: string) => {
     if (userId === currentUserId) {
-      toast({
-        title: "Ej tillåtet",
-        description: "Du kan inte ta bort dig själv som administratör.",
-        variant: "destructive",
-      });
+      showMessage("Du kan inte ta bort dig själv som administratör.", true);
       return;
     }
 
@@ -172,19 +151,11 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         throw new Error(data.message || "Något gick fel");
       }
 
-      toast({
-        title: "Medlem borttagen",
-        description: "Användaren har tagits bort från handboken.",
-      });
-
+      showMessage("Användaren har tagits bort från handboken.");
       fetchMembers();
     } catch (error) {
       console.error("Fel vid borttagning av medlem:", error);
-      toast({
-        title: "Fel",
-        description: error instanceof Error ? error.message : "Kunde inte ta bort medlemmen",
-        variant: "destructive",
-      });
+      showMessage(error instanceof Error ? error.message : "Kunde inte ta bort medlemmen", true);
     } finally {
       setUpdatingId(null);
     }
@@ -193,6 +164,14 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
       <h2 className="text-xl font-semibold mb-4">Hantera medlemmar</h2>
+
+      {statusMessage && (
+        <div className={`mb-4 p-3 rounded ${
+          statusMessage.isError ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+        }`}>
+          {statusMessage.message}
+        </div>
+      )}
 
       <form onSubmit={handleInvite} className="mb-6 space-y-4">
         <div className="flex flex-col md:flex-row gap-3">

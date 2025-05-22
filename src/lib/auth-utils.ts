@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createServerClient, type CookieOptions, type SupabaseClient } from '@supabase/sts-js';
+import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { getServiceSupabase } from '@/lib/supabase';
 import { Database } from '@/types/supabase';
 
@@ -10,7 +10,7 @@ export async function getServerSession() {
   const cookieStore = cookies();
   
   // Skapa en Supabase-klient för servern
-  const supabase = createServerClient<Database>(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -18,6 +18,8 @@ export async function getServerSession() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
+        set() {}, // Används inte i read-only-operationer
+        remove() {}, // Används inte i read-only-operationer
       },
     }
   );
