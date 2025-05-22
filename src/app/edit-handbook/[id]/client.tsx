@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { MembersManager } from '@/components/handbook/MembersManager';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Handbook {
   id: string;
@@ -430,150 +432,173 @@ export default function EditHandbookClient({
             </a>
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-sm text-gray-600 hover:text-black"
+              className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
             >
               Tillbaka till dashboard
             </button>
           </div>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="p-4 bg-red-50 text-red-600 rounded-md mb-6">
-            {error}
-          </div>
-        )}
-        
-        {successMessage && (
-          <div className="p-4 bg-green-50 text-green-600 rounded-md mb-6">
-            {successMessage}
-          </div>
-        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="md:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="font-medium mb-4">Innehåll</h2>
-              <div className="space-y-4">
-                {sections.map((section) => (
-                  <div key={section.id} className="space-y-2">
-                    <h3 className="font-medium text-sm">{section.title}</h3>
-                    <ul className="space-y-1 pl-4">
-                      {section.pages.map((page) => (
-                        <li key={page.id}>
-                          <Button
-                            onClick={() => handleSelectPage(section.id, page.id)}
-                            variant={selectedPageId === page.id ? 'secondary' : 'ghost'}
-                            className={`text-sm w-full text-left ${selectedPageId === page.id ? 'text-black font-medium' : 'text-gray-500'}`}
-                          >
-                            {page.title}
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Tabs defaultValue="content" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="content">Innehåll</TabsTrigger>
+            <TabsTrigger value="members">Medlemmar</TabsTrigger>
+            <TabsTrigger value="settings">Inställningar</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="content">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h2 className="text-xl font-bold mb-4">Sektioner och sidor</h2>
+                
+                {error && (
+                  <div className="bg-red-100 text-red-700 p-2 rounded mb-4">
+                    {error}
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Editor */}
-          <div className="md:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              {selectedPageId ? (
-                <>
-                  <div className="flex items-center justify-between border-b p-4">
-                    <div className="flex space-x-4">
-                      <Button
-                        onClick={() => setIsPreview(false)}
-                        className={`text-sm ${!isPreview ? "text-black font-medium" : "text-gray-500 hover:text-black"}`}
-                      >
-                        Redigera
-                      </Button>
-                      <Button
-                        onClick={() => setIsPreview(true)}
-                        className={`text-sm ${isPreview ? "text-black font-medium" : "text-gray-500 hover:text-black"}`}
-                      >
-                        Förhandsgranska
-                      </Button>
+                )}
+                
+                {successMessage && (
+                  <div className="bg-green-100 text-green-700 p-2 rounded mb-4">
+                    {successMessage}
+                  </div>
+                )}
+                
+                <div className="space-y-4">
+                  {sections.map((section) => (
+                    <div key={section.id} className="space-y-2">
+                      <div className="font-medium border-b pb-1">
+                        {section.title}
+                      </div>
+                      <ul className="pl-4 space-y-1">
+                        {section.pages.map((page) => (
+                          <li key={page.id}>
+                            <button
+                              className={`w-full text-left px-2 py-1 rounded ${
+                                selectedPageId === page.id
+                                  ? "bg-black text-white"
+                                  : "hover:bg-gray-100"
+                              }`}
+                              onClick={() =>
+                                handleSelectPage(section.id, page.id)
+                              }
+                            >
+                              {page.title}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <Button
-                      onClick={handleSavePage}
-                      disabled={isSaving}
-                      className="bg-black text-white px-4 py-1 text-sm rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isSaving ? "Sparar..." : "Spara"}
-                    </Button>
-                  </div>
-
-                  <div className="p-4">
+                  ))}
+                </div>
+              </div>
+              
+              <div className="lg:col-span-2 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                {selectedPageId ? (
+                  <>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold">
+                        {
+                          sections
+                            .find((s) => s.id === selectedSectionId)
+                            ?.pages.find((p) => p.id === selectedPageId)?.title
+                        }
+                      </h2>
+                      <div className="space-x-2">
+                        <Button
+                          onClick={() => setIsPreview(!isPreview)}
+                          variant="outline"
+                        >
+                          {isPreview ? "Redigera" : "Förhandsgranska"}
+                        </Button>
+                        <Button
+                          onClick={handleSavePage}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? "Sparar..." : "Spara"}
+                        </Button>
+                      </div>
+                    </div>
+                    
                     {isPreview ? (
-                      <div className="prose prose-sm max-w-none">
+                      <div className="prose max-w-none">
                         <ReactMarkdown>{editingContent}</ReactMarkdown>
                       </div>
                     ) : (
-                      <>
-                        <Textarea
-                          className="block w-full mb-2 border px-2 py-1 rounded"
-                          value={editingContent}
-                          onChange={(e) => setEditingContent(e.target.value)}
-                        />
-                        
-                        <div className="mt-4">
-                          <h3 className="text-sm font-medium mb-2">
-                            Ladda upp fil
-                          </h3>
-                          <FileUploader
-                            handbookId={handbook.id}
-                            sectionId={selectedSectionId || undefined}
-                            onUploadComplete={handleFileUpload}
-                          />
-                        </div>
-                        
-                        {documents.length > 0 && (
-                          <div className="mt-4">
-                            <h3 className="text-sm font-medium mb-2">
-                              Uppladdade filer
-                            </h3>
-                            <ul className="space-y-1">
-                              {documents
-                                .filter(
-                                  (doc) =>
-                                    doc.section_id === selectedSectionId ||
-                                    doc.section_id === null
-                                )
-                                .map((doc) => (
-                                  <li key={doc.id} className="text-sm">
-                                    <a
-                                      href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/handbook_files/${doc.file_path}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline"
-                                    >
-                                      {doc.name}
-                                    </a>
-                                  </li>
-                                ))}
-                            </ul>
-                          </div>
-                        )}
-                      </>
+                      <Textarea
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                        className="w-full h-[60vh] font-mono text-sm"
+                      />
                     )}
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">
+                      Välj en sida från menyn till vänster för att redigera
+                    </p>
                   </div>
-                </>
-              ) : (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500">
-                    Välj en sida från sidomenyn för att börja redigera.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-        <PermissionsSection handbookId={id} />
-      </main>
+          </TabsContent>
+          
+          <TabsContent value="members">
+            <MembersManager handbookId={id} currentUserId={user?.id || ''} />
+          </TabsContent>
+          
+          <TabsContent value="settings">
+            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h2 className="text-xl font-semibold mb-4">Inställningar</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Handbokens namn</h3>
+                  <Input
+                    value={handbook.name}
+                    onChange={(e) => setHandbook({ ...handbook, name: e.target.value })}
+                    className="max-w-md"
+                  />
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Dokument</h3>
+                  <FileUploader handbookId={id} onUpload={handleFileUpload} />
+                  
+                  {documents.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">Uppladdade dokument</h4>
+                      <ul className="space-y-1">
+                        {documents.map((doc) => (
+                          <li key={doc.id} className="flex items-center justify-between">
+                            <a
+                              href={`${supabase.storage.getPublicUrl(doc.file_path).data.publicUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              {doc.name}
+                            </a>
+                            <button
+                              className="text-red-600 hover:underline text-sm"
+                              onClick={() => {
+                                // Handle document deletion
+                              }}
+                            >
+                              Ta bort
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </MainLayout>
   );
 }
