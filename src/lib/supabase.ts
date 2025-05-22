@@ -1,6 +1,30 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 
+// En helt isolerad in-memory storage som ersätter localStorage/sessionStorage
+// Detta löser "Access to storage is not allowed from this context" felet
+class MemoryStorage {
+  private data: Record<string, string> = {};
+
+  getItem(key: string): string | null {
+    console.log('MemoryStorage: getItem', key);
+    return this.data[key] || null;
+  }
+
+  setItem(key: string, value: string): void {
+    console.log('MemoryStorage: setItem', key);
+    this.data[key] = value;
+  }
+
+  removeItem(key: string): void {
+    console.log('MemoryStorage: removeItem', key);
+    delete this.data[key];
+  }
+}
+
+// Skapa en global instans så att alla anrop använder samma data
+const memoryStorage = new MemoryStorage();
+
 // Ensure SUPABASE_URL has https:// prefix
 const ensureHttpsPrefix = (url: string) => {
   if (!url) return '';
@@ -135,12 +159,9 @@ export const supabase = createClient<Database>(
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true // Ändrad till true för att förhindra JavaScript-åtkomst och därmed förhindra att någon tar bort dem
       },
-      storage: {
-        getItem: () => null,
-        setItem: () => {},
-        removeItem: () => {}
-      },
-      storageKey: null
+      // Använd vår säkra memory-storage istället för browser storage
+      storage: memoryStorage,
+      storageKey: 'supabase.auth.token'
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,

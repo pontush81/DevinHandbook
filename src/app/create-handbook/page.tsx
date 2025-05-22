@@ -29,7 +29,8 @@ function CreateHandbookContent() {
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   // Kontrollera query-parametern new=true för att avgöra om formuläret ska visas initialt
   const forceNewHandbook = searchParams?.get('new') === 'true';
-  const [showCreateForm, setShowCreateForm] = useState(forceNewHandbook || true);
+  // Om forceNewHandbook är true, ska vi alltid visa formuläret
+  const [showCreateForm, setShowCreateForm] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -71,9 +72,11 @@ function CreateHandbookContent() {
     if (user) fetchHandbooks();
   }, [user]);
 
+  // När searchParams ändras och new=true är satt, visa alltid formuläret
   useEffect(() => {
-    // Uppdatera showCreateForm när searchParams ändras
-    setShowCreateForm(forceNewHandbook || true);
+    if (forceNewHandbook) {
+      setShowCreateForm(true);
+    }
   }, [forceNewHandbook]);
 
   if (isLoading || isLoadingHandbooks) {

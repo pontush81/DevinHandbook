@@ -108,11 +108,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
     
-    // Sätt en kort timeout för att minska risken för race conditions
+    // För att säkerställa att cookies har laddats korrekt, vänta lite innan vi försöker hämta session
     const timeout = setTimeout(() => {
       setData();
-    }, 100);
+    }, 300); // Ökad till 300ms för att ge browsern mer tid
     
+    // Rensa timeout när komponenten avmonteras
+    return () => clearTimeout(timeout);
+  }, [createUserProfileIfNeeded]);
+
+  // Separat useEffect för lyssnare för att undvika race conditions
+  useEffect(() => {
     // Lyssna på auth-ändringar
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, {
@@ -167,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       clearInterval(sessionCheck);
     };
-  }, [router, createUserProfileIfNeeded]);
+  }, [createUserProfileIfNeeded]);
 
   // Implementera de olika auth-funktionerna
   const signIn = async (email: string, password: string) => {
