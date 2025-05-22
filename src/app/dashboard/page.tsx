@@ -30,25 +30,41 @@ export default function DashboardPage() {
     if (!isLoading && !user) {
       console.log("Ingen användare hittad, kontrollerar om det finns en aktiv session...");
       
-      // Gör en extra kontroll mot Supabase för att se om det finns en aktiv session
-      // innan vi omdirigerar användaren
+      // Gör en robust kontroll mot Supabase för att se om det finns en aktiv session
+      // använd polling för att ge cookies tid att ladda
+      let attempts = 0;
+      const maxAttempts = 5;
+      const checkInterval = 800; // 800ms mellan varje kontroll
+      
       const checkSessionStatus = async () => {
+        attempts++;
+        console.log(`Kontrollerar session på dashboard (försök ${attempts}/${maxAttempts})...`);
+        
         try {
           const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            console.log("Ingen aktiv session hittad, omdirigerar till login");
+          if (session) {
+            console.log("Session hittad, laddar om sidan för att uppdatera AuthContext");
+            window.location.reload();
+            return;
+          } else if (attempts >= maxAttempts) {
+            console.log("Ingen session hittad efter max antal försök, omdirigerar till login");
             window.location.href = "/login";
           } else {
-            console.log("Session hittad men ingen user i AuthContext, försöker ladda om sidan");
-            window.location.reload();
+            console.log("Ingen session hittad ännu, väntar och försöker igen...");
+            setTimeout(checkSessionStatus, checkInterval);
           }
         } catch (error) {
           console.error("Fel vid kontroll av session:", error);
-          window.location.href = "/login";
+          if (attempts >= maxAttempts) {
+            window.location.href = "/login";
+          } else {
+            setTimeout(checkSessionStatus, checkInterval);
+          }
         }
       };
       
-      checkSessionStatus();
+      // Starta sessionskontrollerna efter en initial fördröjning
+      setTimeout(checkSessionStatus, 500);
     }
   }, [user, isLoading, router]);
 

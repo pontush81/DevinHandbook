@@ -1,44 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 
-// En helt isolerad in-memory storage som ersätter localStorage/sessionStorage
-// Detta löser "Access to storage is not allowed from this context" felet
-class MemoryStorage {
-  private data: Record<string, string> = {};
-  private readonly storageName = 'MemoryStorage';
-
-  getItem(key: string): string | null {
-    const value = this.data[key] || null;
-    console.log(`${this.storageName}.getItem('${key}') => ${value ? (value.length > 20 ? value.substring(0, 20) + '...' : value) : 'null'}`);
-    return value;
-  }
-
-  setItem(key: string, value: string): void {
-    console.log(`${this.storageName}.setItem('${key}', ${value ? (value.length > 20 ? value.substring(0, 20) + '...' : value) : 'null'})`);
-    this.data[key] = value;
-  }
-
-  removeItem(key: string): void {
-    console.log(`${this.storageName}.removeItem('${key}')`);
-    delete this.data[key];
-  }
-
-  // För debugging, logga alla lagrade nycklar
-  debug(): void {
-    console.log(`${this.storageName} innehåll:`, Object.keys(this.data));
-  }
-}
-
-// Skapa en global instans så att alla anrop använder samma data
-const memoryStorage = new MemoryStorage();
-
-// Debuglogga lagrade data periodiskt
-if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-  setInterval(() => {
-    memoryStorage.debug();
-  }, 5000);
-}
-
 // Ensure SUPABASE_URL has https:// prefix
 const ensureHttpsPrefix = (url: string) => {
   if (!url) return '';
@@ -60,19 +22,6 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'tru
   console.log('Node Environment:', process.env.NODE_ENV);
   console.log('Is Edge Runtime:', typeof EdgeRuntime !== 'undefined');
   console.log('Vercel Deployment:', process.env.VERCEL_URL || 'inte i Vercel');
-
-  // Kontrollera localStorage-åtkomst i browsern
-  if (typeof window !== 'undefined') {
-    try {
-      const testKey = 'supabase_storage_test';
-      localStorage.setItem(testKey, 'test');
-      const testValue = localStorage.getItem(testKey);
-      localStorage.removeItem(testKey);
-      console.log('localStorage-åtkomst:', testValue === 'test' ? '✓ Fungerar' : '✗ Fungerar inte');
-    } catch (e) {
-      console.error('localStorage-åtkomst: ✗ Otillgänglig', e);
-    }
-  }
 }
 
 if (typeof window !== 'undefined') {
@@ -171,10 +120,8 @@ export const supabase = createClient<Database>(
         secure: process.env.NODE_ENV === 'production',
         httpOnly: false // Tillåt JavaScript att läsa för att underlätta debugging
       },
-      // Inaktivera alla inbyggda localStorage-operationer
-      persistSession: true,
-      // VIKTIGT: Helt inaktivera lokal lagring
-      localStorage: {
+      // Säkerställ att vi bara använder cookies och aldrig localStorage
+      storage: {
         getItem: () => null,
         setItem: () => {},
         removeItem: () => {}

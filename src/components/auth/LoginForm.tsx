@@ -74,40 +74,46 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         } else if (!data.session) {
           setError("Kunde inte skapa en aktiv session. Försök igen eller kontakta support.");
         } else {
-          // Inloggning lyckades, implementera en mer robust omdirigering
-          console.log("Inloggning lyckades, omdirigerar till dashboard");
+          // Inloggning lyckades, implementera en mer robust omdirigering med ännu längre fördröjning
+          console.log("Inloggning lyckades, förbereder omdirigering till dashboard...");
           
-          // Ge betydligt mer tid för att säkerställa att cookies har sparats
-          setTimeout(async () => {
+          // Säkerställ att vi har cookies genom att köra upprepade sessionskontroller
+          let attempts = 0;
+          const maxAttempts = 5;
+          const checkInterval = 800; // 800ms mellan varje kontroll
+          
+          const checkSessionAndRedirect = async () => {
+            attempts++;
+            console.log(`Kontrollerar session (försök ${attempts}/${maxAttempts})...`);
+            
             try {
-              // Hämta den senaste sessionen från Supabase
               const { data: sessionData } = await supabase.auth.getSession();
               
-              console.log("Session vid omdirigering:", {
-                exists: !!sessionData?.session,
-                expiresAt: sessionData?.session?.expires_at 
-                  ? new Date(sessionData.session.expires_at * 1000).toISOString() 
-                  : 'none'
-              });
-              
               if (sessionData?.session) {
-                console.log("Använder window.location.href för omdirigering till dashboard...");
+                console.log("Session bekräftad, omdirigerar nu till dashboard...");
                 // Använd window.location.href för att garantera en full sidomladdning
-                // vilket säkerställer att cookies skickas korrekt
                 window.location.href = "/dashboard";
+                return;
+              } else if (attempts >= maxAttempts) {
+                console.log("Nådde max antal försök, omdirigerar ändå...");
+                window.location.href = "/dashboard";
+                return;
               } else {
-                console.error("Session saknas vid redirect, försöker igen med längre fördröjning...");
-                // Om sessionen fortfarande saknas, gör ett sista försök med ytterligare fördröjning
-                setTimeout(() => {
-                  window.location.href = "/dashboard";
-                }, 2000);
+                console.log("Ingen session hittades ännu, väntar och försöker igen...");
+                setTimeout(checkSessionAndRedirect, checkInterval);
               }
             } catch (err) {
-              console.error("Fel vid sessionskontroll före redirect:", err);
-              // Fallback-omdirigering om allt annat misslyckas
-              window.location.href = "/dashboard";
+              console.error("Fel vid sessionskontroll:", err);
+              if (attempts >= maxAttempts) {
+                window.location.href = "/dashboard";
+              } else {
+                setTimeout(checkSessionAndRedirect, checkInterval);
+              }
             }
-          }, 1500); // Ökad primär fördröjning till 1500ms
+          };
+          
+          // Starta sessionskontrollerna efter en initial fördröjning
+          setTimeout(checkSessionAndRedirect, 1000);
         }
       }
     } catch (err: unknown) {

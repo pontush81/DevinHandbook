@@ -62,23 +62,46 @@ export default function LoginClient() {
             setUser(sessionUser);
             setRedirecting(true);
             
-            // Ge mycket mer tid för cookies att sparas innan vi gör någon omdirigering
-            setTimeout(async () => {
-              // Hämta användarens handböcker
-              const { data, error: handbooksError } = await supabase
-                .from("handbooks")
-                .select("subdomain")
-                .order("created_at", { ascending: false });
-                
-              if (!handbooksError && data && data.length > 0) {
-                console.log("Omdirigerar till användarens handbok:", data[0].subdomain);
-                // Använd window.location.href för full sidomladdning
-                window.location.href = `https://${data[0].subdomain}.handbok.org`;
-              } else {
-                console.log("Omdirigerar till dashboard...");
-                window.location.href = "/dashboard";
+            // Implementera en robust session-kontroll med polling
+            let attempts = 0;
+            const maxAttempts = 5;
+            const checkInterval = 800; // 800ms mellan varje kontroll
+            
+            const checkSessionAndRedirect = async () => {
+              attempts++;
+              console.log(`Kontrollerar session (försök ${attempts}/${maxAttempts})...`);
+              
+              try {
+                // Hämta användarens handböcker
+                const { data, error: handbooksError } = await supabase
+                  .from("handbooks")
+                  .select("subdomain")
+                  .order("created_at", { ascending: false });
+                  
+                if (!handbooksError && data && data.length > 0) {
+                  console.log("Handböcker hittade, omdirigerar till första handboken:", data[0].subdomain);
+                  window.location.href = `https://${data[0].subdomain}.handbok.org`;
+                  return;
+                } else if (attempts >= maxAttempts) {
+                  console.log("Nådde max antal försök eller inga handböcker hittades, går till dashboard...");
+                  window.location.href = "/dashboard";
+                  return;
+                } else {
+                  console.log("Inga handböcker hittades ännu eller databasfel, väntar och försöker igen...");
+                  setTimeout(checkSessionAndRedirect, checkInterval);
+                }
+              } catch (err) {
+                console.error("Fel vid kontroll av handböcker:", err);
+                if (attempts >= maxAttempts) {
+                  window.location.href = "/dashboard";
+                } else {
+                  setTimeout(checkSessionAndRedirect, checkInterval);
+                }
               }
-            }, 1500);
+            };
+            
+            // Starta sessionskontrollerna efter en initial fördröjning
+            setTimeout(checkSessionAndRedirect, 1000);
           }
         } else {
           // Kontrollera om användaren redan är inloggad
@@ -88,23 +111,46 @@ export default function LoginClient() {
           if (currentUser) {
             setRedirecting(true);
             
-            // Ge mycket mer tid för cookies att sparas innan vi gör någon omdirigering
-            setTimeout(async () => {
-              // Hämta användarens handböcker
-              const { data, error: handbooksError } = await supabase
-                .from("handbooks")
-                .select("subdomain")
-                .order("created_at", { ascending: false });
-                
-              if (!handbooksError && data && data.length > 0) {
-                console.log("Omdirigerar till användarens handbok:", data[0].subdomain);
-                // Använd window.location.href för full sidomladdning
-                window.location.href = `https://${data[0].subdomain}.handbok.org`;
-              } else {
-                console.log("Omdirigerar till dashboard...");
-                window.location.href = "/dashboard";
+            // Implementera en robust session-kontroll med polling
+            let attempts = 0;
+            const maxAttempts = 5;
+            const checkInterval = 800; // 800ms mellan varje kontroll
+            
+            const checkSessionAndRedirect = async () => {
+              attempts++;
+              console.log(`Kontrollerar session för befintlig användare (försök ${attempts}/${maxAttempts})...`);
+              
+              try {
+                // Hämta användarens handböcker
+                const { data, error: handbooksError } = await supabase
+                  .from("handbooks")
+                  .select("subdomain")
+                  .order("created_at", { ascending: false });
+                  
+                if (!handbooksError && data && data.length > 0) {
+                  console.log("Handböcker hittade, omdirigerar till första handboken:", data[0].subdomain);
+                  window.location.href = `https://${data[0].subdomain}.handbok.org`;
+                  return;
+                } else if (attempts >= maxAttempts) {
+                  console.log("Nådde max antal försök eller inga handböcker hittades, går till dashboard...");
+                  window.location.href = "/dashboard";
+                  return;
+                } else {
+                  console.log("Inga handböcker hittades ännu eller databasfel, väntar och försöker igen...");
+                  setTimeout(checkSessionAndRedirect, checkInterval);
+                }
+              } catch (err) {
+                console.error("Fel vid kontroll av handböcker:", err);
+                if (attempts >= maxAttempts) {
+                  window.location.href = "/dashboard";
+                } else {
+                  setTimeout(checkSessionAndRedirect, checkInterval);
+                }
               }
-            }, 1500);
+            };
+            
+            // Starta sessionskontrollerna efter en initial fördröjning
+            setTimeout(checkSessionAndRedirect, 1000);
           }
         }
       } catch (error) {
