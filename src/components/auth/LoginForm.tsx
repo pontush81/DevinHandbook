@@ -15,6 +15,8 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
   const [isLoading, setIsLoading] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showResendButton, setShowResendButton] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,6 +24,7 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
+    setShowResendButton(false);
 
     try {
       if (resetMode) {
@@ -37,21 +40,74 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         }
       } else {
         // Vanlig inloggning
-        const { error } = await supabase.auth.signInWithPassword({ 
+        console.log("Försöker logga in med:", { email, passwordLength: password.length });
+        
+        const { data, error } = await supabase.auth.signInWithPassword({ 
           email, 
           password 
         });
         
+        console.log("Inloggningsresultat:", { 
+          success: !error, 
+          errorMessage: error?.message,
+          errorCode: error?.code,
+          hasUser: !!data?.user,
+          hasSession: !!data?.session,
+          sessionExpiry: data?.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'none'
+        });
+        
         if (error) {
-          setError("Fel e-post eller lösenord.");
+          // Specifik felhantering för obekräftad e-post
+          if (error.message.toLowerCase().includes("email not confirmed") || 
+              error.message.toLowerCase().includes("email is not confirmed") ||
+              error.message.toLowerCase().includes("not confirmed") ||
+              error.code === "401" || 
+              error.code === "422") {
+            setError(
+              "Din e-postadress har inte bekräftats. Klicka på länken i bekräftelsemailet som skickades " +
+              "när du registrerade dig."
+            );
+            setShowResendButton(true);
+          } else {
+            setError(`Fel vid inloggning: ${error.message} (Kod: ${error.code})`);
+          }
+        } else if (!data.session) {
+          setError("Kunde inte skapa en aktiv session. Försök igen eller kontakta support.");
         } else {
+          // Inloggning lyckades, omdirigera direkt till dashboard
+          console.log("Inloggning lyckades, omdirigerar till dashboard");
           router.push("/dashboard");
         }
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Ett fel uppstod vid inloggning");
+      console.error("Detaljerat inloggningsfel:", err);
+      setError(err instanceof Error ? `${err.message} (${err.name})` : "Ett fel uppstod vid inloggning");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
+        },
+      });
+      
+      if (error) {
+        setError(`Kunde inte skicka nytt bekräftelsemail: ${error.message}`);
+      } else {
+        setSuccessMessage("Ett nytt bekräftelsemail har skickats. Kontrollera din inkorg.");
+        setShowResendButton(false);
+      }
+    } catch (err) {
+      setError("Ett fel uppstod när bekräftelsemail skulle skickas.");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -95,6 +151,21 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         {error && (
           <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm">
             {error}
+            
+            {showResendButton && (
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs bg-white border-red-200 text-red-600 hover:bg-red-50 w-full"
+                  onClick={handleResendConfirmation}
+                  disabled={resendLoading}
+                >
+                  {resendLoading ? "Skickar..." : "Skicka nytt bekräftelsemail"}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 

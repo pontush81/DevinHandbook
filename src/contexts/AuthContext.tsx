@@ -392,21 +392,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         console.log('User signed out');
         
-        // Rensa i alla lagringsmekanismer
-        if (window.supabaseStorage) {
-          window.supabaseStorage.clearSession();
-        }
-        
-        if (window.safeStorage) {
-          window.safeStorage.removeItem('supabase.auth.token');
-          window.safeStorage.removeItem('supabase.auth.token.timestamp');
-        }
-        
+        // Använd Supabase:s inbyggda metoder för att rensa session
         try {
-          localStorage.removeItem('supabase.auth.token');
-          localStorage.removeItem('supabase.auth.token.timestamp');
+          if (window.supabaseStorage) {
+            window.supabaseStorage.clearSession();
+          }
+          
+          if (window.safeStorage) {
+            window.safeStorage.removeItem('supabase.auth.token');
+            window.safeStorage.removeItem('supabase.auth.token.timestamp');
+          }
+          
+          // Undvik direkt åtkomst till localStorage/sessionStorage
+          // Supabase kommer att hantera detta med cookies istället
         } catch (e) {
-          console.warn('Kunde inte rensa localStorage:', e);
+          console.warn('Kunde inte rensa lagringsmekanismer:', e);
         }
         
         setSession(null);
@@ -458,21 +458,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     
-    // Rensa i alla lagringsmekanismer
-    if (window.supabaseStorage) {
-      window.supabaseStorage.clearSession();
-    }
-    
-    if (window.safeStorage) {
-      window.safeStorage.removeItem('supabase.auth.token');
-      window.safeStorage.removeItem('supabase.auth.token.timestamp');
-    }
-    
+    // Använd Supabase:s inbyggda metoder för att rensa session
     try {
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('supabase.auth.token.timestamp');
+      if (window.supabaseStorage) {
+        window.supabaseStorage.clearSession();
+      }
+      
+      if (window.safeStorage) {
+        window.safeStorage.removeItem('supabase.auth.token');
+        window.safeStorage.removeItem('supabase.auth.token.timestamp');
+      }
+      
+      // Undvik direkt åtkomst till localStorage/sessionStorage
+      // Supabase kommer att hantera detta med cookies istället
     } catch (e) {
-      console.warn('Kunde inte rensa localStorage:', e);
+      console.warn('Kunde inte rensa lagringsmekanismer:', e);
     }
     
     setSession(null);

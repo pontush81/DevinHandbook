@@ -22,6 +22,19 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'tru
   console.log('Node Environment:', process.env.NODE_ENV);
   console.log('Is Edge Runtime:', typeof EdgeRuntime !== 'undefined');
   console.log('Vercel Deployment:', process.env.VERCEL_URL || 'inte i Vercel');
+
+  // Kontrollera localStorage-åtkomst i browsern
+  if (typeof window !== 'undefined') {
+    try {
+      const testKey = 'supabase_storage_test';
+      localStorage.setItem(testKey, 'test');
+      const testValue = localStorage.getItem(testKey);
+      localStorage.removeItem(testKey);
+      console.log('localStorage-åtkomst:', testValue === 'test' ? '✓ Fungerar' : '✗ Fungerar inte');
+    } catch (e) {
+      console.error('localStorage-åtkomst: ✗ Otillgänglig', e);
+    }
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -74,8 +87,8 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
             if (window.supabaseStorage) {
               window.supabaseStorage.clearSession();
             }
-            localStorage.removeItem('supabase.auth.token');
-            localStorage.removeItem('supabase.auth.token.timestamp');
+            // Undvik direkt åtkomst till localStorage
+            // Supabase kommer att hantera detta med cookies istället
             console.log('Rensade lagrade tokens efter 401 Unauthorized');
           } catch (e) {
             console.warn('Kunde inte rensa tokens:', e);
@@ -118,7 +131,18 @@ export const supabase = createClient<Database>(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      storageKey: 'supabase.auth.token',
+      // Använd cookies istället för localStorage för att lagra sessionen
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      // Explicit använda cookies för sessionshantering
+      cookieOptions: {
+        name: 'sb-auth-token',
+        lifetime: 60 * 60 * 24 * 7, // 7 dagar
+        domain: '',
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production'
+      }
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,
