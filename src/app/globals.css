@@ -48,7 +48,7 @@
 
 :root {
   --radius: 0.5rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.98 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
@@ -85,6 +85,19 @@
   --colors-brandButtonText: #fff !important;
   --colors-messageSuccessBackground: #2563eb !important;
   --colors-messageSuccessText: #fff !important;
+  
+  /* New spacing variables */
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  
+  /* New shadow variables */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .dark {
@@ -137,13 +150,13 @@ html, body {
   letter-spacing: 0.01em;
   line-height: 1.7;
   color: #18181b;
-  background: #fff;
+  background: #f9fafb;
 }
 
 h1, .h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   line-height: 1.15;
   color: var(--foreground);
   margin-bottom: 1.5rem;
@@ -175,58 +188,82 @@ p, li {
   margin-bottom: 1.1em;
 }
 
-/*
+/* Modern button styling inspired by GitHub/Linear */
 button, .btn, a.btn {
   font-family: inherit !important;
   font-size: 1rem !important;
   font-weight: 500 !important;
-  border-radius: 9999px !important;
-  padding: 0.7em 1.5em !important;
-  border: 2px solid #2563eb !important;
-  transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s !important;
-  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.03) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem 1.5rem !important;
+  min-height: 44px !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease !important;
+  box-shadow: var(--shadow-sm) !important;
   cursor: pointer !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-button:hover, .btn:hover, a.btn:hover,
-button:active, .btn:active, a.btn:active {
-  background: #2563eb !important;
-  color: #fff !important;
-  border-color: #2563eb !important;
-}
-button:focus, .btn:focus, a.btn:focus,
-button:focus-visible, .btn:focus-visible, a.btn:focus-visible {
-  outline: none !important;
-  border-color: #2563eb !important;
-  box-shadow: 0 0 0 2px #2563eb22 !important;
-  background: #fff !important;
-  color: #2563eb !important;
-}
-button svg, .btn svg, a.btn svg {
-  color: inherit !important;
-  fill: currentColor !important;
-  transition: color 0.2s, fill 0.2s;
-}
-*/
 
+.btn-primary, a.btn-primary {
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #000 !important;
+}
+.btn-primary:hover, a.btn-primary:hover {
+  background: #18181b !important;
+  border-color: #18181b !important;
+}
+.btn-primary:focus, a.btn-primary:focus {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.btn-secondary, a.btn-secondary {
+  background: #fff !important;
+  color: #18181b !important;
+  border-color: #e5e7eb !important;
+}
+.btn-secondary:hover, a.btn-secondary:hover {
+  background: #f9fafb !important;
+  border-color: #d1d5db !important;
+}
+.btn-secondary:focus, a.btn-secondary:focus {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Modern form styling */
 input, textarea, select {
   font-family: inherit !important;
   font-size: 1rem !important;
-  border-radius: 0.5em !important;
-  border: 1.5px solid #e5e7eb !important;
-  padding: 0.7em 1em !important;
-  background: #fafbfc !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #e5e7eb !important;
+  padding: 0.75rem 1rem !important;
+  min-height: 44px !important;
+  background: #f9fafb !important;
   color: #18181b !important;
-  transition: border 0.2s, box-shadow 0.2s !important;
+  transition: all 0.2s ease !important;
   outline: none !important;
+  width: 100% !important;
 }
 input:focus, textarea:focus, select:focus {
   border-color: #2563eb !important;
-  box-shadow: 0 0 0 2px #2563eb22 !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+  background: #fff !important;
 }
 
+label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #4b5563;
+  margin-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+/* Link styling */
 a {
   color: var(--primary);
   text-decoration: none;
@@ -237,6 +274,84 @@ a:hover {
   color: var(--primary-hover, #18181b);
 }
 
+/* Card styling */
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid #f3f4f6;
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 2rem;
+  }
+}
+
+/* Header styling */
+.site-header {
+  background: #fff;
+  height: 64px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .site-header {
+    padding: 0 2rem;
+  }
+}
+
+.site-header-content {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.site-logo {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Container styling */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 2rem;
+  }
+}
+
+/* Spacing utilities */
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-y-6 > * + * {
+  margin-top: 1.5rem;
+}
+
+.space-y-8 > * + * {
+  margin-top: 2rem;
+}
+
+.space-x-4 > * + * {
+  margin-left: 1rem;
+}
+
+/* Existing styles */
 blockquote {
   border-left: 3px solid var(--primary);
   background: var(--muted);
@@ -268,7 +383,7 @@ table {
 }
 th, td {
   border: 1px solid #e5e7eb;
-  padding: 0.7em 1em;
+  padding: 0.75em 1em;
   text-align: left;
 }
 th {
@@ -302,4 +417,31 @@ a[data-slot="button"] {
 a[data-slot="button"]:hover {
   text-decoration: none !important;
   color: var(--primary-foreground) !important;
+}
+
+/* Mobile optimization */
+@media (max-width: 640px) {
+  html, body {
+    font-size: 16px;
+  }
+  
+  h1, .h1 {
+    font-size: 2rem;
+  }
+  
+  h2, .h2 {
+    font-size: 1.75rem;
+  }
+  
+  h3, .h3 {
+    font-size: 1.25rem;
+  }
+  
+  .container {
+    padding: 0 1.5rem;
+  }
+  
+  .card {
+    padding: 1.25rem;
+  }
 }
