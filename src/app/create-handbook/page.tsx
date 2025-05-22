@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { checkIsSuperAdmin } from "@/lib/user-utils";
 import { CreateHandbookForm } from "@/components/handbook-wizard/CreateHandbookForm";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface Handbook {
   id: string;
@@ -77,36 +79,49 @@ export default function CreateHandbook() {
   if (handbooks.length > 0 && !isSuperadmin) {
     // Visa info om att handbok redan finns (fallback om redirect inte hinner)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
-        <main className="w-full max-w-2xl mx-auto bg-white rounded-3xl p-8 md:p-12 flex flex-col gap-8 shadow-none border border-gray-100 text-center">
-          <h1 className="text-3xl font-bold mb-2">Du har redan en handbok</h1>
-          <p className="text-gray-500 text-lg mb-6">Du kan redigera eller visa din handbok nedan.</p>
-          <a
-            href={`https://${handbooks[0].subdomain}.handbok.org`}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition"
-          >
-            Gå till din handbok
-          </a>
-        </main>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center px-6">
+        <div className="max-w-md w-full">
+          <Card className="shadow-lg border-0">
+            <CardContent className="p-8 text-center">
+              <h1 className="text-2xl font-bold mb-4">Du har redan en handbok</h1>
+              <p className="text-gray-600 mb-6">Du kan redigera eller visa din handbok nedan.</p>
+              <Button asChild className="w-full" size="lg">
+                <a href={`https://${handbooks[0].subdomain}.handbok.org`}>
+                  Gå till din handbok
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   // Endast superadmin eller användare utan handbok får skapa ny handbok
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-2">
-      <main className="w-full max-w-2xl mx-auto bg-white rounded-3xl p-8 md:p-12 flex flex-col gap-8 shadow-none border border-gray-100">
-        <div className="mb-2 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">Skapa digital handbok</h1>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto">Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-16 px-6">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Skapa digital handbok
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
+            Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.
+          </p>
         </div>
         
-        {user && <CreateHandbookForm userId={user.id} />}
+        <Card className="shadow-lg border-0">
+          <CardContent className="p-8">
+            {user && <CreateHandbookForm userId={user.id} />}
+          </CardContent>
+        </Card>
         
-        <div className="text-center mt-4">
-          <p className="text-gray-500 text-sm">Endast superadmin eller användare utan handbok kan skapa en ny handbok.</p>
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-500">
+            Endast superadmin eller användare utan handbok kan skapa en ny handbok.
+          </p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
 import { useRouter } from "next/navigation";
+import { WizardStepOne } from "@/components/handbook-wizard/WizardStepOne";
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(true);
@@ -43,10 +43,22 @@ export default function SignupPage() {
   if (tab === 'login' || tab === 'reset') heading = 'Logga in';
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-gray-50">
-      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-sm">
-        <h2 className="text-2xl font-bold mb-4 text-center">{heading}</h2>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
+      <div className="max-w-md w-full">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {heading}
+          </h1>
+          <p className="text-gray-600">
+            Skapa ditt konto för att komma igång med Handbok.org
+          </p>
+        </div>
+
+        {/* Form */}
         <WizardStepOne showTabs={true} tab={tab} setTab={setTab} />
+        
       </div>
     </div>
   );

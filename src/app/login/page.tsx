@@ -49,9 +49,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-gray-50">
-      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-sm">
-        <h2 className="text-2xl font-bold mb-4 text-center">Logga in</h2>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
+      <div className="max-w-md w-full">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Logga in
+          </h1>
+          <p className="text-gray-600">
+            Logga in för att få tillgång till din handbok
+          </p>
+        </div>
+
+        {/* Form */}
         <WizardStepOne showTabs={true} />
       </div>
     </div>

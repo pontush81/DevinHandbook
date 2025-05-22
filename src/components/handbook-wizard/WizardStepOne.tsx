@@ -30,7 +30,7 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
 
   if (currentStep === 0 && user) {
     return (
-      <div className="space-y-6 text-center">
+      <div className="bg-white rounded-lg p-8 shadow-lg border border-gray-100 space-y-6 text-center">
         <h2 className="text-2xl font-bold">Du är inloggad</h2>
         <p className="text-gray-600 mb-4">Du är inloggad som <span className="font-semibold">{user.email}</span>.</p>
         <div className="flex flex-col gap-2 items-center">
@@ -97,35 +97,35 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-b-md border border-t-0 border-gray-200 shadow-sm space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg border border-gray-200 shadow-lg space-y-5">
         <div>
-          <label className="block text-sm font-medium text-blue-800 mb-1">E-post</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">E-post</label>
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
             placeholder="Ange din e-postadress"
             autoComplete="email"
           />
         </div>
         {tab !== "reset" && (
           <div>
-            <label className="block text-sm font-medium text-blue-800 mb-1">Lösenord</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Lösenord</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
               placeholder="Ange ditt lösenord"
               autoComplete={tab === "signup" ? "new-password" : "current-password"}
             />
           </div>
         )}
         {error && (
-          <div className="text-red-600 text-sm mt-2">
+          <div className="text-red-600 text-sm p-3 bg-red-50 rounded-md">
             {error}
             {emailAlreadyExists && (
               <div className="mt-2">
@@ -140,13 +140,13 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
             )}
           </div>
         )}
-        {success && <div className="text-green-700 text-sm mt-2">{success}</div>}
+        {success && <div className="text-green-700 text-sm p-3 bg-green-50 rounded-md">{success}</div>}
         {tab === "login" && registrationSuccess && (
-          <div className="text-green-700 text-sm mb-2">{registrationSuccess}</div>
+          <div className="text-green-700 text-sm p-3 bg-green-50 rounded-md">{registrationSuccess}</div>
         )}
         <Button
           type="submit"
-          className="w-full py-2 px-4 rounded-md font-semibold transition disabled:opacity-50"
+          className="w-full py-3 px-4 rounded-md font-semibold transition disabled:opacity-50"
           disabled={loading}
         >
           {tab === "signup" && (loading ? "Skapar konto..." : "Skapa konto")}
@@ -154,7 +154,7 @@ export function WizardStepOne({ showTabs = true, tab: propTab, setTab: propSetTa
           {tab === "reset" && (loading ? "Skickar..." : "Skicka återställningslänk")}
         </Button>
         {tab === "login" && (
-          <div className="text-center mt-2">
+          <div className="text-center">
             <Button
               type="button"
               variant="link"
