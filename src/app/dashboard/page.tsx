@@ -196,14 +196,14 @@ export default function DashboardPage() {
                     {handbook.subdomain}.handbok.org
                   </div>
                   <div className="flex space-x-4">
-                    <Button asChild variant="outline" size="sm">
-                      <a
-                        href={`https://${handbook.subdomain}.handbok.org`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Visa
-                      </a>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        window.open(`https://${handbook.subdomain}.handbok.org`, '_blank');
+                      }}
+                    >
+                      Visa
                     </Button>
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/edit-handbook/${handbook.id}`}>
