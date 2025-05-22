@@ -97,7 +97,7 @@ export default async function HomePage() {
                   Starta din första handbok och börja dokumentera rutiner och information.
                 </p>
                 <Button asChild className="w-full" size="lg">
-                  <a href="/create-handbook">Skapa ny handbok</a>
+                  <a href="/create-handbook?new=true">Skapa ny handbok</a>
                 </Button>
               </CardContent>
             </Card>
@@ -111,9 +111,12 @@ export default async function HomePage() {
                 <CardTitle className="text-xl">Hitta förening</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <div className="space-y-4">
-                  <AutoSuggestHandbookSearch />
-                </div>
+                <p className="text-gray-600 mb-6">
+                  Sök efter din bostadsrättsförening och få tillgång till er handbok.
+                </p>
+                <Button asChild className="w-full" size="lg">
+                  <a href="/search">Sök efter förening</a>
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -142,6 +145,29 @@ export default async function HomePage() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* FAQ Section */}
+          <div className="mt-12 mb-8">
+            <h3 className="text-xl font-semibold text-gray-900 text-center mb-6">
+              Vanliga frågor
+            </h3>
+            <div className="space-y-4">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-sm p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Vad är en digital bostadsrättsföreningshandbok?</h4>
+                <p className="text-gray-600 text-sm">En digital handbok för bostadsrättsföreningar är en webbaserad plattform där all viktig information om föreningen samlas. Här finns stadgar, regler, kontaktuppgifter, felanmälan och annan information som medlemmar behöver ha tillgång till.</p>
+              </div>
+              
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-sm p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Hur skapar jag en handbok för min förening?</h4>
+                <p className="text-gray-600 text-sm">Det är enkelt! Klicka på 'Skapa handbok' ovan, följ den guidade processen, ange föreningens namn och välj en unik subdomän. Efter betalning kan du börja fylla din handbok med innehåll.</p>
+              </div>
+              
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-sm p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Vad kostar tjänsten?</h4>
+                <p className="text-gray-600 text-sm">Tjänsten kostar 990 kr per år för en förening, oavsett storlek. I priset ingår obegränsad lagring, egen subdomän, säkerhetskopiering och support.</p>
+              </div>
+            </div>
+          </div>
           
           {/* Login Link */}
           <div className="text-center mt-8">

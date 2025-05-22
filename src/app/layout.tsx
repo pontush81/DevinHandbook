@@ -87,9 +87,6 @@ export default function RootLayout({
           `}
         </Script>
         
-        {/* Lägg in cross-domain-storage-skriptet innan allt annat för att säkerställa korrekt sessionshantering */}
-        <Script src="/cross-domain-storage.js" strategy="beforeInteractive" />
-        
         {/* Resource fix script for cross-domain resources */}
         <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
         
