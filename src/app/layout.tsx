@@ -87,6 +87,9 @@ export default function RootLayout({
           `}
         </Script>
         
+        {/* Lägg in cross-domain-storage-skriptet innan allt annat för att säkerställa korrekt sessionshantering */}
+        <Script src="/cross-domain-storage.js" strategy="beforeInteractive" />
+        
         {/* Resource fix script for cross-domain resources */}
         <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
         
@@ -100,8 +103,6 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://staging.handbok.org" />
         
         {/* Load critical utilities before anything else */}
-        <Script src="/cross-domain-storage.js" strategy="beforeInteractive" />
-        <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
         <Script src="/js-fallback.js" strategy="beforeInteractive" />
         
         {/* Emergency script to handle loading issues */}
@@ -245,9 +246,54 @@ export default function RootLayout({
             }
           })();
         `}} />
+        
+        {/* Memory-baserad fallback för AuthContext om localStorage är blockerad */}
+        <Script id="auth-context-fallback" strategy="beforeInteractive">
+          {`
+            (function() {
+              try {
+                // Skapa en global memory-storage som kan användas om localStorage är blockerad
+                if (typeof window !== 'undefined') {
+                  window.__memoryStorage = {};
+                  
+                  // Testa localStorage
+                  let localStorageBlocked = false;
+                  try {
+                    localStorage.setItem('__test_storage', '1');
+                    localStorage.removeItem('__test_storage');
+                  } catch(e) {
+                    localStorageBlocked = true;
+                    console.warn('localStorage är blockerad, använder memory-fallback');
+                  }
+                  
+                  // Om localStorage är blockerad, skapa en global AuthContext-hjälpare
+                  if (localStorageBlocked && !window.safeStorage) {
+                    window.safeStorage = {
+                      getItem: function(key) {
+                        return window.__memoryStorage[key] || null;
+                      },
+                      setItem: function(key, value) {
+                        window.__memoryStorage[key] = value;
+                        return true;
+                      },
+                      removeItem: function(key) {
+                        delete window.__memoryStorage[key];
+                        return true;
+                      }
+                    };
+                  }
+                }
+              } catch(e) {
+                console.error('Error in AuthContext fallback script:', e);
+              }
+            })();
+          `}
+        </Script>
       </head>
       <body className={`${inter.className} antialiased`}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
