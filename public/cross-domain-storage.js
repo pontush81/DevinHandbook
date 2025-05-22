@@ -1,8 +1,9 @@
 /**
- * Förenklad ersättning för cross-domain storage
+ * Förbättrad ersättning för cross-domain storage
  * 
  * Hanterar både direktåtkomst och fallback för localStorage
  * för att lösa problem med "Access to storage is not allowed from this context" i iframes
+ * och på subdomäner som pontus.handbok.org
  */
 (function() {
   // Detektera om vi är i en iframe
@@ -10,18 +11,21 @@
   
   // Kontrollera om vi är på en subdomän
   const currentDomain = window.location.hostname;
+  const mainDomain = 'handbok.org';
   
   // Bestäm om vi är i staging eller produktion
   const isStaging = currentDomain.includes('staging.handbok.org');
   
-  // Vi hanterar alla subdomäner likadant
+  // Kontrollera om vi är på en subdomän av handbok.org
+  const isSubdomain = (
+    currentDomain.endsWith(mainDomain) && 
+    currentDomain !== mainDomain && 
+    currentDomain !== 'staging.handbok.org' && 
+    currentDomain !== 'www.handbok.org'
+  );
   
   // Undvik omdirigering för API-anrop
   const isApiCall = window.location.pathname.startsWith('/api/');
-  
-  // Om vi är på en subdomän av handbok.org eller staging.handbok.org
-  // och det INTE är ett API-anrop och inte i en iframe
-  const isSubdomain = (currentDomain.endsWith('handbok.org') && currentDomain !== 'handbok.org' && currentDomain !== 'staging.handbok.org');
   
   // Skapa en memory-baserad localStorage-ersättning
   const memoryStorage = {};
@@ -34,6 +38,9 @@
       const testKey = '__test_storage_access__';
       localStorage.setItem(testKey, '1');
       localStorage.removeItem(testKey);
+    } else {
+      localStorageBlocked = true;
+      console.warn('localStorage är inte tillgänglig i denna kontext');
     }
   } catch (e) {
     console.warn('localStorage är blockerad i denna kontext:', e);
@@ -45,20 +52,30 @@
     getItem: function(key) {
       if (!key) return null;
       
-      try {
-        if (!localStorageBlocked && typeof localStorage !== 'undefined') {
-          const value = localStorage.getItem(key);
-          if (value) {
-            // Verifiera att vi fick ett giltigt värde
-            return value;
-          }
-        }
-      } catch (e) {
-        console.warn('Kunde inte hämta från localStorage:', e);
+      // Försök först hämta från memory storage
+      if (memoryStorage[key] !== undefined) {
+        return memoryStorage[key];
       }
       
-      // Använd memory storage som fallback
-      return memoryStorage[key] || null;
+      // Sedan försök med localStorage om det är tillgängligt
+      if (!localStorageBlocked) {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const value = localStorage.getItem(key);
+            if (value !== null && value !== undefined) {
+              // Verifiera att vi fick ett giltigt värde och cache'a det
+              memoryStorage[key] = value;
+              return value;
+            }
+          }
+        } catch (e) {
+          console.warn('Kunde inte hämta från localStorage:', e);
+          // Markera som blockerad för framtida anrop
+          localStorageBlocked = true;
+        }
+      }
+      
+      return null;
     },
     
     setItem: function(key, value) {
@@ -72,12 +89,16 @@
         try {
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem(key, value);
+            return true;
           }
         } catch (e) {
           console.warn('Kunde inte spara i localStorage:', e);
+          // Markera som blockerad för framtida anrop
+          localStorageBlocked = true;
         }
       }
       
+      // Även om localStorage är blockerad så lyckades vi spara i memory
       return true;
     },
     
@@ -95,6 +116,8 @@
           }
         } catch (e) {
           console.warn('Kunde inte ta bort från localStorage:', e);
+          // Markera som blockerad för framtida anrop
+          localStorageBlocked = true;
         }
       }
       
@@ -115,6 +138,8 @@
           }
         } catch (e) {
           console.warn('Kunde inte rensa localStorage:', e);
+          // Markera som blockerad för framtida anrop
+          localStorageBlocked = true;
         }
       }
     }
@@ -166,7 +191,9 @@
       
       try {
         // Validera att det är ett giltigt JSON-objekt
-        const sessionObj = JSON.parse(sessionJson);
+        if (typeof sessionJson === 'string') {
+          JSON.parse(sessionJson); // Kastar fel om ogiltig JSON
+        }
         
         // Spara sessionen
         safeStorage.setItem('supabase.auth.token', sessionJson);
@@ -188,6 +215,7 @@
         safeStorage.removeItem('sb-refresh-token');
         safeStorage.removeItem('sb-access-token');
         safeStorage.removeItem('sb-auth-token');
+        safeStorage.removeItem('sb-provider-token');
         
         return true;
       } catch (e) {
@@ -196,6 +224,41 @@
       }
     }
   };
+  
+  // Polyfilla localStorage och sessionStorage globalt för att hantera blockering
+  if (localStorageBlocked) {
+    try {
+      // Ersätt blockerad localStorage med vår säkra implementation
+      Object.defineProperty(window, 'localStorage', {
+        value: {
+          getItem: safeStorage.getItem,
+          setItem: safeStorage.setItem,
+          removeItem: safeStorage.removeItem,
+          clear: safeStorage.clear,
+          length: 0, // Simulerar standardegenskaper
+          key: function() { return null; } // Dummy implementation
+        },
+        writable: false
+      });
+      
+      // Gör samma sak för sessionStorage om den också är blockerad
+      Object.defineProperty(window, 'sessionStorage', {
+        value: {
+          getItem: safeStorage.getItem,
+          setItem: safeStorage.setItem,
+          removeItem: safeStorage.removeItem,
+          clear: safeStorage.clear,
+          length: 0,
+          key: function() { return null; }
+        },
+        writable: false
+      });
+      
+      console.log('Ersatt blockerad localStorage/sessionStorage med memory-baserad implementation');
+    } catch (e) {
+      console.error('Kunde inte ersätta blockerad storage:', e);
+    }
+  }
   
   // Tillgängliggör safe storage globalt
   window.safeStorage = safeStorage;
@@ -215,6 +278,7 @@
   console.log('Cross-domain storage initialized:', { 
     isInIframe,
     isSubdomain,
+    domain: currentDomain,
     isLocalStorageBlocked: localStorageBlocked
   });
   

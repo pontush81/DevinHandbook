@@ -3,12 +3,19 @@ import React, { useState, useRef, useEffect } from "react";
 import { BookOpenIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { Input } from '@/components/ui/input';
 
+interface HandbookResult {
+  id: string;
+  title: string;
+  subdomain: string;
+}
+
 export default function AutoSuggestHandbookSearch() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<{id:string;name:string;subdomain:string}[]>([]);
+  const [results, setResults] = useState<HandbookResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -16,23 +23,49 @@ export default function AutoSuggestHandbookSearch() {
       setResults([]);
       setShowDropdown(false);
       setLoading(false);
+      setError(null);
       return;
     }
+    
     setLoading(true);
+    setError(null);
+    
     const timeout = setTimeout(() => {
-      fetch(`/api/search-handbooks?q=${encodeURIComponent(query)}`, { cache: 'no-store' })
-        .then(res => res.json())
+      fetch(`/api/search-handbooks?q=${encodeURIComponent(query)}`, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Sökningen misslyckades: ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
-          setResults(data.results || data.handbooks || []);
+          console.log('Sökresultat:', data);
+          if (data.error) {
+            setError(data.error);
+            setResults([]);
+          } else {
+            setResults(data.results || []);
+          }
           setShowDropdown(true);
+        })
+        .catch(err => {
+          console.error('Fel vid sökning:', err);
+          setError('Kunde inte utföra sökningen. Försök igen senare.');
+          setResults([]);
         })
         .finally(() => setLoading(false));
     }, 250);
+    
     return () => clearTimeout(timeout);
   }, [query]);
 
   const handleSelect = (subdomain: string) => {
-    window.location.href = `/view?company=${encodeURIComponent(subdomain)}`;
+    window.location.href = `https://${subdomain}.handbok.org`;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -73,8 +106,12 @@ export default function AutoSuggestHandbookSearch() {
             >
               <BookOpenIcon className={`h-6 w-6 mt-1 flex-shrink-0 ${i === selectedIndex ? 'text-blue-600' : 'text-blue-500'}`} />
               <div className="flex flex-col w-full">
-                <span className={`font-semibold text-base leading-tight ${i === selectedIndex ? 'text-blue-900' : 'text-gray-900'}`}>{r.title}</span>
-                <span className={`text-xs mt-1 ${i === selectedIndex ? 'text-blue-700' : 'text-gray-500'}`}>{r.subdomain}.handbok.org</span>
+                <span className={`font-semibold text-base leading-tight ${i === selectedIndex ? 'text-blue-900' : 'text-gray-900'}`}>
+                  {r.title}
+                </span>
+                <span className={`text-xs mt-1 ${i === selectedIndex ? 'text-blue-700' : 'text-gray-500'}`}>
+                  {r.subdomain}.handbok.org
+                </span>
               </div>
             </li>
           ))}
@@ -83,7 +120,7 @@ export default function AutoSuggestHandbookSearch() {
       {showDropdown && query.length >= 2 && results.length === 0 && !loading && (
         <div className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl rounded-t-none mt-0 shadow-2xl z-10 px-6 py-6 text-gray-500 text-center flex flex-col items-center gap-2">
           <ExclamationCircleIcon className="h-7 w-7 text-gray-300 mb-1" />
-          <span>Ingen förening hittades</span>
+          <span>{error || "Ingen förening hittades"}</span>
         </div>
       )}
       {loading && (
