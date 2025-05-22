@@ -123,17 +123,32 @@ export const supabase = createClient<Database>(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      // Använd cookies istället för localStorage för att lagra sessionen
       detectSessionInUrl: true,
       flowType: 'pkce',
-      // Explicit använda cookies för sessionshantering
+      // Mer omfattande cookie-konfiguration för att säkerställa att refresh tokens hanteras korrekt
       cookieOptions: {
-        name: 'sb-auth-token',
+        name: 'sb-auth', // Standardnamn som Supabase använder
         lifetime: 60 * 60 * 24 * 7, // 7 dagar
         domain: process.env.NODE_ENV === 'production' ? '.handbok.org' : undefined,
         path: '/',
         sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production',
+        // Viktigt för CORS och cross-domain-cookies
+        httpOnly: false // Tillåt JavaScript-åtkomst på klientsidan
+      },
+      // Se till att sessionen hämtas från cookies för varje förfrågan
+      storageKey: 'sb-auth-token',
+      storage: {
+        getItem: (key) => {
+          // I produktion-miljö är cookies alltid tillgängliga
+          if (typeof document === 'undefined') return null;
+          // Hämta cookie via document.cookie API
+          const cookies = document.cookie.split(';').map(c => c.trim());
+          const cookie = cookies.find(c => c.startsWith(`${key}=`));
+          return cookie ? cookie.split('=')[1] : null;
+        },
+        setItem: () => {},  // Hanteras av Supabase-klienten
+        removeItem: () => {} // Hanteras av Supabase-klienten
       }
     },
     global: {
