@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { checkIsSuperAdmin } from "@/lib/user-utils";
 import { CreateHandbookForm } from "@/components/handbook-wizard/CreateHandbookForm";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,12 +18,18 @@ interface Handbook {
   published: boolean;
 }
 
-export default function CreateHandbook() {
+// Wrapper-komponent som använder useSearchParams säkert inom en Suspense-boundary
+function CreateHandbookContent() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
+  // Kontrollera query-parametern new=true för att avgöra om formuläret ska visas initialt
+  const forceNewHandbook = searchParams?.get('new') === 'true';
+  const [showCreateForm, setShowCreateForm] = useState(forceNewHandbook || true);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -66,38 +72,66 @@ export default function CreateHandbook() {
   }, [user]);
 
   useEffect(() => {
-    if (!isLoadingHandbooks && handbooks.length > 0 && !isSuperadmin) {
-      // Redirecta till första handboken
-      router.push(`https://${handbooks[0].subdomain}.handbok.org`);
-    }
-  }, [isLoadingHandbooks, handbooks, isSuperadmin, router]);
+    // Uppdatera showCreateForm när searchParams ändras
+    setShowCreateForm(forceNewHandbook || true);
+  }, [forceNewHandbook]);
 
   if (isLoading || isLoadingHandbooks) {
     return <div className="min-h-screen flex items-center justify-center"><div>Laddar...</div></div>;
   }
 
-  if (handbooks.length > 0 && !isSuperadmin) {
-    // Visa info om att handbok redan finns (fallback om redirect inte hinner)
+  // Visa lista över befintliga handböcker om användaren väljer att se dem
+  if (handbooks.length > 0 && !showCreateForm && !forceNewHandbook) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center px-6">
-        <div className="max-w-md w-full">
-          <Card className="shadow-lg border-0">
-            <CardContent className="p-8 text-center">
-              <h1 className="text-2xl font-bold mb-4">Du har redan en handbok</h1>
-              <p className="text-gray-600 mb-6">Du kan redigera eller visa din handbok nedan.</p>
-              <Button asChild className="w-full" size="lg">
-                <a href={`https://${handbooks[0].subdomain}.handbok.org`}>
-                  Gå till din handbok
-                </a>
-              </Button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-16 px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Dina handböcker
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
+              Du har {handbooks.length} handbok{handbooks.length > 1 ? 'er' : ''}. Du kan skapa en till eller hantera dina befintliga.
+            </p>
+          </div>
+          
+          <Card className="shadow-lg border-0 mb-8">
+            <CardContent className="p-8">
+              <ul className="space-y-4">
+                {handbooks.map(handbook => (
+                  <li key={handbook.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <div>
+                      <h3 className="font-medium text-lg">{handbook.name || handbook.title}</h3>
+                      <p className="text-gray-500">{handbook.subdomain}.handbok.org</p>
+                    </div>
+                    <div className="mt-2 md:mt-0 space-x-2">
+                      <Button asChild variant="outline" size="sm">
+                        <a href={`https://${handbook.subdomain}.handbok.org`} target="_blank" rel="noopener noreferrer">
+                          Visa
+                        </a>
+                      </Button>
+                      <Button asChild size="sm">
+                        <a href={`/edit-handbook/${handbook.id}`}>
+                          Redigera
+                        </a>
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
+          
+          <div className="text-center">
+            <Button onClick={() => setShowCreateForm(true)}>
+              Skapa ny handbok
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Endast superadmin eller användare utan handbok får skapa ny handbok
+  // Visa formulär för att skapa ny handbok som standardläge
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-16 px-6">
       <div className="max-w-2xl mx-auto">
@@ -108,6 +142,11 @@ export default function CreateHandbook() {
           <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
             Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.
           </p>
+          {handbooks.length > 0 && (
+            <Button variant="outline" className="mb-4" onClick={() => setShowCreateForm(false)}>
+              Visa mina handböcker
+            </Button>
+          )}
         </div>
         
         <Card className="shadow-lg border-0">
@@ -121,5 +160,14 @@ export default function CreateHandbook() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// Huvudkomponenten som wrappar innehållet i en Suspense-boundary
+export default function CreateHandbook() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div>Laddar...</div></div>}>
+      <CreateHandbookContent />
+    </Suspense>
   );
 }

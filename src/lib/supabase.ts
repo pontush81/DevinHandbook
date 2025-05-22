@@ -135,9 +135,12 @@ export const supabase = createClient<Database>(
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true // Ändrad till true för att förhindra JavaScript-åtkomst och därmed förhindra att någon tar bort dem
       },
-      // Användning av autoRefreshToken och persistSession är viktiga för cookie-hantering
-      // men vi behöver inte sätta storageKey eller custom storage
-      storageKey: undefined
+      storage: {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {}
+      },
+      storageKey: null
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,

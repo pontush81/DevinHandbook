@@ -108,7 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
     
-    setData();
+    // Sätt en kort timeout för att minska risken för race conditions
+    const timeout = setTimeout(() => {
+      setData();
+    }, 100);
     
     // Lyssna på auth-ändringar
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
