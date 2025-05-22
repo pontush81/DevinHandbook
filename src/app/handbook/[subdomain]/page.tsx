@@ -1,6 +1,6 @@
 "use client";
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import HandbookSectionCard from '@/components/HandbookSectionCard';
@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { Button } from '@/components/ui/button';
+import { Settings } from 'lucide-react';
 
 interface Section {
   id: string;
@@ -38,6 +40,119 @@ type PageParams = {
 type Props = {
   params: PageParams;
 };
+
+// Ny komponent för att hantera admin-knappsvisning
+function AdminButton({ handbookId }: { handbookId: string }) {
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user || !handbookId) {
+        setIsAdmin(false);
+        setIsChecking(false);
+        console.log('[AdminButton] Ingen användare eller handbook_id', { user, handbookId });
+        return;
+      }
+
+      try {
+        console.log('[AdminButton] Kontrollerar admin-status för', { userId: user.id, handbookId });
+        
+        // Först försök via direkt supabase-anrop som fallback på subdomäner
+        const { data: memberData, error: memberError } = await supabase
+          .from('handbook_members')
+          .select('role')
+          .eq('handbook_id', handbookId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        console.log('[AdminButton] Resultat från direkt anrop:', { memberData, memberError });
+        
+        if (!memberError && memberData && memberData.role === 'admin') {
+          setIsAdmin(true);
+          setIsChecking(false);
+          return;
+        }
+        
+        // Försök via API endast om direktanropet inte fungerade
+        const adminUrl = `${window.location.protocol}//${window.location.host.replace(/^[^.]+\./, '')}/api/check-admin-status?handbook_id=${handbookId}`;
+        console.log('[AdminButton] Försöker API-anrop till:', adminUrl);
+        
+        const response = await fetch(adminUrl);
+        const data = await response.json();
+        
+        console.log('[AdminButton] Svar från API:', data);
+        
+        if (response.ok) {
+          setIsAdmin(data.isAdmin);
+        } else {
+          console.error('[AdminButton] API-fel:', data);
+          setError(data.error || 'Fel vid kontroll av adminrättigheter');
+        }
+      } catch (error) {
+        console.error('[AdminButton] Oväntat fel:', error);
+        setError('Kunde inte kontrollera admin-status');
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user, handbookId]);
+
+  // Speciell hantering för utvecklare och superadmin
+  const isSystemAdmin = user?.email?.toLowerCase() === 'pontus.horberg@gmail.com' || 
+                       user?.email?.toLowerCase() === 'admin@handbok.org';
+
+  // I utvecklingsläge, visa alltid admin-knappen
+  if (process.env.NODE_ENV === 'development') {
+    return (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="flex items-center gap-1 bg-amber-50" 
+        onClick={() => window.location.href = `/admin?handbook=${handbookId}`}
+      >
+        <Settings className="h-4 w-4" />
+        <span>Administrera (Dev)</span>
+      </Button>
+    );
+  }
+
+  // Visa alltid för systemadministratören
+  if (isSystemAdmin) {
+    return (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="flex items-center gap-1" 
+        onClick={() => window.location.href = `/admin?handbook=${handbookId}`}
+      >
+        <Settings className="h-4 w-4" />
+        <span>Administrera (Admin)</span>
+      </Button>
+    );
+  }
+
+  // Vanlig logik
+  if (isChecking) return <div className="text-xs text-gray-400 animate-pulse">Kontrollerar behörighet...</div>;
+  if (error) return <div className="text-xs text-red-400">{error}</div>;
+  if (!isAdmin) return null;
+
+  return (
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="flex items-center gap-1" 
+      onClick={() => window.location.href = `/admin?handbook=${handbookId}`}
+    >
+      <Settings className="h-4 w-4" />
+      <span>Administrera</span>
+    </Button>
+  );
+}
 
 export default async function HandbookPage({ params }: Props) {
   // Försök hämta handbook, men med extra felhantering för att undvika redirects
@@ -194,9 +309,15 @@ export default async function HandbookPage({ params }: Props) {
     <MainLayout variant="app" showAuth={false} sections={handbook.sections.map((s: Section) => ({ id: s.id, title: s.title }))}>
       <HandbookOnboardingBanner />
       <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold">{handbook.title}</h1>
-          <p className="text-gray-500">Digital handbok</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">{handbook.title}</h1>
+            <p className="text-gray-500">Digital handbok</p>
+          </div>
+          <div>
+            {/* Använd nya AdminButton-komponenten istället för direkt knapp */}
+            <AdminButton handbookId={handbook.id} />
+          </div>
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
