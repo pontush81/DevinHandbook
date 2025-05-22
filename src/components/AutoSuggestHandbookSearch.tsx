@@ -17,6 +17,7 @@ export default function AutoSuggestHandbookSearch() {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (query.length < 2) {
@@ -31,13 +32,18 @@ export default function AutoSuggestHandbookSearch() {
     setError(null);
     
     const timeout = setTimeout(() => {
-      fetch(`/api/search-handbooks?q=${encodeURIComponent(query)}`, { 
+      const encodedQuery = encodeURIComponent(query);
+      console.log(`Söker efter "${query}" (${encodedQuery})`);
+      
+      fetch(`/api/search-handbooks?q=${encodedQuery}`, { 
         cache: 'no-store',
         headers: {
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       })
         .then(res => {
+          console.log('Söksvar status:', res.status);
           if (!res.ok) {
             throw new Error(`Sökningen misslyckades: ${res.status}`);
           }
@@ -49,9 +55,13 @@ export default function AutoSuggestHandbookSearch() {
             setError(data.error);
             setResults([]);
           } else {
-            setResults(data.results || []);
+            const foundResults = data.results || [];
+            setResults(foundResults);
+            console.log(`Hittade ${foundResults.length} resultat för "${query}"`);
+            if (foundResults.length > 0) {
+              setShowDropdown(true);
+            }
           }
-          setShowDropdown(true);
         })
         .catch(err => {
           console.error('Fel vid sökning:', err);
@@ -64,7 +74,22 @@ export default function AutoSuggestHandbookSearch() {
     return () => clearTimeout(timeout);
   }, [query]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) && 
+          inputRef.current && !inputRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleSelect = (subdomain: string) => {
+    console.log(`Navigerar till https://${subdomain}.handbok.org`);
     window.location.href = `https://${subdomain}.handbok.org`;
   };
 
@@ -80,49 +105,50 @@ export default function AutoSuggestHandbookSearch() {
   };
 
   return (
-    <div className="w-full relative overflow-hidden">
+    <div className="w-full relative overflow-visible">
       <Input
         ref={inputRef}
         type="text"
         value={query}
         onChange={e => { setQuery(e.target.value); setSelectedIndex(-1); }}
         onFocus={() => { if (results.length > 0) setShowDropdown(true); }}
-        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
         onKeyDown={handleKeyDown}
         placeholder="Sök efter förening..."
         className="flex-1 px-4 py-3 rounded-full border border-gray-200 bg-[#f7f8fa] text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition w-full"
         autoComplete="off"
         aria-label="Sök förening"
       />
-      {showDropdown && results.length > 0 && (
-        <ul className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl rounded-t-none mt-0 shadow-2xl z-10 max-h-80 overflow-auto p-0">
-          {results.map((r, i) => (
-            <li
-              key={r.id}
-              className={`w-full block flex items-start gap-3 px-5 py-3 cursor-pointer transition-colors select-none
-                ${i === selectedIndex ? `bg-blue-100 text-blue-900 shadow ${i === 0 ? 'rounded-t-xl' : ''} ${i === results.length - 1 ? 'rounded-b-xl' : ''}` : 'hover:bg-blue-50'}`}
-              onMouseDown={() => handleSelect(r.subdomain)}
-              onMouseEnter={() => setSelectedIndex(i)}
-            >
-              <BookOpenIcon className={`h-6 w-6 mt-1 flex-shrink-0 ${i === selectedIndex ? 'text-blue-600' : 'text-blue-500'}`} />
-              <div className="flex flex-col w-full">
-                <span className={`font-semibold text-base leading-tight ${i === selectedIndex ? 'text-blue-900' : 'text-gray-900'}`}>
-                  {r.title}
-                </span>
-                <span className={`text-xs mt-1 ${i === selectedIndex ? 'text-blue-700' : 'text-gray-500'}`}>
-                  {r.subdomain}.handbok.org
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      {showDropdown && query.length >= 2 && results.length === 0 && !loading && (
-        <div className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl rounded-t-none mt-0 shadow-2xl z-10 px-6 py-6 text-gray-500 text-center flex flex-col items-center gap-2">
-          <ExclamationCircleIcon className="h-7 w-7 text-gray-300 mb-1" />
-          <span>{error || "Ingen förening hittades"}</span>
-        </div>
-      )}
+      <div ref={dropdownRef}>
+        {showDropdown && results.length > 0 && (
+          <ul className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl rounded-t-none mt-0 shadow-2xl z-10 max-h-80 overflow-auto p-0">
+            {results.map((r, i) => (
+              <li
+                key={r.id}
+                className={`w-full block flex items-start gap-3 px-5 py-3 cursor-pointer transition-colors select-none
+                  ${i === selectedIndex ? `bg-blue-100 text-blue-900 shadow ${i === 0 ? 'rounded-t-xl' : ''} ${i === results.length - 1 ? 'rounded-b-xl' : ''}` : 'hover:bg-blue-50'}`}
+                onMouseDown={() => handleSelect(r.subdomain)}
+                onMouseEnter={() => setSelectedIndex(i)}
+              >
+                <BookOpenIcon className={`h-6 w-6 mt-1 flex-shrink-0 ${i === selectedIndex ? 'text-blue-600' : 'text-blue-500'}`} />
+                <div className="flex flex-col w-full">
+                  <span className={`font-semibold text-base leading-tight ${i === selectedIndex ? 'text-blue-900' : 'text-gray-900'}`}>
+                    {r.title}
+                  </span>
+                  <span className={`text-xs mt-1 ${i === selectedIndex ? 'text-blue-700' : 'text-gray-500'}`}>
+                    {r.subdomain}.handbok.org
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {showDropdown && query.length >= 2 && results.length === 0 && !loading && (
+          <div className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl rounded-t-none mt-0 shadow-2xl z-10 px-6 py-6 text-gray-500 text-center flex flex-col items-center gap-2">
+            <ExclamationCircleIcon className="h-7 w-7 text-gray-300 mb-1" />
+            <span>{error || "Ingen förening hittades"}</span>
+          </div>
+        )}
+      </div>
       {loading && (
         <div className="absolute right-4 top-3">
           <span className="inline-block w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
