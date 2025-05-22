@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
 
 // Ensure SUPABASE_URL has https:// prefix
 const ensureHttpsPrefix = (url: string) => {
@@ -23,199 +24,162 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'tru
   console.log('Vercel Deployment:', process.env.VERCEL_URL || 'inte i Vercel');
 }
 
-// Skapa anpassad fetch för att hantera nätverksproblem och återförsök
-const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
+if (typeof window !== 'undefined') {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase miljövariabler saknas! Applikationen kommer inte att fungera korrekt.');
+  }
+}
+
+// Server-side check (för att undvika fel i browsers)
+if (typeof window === 'undefined' && !supabaseServiceRoleKey) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY saknas i miljön! Admin-operationer kommer att misslyckas.');
+}
+
+// Anpassad fetch-funktion med retry-logik för auth-endpoints
+const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === 'string' ? input : input.toString();
+  
+  // Max antal återförsök för auth-relaterade anrop
   const MAX_RETRIES = 5;
-  let error = null;
+  let retryCount = 0;
+  let lastError: Error | null = null;
   
-  // Säkerställer att URL:en har https-prefix
-  const urlString = url.toString();
-  const secureUrl = urlString.startsWith('http://') 
-    ? urlString.replace('http://', 'https://') 
-    : urlString.startsWith('https://') 
-      ? urlString 
-      : `https://${urlString}`;
-  
-  // Skapa nya headers för att undvika CORS-problem
-  const headers = new Headers(options?.headers || {});
-  
-  // Lägg till cache-headers för att förhindra caching-problem
-  headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-  headers.set('Pragma', 'no-cache');
-  
-  // Om vi är i servermiljö och ansluter till Supabase, lägg till extra headers
-  if (typeof window === 'undefined' && secureUrl.includes('supabase.co')) {
-    // Dessa headers kan hjälpa med servermiljöer
-    headers.set('Accept', 'application/json');
-    headers.set('Connection', 'keep-alive');
-    
-    // Om vi har en Vercel-deployment, lägg till det som ursprung
-    if (process.env.VERCEL_URL) {
-      headers.set('Origin', `https://${process.env.VERCEL_URL}`);
-    }
-  }
-  
-  // Logg för debugging
-  const debugInfo = {
-    url: secureUrl,
-    isServer: typeof window === 'undefined',
-    isEdgeRuntime: typeof EdgeRuntime !== 'undefined',
-    nodeEnv: process.env.NODE_ENV,
-    vercelUrl: process.env.VERCEL_URL || null,
-  };
-  
-  if (process.env.DEBUG_SUPABASE === 'true') {
-    console.log('Fetch-anrop detaljer:', JSON.stringify(debugInfo, null, 2));
-  }
-  
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  while (retryCount < MAX_RETRIES) {
     try {
-      // Om vi är på andra eller senare försök, vänta lite innan vi försöker igen
-      if (attempt > 0) {
-        // Exponentiell backoff: 200ms, 400ms, 800ms, 1600ms, 3200ms
-        const delay = 200 * Math.pow(2, attempt);
-        console.log(`Återförsök ${attempt + 1}/${MAX_RETRIES} efter ${delay}ms för ${secureUrl}`);
+      // Använd bara retry för auth-relaterade anrop
+      if (retryCount > 0 && !url.includes('/auth/')) {
+        break;
+      }
+      
+      // Om det är ett återförsök, vänta med exponentiell backoff
+      if (retryCount > 0) {
+        const delay = Math.pow(2, retryCount - 1) * 200; // 200ms, 400ms, 800ms, 1600ms, 3200ms
+        console.log(`Återförsök ${retryCount}/${MAX_RETRIES} efter ${delay}ms för ${url}`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
       
-      // Logg för att spåra anrop i problemsökningssyfte
-      if (process.env.DEBUG_SUPABASE === 'true') {
-        console.log(`Fetch-anrop till: ${secureUrl}, försök ${attempt + 1}`);
-      }
+      const response = await window.fetch(input, init);
       
-      // Konfigurera timeout för att förhindra hängande förfrågningar
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 sek timeout
-      
-      const fetchOptions = {
-        ...options,
-        headers,
-        signal: controller.signal,
-        cache: 'no-store',
-        credentials: 'same-origin',
-      };
-      
-      const response = await fetch(secureUrl, fetchOptions);
-      clearTimeout(timeoutId); // Rensa timeout
-      
-      // Logg för att bekräfta svar
-      if (process.env.DEBUG_SUPABASE === 'true') {
-        console.log(`Svar från ${secureUrl}: ${response.status} ${response.statusText}`);
-      }
-      
-      // Om svaret inte är OK, kasta ett fel för att utlösa återförsök
-      if (!response.ok && attempt < MAX_RETRIES - 1) {
-        throw new Error(`Fetch misslyckades med status: ${response.status} ${response.statusText}`);
+      // Kontrollera och logga felsvar från auth-endpoints
+      if (!response.ok && url.includes('/auth/')) {
+        const responseData = await response.clone().text().catch(() => '');
+        const errorData = responseData ? ` (${responseData})` : '';
+        lastError = new Error(`Fetch misslyckades med status: ${response.status}${errorData}`);
+        console.error('Fetch-försök', retryCount + 1, 'misslyckades:', lastError);
+        console.error('Feldetaljer:', lastError);
+        
+        // Rensa ogiltiga tokens om vi får 401 Unauthorized
+        if (response.status === 401 && typeof window !== 'undefined') {
+          try {
+            if (window.supabaseStorage) {
+              window.supabaseStorage.clearSession();
+            }
+            localStorage.removeItem('supabase.auth.token');
+            localStorage.removeItem('supabase.auth.token.timestamp');
+            console.log('Rensade lagrade tokens efter 401 Unauthorized');
+          } catch (e) {
+            console.warn('Kunde inte rensa tokens:', e);
+          }
+        }
+        
+        retryCount++;
+        continue;
       }
       
       return response;
-    } catch (err) {
-      error = err;
-      // Avbruten förfrågan pga timeout
-      if (err.name === 'AbortError') {
-        console.error(`Fetch-timeout för ${secureUrl}`);
-      } else {
-        console.error(`Fetch-försök ${attempt + 1} misslyckades:`, err);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error('Fetch-fel:', lastError);
+      
+      // Återförsök bara för nätverksfel och auth-anrop
+      if (url.includes('/auth/')) {
+        retryCount++;
+        continue;
       }
       
-      // Logg mer detaljerad information om felet
-      if (err instanceof Error) {
-        console.error(`Feldetaljer: ${err.name}: ${err.message}`);
-        if (err.cause) {
-          console.error(`Felorsak: ${String(err.cause)}`);
-        }
-      }
+      throw lastError;
     }
   }
   
-  // Om alla försök misslyckas, kasta det senaste felet med mer kontext
-  const enhancedError = new Error(`Alla ${MAX_RETRIES} försök misslyckades för ${urlString}: ${error?.message || 'Okänt fel'}`);
-  enhancedError.cause = error;
-  throw enhancedError;
+  // Om vi når hit har alla återförsök misslyckats
+  if (lastError) {
+    throw lastError;
+  }
+  
+  // Fallback om inget annat fungerar
+  return window.fetch(input, init);
 };
 
-// Skapa basklassen för anonym klient
-export const supabase = createClient(
+// Skapa en Supabase-klient för klientsidan
+export const supabase = createClient<Database>(
   supabaseUrl,
   supabaseAnonKey,
   {
     auth: {
-      persistSession: typeof window !== 'undefined',
-      autoRefreshToken: typeof window !== 'undefined',
-      detectSessionInUrl: typeof window !== 'undefined',
+      autoRefreshToken: true,
+      persistSession: true,
+      storageKey: 'supabase.auth.token',
     },
     global: {
-      fetch: customFetch,
+      fetch: typeof window !== 'undefined' ? customFetch : undefined,
     },
-    db: {
-      schema: 'public',
-    },
-    // Lägg till dessa inställningar för bättre prestanda/felhantering
-    realtime: {
-      timeout: 30000, // Öka timeout för realtidsanslutningar
-    },
-    // Anpassade headers som behövs för vissa miljöer
-    headers: {
-      'x-client-info': 'supabase-js/2.0',
-    },
-    // SSL-inställningar för säkra anslutningar
-    maxRetries: 5,
   }
 );
 
-// Skapa admin-klienten för server-side operationer
-let supabaseAdminClient: SupabaseClient | null = null;
-
-// Funktion som skapar eller returnerar admin-klienten on-demand
+// Skapa en Supabase-klient med service role key (endast för server-side)
 export const getServiceSupabase = () => {
-  // Endast skapa admin-klienten om vi är på server-sidan
-  if (typeof window === 'undefined') {
-    if (!supabaseAdminClient && supabaseServiceRoleKey) {
-      try {
-        // Logga URL för felsökning (utan att visa hela nyckeln)
-        if (process.env.DEBUG_SUPABASE === 'true') {
-          console.log('Skapar admin-klient med URL:', supabaseUrl);
-        }
-
-        supabaseAdminClient = createClient(
-          supabaseUrl,
-          supabaseServiceRoleKey,
-          {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false,
-            },
-            global: {
-              fetch: customFetch,
-            },
-            db: {
-              schema: 'public',
-            },
-            // Förbättrade inställningar för server-side klienten
-            realtime: {
-              timeout: 30000,
-            },
-            // SSL-inställningar för säkra anslutningar
-            maxRetries: 5,
-          }
-        );
-        
-        if (process.env.DEBUG_SUPABASE === 'true') {
-          console.log('Admin-klient skapad:', !!supabaseAdminClient);
-        }
-      } catch (error) {
-        console.error('Error creating Supabase admin client:', error);
-        // Fallback till anonym klient om admin-klienten inte kunde skapas
-        return supabase;
-      }
-    }
-    
-    // Om service-klienten existerar, returnera den, annars anonym klient
-    return supabaseAdminClient || supabase;
-  } else {
-    // På klientsidan, returnera alltid den anonyma klienten
+  if (typeof window !== 'undefined') {
+    console.error('Varning: getServiceSupabase anropades från klientsidan! Detta bör endast användas server-side.');
+    // Returnera normal klient för att undvika fel, men logga varning
     return supabase;
   }
+
+  if (!supabaseServiceRoleKey) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY saknas! Admin-operationer kommer att misslyckas.');
+  }
+
+  return createClient<Database>(
+    supabaseUrl,
+    supabaseServiceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+};
+
+// Skapa en admin-klient som alltid använder service role key
+// Bör endast användas i server-komponenter och API-routes
+let adminClientInstance: SupabaseClient<Database> | null = null;
+
+export const getAdminClient = () => {
+  if (typeof window !== 'undefined') {
+    console.error('Varning: getAdminClient anropades från klientsidan! Detta bör endast användas server-side.');
+    // Returnera normal klient för att undvika fel, men logga varning
+    return supabase;
+  }
+
+  if (!adminClientInstance && supabaseServiceRoleKey) {
+    adminClientInstance = createClient<Database>(
+      supabaseUrl,
+      supabaseServiceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+  }
+
+  if (!adminClientInstance) {
+    console.error('Kunde inte skapa admin-klient! SUPABASE_SERVICE_ROLE_KEY saknas.');
+    throw new Error('Admin-klient kunde inte skapas - service role key saknas');
+  }
+
+  return adminClientInstance;
 };
 
 // Hjälpfunktion för att testa databaskoppling
@@ -271,9 +235,6 @@ export async function testDatabaseConnection() {
     };
   }
 }
-
-// Exportera admin-klienten för enklare användning
-export const supabaseAdmin = getServiceSupabase();
 
 export type Database = {
   public: {
