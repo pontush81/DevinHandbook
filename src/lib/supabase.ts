@@ -138,7 +138,7 @@ export const supabase = createClient<Database>(
       cookieOptions: {
         name: 'sb-auth-token',
         lifetime: 60 * 60 * 24 * 7, // 7 dagar
-        domain: '',
+        domain: process.env.NODE_ENV === 'production' ? '.handbok.org' : '',
         path: '/',
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production'

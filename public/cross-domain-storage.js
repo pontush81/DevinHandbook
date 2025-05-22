@@ -161,31 +161,10 @@
           // Hämta token
           const tokenStr = safeStorage.getItem('supabase.auth.token');
           
-          // Validera token innan vi returnerar den
+          // VIKTIGT: Vi använder nu cookies istället, så validera/rensa inte tokens här
+          // eftersom det kan orsaka problem med inloggningssessioner
           if (tokenStr) {
-            try {
-              // Verifiera att det är ett giltigt JSON-objekt
-              const tokenObj = JSON.parse(tokenStr);
-              
-              // Kontrollera om token är utgången
-              if (tokenObj && tokenObj.expires_at) {
-                const expiresAt = new Date(tokenObj.expires_at).getTime();
-                const now = Date.now();
-                
-                // Om token har gått ut, rensa den och returnera null
-                if (now >= expiresAt) {
-                  console.log('Rensade utgången token');
-                  this.clearSession();
-                  return null;
-                }
-              }
-              
-              return tokenStr;
-            } catch (e) {
-              console.warn('Ogiltig token-format, rensar:', e);
-              this.clearSession();
-              return null;
-            }
+            return tokenStr;
           }
           
           return null;
