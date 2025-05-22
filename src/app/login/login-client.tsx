@@ -56,8 +56,10 @@ export default function LoginClient() {
         const refresh_token = params.get("refresh_token");
 
         if (access_token && refresh_token) {
+          console.log("Hittade access_token och refresh_token i URL-hash, försöker sätta session");
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
           if (!error) {
+            console.log("Session satt med token från URL");
             const { data: { user: sessionUser } } = await supabase.auth.getUser();
             setUser(sessionUser);
             setRedirecting(true);
@@ -69,7 +71,7 @@ export default function LoginClient() {
             
             const checkSessionAndRedirect = async () => {
               attempts++;
-              console.log(`Kontrollerar session (försök ${attempts}/${maxAttempts})...`);
+              console.log(`Kontrollerar session med token från URL (försök ${attempts}/${maxAttempts})...`);
               
               try {
                 // Hämta användarens handböcker
@@ -77,6 +79,13 @@ export default function LoginClient() {
                   .from("handbooks")
                   .select("subdomain")
                   .order("created_at", { ascending: false });
+                  
+                console.log("Handböcker resultat från token-inloggning:", { 
+                  hittade: data && data.length > 0, 
+                  antal: data?.length || 0, 
+                  första: data && data.length > 0 ? data[0].subdomain : null,
+                  fel: handbooksError
+                });
                   
                 if (!handbooksError && data && data.length > 0) {
                   console.log("Handböcker hittade, omdirigerar till första handboken:", data[0].subdomain);
@@ -93,6 +102,7 @@ export default function LoginClient() {
               } catch (err) {
                 console.error("Fel vid kontroll av handböcker:", err);
                 if (attempts >= maxAttempts) {
+                  console.log("Efter fel, går till dashboard");
                   window.location.href = "/dashboard";
                 } else {
                   setTimeout(checkSessionAndRedirect, checkInterval);
@@ -102,6 +112,8 @@ export default function LoginClient() {
             
             // Starta sessionskontrollerna efter en initial fördröjning
             setTimeout(checkSessionAndRedirect, 1000);
+          } else {
+            console.error("Fel vid inställning av session från tokens:", error);
           }
         } else {
           // Kontrollera om användaren redan är inloggad
@@ -127,6 +139,13 @@ export default function LoginClient() {
                   .select("subdomain")
                   .order("created_at", { ascending: false });
                   
+                console.log("Handböcker resultat:", { 
+                  hittade: data && data.length > 0, 
+                  antal: data?.length || 0, 
+                  första: data && data.length > 0 ? data[0].subdomain : null,
+                  fel: handbooksError
+                });
+                  
                 if (!handbooksError && data && data.length > 0) {
                   console.log("Handböcker hittade, omdirigerar till första handboken:", data[0].subdomain);
                   window.location.href = `https://${data[0].subdomain}.handbok.org`;
@@ -142,6 +161,7 @@ export default function LoginClient() {
               } catch (err) {
                 console.error("Fel vid kontroll av handböcker:", err);
                 if (attempts >= maxAttempts) {
+                  console.log("Efter fel, går till dashboard");
                   window.location.href = "/dashboard";
                 } else {
                   setTimeout(checkSessionAndRedirect, checkInterval);

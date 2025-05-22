@@ -313,7 +313,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     setSession(null);
     setUser(null);
-    router.push("/");
+    router.push("/login");
   };
 
   const resetPassword = async (email: string) => {
