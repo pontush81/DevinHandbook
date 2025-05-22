@@ -1,6 +1,6 @@
 import { AuthProvider } from "@/contexts/AuthContext";
 import { MainLayout } from '@/components/layout/MainLayout';
-import { SessionResetNotice } from '@/components/SessionResetNotice';
+import SessionResetNotice from '@/components/SessionResetNotice';
 import { DashboardNav } from '@/components/dashboard/DashboardNav';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
