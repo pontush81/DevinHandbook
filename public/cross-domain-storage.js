@@ -346,36 +346,6 @@
         }
       }
     });
-    
-    // Periodiskt kontrollera och rensa utgångna tokens
-    setInterval(function() {
-      try {
-        const tokenStr = safeStorage.getItem('supabase.auth.token');
-        if (tokenStr) {
-          try {
-            const tokenObj = JSON.parse(tokenStr);
-            
-            // Kontrollera om token är utgången
-            if (tokenObj && tokenObj.expires_at) {
-              const expiresAt = new Date(tokenObj.expires_at).getTime();
-              const now = Date.now();
-              
-              // Om token har gått ut, rensa den
-              if (now >= expiresAt) {
-                console.log('Autorensar utgången token');
-                supabaseStorage.clearSession();
-              }
-            }
-          } catch (e) {
-            // Om token är i ogiltigt format, rensa den
-            console.warn('Ogiltig token-format vid kontroll, rensar:', e);
-            supabaseStorage.clearSession();
-          }
-        }
-      } catch (e) {
-        console.error('Fel vid kontroll av token:', e);
-      }
-    }, 60000); // Kontrollera varje minut
   } catch (e) {
     console.error('Kritiskt fel i cross-domain-storage.js:', e);
   }

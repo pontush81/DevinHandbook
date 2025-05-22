@@ -57,148 +57,18 @@ const TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dagar
 
 // Helper function for safely accessing auth session
 const getSafeAuthSession = () => {
-  try {
-    // First try using our cross-domain storage helper if available
-    if (typeof window !== 'undefined' && window.supabaseStorage) {
-      const sessionStr = window.supabaseStorage.getSession();
-      if (sessionStr) {
-        console.log('Retrieved session from safe storage bridge');
-        try {
-          // Validera sessionen innan den används
-          const session = JSON.parse(sessionStr);
-          
-          // Kontrollera om sessionen är för gammal
-          const timestamp = window.safeStorage?.getItem('supabase.auth.token.timestamp');
-          if (timestamp) {
-            const storedTime = parseInt(timestamp, 10);
-            const now = Date.now();
-            
-            // Om token är äldre än max-åldern, rensa den
-            if (now - storedTime > TOKEN_MAX_AGE_MS) {
-              console.log('Rensade gammal auth token (>7 dagar)');
-              
-              if (window.supabaseStorage) {
-                window.supabaseStorage.clearSession();
-              }
-              
-              try {
-                if (window.safeStorage) {
-                  window.safeStorage.removeItem('supabase.auth.token');
-                  window.safeStorage.removeItem('supabase.auth.token.timestamp');
-                } else {
-                  localStorage.removeItem('supabase.auth.token');
-                  localStorage.removeItem('supabase.auth.token.timestamp');
-                }
-              } catch (e) {
-                console.warn('Kunde inte rensa storage:', e);
-              }
-              
-              return null;
-            }
-          }
-          
-          // Kontrollera om token har gått ut baserat på expires_at
-          if (session && session.expires_at) {
-            const expiresAt = new Date(session.expires_at).getTime();
-            const now = Date.now();
-            
-            if (now >= expiresAt) {
-              console.log('Rensade utgången token');
-              
-              if (window.supabaseStorage) {
-                window.supabaseStorage.clearSession();
-              }
-              
-              try {
-                if (window.safeStorage) {
-                  window.safeStorage.removeItem('supabase.auth.token');
-                  window.safeStorage.removeItem('supabase.auth.token.timestamp');
-                } else {
-                  localStorage.removeItem('supabase.auth.token');
-                  localStorage.removeItem('supabase.auth.token.timestamp');
-                }
-              } catch (e) {
-                console.warn('Kunde inte rensa storage:', e);
-              }
-              
-              return null;
-            }
-          }
-          
-          return session;
-        } catch (e) {
-          console.warn('Ogiltigt session-format:', e);
-          
-          // Rensa ogiltig session
-          if (window.supabaseStorage) {
-            window.supabaseStorage.clearSession();
-          }
-          
-          return null;
-        }
-      }
-    }
-    
-    // Fallback to direct localStorage or safeStorage in try-catch
-    if (typeof window !== 'undefined') {
-      try {
-        // Försök först med safeStorage om det finns
-        if (window.safeStorage) {
-          const sessionStr = window.safeStorage.getItem('supabase.auth.token');
-          if (sessionStr) {
-            console.log('Retrieved session from safeStorage');
-            return JSON.parse(sessionStr);
-          }
-        }
-        
-        // Fallback till vanlig localStorage
-        const sessionStr = localStorage.getItem('supabase.auth.token');
-        if (sessionStr) {
-          console.log('Retrieved session from localStorage directly');
-          return JSON.parse(sessionStr);
-        }
-      } catch (e) {
-        console.warn('Storage access failed:', e);
-      }
-    }
-    return null;
-  } catch (e) {
-    console.error('Error retrieving auth session:', e);
-    return null;
-  }
+  // När vi använder cookies behöver vi inte hämta session från localStorage
+  // Vi förlitar oss på Supabase's inbyggda sessionshantering via cookies
+  console.log('Vi använder nu cookies för sessionshantering, ignorerar localStorage');
+  return null;
 };
 
 // Helper för att säkert spara session-data
 const safeSaveSession = (session: Session | null) => {
-  if (!session) return false;
-  
-  try {
-    const sessionStr = JSON.stringify(session);
-    
-    // Spara i vår cross-domain lösning om tillgänglig
-    if (typeof window !== 'undefined' && window.supabaseStorage) {
-      window.supabaseStorage.setSession(sessionStr);
-    }
-    
-    // Spara även i safeStorage om tillgänglig
-    if (typeof window !== 'undefined' && window.safeStorage) {
-      window.safeStorage.setItem('supabase.auth.token', sessionStr);
-      window.safeStorage.setItem('supabase.auth.token.timestamp', Date.now().toString());
-    }
-    
-    // Försök även med direkt localStorage som fallback
-    try {
-      localStorage.setItem('supabase.auth.token', sessionStr);
-      localStorage.setItem('supabase.auth.token.timestamp', Date.now().toString());
-    } catch (e) {
-      console.warn('Direkt localStorage åtkomst misslyckades:', e);
-    }
-    
-    return true;
-  } catch (e) {
-    console.error('Kunde inte spara session:', e);
-    return false;
-  }
+  // Med cookie-baserad autentisering behöver vi inte spara sessioner manuellt
+  // Denna funktion behålls för kompatibilitet men gör inget aktivt
+  console.log('Cookie-baserad session hanteras av Supabase');
+  return true;
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -221,147 +91,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const setData = async () => {
       try {
-        // Försök städa upp potentiellt korrupta sessioner först
-        if (typeof window !== 'undefined') {
-          try {
-            // Rensa cachade tokens om de är äldre än max-åldern
-            let timestamp;
-            
-            if (window.safeStorage) {
-              timestamp = window.safeStorage.getItem('supabase.auth.token.timestamp');
-            } else {
-              try {
-                timestamp = localStorage.getItem('supabase.auth.token.timestamp');
-              } catch (e) {
-                console.warn('Kunde inte läsa timestamp från localStorage:', e);
-              }
-            }
-            
-            if (timestamp) {
-              const storedTime = parseInt(timestamp, 10);
-              const now = Date.now();
-              
-              // Om token är äldre än 7 dagar, rensa den
-              if (now - storedTime > TOKEN_MAX_AGE_MS) {
-                console.log('Rensade gammal auth token (>7 dagar)');
-                
-                // Rensa i alla lagringsmekanismer
-                if (window.supabaseStorage) {
-                  window.supabaseStorage.clearSession();
-                }
-                
-                if (window.safeStorage) {
-                  window.safeStorage.removeItem('supabase.auth.token');
-                  window.safeStorage.removeItem('supabase.auth.token.timestamp');
-                }
-                
-                try {
-                  localStorage.removeItem('supabase.auth.token');
-                  localStorage.removeItem('supabase.auth.token.timestamp');
-                } catch (e) {
-                  console.warn('Kunde inte rensa localStorage:', e);
-                }
-              }
-            } else {
-              // Sätt timestamp om det inte finns
-              try {
-                const now = Date.now().toString();
-                if (window.safeStorage) {
-                  window.safeStorage.setItem('supabase.auth.token.timestamp', now);
-                }
-                
-                try {
-                  localStorage.setItem('supabase.auth.token.timestamp', now);
-                } catch (e) {
-                  console.warn('Kunde inte spara timestamp i localStorage:', e);
-                }
-              } catch (e) {
-                console.warn('Kunde inte spara timestamp:', e);
-              }
-            }
-          } catch (e) {
-            console.warn('Kunde inte kontrollera token-ålder:', e);
-          }
-        }
+        // Använd Supabase's inbyggda getSession istället för localStorage/cookies
+        const { data: { session: freshSession }, error: sessionError } = await supabase.auth.getSession();
         
-        // First try our safe storage helper
-        const safeSession = getSafeAuthSession();
-        
-        if (safeSession) {
-          console.log('Using cached session from safe storage');
-          setSession(safeSession);
-          setUser(safeSession?.user ?? null);
+        if (sessionError) {
+          console.error('Fel vid hämtning av session:', sessionError);
+          setSession(null);
+          setUser(null);
+        } else if (freshSession) {
+          console.log('Hittade aktiv session från Supabase');
+          setSession(freshSession);
+          setUser(freshSession.user);
           
           // Säkerställ att användarprofilen finns
-          if (safeSession?.user?.id && safeSession?.user?.email) {
-            createUserProfileIfNeeded(safeSession.user.id, safeSession.user.email);
-          }
-          
-          // Verifiera att sessionen fortfarande är giltig genom att anropa getUser
-          try {
-            const { data: { user: freshUser }, error: userError } = await supabase.auth.getUser();
-            
-            if (userError || !freshUser) {
-              console.log('Sparad session är ogiltig, loggar ut och ryddar lokalt');
-              await supabase.auth.signOut();
-              
-              // Rensa i alla lagringsmekanismer
-              if (window.supabaseStorage) {
-                window.supabaseStorage.clearSession();
-              }
-              
-              if (window.safeStorage) {
-                window.safeStorage.removeItem('supabase.auth.token');
-                window.safeStorage.removeItem('supabase.auth.token.timestamp');
-              }
-              
-              try {
-                localStorage.removeItem('supabase.auth.token');
-                localStorage.removeItem('supabase.auth.token.timestamp');
-              } catch (e) {
-                console.warn('Kunde inte rensa localStorage:', e);
-              }
-              
-              setSession(null);
-              setUser(null);
-            } else {
-              // Sessionen är giltig, uppdatera user med den färska datan
-              setUser(freshUser);
-              
-              // Säkerställ att användarprofilen finns
-              if (freshUser.id && freshUser.email) {
-                createUserProfileIfNeeded(freshUser.id, freshUser.email);
-              }
-            }
-          } catch (verifyError) {
-            console.error('Fel vid verifiering av session:', verifyError);
+          if (freshSession.user.id && freshSession.user.email) {
+            createUserProfileIfNeeded(freshSession.user.id, freshSession.user.email);
           }
         } else {
-          // Ingen cachad session, försök hämta från Supabase
-          const { data: { session: freshSession }, error: sessionError } = await supabase.auth.getSession();
-          
-          if (sessionError) {
-            console.error('Fel vid hämtning av session:', sessionError);
-          } else if (freshSession) {
-            console.log('Hittade aktiv session från Supabase');
-            setSession(freshSession);
-            setUser(freshSession.user);
-            
-            // Spara i vår säkra lagring
-            safeSaveSession(freshSession);
-            
-            // Säkerställ att användarprofilen finns
-            if (freshSession.user.id && freshSession.user.email) {
-              createUserProfileIfNeeded(freshSession.user.id, freshSession.user.email);
-            }
-          } else {
-            console.log('Ingen aktiv session hittades');
-            setSession(null);
-            setUser(null);
-          }
+          console.log('Ingen aktiv session hittades');
+          setSession(null);
+          setUser(null);
         }
       } catch (e) {
         console.error('Fel vid inläsning av auth-status:', e);
+        setSession(null);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -380,9 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Spara i vår säkra lagring
-        safeSaveSession(session);
-        
         // Säkerställ att användarprofilen finns
         if (session?.user?.id && session?.user?.email) {
           createUserProfileIfNeeded(session.user.id, session.user.email);
@@ -391,24 +142,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (event === 'SIGNED_OUT') {
         console.log('User signed out');
-        
-        // Använd Supabase:s inbyggda metoder för att rensa session
-        try {
-          if (window.supabaseStorage) {
-            window.supabaseStorage.clearSession();
-          }
-          
-          if (window.safeStorage) {
-            window.safeStorage.removeItem('supabase.auth.token');
-            window.safeStorage.removeItem('supabase.auth.token.timestamp');
-          }
-          
-          // Undvik direkt åtkomst till localStorage/sessionStorage
-          // Supabase kommer att hantera detta med cookies istället
-        } catch (e) {
-          console.warn('Kunde inte rensa lagringsmekanismer:', e);
-        }
-        
         setSession(null);
         setUser(null);
       }
@@ -428,11 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       });
-      
-      if (data.session) {
-        // Spara i vår säkra lagring
-        safeSaveSession(data.session);
-      }
       
       return { data: data.session, error };
     } catch (error) {
@@ -456,24 +184,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Låt Supabase hantera utloggningen och rensning av cookies
     await supabase.auth.signOut();
-    
-    // Använd Supabase:s inbyggda metoder för att rensa session
-    try {
-      if (window.supabaseStorage) {
-        window.supabaseStorage.clearSession();
-      }
-      
-      if (window.safeStorage) {
-        window.safeStorage.removeItem('supabase.auth.token');
-        window.safeStorage.removeItem('supabase.auth.token.timestamp');
-      }
-      
-      // Undvik direkt åtkomst till localStorage/sessionStorage
-      // Supabase kommer att hantera detta med cookies istället
-    } catch (e) {
-      console.warn('Kunde inte rensa lagringsmekanismer:', e);
-    }
     
     setSession(null);
     setUser(null);
