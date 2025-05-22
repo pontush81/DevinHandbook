@@ -111,9 +111,6 @@ export default async function HomePage() {
                 <CardTitle className="text-xl">Hitta förening</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-gray-600 mb-6">
-                  Sök efter din bostadsrättsförening och få tillgång till er handbok.
-                </p>
                 <div className="space-y-4">
                   <AutoSuggestHandbookSearch />
                 </div>
