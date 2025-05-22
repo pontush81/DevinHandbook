@@ -7,7 +7,6 @@ import HandbookSectionCard from '@/components/HandbookSectionCard';
 import HandbookHeader from '@/components/HandbookHeader';
 import HandbookOnboardingBanner from '@/components/HandbookOnboardingBanner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
