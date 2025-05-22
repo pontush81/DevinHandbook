@@ -52,24 +52,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Tidsgräns för hur gammal en sparad token får vara
-const TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dagar
-
-// Helper function for safely accessing auth session
-const getSafeAuthSession = () => {
-  // När vi använder cookies behöver vi inte hämta session från localStorage
-  // Vi förlitar oss på Supabase's inbyggda sessionshantering via cookies
-  console.log('Vi använder nu cookies för sessionshantering, ignorerar localStorage');
-  return null;
-};
-
-// Helper för att säkert spara session-data
-const safeSaveSession = (session: Session | null) => {
-  // Med cookie-baserad autentisering behöver vi inte spara sessioner manuellt
-  // Denna funktion behålls för kompatibilitet men gör inget aktivt
-  console.log('Cookie-baserad session hanteras av Supabase');
-  return true;
-};
+// Vi använder nu cookies för sessionshantering
+// Inga manuella token-helpers behövs längre
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

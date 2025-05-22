@@ -81,18 +81,10 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         console.error('Fetch-försök', retryCount + 1, 'misslyckades:', lastError);
         console.error('Feldetaljer:', lastError);
         
-        // Rensa ogiltiga tokens om vi får 401 Unauthorized
-        if (response.status === 401 && typeof window !== 'undefined') {
-          try {
-            if (window.supabaseStorage) {
-              window.supabaseStorage.clearSession();
-            }
-            // Undvik direkt åtkomst till localStorage
-            // Supabase kommer att hantera detta med cookies istället
-            console.log('Rensade lagrade tokens efter 401 Unauthorized');
-          } catch (e) {
-            console.warn('Kunde inte rensa tokens:', e);
-          }
+        // Vi låter Supabase sköta sessionshanteringen via cookies
+        // Ingen manuell hantering av tokens här längre
+        if (response.status === 401) {
+          console.log('401 Unauthorized - Supabase hanterar sessions via cookies');
         }
         
         retryCount++;
@@ -138,7 +130,7 @@ export const supabase = createClient<Database>(
       cookieOptions: {
         name: 'sb-auth-token',
         lifetime: 60 * 60 * 24 * 7, // 7 dagar
-        domain: process.env.NODE_ENV === 'production' ? '.handbok.org' : '',
+        domain: process.env.NODE_ENV === 'production' ? '.handbok.org' : undefined,
         path: '/',
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production'
