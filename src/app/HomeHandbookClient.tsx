@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Menu, BookOpen, Settings, Info, Users, FileText } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/sheet";
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 interface Page {
   id: string;
@@ -56,6 +58,33 @@ const getSectionIcon = (title: string) => {
 };
 
 const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => {
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Kontrollera om användaren är admin för denna handbok
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user || !handbook.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('handbook_members')
+          .select('role')
+          .eq('handbook_id', handbook.id)
+          .eq('user_id', user.id)
+          .single();
+          
+        if (!error && data && data.role === 'admin') {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error('Fel vid kontroll av adminrättigheter:', error);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user, handbook.id]);
+  
   // Hitta välkomstsektionen (vanligtvis den första)
   const welcomeSection = handbook.sections.find(s => 
     s.title.toLowerCase().includes('välkommen') || s.order_index === 0
@@ -72,6 +101,26 @@ const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => 
       showAuth={false} 
       sections={handbook.sections.map((s) => ({ id: s.id, title: s.title }))}
     >
+      {/* Admin-knapp som visas för behöriga användare */}
+      {isAdmin && (
+        <div className="sticky top-0 z-50 w-full bg-white shadow-sm border-b">
+          <div className="container flex h-14 max-w-screen-2xl items-center">
+            <div className="flex flex-1 items-center justify-between">
+              <div></div> {/* Tom div för att skapa space-between */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1" 
+                onClick={() => window.location.href = `/admin?handbook=${handbook.id}`}
+              >
+                <Settings className="h-4 w-4" />
+                <span>Administrera</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <main className="w-full max-w-5xl mx-auto px-6 py-8">
         {/* Välkomstsektion med anpassad layout */}
         {welcomeSection && (

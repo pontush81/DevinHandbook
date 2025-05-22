@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Menu } from 'lucide-react';
+import { Menu, Settings } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -12,6 +12,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { MainLayout } from '@/components/layout/MainLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 interface HandbookPage {
   id: string;
@@ -56,8 +58,34 @@ function useActiveSection(sectionIds: string[]) {
 }
 
 export default function HandbookClient({ handbook }: { handbook: Handbook }) {
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
   const sectionIds = handbook.sections?.map((s) => s.id) || [];
   const activeSection = useActiveSection(sectionIds);
+  
+  // Kontrollera om användaren är admin för denna handbok
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user || !handbook.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('handbook_members')
+          .select('role')
+          .eq('handbook_id', handbook.id)
+          .eq('user_id', user.id)
+          .single();
+          
+        if (!error && data && data.role === 'admin') {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error('Fel vid kontroll av adminrättigheter:', error);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user, handbook.id]);
 
   return (
     <MainLayout 
@@ -65,6 +93,26 @@ export default function HandbookClient({ handbook }: { handbook: Handbook }) {
       showAuth={false} 
       sections={handbook.sections.map((s) => ({ id: s.id, title: s.title }))}
     >
+      {/* Admin-knapp som visas för behöriga användare */}
+      {isAdmin && (
+        <div className="sticky top-0 z-50 w-full bg-white shadow-sm border-b">
+          <div className="container flex h-14 max-w-screen-2xl items-center">
+            <div className="flex flex-1 items-center justify-between">
+              <div></div> {/* Tom div för att skapa space-between */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1" 
+                onClick={() => window.location.href = `/admin?handbook=${handbook.id}`}
+              >
+                <Settings className="h-4 w-4" />
+                <span>Administrera</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex-1 container max-w-6xl py-8">
         <div className="flex flex-col md:flex-row gap-12">
           {/* Desktop sidebar */}
