@@ -32,11 +32,16 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
         console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
       }
     } else {
-      // Production: use subdomain with session transfer (now that subdomain routing works)
+      // Production: use main domain handbook route (reliable solution)
       console.log(`[Redirect to New Handbook] 🌐 Production environment detected`);
-      const handbookUrl = `https://${subdomain}.handbok.org`;
-      console.log(`[Redirect to New Handbook] ⚡ Redirecting to subdomain: ${handbookUrl}`);
-      await transferSessionToSubdomain(subdomain);
+      const handbookUrl = `https://www.handbok.org/handbook/${subdomain}`;
+      console.log(`[Redirect to New Handbook] ⚡ Redirecting to main domain: ${handbookUrl}`);
+      
+      if (typeof window !== 'undefined') {
+        window.location.href = handbookUrl;
+      } else {
+        console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
+      }
     }
   } catch (error) {
     console.error('[Redirect to New Handbook] Error during redirect:', error);
@@ -154,7 +159,7 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
       const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
       const handbookUrl = isDevelopment 
         ? `http://localhost:3000/handbook/${handbook.subdomain}`
-        : `https://${handbook.subdomain}.handbok.org`;
+        : `https://www.handbok.org/handbook/${handbook.subdomain}`;
       
       window.location.href = handbookUrl;
       
@@ -250,7 +255,7 @@ export async function smartRedirectWithPolling(
         const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
         const handbookUrl = isDevelopment 
           ? `http://localhost:3000/handbook/${handbook.subdomain}`
-          : `https://${handbook.subdomain}.handbok.org`;
+          : `https://www.handbok.org/handbook/${handbook.subdomain}`;
         
         console.log(`[Smart Redirect Polling] Redirecting to: ${handbookUrl}`);
         window.location.href = handbookUrl;
