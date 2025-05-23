@@ -24,23 +24,7 @@ const nextConfig = {
   // Skapar omskrivningar för subdomäner
   async rewrites() {
     return [
-      // Mycket specifik regel: endast för riktiga subdomäner, aldrig för admin-sidor
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: '(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org',
-          },
-          {
-            type: 'header',
-            key: 'x-pathname',
-            value: '(?!/(edit-handbook|dashboard|create-handbook|login|signup|auth|api)).*',
-          },
-        ],
-        destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
-      },
-      // Fallback för subdomäner utan specifik header-kontroll
+      // Enkel och pålitlig regel för subdomäner
       {
         source: '/:path((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api).*)',
         has: [
