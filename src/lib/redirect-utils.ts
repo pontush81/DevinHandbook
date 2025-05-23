@@ -32,15 +32,11 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
         console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
       }
     } else {
-      // TEMPORARY FIX: Use main domain handbook route until subdomain routing is deployed
-      const handbookUrl = `https://www.handbok.org/handbook/${subdomain}`;
+      // Production: use subdomain with session transfer (now that subdomain routing works)
       console.log(`[Redirect to New Handbook] 🌐 Production environment detected`);
-      console.log(`[Redirect to New Handbook] ⚡ TEMP FIX: Using main domain route: ${handbookUrl}`);
-      window.location.href = handbookUrl;
-      
-      // TODO: Switch back to subdomain when vercel deployment is ready
-      // const handbookUrl = `https://${subdomain}.handbok.org`;
-      // await transferSessionToSubdomain(handbookUrl);
+      const handbookUrl = `https://${subdomain}.handbok.org`;
+      console.log(`[Redirect to New Handbook] ⚡ Redirecting to subdomain: ${handbookUrl}`);
+      await transferSessionToSubdomain(subdomain);
     }
   } catch (error) {
     console.error('[Redirect to New Handbook] Error during redirect:', error);
@@ -55,15 +51,19 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
  */
 async function transferSessionToSubdomain(subdomain: string): Promise<void> {
   try {
+    console.log(`[Transfer Session] 🔄 Starting session transfer to: ${subdomain}.handbok.org`);
+    
     // Get current session
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      console.log('[Transfer Session] No session found, redirecting to dashboard');
-      window.location.href = '/dashboard';
+      console.log('[Transfer Session] ⚠️ No session found, redirecting directly (user will need to login)');
+      window.location.href = `https://${subdomain}.handbok.org`;
       return;
     }
 
+    console.log('[Transfer Session] ✅ Active session found, transferring session data...');
+    
     // Create session transfer URL with session data as query params
     // This is secure since we're only passing this between our own domains
     const sessionData = {
@@ -77,13 +77,14 @@ async function transferSessionToSubdomain(subdomain: string): Promise<void> {
     
     // Redirect to subdomain with session transfer
     const handbookUrl = `https://${subdomain}.handbok.org/?transfer_session=${encodedSession}`;
-    console.log(`[Transfer Session] Production URL: https://${subdomain}.handbok.org`);
+    console.log(`[Transfer Session] 🚀 Redirecting with session transfer to: https://${subdomain}.handbok.org`);
     
     window.location.href = handbookUrl;
     
   } catch (error) {
-    console.error('[Transfer Session] Error:', error);
-    // Fallback to direct redirect
+    console.error('[Transfer Session] ❌ Error during session transfer:', error);
+    // Fallback to direct redirect without session
+    console.log('[Transfer Session] 🔄 Falling back to direct redirect');
     const handbookUrl = `https://${subdomain}.handbok.org`;
     window.location.href = handbookUrl;
   }
