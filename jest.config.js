@@ -7,6 +7,13 @@ module.exports = {
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
   testPathIgnorePatterns: ["/node_modules/", "/dist/", "/.next/"],
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+  // Lägg till moduleNameMapper för path aliases
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/components/(.*)$': '<rootDir>/src/components/$1',
+    '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
+    '^@/hooks/(.*)$': '<rootDir>/src/hooks/$1',
+  },
   // Förhindra att Jest behandlar Next.js interna filer
   transformIgnorePatterns: [
     '/node_modules/(?!.*.mjs$)',

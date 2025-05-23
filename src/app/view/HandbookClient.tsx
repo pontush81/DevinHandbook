@@ -14,6 +14,7 @@ import {
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { getHandbookSectionIcon } from '@/lib/handbook-icons-mapping';
 
 interface HandbookPage {
   id: string;
@@ -56,6 +57,34 @@ function useActiveSection(sectionIds: string[]) {
   
   return active;
 }
+
+// Hjälpfunktion för att rendera navigationsikonerna
+const renderNavIcon = (title: string) => {
+  const emoji = getHandbookSectionIcon(title, 'emoji') as string;
+  return (
+    <span 
+      className="text-lg mr-3 flex-shrink-0" 
+      role="img" 
+      aria-label={title}
+    >
+      {emoji}
+    </span>
+  );
+};
+
+// Hjälpfunktion för att rendera sektionsrubriker med ikoner
+const renderSectionIcon = (title: string) => {
+  const emoji = getHandbookSectionIcon(title, 'emoji') as string;
+  return (
+    <span 
+      className="text-3xl mr-4 flex-shrink-0" 
+      role="img" 
+      aria-label={title}
+    >
+      {emoji}
+    </span>
+  );
+};
 
 export default function HandbookClient({ handbook }: { handbook: Handbook }) {
   const { user } = useAuth();
@@ -122,13 +151,14 @@ export default function HandbookClient({ handbook }: { handbook: Handbook }) {
                 <a
                   key={section.id}
                   href={`#section-${section.id}`}
-                  className={`block py-2 px-3 text-base transition-colors rounded-md ${
+                  className={`flex items-center py-2 px-3 text-base transition-colors rounded-md ${
                     activeSection === section.id
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-foreground hover:bg-muted"
                   }`}
                 >
-                  {section.title}
+                  {renderNavIcon(section.title)}
+                  <span className="truncate">{section.title}</span>
                 </a>
               ))}
             </nav>
@@ -141,7 +171,10 @@ export default function HandbookClient({ handbook }: { handbook: Handbook }) {
                 id={`section-${section.id}`}
                 className="mb-16 scroll-mt-24"
               >
-                <h2 className="text-2xl font-semibold mb-6">{section.title}</h2>
+                <div className="flex items-center mb-6">
+                  {renderSectionIcon(section.title)}
+                  <h2 className="text-2xl font-semibold">{section.title}</h2>
+                </div>
                 <div className="prose max-w-none mb-8">
                   <ReactMarkdown>{section.description}</ReactMarkdown>
                 </div>

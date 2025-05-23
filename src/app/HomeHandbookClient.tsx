@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Menu, BookOpen, Settings, Info, Users, FileText } from 'lucide-react';
+import { Menu, Settings } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,6 +15,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { getHandbookSectionIcon } from '@/lib/handbook-icons-mapping';
 
 interface Page {
   id: string;
@@ -44,17 +45,18 @@ interface HomeHandbookClientProps {
   handbook: Handbook;
 }
 
-// Hjälpfunktion för att rendera ikon baserat på sektionsnamn
-const getSectionIcon = (title: string) => {
-  const lowerTitle = title.toLowerCase();
-  
-  if (lowerTitle.includes('välkommen')) return <Info className="h-5 w-5 text-blue-500" />;
-  if (lowerTitle.includes('kontakt') || lowerTitle.includes('styrelse')) return <Users className="h-5 w-5 text-green-500" />;
-  if (lowerTitle.includes('stadgar') || lowerTitle.includes('årsredovisning')) return <FileText className="h-5 w-5 text-purple-500" />;
-  if (lowerTitle.includes('regler') || lowerTitle.includes('reglerna')) return <Settings className="h-5 w-5 text-orange-500" />;
-  
-  // Default icon
-  return <BookOpen className="h-5 w-5 text-gray-500" />;
+// Förbättrad hjälpfunktion för att rendera ikon baserat på sektionsnamn
+const renderSectionIcon = (title: string) => {
+  const emoji = getHandbookSectionIcon(title, 'emoji') as string;
+  return (
+    <span 
+      className="text-2xl mr-3 flex-shrink-0" 
+      role="img" 
+      aria-label={title}
+    >
+      {emoji}
+    </span>
+  );
 };
 
 const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => {
@@ -125,7 +127,10 @@ const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => 
         {/* Välkomstsektion med anpassad layout */}
         {welcomeSection && (
           <div className="mb-12">
-            <h1 className="text-3xl font-bold mb-4">{welcomeSection.title}</h1>
+            <div className="flex items-center mb-4">
+              {renderSectionIcon(welcomeSection.title)}
+              <h1 className="text-3xl font-bold">{welcomeSection.title}</h1>
+            </div>
             <div className="prose max-w-none mb-6 text-lg text-gray-700">
               <ReactMarkdown>{welcomeSection.description}</ReactMarkdown>
             </div>
@@ -148,8 +153,8 @@ const HomeHandbookClient: React.FC<HomeHandbookClientProps> = ({ handbook }) => 
         {/* Övriga sektioner */}
         {otherSections.map((section: Section) => (
           <section key={section.id} id={`section-${section.id}`} className="mb-12 pt-6 border-t border-gray-200">
-            <div className="flex items-center gap-2 mb-4">
-              {getSectionIcon(section.title)}
+            <div className="flex items-center mb-4">
+              {renderSectionIcon(section.title)}
               <h2 className="text-2xl font-semibold">{section.title}</h2>
             </div>
             <div className="prose max-w-none mb-6">

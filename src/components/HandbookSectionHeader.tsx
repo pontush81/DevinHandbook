@@ -1,22 +1,23 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getHandbookSectionIcon, type IconType } from '@/lib/handbook-icons-mapping';
 import { cn } from '@/lib/utils';
 
-export type HandbookSectionCardProps = {
+interface HandbookSectionHeaderProps {
   title: string;
-  description: string;
-  className?: string;
+  description?: string;
   iconType?: IconType;
   showIcon?: boolean;
-};
+  className?: string;
+  level?: 1 | 2 | 3; // h1, h2, h3
+}
 
-const HandbookSectionCard: React.FC<HandbookSectionCardProps> = ({ 
-  title, 
-  description, 
-  className = '',
+export const HandbookSectionHeader: React.FC<HandbookSectionHeaderProps> = ({
+  title,
+  description,
   iconType = 'emoji',
-  showIcon = true
+  showIcon = true,
+  className,
+  level = 2
 }) => {
   const renderIcon = () => {
     if (!showIcon) return null;
@@ -25,7 +26,7 @@ const HandbookSectionCard: React.FC<HandbookSectionCardProps> = ({
       const emoji = getHandbookSectionIcon(title, 'emoji') as string;
       return (
         <span 
-          className="text-2xl mr-3 flex-shrink-0" 
+          className="text-3xl mr-4 flex-shrink-0" 
           role="img" 
           aria-label={title}
         >
@@ -38,7 +39,7 @@ const HandbookSectionCard: React.FC<HandbookSectionCardProps> = ({
       return IconComponent ? (
         <IconComponent 
           className={cn(
-            "h-6 w-6 mr-3 flex-shrink-0",
+            "h-8 w-8 mr-4 flex-shrink-0",
             iconType === 'lucide' && "text-blue-600",
             iconType === 'hero' && "text-green-600", 
             iconType === 'material' && "text-purple-600",
@@ -50,23 +51,29 @@ const HandbookSectionCard: React.FC<HandbookSectionCardProps> = ({
     }
   };
 
+  const HeaderComponent = level === 1 ? 'h1' : level === 3 ? 'h3' : 'h2';
+  const headerClasses = cn(
+    "font-semibold scroll-mt-24",
+    level === 1 && "text-3xl md:text-4xl",
+    level === 2 && "text-2xl md:text-3xl",
+    level === 3 && "text-xl md:text-2xl"
+  );
+
   return (
-    <Card className={cn("mb-4", className)} style={{ borderRadius: '16px' }}>
-      <CardHeader>
-        <div className="flex items-start">
-          {renderIcon()}
-          <div className="flex-1 min-w-0">
-            <CardTitle className="font-handbook text-lg md:text-xl mb-2">
-              {title}
-            </CardTitle>
-            <CardDescription className="text-base">
-              {description}
-            </CardDescription>
-          </div>
+    <div className={cn("mb-6", className)}>
+      <div className="flex items-center mb-4">
+        {renderIcon()}
+        <HeaderComponent className={headerClasses}>
+          {title}
+        </HeaderComponent>
+      </div>
+      {description && (
+        <div className="prose max-w-none text-lg text-muted-foreground">
+          {description}
         </div>
-      </CardHeader>
-    </Card>
+      )}
+    </div>
   );
 };
 
-export default HandbookSectionCard; 
+export default HandbookSectionHeader; 

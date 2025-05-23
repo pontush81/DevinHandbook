@@ -6,6 +6,7 @@ import { PrinterIcon, DownloadIcon } from "lucide-react"
 import { useRef } from "react"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
+import { getHandbookSectionIcon } from '@/lib/handbook-icons-mapping'
 
 export default function HandbookTemplate({ handbookData }) {
   const currentDate = new Date().toLocaleDateString('sv-SE')
@@ -85,6 +86,15 @@ export default function HandbookTemplate({ handbookData }) {
       if (actionsElement) actionsElement.style.display = 'flex'
     }
   }
+
+  const renderSectionIcon = (title) => {
+    const emoji = getHandbookSectionIcon(title, 'emoji')
+    return (
+      <span className="text-2xl mr-3" role="img" aria-label={title}>
+        {emoji}
+      </span>
+    )
+  }
   
   return (
     <div className="max-w-4xl mx-auto bg-white" ref={handbookRef}>
@@ -121,6 +131,7 @@ export default function HandbookTemplate({ handbookData }) {
             <p>Org.nr: {handbookData.orgNumber || "Saknas"}</p>
             <p>Telefon: {handbookData.phone || "Saknas"}</p>
             <p>E-post: {handbookData.email || "Saknas"}</p>
+            {handbookData.website && <p>Webb: {handbookData.website}</p>}
           </div>
           
           <div className="text-sm text-gray-500">
@@ -132,68 +143,91 @@ export default function HandbookTemplate({ handbookData }) {
       {/* Table of Contents */}
       <Card className="mb-12 print:shadow-none print:border toc-page">
         <CardHeader>
-          <CardTitle className="text-2xl">Innehållsförteckning</CardTitle>
+          <CardTitle className="text-2xl flex items-center">
+            {renderSectionIcon("Innehållsförteckning")}
+            Innehållsförteckning
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <nav className="space-y-2">
-            <a href="#allmant" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">1. Allmän Information</span>
-                <span className="text-gray-500">3</span>
-              </div>
-            </a>
-            <a href="#styrelse" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">2. Styrelse och Administration</span>
-                <span className="text-gray-500">5</span>
-              </div>
-            </a>
-            <a href="#ekonomi" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">3. Ekonomi och Avgifter</span>
-                <span className="text-gray-500">8</span>
-              </div>
-            </a>
-            <a href="#fastighet" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">4. Fastighet och Underhåll</span>
-                <span className="text-gray-500">12</span>
-              </div>
-            </a>
-            <a href="#regler" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">5. Regler och Ordningsföreskrifter</span>
-                <span className="text-gray-500">16</span>
-              </div>
-            </a>
-            <a href="#lagenheter" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">6. Lägenheter och Ändamål</span>
-                <span className="text-gray-500">20</span>
-              </div>
-            </a>
-            <a href="#gemensamt" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">7. Gemensamma Utrymmen</span>
-                <span className="text-gray-500">24</span>
-              </div>
-            </a>
-            <a href="#sakerhet" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">8. Säkerhet och Beredskap</span>
-                <span className="text-gray-500">28</span>
-              </div>
-            </a>
-            <a href="#praktiskt" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">9. Praktisk Information</span>
-                <span className="text-gray-500">32</span>
+            <a href="#valkommen" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Välkommen")}
+                  1. Välkommen till föreningen
+                </span>
               </div>
             </a>
             <a href="#kontakt" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
-              <div className="flex justify-between">
-                <span className="font-medium">10. Kontaktinformation</span>
-                <span className="text-gray-500">36</span>
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Kontaktuppgifter")}
+                  2. Kontaktuppgifter och styrelse
+                </span>
+              </div>
+            </a>
+            <a href="#ekonomi" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Ekonomi")}
+                  3. Ekonomi och avgifter
+                </span>
+              </div>
+            </a>
+            <a href="#regler" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Trivselregler")}
+                  4. Husets regler och ordningsregler
+                </span>
+              </div>
+            </a>
+            <a href="#sakerhet" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Säkerhet")}
+                  5. Säkerhet och trygghet
+                </span>
+              </div>
+            </a>
+            <a href="#teknisk" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Teknisk")}
+                  6. Teknisk information
+                </span>
+              </div>
+            </a>
+            <a href="#renovering" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Renovering")}
+                  7. Ombyggnader och renoveringar
+                </span>
+              </div>
+            </a>
+            <a href="#forsakringar" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Försäkring")}
+                  8. Försäkringar
+                </span>
+              </div>
+            </a>
+            <a href="#gemensamt" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Gemensamma utrymmen")}
+                  9. Gemensamma faciliteter
+                </span>
+              </div>
+            </a>
+            <a href="#praktiskt" className="block py-2 px-4 rounded hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-500 transition-all">
+              <div className="flex justify-between items-center">
+                <span className="font-medium flex items-center">
+                  {renderSectionIcon("Praktisk information")}
+                  10. Praktisk vardagsinformation
+                </span>
               </div>
             </a>
           </nav>
@@ -203,10 +237,11 @@ export default function HandbookTemplate({ handbookData }) {
       {/* Content Sections */}
       <div className="px-6 space-y-12">
         
-        {/* Section 1: Allmän Information */}
-        <section id="allmant" className="print:break-before-page">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200">
-            1. Allmän Information
+        {/* Section 1: Välkommen */}
+        <section id="valkommen" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Välkommen")}
+            1. Välkommen till föreningen
           </h2>
           
           <div className="grid md:grid-cols-2 gap-8">
@@ -250,10 +285,11 @@ export default function HandbookTemplate({ handbookData }) {
           </div>
         </section>
 
-        {/* Section 2: Styrelse */}
-        <section id="styrelse" className="print:break-before-page">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200">
-            2. Styrelse och Administration
+        {/* Section 2: Kontaktuppgifter och styrelse */}
+        <section id="kontakt" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Kontaktuppgifter")}
+            2. Kontaktuppgifter och styrelse
           </h2>
           
           <Card className="mb-8 print:shadow-none print:border">
@@ -302,10 +338,11 @@ export default function HandbookTemplate({ handbookData }) {
           </div>
         </section>
 
-        {/* Section 3: Ekonomi */}
+        {/* Section 3: Ekonomi och avgifter */}
         <section id="ekonomi" className="print:break-before-page">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200">
-            3. Ekonomi och Avgifter
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Ekonomi")}
+            3. Ekonomi och avgifter
           </h2>
           
           <div className="grid md:grid-cols-2 gap-8 mb-8">
@@ -319,19 +356,23 @@ export default function HandbookTemplate({ handbookData }) {
               <CardContent>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                   <p className="text-sm text-green-800">
-                    <strong>Aktuell avgift per kvm:</strong> {handbookData.monthlyFeePerSqm || "XX kr/kvm"} kr/kvm
+                    <strong>Aktuell avgift per kvm:</strong> {handbookData.monthlyFeePerSqm || "XX"} kr/kvm
                   </p>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Inkluderar:</strong></p>
-                  <ul className="list-disc list-inside text-gray-700 space-y-1">
-                    <li>Uppvärmning</li>
-                    <li>Varmvatten</li>
-                    <li>Fastighetsskötsel</li>
-                    <li>Kapitalavgift</li>
-                    <li>Underhållsfond</li>
-                  </ul>
-                </div>
+                
+                {handbookData.monthlyFeeIncludes && (
+                  <div className="space-y-2 text-sm">
+                    <p><strong>Inkluderar:</strong></p>
+                    <p className="text-gray-700">{handbookData.monthlyFeeIncludes}</p>
+                  </div>
+                )}
+                
+                {handbookData.memberPaysOwn && (
+                  <div className="space-y-2 text-sm mt-4">
+                    <p><strong>Medlem betalar själv:</strong></p>
+                    <p className="text-gray-700">{handbookData.memberPaysOwn}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -347,11 +388,19 @@ export default function HandbookTemplate({ handbookData }) {
                 <p><strong>Fakturering:</strong> {handbookData.invoicing || "Månadsvis via e-post"}</p>
                 <p><strong>Dröjsmålsränta:</strong> {handbookData.lateInterest || "Enligt lag + 8%"}</p>
                 <p><strong>Bankgiro:</strong> {handbookData.bankgiro || "XXXX-XXXX"}</p>
+                
+                {handbookData.paymentDifficulties && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Betalningssvårigheter:</strong> {handbookData.paymentDifficulties}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          <Card className="print:shadow-none print:border">
+          <Card className="print:shadow-none print:border mb-8">
             <CardHeader>
               <CardTitle>Budgetprocess</CardTitle>
             </CardHeader>
@@ -359,27 +408,366 @@ export default function HandbookTemplate({ handbookData }) {
               <p className="text-gray-700 mb-4">
                 {handbookData.budgetProcess || "Budget fastställs på årsstämman i mars. Preliminär budget presenteras i februari för medlemmarna att granska."}
               </p>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>Viktigt:</strong> Medlemmar har rätt att få insyn i föreningens ekonomi och kan begära att få se årsredovisning och budget.
-                </p>
-              </div>
+              
+              {handbookData.specialFees && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Särskilda avgifter:</strong> {handbookData.specialFees}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>
 
-        {/* Section 4: Fastighet och Underhåll */}
-        <section id="fastighet" className="print:break-before-page">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200">
-            4. Fastighet och Underhåll
+        {/* Section 4: Husets regler och ordningsregler */}
+        <section id="regler" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Trivselregler")}
+            4. Husets regler och ordningsregler
           </h2>
           
           <div className="grid md:grid-cols-2 gap-8">
             <Card className="print:shadow-none print:border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">🔧</span>
-                  Felanmälan
+                  <span className="text-2xl">🔇</span>
+                  Tysta timmar och störningar
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {handbookData.quietHours && (
+                  <div>
+                    <p><strong>Tysta timmar:</strong> {handbookData.quietHours}</p>
+                  </div>
+                )}
+                {handbookData.disturbanceRules && (
+                  <div>
+                    <p><strong>Störningsregler:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.disturbanceRules}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {renderSectionIcon("Parkering")}
+                  Parkering
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {handbookData.parkingRules && (
+                  <p className="text-gray-700">{handbookData.parkingRules}</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 mt-8">
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🐕</span>
+                  Husdjur och rökning
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {handbookData.petRules && (
+                  <div>
+                    <p><strong>Husdjur:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.petRules}</p>
+                  </div>
+                )}
+                {handbookData.smokingRules && (
+                  <div>
+                    <p><strong>Rökning:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.smokingRules}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {renderSectionIcon("Sopsortering")}
+                  Sophantering
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {handbookData.wasteManagement && (
+                  <p className="text-gray-700">{handbookData.wasteManagement}</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section 5: Säkerhet och trygghet */}
+        <section id="sakerhet" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Säkerhet")}
+            5. Säkerhet och trygghet
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🔑</span>
+                  Lås och nycklar
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {handbookData.doorLocks && (
+                  <div>
+                    <p><strong>Dörrlås:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.doorLocks}</p>
+                  </div>
+                )}
+                {handbookData.keyTags && (
+                  <div>
+                    <p><strong>Nyckelbrickor:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.keyTags}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🚨</span>
+                  Brandsäkerhet
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {handbookData.fireProtection && (
+                  <div>
+                    <p><strong>Brandskydd:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.fireProtection}</p>
+                  </div>
+                )}
+                {handbookData.evacuationRoutes && (
+                  <div>
+                    <p><strong>Utrymning:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.evacuationRoutes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section 6: Teknisk information */}
+        <section id="teknisk" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Teknisk")}
+            6. Teknisk information
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🌡️</span>
+                  Värme och ventilation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {handbookData.heating && (
+                  <div>
+                    <p><strong>Uppvärmning:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.heating}</p>
+                  </div>
+                )}
+                {handbookData.ventilation && (
+                  <div>
+                    <p><strong>Ventilation:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.ventilation}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">💧</span>
+                  Vatten och el
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {handbookData.waterSewage && (
+                  <div>
+                    <p><strong>Vatten:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.waterSewage}</p>
+                  </div>
+                )}
+                {handbookData.electricity && (
+                  <div>
+                    <p><strong>El:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.electricity}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section 7: Renovering */}
+        <section id="renovering" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Renovering")}
+            7. Ombyggnader och renoveringar
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🔨</span>
+                  Renoveringsregler
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {handbookData.ownRenovations && (
+                  <div>
+                    <p><strong>Mindre renoveringar:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.ownRenovations}</p>
+                  </div>
+                )}
+                {handbookData.majorRenovations && (
+                  <div>
+                    <p><strong>Större renoveringar:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.majorRenovations}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">📋</span>
+                  Ansvar
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {handbookData.responsibility && (
+                  <p className="text-gray-700">{handbookData.responsibility}</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section 8: Försäkringar */}
+        <section id="forsakringar" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Försäkring")}
+            8. Försäkringar
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🏢</span>
+                  Föreningens försäkring
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {handbookData.buildingInsurance && (
+                  <p className="text-gray-700">{handbookData.buildingInsurance}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">👤</span>
+                  Medlemsförsäkring
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {handbookData.memberInsurance && (
+                  <p className="text-gray-700">{handbookData.memberInsurance}</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section 9: Gemensamma faciliteter */}
+        <section id="gemensamt" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Gemensamma utrymmen")}
+            9. Gemensamma faciliteter
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {renderSectionIcon("Tvättstuga")}
+                  Tvättstuga
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {handbookData.laundryRoom && (
+                  <p className="text-gray-700">{handbookData.laundryRoom}</p>
+                )}
+                {handbookData.laundryRules && (
+                  <div className="mt-3">
+                    <p><strong>Regler:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.laundryRules}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🏡</span>
+                  Övriga utrymmen
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {handbookData.storage && (
+                  <div>
+                    <p><strong>Förråd:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.storage}</p>
+                  </div>
+                )}
+                {handbookData.courtyard && (
+                  <div>
+                    <p><strong>Gård:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.courtyard}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section 10: Praktisk vardagsinformation */}
+        <section id="praktiskt" className="print:break-before-page">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200 flex items-center">
+            {renderSectionIcon("Praktisk information")}
+            10. Praktisk vardagsinformation
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {renderSectionIcon("Felanmälan")}
+                  Akuta kontakter
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -403,97 +791,48 @@ export default function HandbookTemplate({ handbookData }) {
             <Card className="print:shadow-none print:border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">📋</span>
-                  Ansvar
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-green-700 mb-2">Föreningen ansvarar för:</h4>
-                    <ul className="text-sm text-gray-700 space-y-1">
-                      <li>• Stamledningar</li>
-                      <li>• Värme och ventilation</li>
-                      <li>• Yttre underhåll</li>
-                      <li>• Trapphus och gemensamma utrymmen</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold text-blue-700 mb-2">Medlemmen ansvarar för:</h4>
-                    <ul className="text-sm text-gray-700 space-y-1">
-                      <li>• Inredning och vitvaror</li>
-                      <li>• Kranar och WC-stol</li>
-                      <li>• Målning och tapetsering</li>
-                      <li>• Golvbeläggning</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* Section 10: Kontaktinformation */}
-        <section id="kontakt" className="print:break-before-page">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 pb-2 border-b-2 border-blue-200">
-            10. Kontaktinformation
-          </h2>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="print:shadow-none print:border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">📞</span>
-                  Viktiga Kontakter
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Styrelsen</h4>
-                  <p className="text-sm">📧 {handbookData.boardEmail || "styrelsen@forening.se"}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Förvaltare</h4>
-                  <p className="text-sm">
-                    📞 {handbookData.managerPhone || "XXX-XXX XX XX"}<br/>
-                    📧 {handbookData.managerEmail || "forvaltare@bolag.se"}
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Akuta problem</h4>
-                  <p className="text-sm">📞 {handbookData.emergencyPhone || "XXX-XXX XX XX"}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="print:shadow-none print:border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">🏛️</span>
-                  Myndigheter
+                  <span className="text-2xl">📮</span>
+                  Service och vardagsinfo
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div>
-                  <h4 className="font-semibold">Byggnadsnämnden</h4>
-                  <p className="text-sm">För bygglov och tekniska frågor</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold">Miljönämnden</h4>
-                  <p className="text-sm">Miljö- och hälsoskyddsfrågor</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold">Hyresnämnden</h4>
-                  <p className="text-sm">Tvister och rådgivning</p>
-                </div>
+                {handbookData.mailPackages && (
+                  <div>
+                    <p><strong>Post och paket:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.mailPackages}</p>
+                  </div>
+                )}
+                {handbookData.movingRules && (
+                  <div>
+                    <p><strong>Flyttning:</strong></p>
+                    <p className="text-gray-700 text-sm">{handbookData.movingRules}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
+
+          {/* Närliggande service */}
+          {handbookData.nearbyServices && (
+            <Card className="mt-8 print:shadow-none print:border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🏪</span>
+                  Närliggande service
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {Object.entries(handbookData.nearbyServices).map(([key, value]) => (
+                    <div key={key}>
+                      <p className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}</p>
+                      <p className="text-sm text-gray-700">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </section>
       </div>
 
