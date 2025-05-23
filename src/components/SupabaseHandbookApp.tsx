@@ -404,14 +404,14 @@ const SupabaseHandbookApp: React.FC<SupabaseHandbookAppProps> = ({ handbook }) =
 
   // Initiera med första sektionen
   useEffect(() => {
-    if (handbookData.sections.length > 0) {
+    if (handbookData.sections.length > 0 && !currentSection) {
       const firstSection = handbookData.sections[0];
       setCurrentSection(firstSection.id);
       if (firstSection.pages.length > 0) {
         setCurrentPage(firstSection.pages[0].id);
       }
     }
-  }, [handbookData]);
+  }, [handbookData.sections.length, currentSection]);
 
   const handleSectionChange = (sectionId: string, pageId?: string) => {
     setCurrentSection(sectionId);

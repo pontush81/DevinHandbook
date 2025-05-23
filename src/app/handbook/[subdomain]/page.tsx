@@ -46,10 +46,14 @@ export default function HandbookPage({ params }: Props) {
   const [subdomain, setSubdomain] = useState<string>('');
 
   useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates after unmount
+    
     const loadHandbook = async () => {
       try {
         const resolvedParams = await params;
         const { subdomain: subdomainParam } = resolvedParams;
+        
+        if (!isMounted) return; // Exit if component is unmounted
         
         console.log(`[Handbook Page] 🏁 RENDERING HANDBOOK PAGE FOR SUBDOMAIN: ${subdomainParam}`);
         console.log(`[Handbook Page] 📍 This proves the vercel.json rewrite is working correctly`);
@@ -59,6 +63,8 @@ export default function HandbookPage({ params }: Props) {
         const handbookData = await getHandbookBySubdomain(subdomainParam);
         console.log(`[Handbook Page] ✅ HANDBOOK FOUND:`, handbookData ? `ID: ${handbookData.id}, Title: ${handbookData.title}` : 'NULL');
         
+        if (!isMounted) return; // Exit if component is unmounted
+        
         if (handbookData) {
           setHandbook(handbookData);
         } else {
@@ -66,14 +72,23 @@ export default function HandbookPage({ params }: Props) {
         }
       } catch (err) {
         console.error('Error fetching handbook:', err);
-        setError('Det gick inte att ladda handboken just nu. Försök igen senare.');
+        if (isMounted) {
+          setError('Det gick inte att ladda handboken just nu. Försök igen senare.');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadHandbook();
-  }, [params]);
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array - only run once on mount
 
   if (loading) {
     return (
