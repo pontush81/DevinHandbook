@@ -216,11 +216,12 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         }
       }
 
-      setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras...`);
+      setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras till dashboard...`);
       
-      // Redirect back to create-handbook page to show all handbooks instead of directly to the new handbook
+      // Refresh the page state to ensure parent component updates its handbook list
+      // This forces a reload to pick up the new handbook in the list
       setTimeout(() => {
-        router.push(`/create-handbook`);
+        window.location.href = '/dashboard';
       }, 2000);
     } catch (error) {
       console.error('Error creating handbook:', error);
