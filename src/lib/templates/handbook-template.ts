@@ -25,7 +25,7 @@ export interface HandbookTemplate {
   sections: Section[];
 }
 
-// Ikoner för varje sektion
+// Ikoner för varje sektion - förbättrad design med emojis
 export const sectionIcons: { [key: string]: string } = {
   "Välkommen": "👋",
   "Kontaktuppgifter och styrelse": "👥",
@@ -42,12 +42,13 @@ export const sectionIcons: { [key: string]: string } = {
   "Dokumentarkiv": "📁"
 };
 
+// Förbättrad handbok-mall med snyggare design och rikare innehåll
 export const defaultHandbookTemplate: HandbookTemplate = {
   sections: [
     {
       id: generateId(),
       title: "Välkommen",
-      description: "Välkommen till föreningens digitala handbok! Här hittar du all viktig information om ditt boende och föreningen.",
+      description: "👋 **Välkommen till föreningens digitala handbok!** Här hittar du all viktig information om ditt boende och föreningen. Navigera genom menyn för att hitta det du söker.",
       order: 1,
       isActive: true,
       pages: [
@@ -126,116 +127,112 @@ Som medlem välkomnar vi ditt engagemang! Du kan:
     {
       id: generateId(),
       title: "Kontaktuppgifter och styrelse",
-      description: "Information om styrelsen och viktiga kontaktuppgifter",
+      description: "👥 **Styrelse och viktiga kontakter** - Här hittar du kontaktuppgifter till styrelsemedlemmar, fastighetsskötare och andra viktiga kontakter för föreningen.",
       order: 2,
       isActive: true,
       pages: [
         {
           id: generateId(),
           title: "Styrelsen",
-          content: `# Styrelsen
+          content: `# 👥 Styrelsen
 
-Här presenteras föreningens styrelsemedlemmar och deras ansvarsområden.
+## 🏆 Styrelsemedlemmar 2024
 
-## Styrelsemedlemmar 2024
+### 👑 Anna Andersson - Ordförande
+- **📞 Telefon:** 070-123 45 67
+- **📧 E-post:** anna.andersson@exempel.se
+- **🎯 Ansvar:** Övergripande ledning, kontakt med myndigheter
+- **🏠 Bor i:** Lägenhet 15, 3 tr
 
-### Anna Andersson - Ordförande
-- **Telefon:** 070-123 45 67
-- **E-post:** anna.andersson@exempel.se
-- **Ansvar:** Övergripande ledning, kontakt med myndigheter
-- **Bor i:** Lägenhet 15, 3 tr
+### 💰 Erik Eriksson - Kassör  
+- **📞 Telefon:** 070-234 56 78
+- **📧 E-post:** erik.eriksson@exempel.se
+- **🎯 Ansvar:** Ekonomi, bokföring, avgifter
+- **🏠 Bor i:** Lägenhet 8, 2 tr
 
-### Erik Eriksson - Kassör  
-- **Telefon:** 070-234 56 78
-- **E-post:** erik.eriksson@exempel.se
-- **Ansvar:** Ekonomi, bokföring, avgifter
-- **Bor i:** Lägenhet 8, 2 tr
+### ✍️ Maria Johansson - Sekreterare
+- **📞 Telefon:** 070-345 67 89
+- **📧 E-post:** maria.johansson@exempel.se
+- **🎯 Ansvar:** Protokoll, korrespondens
+- **🏠 Bor i:** Lägenhet 23, 4 tr
 
-### Maria Johansson - Sekreterare
-- **Telefon:** 070-345 67 89
-- **E-post:** maria.johansson@exempel.se
-- **Ansvar:** Protokoll, korrespondens
-- **Bor i:** Lägenhet 23, 4 tr
+### 🔧 Lars Svensson - Ledamot
+- **📞 Telefon:** 070-456 78 90
+- **📧 E-post:** lars.svensson@exempel.se
+- **🎯 Ansvar:** Tekniska frågor, underhåll
+- **🏠 Bor i:** Lägenhet 3, 1 tr
 
-### Lars Svensson - Ledamot
-- **Telefon:** 070-456 78 90
-- **E-post:** lars.svensson@exempel.se
-- **Ansvar:** Tekniska frågor, underhåll
-- **Bor i:** Lägenhet 3, 1 tr
+### 🌟 Karin Nilsson - Ledamot
+- **📞 Telefon:** 070-567 89 01
+- **📧 E-post:** karin.nilsson@exempel.se
+- **🎯 Ansvar:** Trivsel, gemensamma aktiviteter
+- **🏠 Bor i:** Lägenhet 31, 5 tr
 
-### Karin Nilsson - Ledamot
-- **Telefon:** 070-567 89 01
-- **E-post:** karin.nilsson@exempel.se
-- **Ansvar:** Trivsel, gemensamma aktiviteter
-- **Bor i:** Lägenhet 31, 5 tr
+## 📅 Styrelsemöten
 
-## Styrelsemöten
+- **🗓️ När:** Första onsdagen varje månad kl. 19:00
+- **📍 Plats:** Föreningslokalen (källarplan)
+- **👥 Medlemmar välkomna:** Efter anmälan till ordföranden
 
-- **När:** Första onsdagen varje månad kl. 19:00
-- **Plats:** Föreningslokalen (källarplan)
-- **Medlemmar välkomna:** Efter anmälan till ordföranden
+## 📬 Kontakta styrelsen
 
-## Kontakta styrelsen
-
-- **Allmänna frågor:** styrelsen@ekstugan15.se
-- **Akuta ärenden:** Ring ordföranden direkt`,
+- **📧 Allmänna frågor:** styrelsen@ekstugan15.se
+- **🚨 Akuta ärenden:** Ring ordföranden direkt`,
           order: 1,
         },
         {
           id: generateId(),
           title: "Viktiga kontakter",
-          content: `# Viktiga kontakter
+          content: `# 📞 Viktiga kontakter
 
-Här hittar du kontaktuppgifter till förvaltare, fastighetsskötare och andra viktiga kontakter.
+## 🔧 Fastighetsskötsel
 
-## Fastighetsskötsel
+### 👨‍🔧 Sven Karlsson - Fastighetsskötare
+- **📞 Telefon:** 070-111 22 33
+- **📧 E-post:** sven.karlsson@fastighet.se
+- **⏰ Arbetstider:** Måndag-fredag 07:00-15:00
+- **🎯 Ansvar:** Daglig drift, mindre reparationer, städning
 
-### Sven Karlsson - Fastighetsskötare
-- **Telefon:** 070-111 22 33
-- **E-post:** sven.karlsson@fastighet.se
-- **Arbetstider:** Måndag-fredag 07:00-15:00
-- **Ansvar:** Daglig drift, mindre reparationer, städning
+### 🚨 Jourfunktion (kvällar/helger)
+- **📞 Telefon:** 08-123 456 78
+- **⚠️ Endast för akuta ärenden:** Vattenläckor, el-fel, inbrott
+- **💰 Kostnad:** 1200 kr för icke-akuta ärenden
 
-### Jourfunktion (kvällar/helger)
-- **Telefon:** 08-123 456 78
-- **Endast för akuta ärenden:** Vattenläckor, el-fel, inbrott
-- **Kostnad:** 1200 kr för icke-akuta ärenden
+## 🏢 Förvaltning
 
-## Förvaltning
+### 🏛️ Stockholm Bostadsförvaltning AB
+- **📍 Adress:** Förvaltargatan 10, 111 22 Stockholm  
+- **📞 Telefon:** 08-234 567 89
+- **📧 E-post:** info@stockholmforvaltning.se
+- **👤 Handläggare:** Linda Petersson
+- **🎯 Ansvar:** Ekonomisk förvaltning, försäkringar
 
-### Stockholm Bostadsförvaltning AB
-- **Adress:** Förvaltargatan 10, 111 22 Stockholm  
-- **Telefon:** 08-234 567 89
-- **E-post:** info@stockholmforvaltning.se
-- **Handläggare:** Linda Petersson
-- **Ansvar:** Ekonomisk förvaltning, försäkringar
+## 🔨 Entreprenörer
 
-## Entreprenörer
+### ⚡ El-företag
+- **🏢 Företag:** Stockholm El Service AB
+- **📞 Telefon:** 08-345 678 90
+- **🚨 Jour:** 070-123 123 12
 
-### El-företag
-- **Företag:** Stockholm El Service AB
-- **Telefon:** 08-345 678 90
-- **Jour:** 070-123 123 12
+### 🚰 VVS-företag  
+- **🏢 Företag:** Rörexperten Stockholm AB
+- **📞 Telefon:** 08-456 789 01
+- **🚨 Jour:** 070-234 234 23
 
-### VVS-företag  
-- **Företag:** Rörexperten Stockholm AB
-- **Telefon:** 08-456 789 01
-- **Jour:** 070-234 234 23
+### 🛗 Hiss-service
+- **🏢 Företag:** LiftTech Sverige AB
+- **📞 Telefon:** 08-567 890 12
+- **🚨 Jour:** 070-345 345 34
 
-### Hiss-service
-- **Företag:** LiftTech Sverige AB
-- **Telefon:** 08-567 890 12
-- **Jour:** 070-345 345 34
+## 🏛️ Myndigheter
 
-## Myndigheter
+### 🌍 Stockholm Stad - Miljöförvaltningen
+- **📞 Telefon:** 08-508 285 00
+- **🎯 Ärenden:** Miljötillsyn, bullerklagomål
 
-### Stockholm Stad - Miljöförvaltningen
-- **Telefon:** 08-508 285 00
-- **Ärenden:** Miljötillsyn, bullerklagomål
-
-### Polisen - Lokalpolisområde Södermalm  
-- **Telefon:** 114 14 (icke-akut)
-- **Nödnummer:** 112`,
+### 👮‍♂️ Polisen - Lokalpolisområde Södermalm  
+- **📞 Telefon:** 114 14 (icke-akut)
+- **🚨 Nödnummer:** 112`,
           order: 2,
         }
       ]
@@ -243,100 +240,96 @@ Här hittar du kontaktuppgifter till förvaltare, fastighetsskötare och andra v
     {
       id: generateId(),
       title: "Stadgar och årsredovisning",
-      description: "Föreningens stadgar och ekonomiska dokument",
+      description: "📋 **Ekonomi och styrning** - Här hittar du föreningens stadgar, årsredovisningar och ekonomiska rapporter som styr verksamheten.",
       order: 3,
       isActive: true,
       pages: [
         {
           id: generateId(),
           title: "Stadgar",
-          content: `# Föreningens stadgar
+          content: `# 📋 Föreningens stadgar
 
-Här hittar du föreningens stadgar som reglerar verksamheten.
-
-## Aktuella stadgar
+## 📖 Aktuella stadgar
 
 Stadgarna antogs på årsstämman 2023 och gäller från 1 april 2023.
 
-### Viktigaste punkterna
+### ⭐ Viktigaste punkterna
 
 **§ 3 Föreningens ändamål**
 Föreningen har till ändamål att främja medlemmarnas ekonomiska intressen genom att i föreningens hus upplåta bostadslägenheter och lokaler.
 
 **§ 7 Medlemskap**
-- Medlemskap erhålls genom förvärv av bostadsrätt
-- Vid överlåtelse ska köparen godkännas av styrelsen
-- Styrelsen kan endast vägra godkännande om det finns särskilda skäl
+- 👤 Medlemskap erhålls genom förvärv av bostadsrätt
+- 🤝 Vid överlåtelse ska köparen godkännas av styrelsen
+- ⚖️ Styrelsen kan endast vägra godkännande om det finns särskilda skäl
 
 **§ 12 Månadsavgift**
-- Avgiften fastställs av årsstämman
-- Betalas senast den 25:e varje månad
-- Vid försenad betalning utgår dröjsmålsränta
+- 💰 Avgiften fastställs av årsstämman
+- 📅 Betalas senast den 25:e varje månad
+- ⏰ Vid försenad betalning utgår dröjsmålsränta
 
 **§ 15 Disposition av lägenhet**
-- Uthyrning i andra hand kräver styrelsens tillstånd
-- Tillstånd gäller normalt max 2 år
-- Korttidsuthyrning via digitala plattformar är inte tillåtet
+- 🏠 Uthyrning i andra hand kräver styrelsens tillstånd
+- ⏱️ Tillstånd gäller normalt max 2 år
+- 🚫 Korttidsuthyrning via digitala plattformar är inte tillåtet
 
-## Dokumentarkiv
+## 📁 Dokumentarkiv
 
-- [Stadgar 2023 (PDF)](#)
-- [Protokoll årsstämma 2024 (PDF)](#)
-- [Föreningens ordningsregler (PDF)](#)`,
+- 📄 [Stadgar 2023 (PDF)](#)
+- 📋 [Protokoll årsstämma 2024 (PDF)](#)
+- 📜 [Föreningens ordningsregler (PDF)](#)`,
           order: 1,
         },
         {
           id: generateId(),
           title: "Årsredovisningar",
-          content: `# Årsredovisningar
+          content: `# 📊 Årsredovisningar
 
-Här hittar du föreningens senaste årsredovisningar och ekonomiska rapporter.
+## 💰 Årsredovisning 2023
 
-## Årsredovisning 2023
+### 📈 Sammanfattning
+- **💵 Totala intäkter:** 2 450 000 kr
+- **💸 Totala kostnader:** 2 380 000 kr  
+- **📊 Årets resultat:** +70 000 kr
+- **🏦 Soliditet:** 45%
+- **📉 Skuldsättningsgrad:** 1,2
 
-### Sammanfattning
-- **Totala intäkter:** 2 450 000 kr
-- **Totala kostnader:** 2 380 000 kr  
-- **Årets resultat:** +70 000 kr
-- **Soliditet:** 45%
-- **Skuldsättningsgrad:** 1,2
+### 🔨 Större underhållsinsatser 2023
+- 🪟 Byte av fönster (våning 3-5): 450 000 kr
+- 🚿 Stamrenovering (WC/Bad): 280 000 kr
+- 🎨 Fasadmålning: 180 000 kr
 
-### Större underhållsinsatser 2023
-- Byte av fönster (våning 3-5): 450 000 kr
-- Stamrenovering (WC/Bad): 280 000 kr
-- Fasadmålning:** 180 000 kr
+## 💳 Månadsavgifter 2024
 
-## Månadsavgifter 2024
+| 🏠 Lägenhetsstorlek | 💰 Avgift/månad |
+|---------------------|-----------------|
+| 1️⃣ ROK (35-45 kvm) | 3 200 kr |
+| 2️⃣ ROK (50-65 kvm) | 4 100 kr |
+| 3️⃣ ROK (70-85 kvm) | 5 200 kr |
+| 4️⃣ ROK (90-105 kvm) | 6 400 kr |
 
-| Lägenhetsstorlek | Avgift/månad |
-|------------------|--------------|
-| 1 ROK (35-45 kvm) | 3 200 kr |
-| 2 ROK (50-65 kvm) | 4 100 kr |
-| 3 ROK (70-85 kvm) | 5 200 kr |
-| 4 ROK (90-105 kvm) | 6 400 kr |
-
-## Planerat underhåll 2024-2026
+## 🗓️ Planerat underhåll 2024-2026
 
 ### 2024 (Budget: 380 000 kr)
-- Byte av ytterdörr och portlås
-- Renovering av tvättstuga
-- Asfaltering av innergård
+- 🚪 Byte av ytterdörr och portlås
+- 👕 Renovering av tvättstuga
+- 🛣️ Asfaltering av innergård
 
 ### 2025 (Budget: 520 000 kr)  
-- Byte av fönster (våning 1-2)
-- Upprustning av hiss
-- Energieffektivisering
+- 🪟 Byte av fönster (våning 1-2)
+- 🛗 Upprustning av hiss
+- ⚡ Energieffektivisering
 
 ### 2026 (Budget: 680 000 kr)
-- Takrenovering
-- Uppgradering av el-centraler
+- 🏠 Takrenovering
+- ⚡ Uppgradering av el-centraler
 
-## Dokumentarkiv
+## 📁 Dokumentarkiv
 
-- [Årsredovisning 2023 (PDF)](#)
-- [Budget 2024 (PDF)](#) 
-- [Revisionsberättelse 2023 (PDF)](#)
-- [Underhållsplan 2024-2029 (PDF)](#)`,
+- 📊 [Årsredovisning 2023 (PDF)](#)
+- 💰 [Budget 2024 (PDF)](#) 
+- ✅ [Revisionsberättelse 2023 (PDF)](#)
+- 🔧 [Underhållsplan 2024-2029 (PDF)](#)`,
           order: 2,
         }
       ]
@@ -344,58 +337,56 @@ Här hittar du föreningens senaste årsredovisningar och ekonomiska rapporter.
     {
       id: generateId(),
       title: "Renoveringar och underhåll",
-      description: "Information om renoveringar och underhåll av fastigheten",
+      description: "🔨 **Renovering och underhåll** - Information om renoveringsregler, tillstånd och föreningens underhållsplan för fastigheten.",
       order: 4,
       isActive: true,
       pages: [
         {
           id: generateId(),
           title: "Renoveringsregler",
-          content: `# Renoveringsregler
+          content: `# 🔨 Renoveringsregler
 
-Här hittar du information om vad du får och inte får göra vid renovering av din lägenhet.
+## ✅ Tillståndspliktiga renoveringar
 
-## Tillståndspliktiga renoveringar
+Följande arbeten kräver **📝 skriftligt tillstånd** från styrelsen:
+- 🚿 Ändring av våtrummen (badrum, kök, tvättstuga)
+- 🧱 Flyttning eller borttagning av väggar
+- ⚡ Ändring av el- eller VVS-installationer
+- ❄️ Installation av luftvärmepump eller AC
+- 🔊 Ändring av golv till hårdare material (parkett→kakel)
+- 🪟 Inglasning av balkong
 
-Följande arbeten kräver **skriftligt tillstånd** från styrelsen:
-- Ändring av våtrummen (badrum, kök, tvättstuga)
-- Flyttning eller borttagning av väggar
-- Ändring av el- eller VVS-installationer
-- Installation av luftvärmepump eller AC
-- Ändring av golv till hårdare material (parkett→kakel)
-- Inglasning av balkong
+## 🆓 Tillståndsfria renoveringar
 
-## Tillståndsfria renoveringar
+Dessa arbeten kan du göra **utan tillstånd:**
+- 🎨 Målning av väggar och tak
+- 🖼️ Byte av tapeter
+- 🚪 Byte av köksluckor (samma storlek)
+- 💡 Installation av inredning och hyllor
+- ⚡ Byte av belysning (samma typ av uttag)
+- 🔧 Mindre reparationer
 
-Dessa arbeten kan du göra **utan tillstånd**:
-- Målning av väggar och tak
-- Byte av tapeter
-- Byte av köksluckor (samma storlek)
-- Installation av inredning och hyllor
-- Byte av belysning (samma typ av uttag)
-- Mindre reparationer
+## 📋 Ansökningsprocess
 
-## Ansökningsprocess
+1. **📝 Lämna ansökan** minst 4 veckor innan planerad start
+2. **📐 Bifoga ritningar** och beskrivning av arbetet
+3. **⏳ Vänta på godkännande** innan arbetet påbörjas
+4. **✅ Anmäl när arbetet är klart** för eventuell besiktning
 
-1. **Lämna ansökan** minst 4 veckor innan planerad start
-2. **Bifoga ritningar** och beskrivning av arbetet
-3. **Vänta på godkännande** innan arbetet påbörjas
-4. **Anmäl när arbetet är klart** för eventuell besiktning
+## ⏰ Arbetstider
 
-## Arbetstider
+**🕐 Tillåtna arbetstider för renovering:**
+- 📅 Måndag-fredag: 08:00-17:00
+- 📅 Lördag: 09:00-15:00  
+- 🚫 Söndagar och helger: **Ej tillåtet**
 
-**Tillåtna arbetstider för renovering:**
-- Måndag-fredag: 08:00-17:00
-- Lördag: 09:00-15:00  
-- Söndagar och helger: **Ej tillåtet**
+## 👷‍♂️ Krav på hantverkare
 
-## Krav på hantverkare
+- 🛡️ Hantverkare ska vara försäkrade och auktoriserade
+- 💸 Skador som uppstår ska täckas av hantverkarens försäkring
+- 🧹 Gemensamma utrymmen ska skyddas och städas
 
-- Hantverkare ska vara försäkrade och auktoriserade
-- Skador som uppstår ska täckas av hantverkarens försäkring
-- Gemensamma utrymmen ska skyddas och städas
-
-## Viktigt att tänka på
+## ⚠️ Viktigt att tänka på
 
 ⚠️ **Ansvar:** Du ansvarar för alla skador som uppstår i samband med renovering
 ⚠️ **Grannar:** Informera grannarna om planerade arbeten
@@ -405,58 +396,56 @@ Dessa arbeten kan du göra **utan tillstånd**:
         {
           id: generateId(),
           title: "Underhållsplan",
-          content: `# Underhållsplan
+          content: `# 🗓️ Underhållsplan
 
-Här hittar du information om föreningens planerade underhåll och renoveringar.
+## 🚧 Pågående projekt 2024
 
-## Pågående projekt 2024
+### 👕 Renovering av tvättstuga (Mars-April)
+- **💰 Budget:** 180 000 kr
+- **🎯 Omfattning:** Nya maskiner, kakelsättning, målning
+- **⚠️ Påverkan:** Tvättstuga stängd 3 veckor
 
-### Renovering av tvättstuga (Mars-April)
-- **Budget:** 180 000 kr
-- **Omfattning:** Nya maskiner, kakelsättning, målning
-- **Påverkan:** Tvättstuga stängd 3 veckor
+### 🛣️ Asfaltering av innergård (Maj)
+- **💰 Budget:** 85 000 kr  
+- **🎯 Omfattning:** Ny asfalt och parkeringsmarkering
+- **⚠️ Påverkan:** Parkeringen stängd 1 vecka
 
-### Asfaltering av innergård (Maj)
-- **Budget:** 85 000 kr  
-- **Omfattning:** Ny asfalt och parkeringsmarkering
-- **Påverkan:** Parkeringen stängd 1 vecka
-
-## Planerat underhåll 2024-2026
+## 📅 Planerat underhåll 2024-2026
 
 ### 2024 (Återstående budget: 115 000 kr)
-- **Juni:** Målning av trapphus (våning 4-5)
-- **Augusti:** Byte av ytterdörr och portlås
-- **September:** Installation av ny belysning i källare
+- **🌞 Juni:** Målning av trapphus (våning 4-5)
+- **🌅 Augusti:** Byte av ytterdörr och portlås
+- **🍂 September:** Installation av ny belysning i källare
 
 ### 2025 (Budget: 520 000 kr)
-- **Våren:** Byte av fönster (våning 1-2) - 380 000 kr
-- **Sommaren:** Upprustning av hiss - 140 000 kr
+- **🌸 Våren:** Byte av fönster (våning 1-2) - 380 000 kr
+- **☀️ Sommaren:** Upprustning av hiss - 140 000 kr
 
 ### 2026 (Budget: 680 000 kr)
-- **Våren:** Takrenovering - 450 000 kr
-- **Hösten:** Uppgradering av el-centraler - 230 000 kr
+- **🌸 Våren:** Takrenovering - 450 000 kr
+- **🍂 Hösten:** Uppgradering av el-centraler - 230 000 kr
 
-## Långsiktig underhållsplan (2027-2030)
+## 📊 Långsiktig underhållsplan (2027-2030)
 
-| År | Projekt | Uppskattat belopp |
-|----|---------|-------------------|
-| 2027 | Fasadrenovering | 850 000 kr |
-| 2028 | Stamrenovering (resterande lägenheter) | 720 000 kr |
-| 2029 | Byte av balkonger | 950 000 kr |
-| 2030 | Energieffektivisering | 400 000 kr |
+| 📅 År | 🔨 Projekt | 💰 Uppskattat belopp |
+|-------|-------------|---------------------|
+| 2027 | 🏠 Fasadrenovering | 850 000 kr |
+| 2028 | 🚿 Stamrenovering (resterande lägenheter) | 720 000 kr |
+| 2029 | 🏗️ Byte av balkonger | 950 000 kr |
+| 2030 | ⚡ Energieffektivisering | 400 000 kr |
 
-## Finansiering
+## 💳 Finansiering
 
 Större underhållsprojekt finansieras genom:
-- **Underhållsfond** (avsättning från månadsavgifter)
-- **Eventuella lån** (för större projekt)
-- **Extra insatser** (i undantagsfall)
+- **🏦 Underhållsfond** (avsättning från månadsavgifter)
+- **💰 Eventuella lån** (för större projekt)
+- **➕ Extra insatser** (i undantagsfall)
 
-## Information till boende
+## 📢 Information till boende
 
-- Alla projekt meddelas minst 4 veckor i förväg
-- Information delas ut via mail och anslagstavla
-- Vid större projekt hålls informationsmöten`,
+- 📬 Alla projekt meddelas minst 4 veckor i förväg
+- 📧 Information delas ut via mail och anslagstavla
+- 👥 Vid större projekt hålls informationsmöten`,
           order: 2,
         }
       ]
@@ -464,7 +453,7 @@ Större underhållsprojekt finansieras genom:
     {
       id: generateId(),
       title: "Bopärmar och regler",
-      description: "Bopärmar och föreningens regler",
+      description: "📖 **Bopärmar och föreningens regler** - Information om din lägenhet, tekniska installationer och föreningens olika regler och riktlinjer.",
       order: 5,
       isActive: true,
       pages: [
@@ -611,7 +600,7 @@ Här hittar du information om föreningens regler och riktlinjer.
     {
       id: generateId(),
       title: "Sopsortering och återvinning",
-      description: "Information om sopsortering och återvinning",
+      description: "♻️ **Sopsortering och miljö** - Komplett guide för sopsortering, återvinning och miljövänligt boende. Gör skillnad för miljön!",
       order: 6,
       isActive: true,
       pages: [
@@ -809,7 +798,7 @@ Här hittar du information om återvinningsstationer och miljörum.
     {
       id: generateId(),
       title: "Parkering och garage",
-      description: "Information om parkering och garage",
+      description: "🚗 **Parkering och garage** - Information om parkeringsplatser, garage, hyra, regler och priser för alla fordonsägare.",
       order: 7,
       isActive: true,
       pages: [
@@ -991,7 +980,7 @@ Här hittar du information om garage och garageregler.
     {
       id: generateId(),
       title: "Tvättstuga och bokningssystem",
-      description: "Information om tvättstuga och bokningssystem",
+      description: "👕 **Tvättstuga och bokning** - Allt om tvättstugan, bokningssystem, öppettider och regler för en smidig tvättupplevelse.",
       order: 8,
       isActive: true,
       pages: [
@@ -1207,7 +1196,7 @@ Här hittar du information om hur du bokar tvättstugan och andra gemensamma utr
     {
       id: generateId(),
       title: "Felanmälan",
-      description: "Information om felanmälan",
+      description: "🔧 **Felanmälan och service** - Så här rapporterar du fel och problem. Akuta nummer, kontakter och digitala verktyg för snabb hjälp.",
       order: 9,
       isActive: true,
       pages: [
@@ -1328,7 +1317,7 @@ Här hittar du information om hur du gör en felanmälan och vem du kontaktar vi
     {
       id: generateId(),
       title: "Trivselregler",
-      description: "Föreningens trivselregler",
+      description: "🤝 **Trivsel och gemenskap** - Regler och riktlinjer för att alla ska trivas. Buller, husdjur, fester och grannsämja.",
       order: 10,
       isActive: true,
       pages: [
@@ -1470,7 +1459,7 @@ Under nattvilotid är följande **förbjudet:**
     {
       id: generateId(),
       title: "Gemensamma utrymmen",
-      description: "Information om föreningens gemensamma utrymmen",
+      description: "🏢 **Gemensamma utrymmen** - Föreningslokal, bastu, trädgård och andra gemensamma områden. Bokning, regler och användning.",
       order: 11,
       isActive: true,
       pages: [
@@ -1620,7 +1609,7 @@ Här hittar du information om föreningens gemensamma utrymmen och hur du använ
     {
       id: generateId(),
       title: "Vanliga frågor (FAQ)",
-      description: "Svar på vanliga frågor",
+      description: "❓ **Vanliga frågor** - Snabba svar på de vanligaste frågorna om föreningen, boendet och praktiska saker.",
       order: 12,
       isActive: true,
       pages: [
@@ -1751,7 +1740,7 @@ Här hittar du svar på vanliga frågor om föreningen och boendet.
     {
       id: generateId(),
       title: "Dokumentarkiv",
-      description: "Arkiv med viktiga dokument",
+      description: "📁 **Dokumentarkiv** - Samling av viktiga dokument, blanketter, avtal och historiska handlingar för föreningen.",
       order: 13,
       isActive: true,
       pages: [
