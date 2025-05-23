@@ -26,14 +26,14 @@ const nextConfig = {
     return [
       // Enkel och pålitlig regel för subdomäner
       {
-        source: '/:path((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api).*)',
+        source: '/((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api).*)',
         has: [
           {
             type: 'host',
             value: '(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org',
           },
         ],
-        destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
+        destination: 'https://www.handbok.org/handbook/:subdomain/$1',
       },
     ];
   },
