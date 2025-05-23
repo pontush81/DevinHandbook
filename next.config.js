@@ -24,18 +24,19 @@ const nextConfig = {
   // Skapar omskrivningar för subdomäner
   async rewrites() {
     return [
-      // Skriv om alla subdomäner till www.handbok.org/handbook/[subdomain]
-      // MEN undanta API-anrop OCH admin-sidor med regex
-      {
-        source: '/:path((?!api/|edit-handbook|dashboard|create-handbook|login|signup|auth).*)',
-        has: [
-          {
-            type: 'host',
-            value: ':subdomain.handbok.org',
-          },
-        ],
-        destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
-      },
+      // TEMPORARILY DISABLED FOR DEBUGGING 508 ERRORS
+      // // Skriv om alla subdomäner till www.handbok.org/handbook/[subdomain]
+      // // MEN undanta API-anrop OCH admin-sidor med regex
+      // {
+      //   source: '/:path((?!api/|edit-handbook|dashboard|create-handbook|login|signup|auth).*)',
+      //   has: [
+      //     {
+      //       type: 'host',
+      //       value: ':subdomain.handbok.org',
+      //     },
+      //   ],
+      //   destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
+      // },
     ];
   },
   

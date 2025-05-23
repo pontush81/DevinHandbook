@@ -1,2 +1,6 @@
 # This file is used to trigger a new Vercel build
 # Current timestamp: 2025-05-16T11:15:30Z
+
+# Build trigger för att force new deployment och rensa cache
+# Timestamp: 2025-05-23 10:00:00
+# Reason: Fix 508 Loop Detected errors by disabling rewrites temporarily
