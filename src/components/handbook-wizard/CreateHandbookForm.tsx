@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { smartRedirectWithPolling } from '@/lib/redirect-utils';
 
 interface CreateHandbookFormProps {
   userId: string;
@@ -52,13 +53,18 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
 
       setIsCheckingSubdomain(true);
       try {
-        const { data: existingHandbook } = await supabase
+        const { data: existingHandbook, error } = await supabase
           .from('handbooks')
           .select('id')
           .eq('subdomain', value)
           .maybeSingle();
 
-        setIsSubdomainAvailable(!existingHandbook);
+        if (error) {
+          console.error('Error checking subdomain availability:', error);
+          setIsSubdomainAvailable(null);
+        } else {
+          setIsSubdomainAvailable(!existingHandbook);
+        }
       } catch (error) {
         console.error('Error checking subdomain:', error);
         setIsSubdomainAvailable(null);
@@ -126,20 +132,8 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     }
 
     try {
-      // Check if the subdomain is already taken
-      const { data: existingHandbook } = await supabase
-        .from('handbooks')
-        .select('id')
-        .eq('subdomain', subdomain)
-        .maybeSingle();
-
-      if (existingHandbook) {
-        setError(`Adressen "${subdomain}.handbok.org" är redan upptagen. Vänligen välj en annan.`);
-        setIsLoading(false);
-        return;
-      }
-
-      // Create the handbook
+      // Create the handbook directly - let the database enforce uniqueness
+      // This eliminates race conditions between checking and creating
       const { data: handbook, error: handbookError } = await supabase
         .from('handbooks')
         .insert({
@@ -152,6 +146,12 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         .single();
 
       if (handbookError) {
+        // Check if it's a uniqueness constraint violation
+        if (handbookError.code === '23505' || handbookError.message?.includes('duplicate') || handbookError.message?.includes('subdomain')) {
+          setError(`Adressen "${subdomain}.handbok.org" är redan upptagen. Vänligen välj en annan.`);
+          setIsLoading(false);
+          return;
+        }
         throw handbookError;
       }
       
@@ -216,12 +216,15 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         }
       }
 
-      setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras till dashboard...`);
+      setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras...`);
       
-      // Refresh the page state to ensure parent component updates its handbook list
-      // This forces a reload to pick up the new handbook in the list
+      console.log(`[Create Handbook] Success! Handbook created with ID: ${handbook.id}, subdomain: ${handbook.subdomain}`);
+      console.log(`[Create Handbook] Starting smart redirect with userId: ${userId}`);
+      
+      // Use smart redirect with polling to ensure the new handbook is found
       setTimeout(() => {
-        window.location.href = '/dashboard';
+        console.log(`[Create Handbook] Executing smart redirect...`);
+        smartRedirectWithPolling(5, 800, userId);
       }, 2000);
     } catch (error) {
       console.error('Error creating handbook:', error);
@@ -275,7 +278,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
             ) : isSubdomainAvailable === true ? (
               <div className="flex items-center text-sm text-green-600">
                 <CheckCircle2 size={14} className="mr-1" />
-                Denna adress är tillgänglig!
+                Denna adress verkar vara tillgänglig
               </div>
             ) : isSubdomainAvailable === false ? (
               <div className="flex items-center text-sm text-red-600">

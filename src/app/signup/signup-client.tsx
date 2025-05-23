@@ -7,6 +7,7 @@ import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SignUpForm } from "@/components/auth/SignUpForm";
+import { smartRedirect } from '@/lib/redirect-utils';
 
 export default function SignupClient() {
   const [loading, setLoading] = useState(true);
@@ -22,17 +23,10 @@ export default function SignupClient() {
         
         if (user) {
           setRedirecting(true);
-          // Hämta användarens handböcker
-          const { data, error: handbooksError } = await supabase
-            .from("handbooks")
-            .select("subdomain")
-            .order("created_at", { ascending: false });
-            
-          if (!handbooksError && data && data.length > 0) {
-            window.location.replace(`https://${data[0].subdomain}.handbok.org`);
-          } else {
-            router.replace("/dashboard");
-          }
+          // Use smart redirect logic
+          setTimeout(() => {
+            smartRedirect(user.id);
+          }, 1000);
         }
       } catch (error) {
         console.error("Fel vid kontroll av inloggningsstatus:", error);

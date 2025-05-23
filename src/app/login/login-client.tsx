@@ -9,6 +9,7 @@ import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { smartRedirectWithPolling } from '@/lib/redirect-utils';
 
 export default function LoginClient() {
   const [loading, setLoading] = useState(true);
@@ -74,35 +75,23 @@ export default function LoginClient() {
               console.log(`Kontrollerar session med token från URL (försök ${attempts}/${maxAttempts})...`);
               
               try {
-                // Hämta användarens handböcker
-                const { data, error: handbooksError } = await supabase
-                  .from("handbooks")
-                  .select("subdomain")
-                  .order("created_at", { ascending: false });
-                  
-                console.log("Handböcker resultat från token-inloggning:", { 
-                  hittade: data && data.length > 0, 
-                  antal: data?.length || 0, 
-                  första: data && data.length > 0 ? data[0].subdomain : null,
-                  fel: handbooksError
-                });
-                  
-                if (!handbooksError && data && data.length > 0) {
-                  console.log("Handböcker hittade, omdirigerar till första handboken:", data[0].subdomain);
-                  window.location.href = `https://${data[0].subdomain}.handbok.org`;
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                  console.log("Session bekräftad, använder smart redirect...");
+                  smartRedirectWithPolling(3, 800);
                   return;
                 } else if (attempts >= maxAttempts) {
-                  console.log("Nådde max antal försök eller inga handböcker hittades, går till dashboard...");
+                  console.log("Nådde max antal försök, fallback till dashboard...");
                   window.location.href = "/dashboard";
                   return;
                 } else {
-                  console.log("Inga handböcker hittades ännu eller databasfel, väntar och försöker igen...");
+                  console.log("Ingen session hittades ännu, väntar och försöker igen...");
                   setTimeout(checkSessionAndRedirect, checkInterval);
                 }
-              } catch (err) {
-                console.error("Fel vid kontroll av handböcker:", err);
+              } catch (error) {
+                console.error("Fel vid sessionskontroll:", error);
                 if (attempts >= maxAttempts) {
-                  console.log("Efter fel, går till dashboard");
                   window.location.href = "/dashboard";
                 } else {
                   setTimeout(checkSessionAndRedirect, checkInterval);
@@ -133,35 +122,23 @@ export default function LoginClient() {
               console.log(`Kontrollerar session för befintlig användare (försök ${attempts}/${maxAttempts})...`);
               
               try {
-                // Hämta användarens handböcker
-                const { data, error: handbooksError } = await supabase
-                  .from("handbooks")
-                  .select("subdomain")
-                  .order("created_at", { ascending: false });
-                  
-                console.log("Handböcker resultat:", { 
-                  hittade: data && data.length > 0, 
-                  antal: data?.length || 0, 
-                  första: data && data.length > 0 ? data[0].subdomain : null,
-                  fel: handbooksError
-                });
-                  
-                if (!handbooksError && data && data.length > 0) {
-                  console.log("Handböcker hittade, omdirigerar till första handboken:", data[0].subdomain);
-                  window.location.href = `https://${data[0].subdomain}.handbok.org`;
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                  console.log("Session bekräftad, använder smart redirect...");
+                  smartRedirectWithPolling(3, 800);
                   return;
                 } else if (attempts >= maxAttempts) {
-                  console.log("Nådde max antal försök eller inga handböcker hittades, går till dashboard...");
+                  console.log("Nådde max antal försök, fallback till dashboard...");
                   window.location.href = "/dashboard";
                   return;
                 } else {
-                  console.log("Inga handböcker hittades ännu eller databasfel, väntar och försöker igen...");
+                  console.log("Ingen session hittades ännu, väntar och försöker igen...");
                   setTimeout(checkSessionAndRedirect, checkInterval);
                 }
-              } catch (err) {
-                console.error("Fel vid kontroll av handböcker:", err);
+              } catch (error) {
+                console.error("Fel vid sessionskontroll:", error);
                 if (attempts >= maxAttempts) {
-                  console.log("Efter fel, går till dashboard");
                   window.location.href = "/dashboard";
                 } else {
                   setTimeout(checkSessionAndRedirect, checkInterval);

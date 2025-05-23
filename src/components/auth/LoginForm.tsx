@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from "@/lib/supabase";
+import { smartRedirectWithPolling } from '@/lib/redirect-utils';
 
 export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean }) {
   const [email, setEmail] = useState("");
@@ -75,45 +76,12 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
           setError("Kunde inte skapa en aktiv session. Försök igen eller kontakta support.");
         } else {
           // Inloggning lyckades, implementera en mer robust omdirigering med ännu längre fördröjning
-          console.log("Inloggning lyckades, förbereder omdirigering till dashboard...");
+          console.log("Inloggning lyckades, förbereder omdirigering...");
           
-          // Säkerställ att vi har cookies genom att köra upprepade sessionskontroller
-          let attempts = 0;
-          const maxAttempts = 5;
-          const checkInterval = 800; // 800ms mellan varje kontroll
-          
-          const checkSessionAndRedirect = async () => {
-            attempts++;
-            console.log(`Kontrollerar session (försök ${attempts}/${maxAttempts})...`);
-            
-            try {
-              const { data: sessionData } = await supabase.auth.getSession();
-              
-              if (sessionData?.session) {
-                console.log("Session bekräftad, omdirigerar nu till dashboard...");
-                // Använd window.location.href för att garantera en full sidomladdning
-                window.location.href = "/dashboard";
-                return;
-              } else if (attempts >= maxAttempts) {
-                console.log("Nådde max antal försök, omdirigerar ändå...");
-                window.location.href = "/dashboard";
-                return;
-              } else {
-                console.log("Ingen session hittades ännu, väntar och försöker igen...");
-                setTimeout(checkSessionAndRedirect, checkInterval);
-              }
-            } catch (err) {
-              console.error("Fel vid sessionskontroll:", err);
-              if (attempts >= maxAttempts) {
-                window.location.href = "/dashboard";
-              } else {
-                setTimeout(checkSessionAndRedirect, checkInterval);
-              }
-            }
-          };
-          
-          // Starta sessionskontrollerna efter en initial fördröjning
-          setTimeout(checkSessionAndRedirect, 1000);
+          // Use smart redirect with polling to ensure session is properly established
+          setTimeout(() => {
+            smartRedirectWithPolling(5, 800);
+          }, 1000);
         }
       }
     } catch (err: unknown) {

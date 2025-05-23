@@ -34,7 +34,7 @@ function CreateHandbookContent() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/signup");
+      router.push("/login");
     }
   }, [user, isLoading, router]);
 

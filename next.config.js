@@ -22,22 +22,22 @@ const nextConfig = {
   },
   
   // Skapar omskrivningar för subdomäner
-  // async rewrites() {
-  //   return [
-  //     // Skriv om alla subdomäner till www.handbok.org/handbook/[subdomain]
-  //     // MEN undanta API-anrop med regex (Next.js stödjer inte 'missing: path')
-  //     {
-  //       source: '/:path((?!api/).*)',
-  //       has: [
-  //         {
-  //           type: 'host',
-  //           value: ':subdomain.handbok.org',
-  //         },
-  //       ],
-  //       destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
-  //     },
-  //   ];
-  // },
+  async rewrites() {
+    return [
+      // Skriv om alla subdomäner till www.handbok.org/handbook/[subdomain]
+      // MEN undanta API-anrop med regex (Next.js stödjer inte 'missing: path')
+      {
+        source: '/:path((?!api/).*)',
+        has: [
+          {
+            type: 'host',
+            value: ':subdomain.handbok.org',
+          },
+        ],
+        destination: 'https://www.handbok.org/handbook/:subdomain/:path*',
+      },
+    ];
+  },
   
   // Redirects för subdomäner
   async redirects() {
