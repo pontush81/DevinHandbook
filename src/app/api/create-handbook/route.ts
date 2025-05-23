@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: handbookId,
       subdomain,
-      url: `https://${subdomain}.handbok.org`,
+      url: `https://www.handbok.org/handbook/${subdomain}`,
     });
   } catch (error) {
     console.error("Oväntat fel vid skapande av handbok:", error);

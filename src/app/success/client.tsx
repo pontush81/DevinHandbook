@@ -72,7 +72,7 @@ export default function SuccessClient() {
         setRedirectCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
-            window.location.href = `https://${getFinalSubdomain()}.handbok.org`;
+            window.location.href = `https://www.handbok.org/handbook/${getFinalSubdomain()}`;
             return 0;
           }
           return prev - 1;
@@ -157,7 +157,7 @@ export default function SuccessClient() {
           </div>
           <div className="flex justify-center space-x-4">
             <a 
-              href={`https://${finalSubdomain}.handbok.org`} 
+              href={`https://www.handbok.org/handbook/${finalSubdomain}`} 
               className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
             >
               Gå till din handbok nu

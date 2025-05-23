@@ -17,10 +17,12 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
   const [name, setName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
   const [isSubdomainAvailable, setIsSubdomainAvailable] = useState<boolean | null>(null);
+  const [creationStep, setCreationStep] = useState<'idle' | 'creating' | 'success' | 'redirecting'>('idle');
 
   // Keep track of timeout for debouncing subdomain checks
   let checkSubdomainTimeout: NodeJS.Timeout | null = null;
@@ -117,6 +119,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setCreationStep('creating');
     setError(null);
     setSuccess(null);
 
@@ -124,12 +127,14 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     if (!name.trim()) {
       setError('Vänligen ange ett namn för handboken');
       setIsLoading(false);
+      setCreationStep('idle');
       return;
     }
 
     if (!subdomain.trim()) {
       setError('Vänligen ange en adress för handboken');
       setIsLoading(false);
+      setCreationStep('idle');
       return;
     }
 
@@ -138,6 +143,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     if (!subdomainRegex.test(subdomain)) {
       setError('Adressen får endast innehålla små bokstäver, siffror och bindestreck');
       setIsLoading(false);
+      setCreationStep('idle');
       return;
     }
 
@@ -152,12 +158,22 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         userId
       );
 
+      // Transition to success state
+      setCreationStep('success');
+      setIsLoading(false);
       setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras...`);
       
       console.log(`[Create Handbook] Success! Handbook created with ID: ${handbookId}, subdomain: ${subdomain}`);
       console.log(`[Create Handbook] About to schedule redirect to newly created handbook: ${subdomain}`);
       
-      // Redirect directly to the newly created handbook (regardless of user's total handbook count)
+      // Wait a moment to show success, then transition to redirecting state
+      setTimeout(() => {
+        setCreationStep('redirecting');
+        setSuccess('Omdirigerar till din nya handbok...');
+        setIsRedirecting(true);
+      }, 1500);
+      
+      // Redirect after showing redirecting state briefly
       setTimeout(() => {
         console.log(`[Create Handbook] ⚡ EXECUTING REDIRECT NOW to newly created handbook: ${subdomain}`);
         console.log(`[Create Handbook] Current logs captured: ${logs.length} entries`);
@@ -168,8 +184,11 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         } catch (error) {
           console.error(`[Create Handbook] ❌ Error during redirect:`, error);
           setError(`Redirect misslyckades: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+          setCreationStep('idle');
+          setIsLoading(false);
+          setIsRedirecting(false);
         }
-      }, 1000); // Reduced from 2000 to 1000
+      }, 2500);
     } catch (error) {
       console.error('Error creating handbook:', error);
       
@@ -179,8 +198,11 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       } else {
         setError(`Ett fel uppstod: ${error.message || 'Okänt fel'}`);
       }
-    } finally {
+      
+      // Reset states on error
       setIsLoading(false);
+      setCreationStep('idle');
+      setIsRedirecting(false);
     }
   };
 
@@ -207,6 +229,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
             Adressen till din handbok blir:
           </label>
           <div className="flex items-center">
+            <span className="text-gray-500 mr-1">www.handbok.org/handbook/</span>
             <Input
               id="subdomain"
               type="text"
@@ -216,7 +239,6 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
               className={`w-full ${isSubdomainAvailable === true ? 'border-green-500' : isSubdomainAvailable === false ? 'border-red-500' : ''}`}
               disabled={isLoading}
             />
-            <span className="ml-2 text-gray-500">.handbok.org</span>
           </div>
           
           <div className="mt-1">
@@ -248,9 +270,56 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       )}
 
       {success && (
-        <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-md">
-          <CheckCircle2 size={16} />
+        <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-md transition-all duration-300 ease-in-out">
+          {creationStep === 'success' && (
+            <CheckCircle2 size={16} className="animate-bounce" />
+          )}
+          {creationStep === 'redirecting' && (
+            <Loader2 size={16} className="animate-spin" />
+          )}
           <span>{success}</span>
+        </div>
+      )}
+
+      {/* Creation progress indicator */}
+      {creationStep !== 'idle' && (
+        <div className="space-y-3 p-4 bg-blue-50 rounded-md border border-blue-200">
+          <div className="flex items-center justify-between text-sm font-medium text-blue-900">
+            <span>Skapar din handbok</span>
+            <span>
+              {creationStep === 'creating' && '1/3'}
+              {creationStep === 'success' && '2/3'}
+              {creationStep === 'redirecting' && '3/3'}
+            </span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2 text-sm">
+              <div className={`w-2 h-2 rounded-full ${creationStep === 'creating' ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`}></div>
+              <span className={creationStep === 'creating' ? 'text-blue-700' : 'text-green-700'}>
+                Skapar handbok och sektioner
+              </span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm">
+              <div className={`w-2 h-2 rounded-full ${
+                creationStep === 'creating' ? 'bg-gray-300' : 
+                creationStep === 'success' ? 'bg-blue-500 animate-pulse' : 'bg-green-500'
+              }`}></div>
+              <span className={
+                creationStep === 'creating' ? 'text-gray-500' :
+                creationStep === 'success' ? 'text-blue-700' : 'text-green-700'
+              }>
+                Handboken är klar
+              </span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm">
+              <div className={`w-2 h-2 rounded-full ${
+                creationStep === 'redirecting' ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'
+              }`}></div>
+              <span className={creationStep === 'redirecting' ? 'text-blue-700' : 'text-gray-500'}>
+                Omdirigerar till din handbok
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -275,9 +344,27 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       <Button
         type="submit"
         className="w-full"
-        disabled={isLoading || isSubdomainAvailable === false}
+        disabled={isLoading || isRedirecting || isSubdomainAvailable === false || creationStep !== 'idle'}
       >
-        {isLoading ? 'Skapar handbok...' : 'Skapa handbok'}
+        {creationStep === 'creating' && (
+          <span className="flex items-center gap-2">
+            <Loader2 size={16} className="animate-spin" />
+            Skapar handbok...
+          </span>
+        )}
+        {creationStep === 'success' && (
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={16} />
+            Handbok skapad!
+          </span>
+        )}
+        {creationStep === 'redirecting' && (
+          <span className="flex items-center gap-2">
+            <Loader2 size={16} className="animate-spin" />
+            Omdirigerar...
+          </span>
+        )}
+        {creationStep === 'idle' && 'Skapa handbok'}
       </Button>
     </form>
   );

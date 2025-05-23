@@ -60,8 +60,11 @@ export function WizardStepTwo() {
           />
         </div>
         <div className="flex-1">
-          <label className="block text-sm font-medium text-blue-800 mb-1">Subdomän</label>
+          <label className="block text-sm font-medium text-blue-800 mb-1">Handbokens adress</label>
           <div className="flex rounded-md shadow-sm">
+            <span className="inline-flex items-center px-3 py-2 rounded-l-md border border-blue-200 bg-gray-50 text-gray-500 text-sm">
+              www.handbok.org/handbook/
+            </span>
             <input
               type="text"
               value={subdomain}
@@ -70,14 +73,11 @@ export function WizardStepTwo() {
                 setSubdomainEdited(true);
               }}
               required
-              className="block w-full border border-blue-200 rounded-l-md px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+              className="block w-full border border-blue-200 rounded-r-md px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
               placeholder="min-forening"
               pattern="[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?"
               title="Subdomänen får endast innehålla små bokstäver, siffror och bindestreck. Den får inte börja eller sluta med bindestreck."
             />
-            <span className="inline-flex items-center px-3 py-2 rounded-r-md border border-l-0 border-blue-200 bg-gray-50 text-gray-500">
-              .handbok.org
-            </span>
           </div>
           {subdomainError && (
             <p className="mt-1 text-xs text-red-600">{subdomainError}</p>
