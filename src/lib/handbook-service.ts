@@ -41,18 +41,20 @@ export async function createHandbookWithSectionsAndPages(
 
   console.log('[Handbook] Handbok skapad med ID:', handbookObj.id, 'och owner_id:', userId);
 
-  // NYTT: Lägg till skaparen som admin i handbook_permissions (för framtida funktionalitet)
+  // NYTT: Lägg till skaparen som admin i handbook_members (för framtida funktionalitet)
   if (userId) {
     const { error: permError } = await supabase
-      .from('handbook_permissions')
+      .from('handbook_members')
       .insert({
         handbook_id: handbookObj.id,
-        owner_id: userId,
+        user_id: userId,
         role: 'admin',
       });
     if (permError) {
-      console.error('[Handbook] Kunde inte lägga till skaparen i handbook_permissions:', permError);
+      console.error('[Handbook] Kunde inte lägga till skaparen i handbook_members:', permError);
       // Fortsätt ändå - detta är inte kritiskt
+    } else {
+      console.log('[Handbook] Skapare tillagd som admin i handbook_members');
     }
   }
 
