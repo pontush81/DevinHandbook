@@ -25,9 +25,9 @@ const nextConfig = {
   async rewrites() {
     return [
       // Skriv om alla subdomäner till www.handbok.org/handbook/[subdomain]
-      // MEN undanta API-anrop med regex (Next.js stödjer inte 'missing: path')
+      // MEN undanta API-anrop OCH admin-sidor med regex
       {
-        source: '/:path((?!api/).*)',
+        source: '/:path((?!api/|edit-handbook|dashboard|create-handbook|login|signup|auth).*)',
         has: [
           {
             type: 'host',
