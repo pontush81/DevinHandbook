@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Input } from '@/components/ui/input';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { smartRedirectWithPolling } from '@/lib/redirect-utils';
+import { debounce } from 'lodash';
+import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
+import { defaultHandbookTemplate } from '@/lib/templates/handbook-template';
+import { redirectToNewlyCreatedHandbook } from '@/lib/redirect-utils';
 
 interface CreateHandbookFormProps {
   userId: string;
@@ -132,103 +134,35 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     }
 
     try {
-      // Create the handbook directly - let the database enforce uniqueness
-      // This eliminates race conditions between checking and creating
-      const { data: handbook, error: handbookError } = await supabase
-        .from('handbooks')
-        .insert({
-          title: name,
-          subdomain,
-          owner_id: userId,
-          published: true
-        })
-        .select()
-        .single();
-
-      if (handbookError) {
-        // Check if it's a uniqueness constraint violation
-        if (handbookError.code === '23505' || handbookError.message?.includes('duplicate') || handbookError.message?.includes('subdomain')) {
-          setError(`Adressen "${subdomain}.handbok.org" är redan upptagen. Vänligen välj en annan.`);
-          setIsLoading(false);
-          return;
-        }
-        throw handbookError;
-      }
+      console.log(`[Create Handbook] Creating handbook with rich template: ${name}, subdomain: ${subdomain}, userId: ${userId}`);
       
-      // Lägg till skaparen som admin i handbook_permissions-tabellen
-      const { error: permError } = await supabase
-        .from('handbook_permissions')
-        .insert({
-          handbook_id: handbook.id,
-          owner_id: userId,
-          role: 'admin',
-        });
-        
-      if (permError) {
-        console.error('Error adding creator as admin:', permError);
-      }
-
-      // Create a welcome section
-      const { data: section, error: sectionError } = await supabase
-        .from('sections')
-        .insert({
-          title: 'Välkommen',
-          description: 'Välkommen till föreningens digitala handbok! Här hittar du all viktig information om ditt boende och föreningen.',
-          order_index: 0,
-          handbook_id: handbook.id
-        })
-        .select()
-        .single();
-
-      if (sectionError) {
-        console.error('Error creating section:', sectionError);
-      }
-
-      // Create a welcome page if section was created
-      if (section) {
-        const { error: pageError } = await supabase
-          .from('pages')
-          .insert({
-            title: 'Om föreningen',
-            content: `# Om vår förening\n\nHär finner du grundläggande information om vår bostadsrättsförening, inklusive historia, vision och kontaktuppgifter.\n\n## Fakta om föreningen\n\n- **Bildad år:** [Årtal]\n- **Antal lägenheter:** [Antal]\n- **Adress:** [Föreningens adress]\n- **Organisationsnummer:** [Org.nr]\n\nVår förening strävar efter att skapa en trivsam boendemiljö med god gemenskap och ekonomisk stabilitet. Vi uppmuntrar alla medlemmar att engagera sig i föreningens angelägenheter.`,
-            order_index: 0,
-            section_id: section.id,
-            slug: 'om-foreningen'
-          });
-
-        if (pageError) {
-          console.error('Error creating page:', pageError);
-        }
-        
-        // Skapa en ytterligare sida för nya medlemmar
-        const { error: secondPageError } = await supabase
-          .from('pages')
-          .insert({
-            title: 'För nya medlemmar',
-            content: `# Information för nya medlemmar\n\nDetta avsnitt innehåller praktisk information som är särskilt användbar för dig som är ny medlem i föreningen.\n\n## Viktigt att känna till\n\n- Styrelsen håller möten regelbundet och årsstämma hålls vanligtvis i [månad].\n- Felanmälan görs via [metod för felanmälan].\n- I denna handbok hittar du svar på många vanliga frågor om boendet.\n\n## Första tiden i föreningen\n\nVi rekommenderar att du bekantar dig med föreningens stadgar och trivselregler. Ta gärna kontakt med dina grannar och styrelsen om du har frågor om föreningen eller fastigheten.`,
-            order_index: 1,
-            section_id: section.id,
-            slug: 'for-nya-medlemmar'
-          });
-          
-        if (secondPageError) {
-          console.error('Error creating second page:', secondPageError);
-        }
-      }
+      // Use the rich template creation function
+      const handbookId = await createHandbookWithSectionsAndPages(
+        name,
+        subdomain,
+        defaultHandbookTemplate,
+        userId
+      );
 
       setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras...`);
       
-      console.log(`[Create Handbook] Success! Handbook created with ID: ${handbook.id}, subdomain: ${handbook.subdomain}`);
-      console.log(`[Create Handbook] Starting smart redirect with userId: ${userId}`);
+      console.log(`[Create Handbook] Success! Handbook created with ID: ${handbookId}, subdomain: ${subdomain}`);
+      console.log(`[Create Handbook] Redirecting to newly created handbook: ${subdomain}.handbok.org`);
       
-      // Use smart redirect with polling to ensure the new handbook is found
+      // Redirect directly to the newly created handbook (regardless of user's total handbook count)
       setTimeout(() => {
-        console.log(`[Create Handbook] Executing smart redirect...`);
-        smartRedirectWithPolling(5, 800, userId);
+        console.log(`[Create Handbook] Executing redirect to newly created handbook...`);
+        redirectToNewlyCreatedHandbook(subdomain);
       }, 2000);
     } catch (error) {
       console.error('Error creating handbook:', error);
-      setError(`Ett fel uppstod: ${error.message || 'Okänt fel'}`);
+      
+      // Check if it's a uniqueness constraint violation
+      if (error.message?.includes('duplicate') || error.message?.includes('subdomain') || error.message?.includes('unique')) {
+        setError(`Adressen "${subdomain}.handbok.org" är redan upptagen. Vänligen välj en annan.`);
+      } else {
+        setError(`Ett fel uppstod: ${error.message || 'Okänt fel'}`);
+      }
     } finally {
       setIsLoading(false);
     }

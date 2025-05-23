@@ -9,10 +9,17 @@ export async function createHandbookWithSectionsAndPages(
 ) {
   const supabase = getServiceSupabase();
   
+  console.log('[Handbook] Creating handbook with owner_id:', { name, subdomain, userId });
+  
   // Kontrollera obligatoriska fält för handbooks
   if (!name || typeof name !== 'string' || !subdomain || typeof subdomain !== 'string') {
     console.error('[Handbook] Saknar obligatoriskt fält (name eller subdomain) vid skapande av handbok:', { name, subdomain });
     throw new Error('Obligatoriskt fält saknas vid skapande av handbok.');
+  }
+
+  if (!userId) {
+    console.error('[Handbook] Saknar userId vid skapande av handbok');
+    throw new Error('userId krävs för att skapa handbok');
   }
 
   const { data: handbook, error: handbookError } = await supabase
@@ -21,6 +28,7 @@ export async function createHandbookWithSectionsAndPages(
       title: name,
       subdomain,
       published: true,
+      owner_id: userId, // VIKTIGT: Sätt owner_id så smart redirect fungerar
     })
     .select()
     .single();
@@ -31,7 +39,9 @@ export async function createHandbookWithSectionsAndPages(
     throw new Error('Misslyckades med att skapa handbok eller saknar id. Avbryter.');
   }
 
-  // NYTT: Lägg till skaparen som admin i handbook_permissions
+  console.log('[Handbook] Handbok skapad med ID:', handbookObj.id, 'och owner_id:', userId);
+
+  // NYTT: Lägg till skaparen som admin i handbook_permissions (för framtida funktionalitet)
   if (userId) {
     const { error: permError } = await supabase
       .from('handbook_permissions')
@@ -42,6 +52,7 @@ export async function createHandbookWithSectionsAndPages(
       });
     if (permError) {
       console.error('[Handbook] Kunde inte lägga till skaparen i handbook_permissions:', permError);
+      // Fortsätt ändå - detta är inte kritiskt
     }
   }
 

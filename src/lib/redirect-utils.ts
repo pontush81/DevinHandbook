@@ -7,6 +7,30 @@ interface Handbook {
 }
 
 /**
+ * Redirect directly to a specific handbook after creation
+ * Always goes to the specified handbook regardless of user's total handbook count
+ */
+export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise<void> {
+  try {
+    console.log(`[Redirect to New Handbook] Redirecting to newly created handbook: ${subdomain}`);
+    
+    // Use appropriate domain based on environment
+    const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    const handbookUrl = isDevelopment 
+      ? `http://localhost:3000/handbook/${subdomain}`
+      : `https://${subdomain}.handbok.org`;
+    
+    console.log(`[Redirect to New Handbook] URL: ${handbookUrl}`);
+    window.location.href = handbookUrl;
+    
+  } catch (error) {
+    console.error('[Redirect to New Handbook] Error:', error);
+    // Fallback to dashboard on error
+    window.location.href = '/dashboard';
+  }
+}
+
+/**
  * Smart redirect logic based on user's handbooks
  * - 0 handbooks: Go to dashboard (to create first)
  * - 1 handbook: Go directly to the handbook (most users)
@@ -19,19 +43,34 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
   try {
     // Super admins always go to dashboard for overview
     if (isSuperAdmin) {
-      console.log('Super admin detected, redirecting to dashboard');
+      console.log('[Smart Redirect] Super admin detected, redirecting to dashboard');
       window.location.href = '/dashboard';
       return;
     }
 
-    // Fetch user's handbooks
+    // Get current user if not provided
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    }
+
+    if (!userId) {
+      console.log('[Smart Redirect] No user found, redirecting to dashboard');
+      window.location.href = '/dashboard';
+      return;
+    }
+
+    console.log(`[Smart Redirect] Fetching handbooks for user: ${userId}`);
+
+    // Fetch user's handbooks ONLY
     const { data: handbooks, error } = await supabase
       .from('handbooks')
       .select('id, subdomain, title')
+      .eq('owner_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching handbooks for redirect:', error);
+      console.error('[Smart Redirect] Error fetching handbooks:', error);
       // Fallback to dashboard on error
       window.location.href = '/dashboard';
       return;
@@ -39,17 +78,17 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
 
     const handbookCount = handbooks?.length || 0;
     
-    console.log(`Smart redirect: Found ${handbookCount} handbooks`);
+    console.log(`[Smart Redirect] Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map(h => h.subdomain));
 
     if (handbookCount === 0) {
       // No handbooks - go to dashboard to create first one
-      console.log('No handbooks found, redirecting to dashboard');
+      console.log('[Smart Redirect] No handbooks found, redirecting to dashboard');
       window.location.href = '/dashboard';
       
     } else if (handbookCount === 1) {
       // One handbook - go directly to it (most common case)
       const handbook = handbooks[0];
-      console.log(`One handbook found, redirecting to: ${handbook.subdomain}.handbok.org`);
+      console.log(`[Smart Redirect] One handbook found, redirecting to: ${handbook.subdomain}.handbok.org`);
       
       // Use appropriate domain based on environment
       const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
@@ -61,12 +100,12 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
       
     } else {
       // Multiple handbooks - go to dashboard to choose
-      console.log(`Multiple handbooks (${handbookCount}) found, redirecting to dashboard`);
+      console.log(`[Smart Redirect] Multiple handbooks (${handbookCount}) found, redirecting to dashboard`);
       window.location.href = '/dashboard';
     }
     
   } catch (error) {
-    console.error('Unexpected error in smart redirect:', error);
+    console.error('[Smart Redirect] Unexpected error:', error);
     // Fallback to dashboard on any error
     window.location.href = '/dashboard';
   }
@@ -84,53 +123,68 @@ export async function smartRedirectWithPolling(
 ): Promise<void> {
   let attempts = 0;
   
-  console.log(`[Smart Redirect] Starting with maxAttempts: ${maxAttempts}, intervalMs: ${intervalMs}, userId: ${userId}, isSuperAdmin: ${isSuperAdmin}`);
+  console.log(`[Smart Redirect Polling] Starting with maxAttempts: ${maxAttempts}, intervalMs: ${intervalMs}, userId: ${userId}, isSuperAdmin: ${isSuperAdmin}`);
   
   const attemptRedirect = async (): Promise<void> => {
     attempts++;
-    console.log(`[Smart Redirect] Attempt ${attempts}/${maxAttempts}`);
+    console.log(`[Smart Redirect Polling] Attempt ${attempts}/${maxAttempts}`);
     
     try {
       // Super admins always go to dashboard
       if (isSuperAdmin) {
-        console.log('[Smart Redirect] Super admin detected, redirecting to dashboard');
+        console.log('[Smart Redirect Polling] Super admin detected, redirecting to dashboard');
         window.location.href = '/dashboard';
         return;
       }
 
-      console.log('[Smart Redirect] Fetching user handbooks...');
+      // Get current user if not provided
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id;
+      }
+
+      if (!userId) {
+        console.log('[Smart Redirect Polling] No user found, redirecting to dashboard');
+        window.location.href = '/dashboard';
+        return;
+      }
+
+      console.log(`[Smart Redirect Polling] Fetching handbooks for user: ${userId}`);
+      
+      // Fetch user's handbooks ONLY
       const { data: handbooks, error } = await supabase
         .from('handbooks')
         .select('id, subdomain, title')
+        .eq('owner_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error(`[Smart Redirect] Attempt ${attempts}: Error fetching handbooks:`, error);
+        console.error(`[Smart Redirect Polling] Attempt ${attempts}: Error fetching handbooks:`, error);
         if (attempts >= maxAttempts) {
-          console.log('[Smart Redirect] Max attempts reached, falling back to dashboard');
+          console.log('[Smart Redirect Polling] Max attempts reached, falling back to dashboard');
           window.location.href = '/dashboard';
         } else {
-          console.log(`[Smart Redirect] Retrying in ${intervalMs}ms...`);
+          console.log(`[Smart Redirect Polling] Retrying in ${intervalMs}ms...`);
           setTimeout(attemptRedirect, intervalMs);
         }
         return;
       }
 
       const handbookCount = handbooks?.length || 0;
-      console.log(`[Smart Redirect] Attempt ${attempts}: Found ${handbookCount} handbooks:`, handbooks?.map(h => h.subdomain));
+      console.log(`[Smart Redirect Polling] Attempt ${attempts}: Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map(h => h.subdomain));
 
       if (handbookCount === 0) {
         if (attempts >= maxAttempts) {
-          console.log('[Smart Redirect] Max attempts reached with no handbooks, redirecting to dashboard');
+          console.log('[Smart Redirect Polling] Max attempts reached with no handbooks, redirecting to dashboard');
           window.location.href = '/dashboard';
         } else {
-          console.log('[Smart Redirect] No handbooks yet, retrying...');
+          console.log('[Smart Redirect Polling] No handbooks yet, retrying...');
           setTimeout(attemptRedirect, intervalMs);
         }
         
       } else if (handbookCount === 1) {
         const handbook = handbooks[0];
-        console.log(`[Smart Redirect] Found single handbook: ${handbook.subdomain}`);
+        console.log(`[Smart Redirect Polling] Found single handbook: ${handbook.subdomain}`);
         
         // Use appropriate domain based on environment
         const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
@@ -138,27 +192,27 @@ export async function smartRedirectWithPolling(
           ? `http://localhost:3000/handbook/${handbook.subdomain}`
           : `https://${handbook.subdomain}.handbok.org`;
         
-        console.log(`[Smart Redirect] Redirecting to: ${handbookUrl}`);
+        console.log(`[Smart Redirect Polling] Redirecting to: ${handbookUrl}`);
         window.location.href = handbookUrl;
         
       } else {
-        console.log(`[Smart Redirect] Multiple handbooks found (${handbookCount}), redirecting to dashboard`);
+        console.log(`[Smart Redirect Polling] Multiple handbooks found (${handbookCount}), redirecting to dashboard`);
         window.location.href = '/dashboard';
       }
       
     } catch (error) {
-      console.error(`[Smart Redirect] Attempt ${attempts}: Unexpected error:`, error);
+      console.error(`[Smart Redirect Polling] Attempt ${attempts}: Unexpected error:`, error);
       if (attempts >= maxAttempts) {
-        console.log('[Smart Redirect] Max attempts reached due to error, falling back to dashboard');
+        console.log('[Smart Redirect Polling] Max attempts reached due to error, falling back to dashboard');
         window.location.href = '/dashboard';
       } else {
-        console.log(`[Smart Redirect] Retrying after error in ${intervalMs}ms...`);
+        console.log(`[Smart Redirect Polling] Retrying after error in ${intervalMs}ms...`);
         setTimeout(attemptRedirect, intervalMs);
       }
     }
   };
 
   // Start the polling
-  console.log('[Smart Redirect] Starting polling...');
+  console.log('[Smart Redirect Polling] Starting polling...');
   attemptRedirect();
 } 
