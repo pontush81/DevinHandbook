@@ -213,10 +213,13 @@ export default async function HandbookPage({ params }: Props) {
   // Await params för Next.js 15 kompatibilitet
   const { subdomain } = await params;
   
-  // Försök hämta handbook, men med extra felhantering för att undvika redirects
+  console.log(`[Handbook Page] 🏁 RENDERING HANDBOOK PAGE FOR SUBDOMAIN: ${subdomain}`);
+  console.log(`[Handbook Page] 📍 This proves the vercel.json rewrite is working correctly`);
+
   let handbook = null;
   try {
     handbook = await getHandbookBySubdomain(subdomain);
+    console.log(`[Handbook Page] ✅ HANDBOOK FOUND:`, handbook ? `ID: ${handbook.id}, Title: ${handbook.title}` : 'NULL');
   } catch (error) {
     console.error('Error fetching handbook:', error);
     // Visa en fallback istället för notFound() för att undvika redirect
