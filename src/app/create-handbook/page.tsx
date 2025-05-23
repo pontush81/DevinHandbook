@@ -104,11 +104,11 @@ function CreateHandbookContent() {
                   <li key={handbook.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center">
                     <div>
                       <h3 className="font-medium text-lg">{handbook.name || handbook.title}</h3>
-                      <p className="text-gray-500">{handbook.subdomain}.handbok.org</p>
+                      <p className="text-gray-500">www.handbok.org/{handbook.subdomain}</p>
                     </div>
                     <div className="mt-2 md:mt-0 space-x-2">
                       <Button asChild variant="outline" size="sm">
-                        <a href={`https://${handbook.subdomain}.handbok.org`} target="_blank" rel="noopener noreferrer">
+                        <a href={`https://www.handbok.org/${handbook.subdomain}`} target="_blank" rel="noopener noreferrer">
                           Visa
                         </a>
                       </Button>

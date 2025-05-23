@@ -4,28 +4,6 @@
       "maxDuration": 10
     }
   },
-  "rewrites": [
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "(?<subdomain>(?!www)[^.]+)\\.handbok\\.org"
-        }
-      ],
-      "destination": "/handbook/:subdomain"
-    },
-    {
-      "source": "/((?!api|_next|favicon).*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "(?<subdomain>(?!www)[^.]+)\\.handbok\\.org"
-        }
-      ],
-      "destination": "/handbook/:subdomain/$1"
-    }
-  ],
   "redirects": [
     {
       "source": "/:path((?!api/).*)",

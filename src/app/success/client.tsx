@@ -72,7 +72,7 @@ export default function SuccessClient() {
         setRedirectCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
-            window.location.href = `https://www.handbok.org/handbook/${getFinalSubdomain()}`;
+            window.location.href = `https://www.handbok.org/${getFinalSubdomain()}`;
             return 0;
           }
           return prev - 1;

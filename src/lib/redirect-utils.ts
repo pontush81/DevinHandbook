@@ -21,8 +21,8 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
     console.log(`[Redirect to New Handbook] Current hostname: ${typeof window !== 'undefined' ? window.location.hostname : 'unknown'}`);
     
     if (isDevelopment) {
-      // In development, use localhost:3000/handbook/subdomain to avoid session loss
-      const handbookUrl = `http://localhost:3000/handbook/${subdomain}`;
+      // In development, use localhost:3000/namn (new URL structure)
+      const handbookUrl = `http://localhost:3000/${subdomain}`;
       console.log(`[Redirect to New Handbook] 🏠 Development redirect to: ${handbookUrl}`);
       
       if (typeof window !== 'undefined') {
@@ -32,10 +32,10 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
         console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
       }
     } else {
-      // Production: use main domain handbook route (reliable solution)
+      // Production: use new URL structure (www.handbok.org/namn)
       console.log(`[Redirect to New Handbook] 🌐 Production environment detected`);
-      const handbookUrl = `https://www.handbok.org/handbook/${subdomain}`;
-      console.log(`[Redirect to New Handbook] ⚡ Redirecting to main domain: ${handbookUrl}`);
+      const handbookUrl = `https://www.handbok.org/${subdomain}`;
+      console.log(`[Redirect to New Handbook] ⚡ Redirecting to new URL structure: ${handbookUrl}`);
       
       if (typeof window !== 'undefined') {
         window.location.href = handbookUrl;
@@ -53,45 +53,23 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
 
 /**
  * Transfer session to subdomain in production to avoid session loss
+ * NOTE: This function is kept for backward compatibility but subdomains are no longer used
  */
 async function transferSessionToSubdomain(subdomain: string): Promise<void> {
   try {
-    console.log(`[Transfer Session] 🔄 Starting session transfer to: ${subdomain}.handbok.org`);
+    console.log(`[Transfer Session] 🔄 NOTE: Subdomains are deprecated. Redirecting to main domain instead.`);
     
-    // Get current session
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      console.log('[Transfer Session] ⚠️ No session found, redirecting directly (user will need to login)');
-      window.location.href = `https://${subdomain}.handbok.org`;
-      return;
-    }
-
-    console.log('[Transfer Session] ✅ Active session found, transferring session data...');
-    
-    // Create session transfer URL with session data as query params
-    // This is secure since we're only passing this between our own domains
-    const sessionData = {
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at
-    };
-
-    // Encode session data
-    const encodedSession = btoa(JSON.stringify(sessionData));
-    
-    // Redirect to subdomain with session transfer
-    const handbookUrl = `https://${subdomain}.handbok.org/?transfer_session=${encodedSession}`;
-    console.log(`[Transfer Session] 🚀 Redirecting with session transfer to: https://${subdomain}.handbok.org`);
+    // Redirect to main domain with new URL structure instead of subdomain
+    const handbookUrl = `https://www.handbok.org/${subdomain}`;
+    console.log(`[Transfer Session] 🚀 Redirecting to new URL structure: ${handbookUrl}`);
     
     window.location.href = handbookUrl;
     
   } catch (error) {
-    console.error('[Transfer Session] ❌ Error during session transfer:', error);
-    // Fallback to direct redirect without session
-    console.log('[Transfer Session] 🔄 Falling back to direct redirect');
-    const handbookUrl = `https://${subdomain}.handbok.org`;
-    window.location.href = handbookUrl;
+    console.error('[Transfer Session] ❌ Error during redirect:', error);
+    // Fallback to direct redirect
+    console.log('[Transfer Session] 🔄 Falling back to dashboard');
+    window.location.href = '/dashboard';
   }
 }
 
@@ -153,13 +131,13 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
     } else if (handbookCount === 1) {
       // One handbook - go directly to it (most common case)
       const handbook = handbooks[0];
-      console.log(`[Smart Redirect] One handbook found, redirecting to: ${handbook.subdomain}.handbok.org`);
+      console.log(`[Smart Redirect] One handbook found, redirecting to: ${handbook.subdomain}`);
       
-      // Use appropriate domain based on environment
+      // Use new URL structure (www.handbok.org/namn)
       const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
       const handbookUrl = isDevelopment 
-        ? `http://localhost:3000/handbook/${handbook.subdomain}`
-        : `https://www.handbok.org/handbook/${handbook.subdomain}`;
+        ? `http://localhost:3000/${handbook.subdomain}`
+        : `https://www.handbok.org/${handbook.subdomain}`;
       
       window.location.href = handbookUrl;
       
@@ -195,7 +173,7 @@ export async function smartRedirectWithPolling(
     console.log(`[Smart Redirect Polling] Attempt ${attempts}/${maxAttempts}`);
     
     try {
-      // Super admins always go to dashboard
+      // Super admins always go to dashboard for overview
       if (isSuperAdmin) {
         console.log('[Smart Redirect Polling] Super admin detected, redirecting to dashboard');
         window.location.href = '/dashboard';
@@ -209,12 +187,18 @@ export async function smartRedirectWithPolling(
       }
 
       if (!userId) {
-        console.log('[Smart Redirect Polling] No user found, redirecting to dashboard');
-        window.location.href = '/dashboard';
+        console.log(`[Smart Redirect Polling] Attempt ${attempts}: No user found`);
+        if (attempts >= maxAttempts) {
+          console.log('[Smart Redirect Polling] Max attempts reached with no user, redirecting to dashboard');
+          window.location.href = '/dashboard';
+        } else {
+          console.log(`[Smart Redirect Polling] Retrying in ${intervalMs}ms...`);
+          setTimeout(attemptRedirect, intervalMs);
+        }
         return;
       }
 
-      console.log(`[Smart Redirect Polling] Fetching handbooks for user: ${userId}`);
+      console.log(`[Smart Redirect Polling] Attempt ${attempts}: Fetching handbooks for user: ${userId}`);
       
       // Fetch user's handbooks ONLY
       const { data: handbooks, error } = await supabase
@@ -251,11 +235,11 @@ export async function smartRedirectWithPolling(
         const handbook = handbooks[0];
         console.log(`[Smart Redirect Polling] Found single handbook: ${handbook.subdomain}`);
         
-        // Use appropriate domain based on environment
+        // Use new URL structure (www.handbok.org/namn)
         const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
         const handbookUrl = isDevelopment 
-          ? `http://localhost:3000/handbook/${handbook.subdomain}`
-          : `https://www.handbok.org/handbook/${handbook.subdomain}`;
+          ? `http://localhost:3000/${handbook.subdomain}`
+          : `https://www.handbok.org/${handbook.subdomain}`;
         
         console.log(`[Smart Redirect Polling] Redirecting to: ${handbookUrl}`);
         window.location.href = handbookUrl;

@@ -192,15 +192,15 @@ export default function DashboardPage() {
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-600 mb-6">
-                    <span className="font-medium">Subdomän:</span>{" "}
-                    {handbook.subdomain}.handbok.org
+                    <span className="font-medium">URL:</span>{" "}
+                    www.handbok.org/{handbook.subdomain}
                   </div>
                   <div className="flex space-x-4">
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        window.open(`https://${handbook.subdomain}.handbok.org`, '_blank');
+                        window.open(`https://www.handbok.org/${handbook.subdomain}`, '_blank');
                       }}
                     >
                       Visa
