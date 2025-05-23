@@ -16,17 +16,61 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
     
     // Use appropriate domain based on environment
     const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-    const handbookUrl = isDevelopment 
-      ? `http://localhost:3000/handbook/${subdomain}`
-      : `https://${subdomain}.handbok.org`;
     
-    console.log(`[Redirect to New Handbook] URL: ${handbookUrl}`);
-    window.location.href = handbookUrl;
+    if (isDevelopment) {
+      // In development, use localhost:3000/handbook/subdomain to avoid session loss
+      const handbookUrl = `http://localhost:3000/handbook/${subdomain}`;
+      console.log(`[Redirect to New Handbook] Development URL: ${handbookUrl}`);
+      window.location.href = handbookUrl;
+    } else {
+      // In production, we need to transfer session to subdomain
+      // First, save current session in a cookie that works across subdomains
+      await transferSessionToSubdomain(subdomain);
+    }
     
   } catch (error) {
     console.error('[Redirect to New Handbook] Error:', error);
     // Fallback to dashboard on error
     window.location.href = '/dashboard';
+  }
+}
+
+/**
+ * Transfer session to subdomain in production to avoid session loss
+ */
+async function transferSessionToSubdomain(subdomain: string): Promise<void> {
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.log('[Transfer Session] No session found, redirecting to dashboard');
+      window.location.href = '/dashboard';
+      return;
+    }
+
+    // Create session transfer URL with session data as query params
+    // This is secure since we're only passing this between our own domains
+    const sessionData = {
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at
+    };
+
+    // Encode session data
+    const encodedSession = btoa(JSON.stringify(sessionData));
+    
+    // Redirect to subdomain with session transfer
+    const handbookUrl = `https://${subdomain}.handbok.org/?transfer_session=${encodedSession}`;
+    console.log(`[Transfer Session] Production URL: https://${subdomain}.handbok.org`);
+    
+    window.location.href = handbookUrl;
+    
+  } catch (error) {
+    console.error('[Transfer Session] Error:', error);
+    // Fallback to direct redirect
+    const handbookUrl = `https://${subdomain}.handbok.org`;
+    window.location.href = handbookUrl;
   }
 }
 

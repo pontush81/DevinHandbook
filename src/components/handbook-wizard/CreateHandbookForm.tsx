@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { debounce } from 'lodash';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { defaultHandbookTemplate } from '@/lib/templates/handbook-template';
 import { redirectToNewlyCreatedHandbook } from '@/lib/redirect-utils';
@@ -22,8 +21,9 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
   const [isSubdomainAvailable, setIsSubdomainAvailable] = useState<boolean | null>(null);
-  const router = useRouter();
-  const checkSubdomainTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep track of timeout for debouncing subdomain checks
+  let checkSubdomainTimeout: NodeJS.Timeout | null = null;
 
   // Konvertera handbokens namn till en lämplig subdomän
   const convertToSubdomain = (name: string): string => {
@@ -76,13 +76,13 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     };
 
     // Avbryt tidigare timeout
-    if (checkSubdomainTimeout.current) {
-      clearTimeout(checkSubdomainTimeout.current);
+    if (checkSubdomainTimeout) {
+      clearTimeout(checkSubdomainTimeout);
     }
 
     // Skapa en ny timeout för att kontrollera subdomänen efter en kort fördröjning
     if (subdomain) {
-      checkSubdomainTimeout.current = setTimeout(() => {
+      checkSubdomainTimeout = setTimeout(() => {
         checkSubdomainAvailability(subdomain);
       }, 500);
     } else {
@@ -91,8 +91,8 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
 
     // Rensa timeout när komponenten avmonteras
     return () => {
-      if (checkSubdomainTimeout.current) {
-        clearTimeout(checkSubdomainTimeout.current);
+      if (checkSubdomainTimeout) {
+        clearTimeout(checkSubdomainTimeout);
       }
     };
   }, [subdomain]);

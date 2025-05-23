@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
+import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 
 interface Section {
   id: string;
@@ -364,6 +365,7 @@ export default async function HandbookPage({ params }: Props) {
 
   return (
     <MainLayout variant="app" showAuth={false} sections={handbook.sections.map((s: Section) => ({ id: s.id, title: s.title }))}>
+      <SessionTransferHandler />
       <HandbookOnboardingBanner />
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
