@@ -25,6 +25,14 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
   // Keep track of timeout for debouncing subdomain checks
   let checkSubdomainTimeout: NodeJS.Timeout | null = null;
 
+  // Log capture for debugging
+  const logs: string[] = [];
+  const originalLog = console.log;
+  console.log = function (...args: any[]) {
+    logs.push(args.join(' '));
+    originalLog.apply(console, args);
+  };
+
   // Konvertera handbokens namn till en lämplig subdomän
   const convertToSubdomain = (name: string): string => {
     return name
@@ -152,11 +160,14 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       // Redirect directly to the newly created handbook (regardless of user's total handbook count)
       setTimeout(() => {
         console.log(`[Create Handbook] ⚡ EXECUTING REDIRECT NOW to newly created handbook: ${subdomain}`);
+        console.log(`[Create Handbook] Current logs captured: ${logs.length} entries`);
+        console.log(`[Create Handbook] Window location before redirect: ${typeof window !== 'undefined' ? window.location.href : 'unknown'}`);
         try {
           redirectToNewlyCreatedHandbook(subdomain);
           console.log(`[Create Handbook] ✅ Redirect function called successfully`);
         } catch (error) {
           console.error(`[Create Handbook] ❌ Error during redirect:`, error);
+          setError(`Redirect misslyckades: ${error instanceof Error ? error.message : 'Okänt fel'}`);
         }
       }, 1000); // Reduced from 2000 to 1000
     } catch (error) {
@@ -241,6 +252,24 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
           <CheckCircle2 size={16} />
           <span>{success}</span>
         </div>
+      )}
+
+      {/* Debug logs section */}
+      {(error || logs.length > 0) && (
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
+            🔍 Debug Logs ({logs.length} entries) - Klicka för att visa
+          </summary>
+          <div className="mt-2 p-3 bg-gray-50 rounded-md max-h-60 overflow-y-auto">
+            <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+              {logs.map((log, index) => (
+                <div key={index} className="mb-1">
+                  {`${index + 1}: ${log}`}
+                </div>
+              ))}
+            </pre>
+          </div>
+        </details>
       )}
 
       <Button

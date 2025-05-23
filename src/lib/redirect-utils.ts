@@ -12,26 +12,33 @@ interface Handbook {
  */
 export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise<void> {
   try {
-    console.log(`[Redirect to New Handbook] Redirecting to newly created handbook: ${subdomain}`);
+    console.log(`[Redirect to New Handbook] 🚀 Starting redirect process for subdomain: ${subdomain}`);
     
     // Use appropriate domain based on environment
     const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
     
+    console.log(`[Redirect to New Handbook] Environment check - isDevelopment: ${isDevelopment}`);
+    console.log(`[Redirect to New Handbook] Current hostname: ${typeof window !== 'undefined' ? window.location.hostname : 'unknown'}`);
+    
     if (isDevelopment) {
       // In development, use localhost:3000/handbook/subdomain to avoid session loss
       const handbookUrl = `http://localhost:3000/handbook/${subdomain}`;
-      console.log(`[Redirect to New Handbook] Development URL: ${handbookUrl}`);
-      window.location.href = handbookUrl;
+      console.log(`[Redirect to New Handbook] 🏠 Development redirect to: ${handbookUrl}`);
+      
+      if (typeof window !== 'undefined') {
+        console.log(`[Redirect to New Handbook] ✅ Executing window.location.href redirect...`);
+        window.location.href = handbookUrl;
+      } else {
+        console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
+      }
     } else {
-      // In production, we need to transfer session to subdomain
-      // First, save current session in a cookie that works across subdomains
+      // Production: try to transfer session to subdomain
+      console.log(`[Redirect to New Handbook] 🌐 Production environment detected`);
       await transferSessionToSubdomain(subdomain);
     }
-    
   } catch (error) {
-    console.error('[Redirect to New Handbook] Error:', error);
-    // Fallback to dashboard on error
-    window.location.href = '/dashboard';
+    console.error(`[Redirect to New Handbook] ❌ Error in redirect process:`, error);
+    throw error;
   }
 }
 
