@@ -42,6 +42,8 @@ export async function createHandbookWithSectionsAndPages(
   console.log('[Handbook] Handbok skapad med ID:', handbookObj.id, 'och owner_id:', userId);
 
   // NYTT: Lägg till skaparen som admin i handbook_members (för framtida funktionalitet)
+  // Temporärt kommenterat för att fokusera på redirect-problemet
+  /*
   if (userId) {
     const { error: permError } = await supabase
       .from('handbook_members')
@@ -57,6 +59,7 @@ export async function createHandbookWithSectionsAndPages(
       console.log('[Handbook] Skapare tillagd som admin i handbook_members');
     }
   }
+  */
 
   const activeSections = template.sections
     .filter(section => section.isActive)

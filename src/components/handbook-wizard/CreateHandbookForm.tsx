@@ -147,13 +147,18 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       setSuccess(`Handbok "${name}" skapades framgångsrikt! Du kommer att omdirigeras...`);
       
       console.log(`[Create Handbook] Success! Handbook created with ID: ${handbookId}, subdomain: ${subdomain}`);
-      console.log(`[Create Handbook] Redirecting to newly created handbook: ${subdomain}.handbok.org`);
+      console.log(`[Create Handbook] About to schedule redirect to newly created handbook: ${subdomain}`);
       
       // Redirect directly to the newly created handbook (regardless of user's total handbook count)
       setTimeout(() => {
-        console.log(`[Create Handbook] Executing redirect to newly created handbook...`);
-        redirectToNewlyCreatedHandbook(subdomain);
-      }, 2000);
+        console.log(`[Create Handbook] ⚡ EXECUTING REDIRECT NOW to newly created handbook: ${subdomain}`);
+        try {
+          redirectToNewlyCreatedHandbook(subdomain);
+          console.log(`[Create Handbook] ✅ Redirect function called successfully`);
+        } catch (error) {
+          console.error(`[Create Handbook] ❌ Error during redirect:`, error);
+        }
+      }, 1000); // Reduced from 2000 to 1000
     } catch (error) {
       console.error('Error creating handbook:', error);
       
