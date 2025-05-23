@@ -1,14 +1,24 @@
 {
   "rewrites": [
     {
-      "source": "/((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api).*)",
+      "source": "/",
       "has": [
         {
           "type": "host",
           "value": "(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org"
         }
       ],
-      "destination": "https://www.handbok.org/handbook/:subdomain/$1"
+      "destination": "/handbook/:subdomain"
+    },
+    {
+      "source": "/((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api|_next|favicon).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org"
+        }
+      ],
+      "destination": "/handbook/:subdomain/$1"
     }
   ],
   "redirects": [
