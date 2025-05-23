@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
-import { logDiagnostic, snapshotSession, snapshotCookies, logStorageAccess } from "@/lib/auth-diagnostics";
 
 type AuthContextType = {
   user: User | null;
@@ -62,9 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ? error 
       : error.message || (error.error && error.error.message) || '';
     
-    logDiagnostic('error', 'Supabase auth error', { error: errorMessage });
-    console.error('Supabase auth error:', errorMessage);
-    
     // Kontrollera för sessionsrelaterade fel
     if (
       errorMessage.includes('refresh_token_not_found') || 
@@ -72,9 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       errorMessage.includes('JWT expired') ||
       errorMessage.includes('Invalid refresh token')
     ) {
-      logDiagnostic('error', 'Sessionsfel detekterat, loggar ut användare', { message: errorMessage });
-      console.warn('Sessionsfel detekterat, loggar ut användare:', errorMessage);
-      
       // Rensa session/user state
       setSession(null);
       setUser(null);
@@ -87,29 +80,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       
       try {
-        // Logga storage-status vid start
-        logStorageAccess();
-        
         // Hämta aktuell session
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Fel vid hämtning av session:', error);
-          logDiagnostic('error', 'Fel vid hämtning av initial session', { error: error });
           setSession(null);
           setUser(null);
         } else if (currentSession) {
-          logDiagnostic('session', 'Hittade aktiv session', {
-            userId: currentSession.user?.id,
-            expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
-          });
           console.log('Hittade aktiv session från Supabase', {
             userId: currentSession.user?.id,
             expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
           });
-          
-          // Ta snapshot av sessionen för diagnostik
-          snapshotSession(currentSession);
           
           setSession(currentSession);
           setUser(currentSession.user);
@@ -119,14 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             createUserProfileIfNeeded(currentSession.user.id, currentSession.user.email);
           }
         } else {
-          logDiagnostic('session', 'Ingen aktiv session hittades');
           console.log('Ingen aktiv session hittades');
           setSession(null);
           setUser(null);
         }
-        
-        // Ta snapshot av cookies för diagnostik
-        snapshotCookies();
       } catch (e) {
         console.error('Fel vid inläsning av auth-status:', e);
         setSession(null);
@@ -143,12 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Lyssna på auth-ändringar
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      logDiagnostic('auth', `Auth state change: ${event}`, {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none'
-      });
-      
       console.log('Auth state change:', event, {
         hasSession: !!session,
         userId: session?.user?.id,
@@ -156,16 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        logDiagnostic('auth', 'User signed in or token refreshed');
         console.log('User signed in or token refreshed');
-        
-        // Logga storage-status efter inloggning eller token refresh
-        logStorageAccess();
-        
-        // Ta snapshot av session för diagnostik
-        if (session) {
-          snapshotSession(session);
-        }
         
         // Uppdatera state
         setSession(session);
@@ -178,11 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             cookies: document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith('sb-')).join(', ')
           };
           
-          logDiagnostic('cookie', 'Cookie status efter auth-ändring', cookieInfo);
           console.log('Cookie status:', cookieInfo);
-          
-          // Ta snapshot av cookies för diagnostik
-          snapshotCookies();
         }
         
         // Säkerställ att användarprofilen finns
@@ -192,18 +151,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (event === 'SIGNED_OUT') {
-        logDiagnostic('auth', 'User signed out');
         console.log('User signed out');
         setSession(null);
         setUser(null);
-        
-        // Ta snapshot av cookies efter utloggning
-        snapshotCookies();
       }
       
       // Hantera sessionsfel
       if (event === 'TOKEN_REFRESHED' && !session) {
-        logDiagnostic('error', 'Token refresh misslyckades utan session');
         console.warn('Token refresh misslyckades utan session');
         setSession(null);
         setUser(null);
@@ -211,7 +165,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Hantera när användarsessionen blir ogiltig
       if (event === 'USER_UPDATED' && !session) {
-        logDiagnostic('error', 'Användare uppdaterad men session saknas');
         console.warn('Användare uppdaterad men session saknas');
         setSession(null);
         setUser(null);
@@ -230,8 +183,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                  errorMessage.includes('Invalid Refresh Token');
       
       if (isRefreshTokenError) {
-        logDiagnostic('error', 'Refresh token fel upptäckt', { errorMessage });
-        
         // Rensa session state
         setSession(null);
         setUser(null);
@@ -256,7 +207,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Hantera andra typer av auth-fel
         console.error('Auth error:', errorMessage);
-        logDiagnostic('error', 'Auth error', { errorMessage });
       }
     };
 

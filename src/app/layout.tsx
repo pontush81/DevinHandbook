@@ -5,7 +5,6 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Script from 'next/script';
 import SessionResetNotice from "@/components/SessionResetNotice";
-import AuthDiagnosticsPanel from "@/components/AuthDiagnosticsPanel";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -279,7 +278,6 @@ export default function RootLayout({
         <AuthProvider>
           <SessionResetNotice />
           {children}
-          <AuthDiagnosticsPanel />
         </AuthProvider>
       </body>
     </html>

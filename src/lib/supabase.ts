@@ -1,6 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
-import { logDiagnostic } from './auth-diagnostics';
 
 // Ensure SUPABASE_URL has https:// prefix
 const ensureHttpsPrefix = (url: string) => {
@@ -40,14 +39,6 @@ if (typeof window === 'undefined' && !supabaseServiceRoleKey) {
 const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input.toString();
   
-  // Logga fetch-anrop till diagnostik
-  if (url.includes('/auth/')) {
-    logDiagnostic('network', `Supabase fetch start: ${url}`, {
-      method: init?.method || 'GET',
-      hasBody: !!init?.body
-    });
-  }
-  
   // Max antal återförsök för auth-relaterade anrop
   const MAX_RETRIES = 3; // Reducerat från 5 till 3 för att minska DOS-risken
   let retryCount = 0;
@@ -70,38 +61,13 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       
       // Om det är ett återförsök, vänta med exponentiell backoff
       if (retryCount > 0) {
-        const delay = Math.pow(2, retryCount - 1) * 200; // 200ms, 400ms, 800ms, 1600ms, 3200ms
+        const delay = Math.pow(2, retryCount - 1) * 200; // 200ms, 400ms, 800ms
         console.log(`Återförsök ${retryCount}/${MAX_RETRIES} efter ${delay}ms för ${url}`);
-        
-        // Logga återförsök till diagnostik
-        logDiagnostic('network', `Återförsök ${retryCount}/${MAX_RETRIES} för ${url}`, { delay });
         
         await new Promise(resolve => setTimeout(resolve, delay));
       }
       
       const response = await fetch(input, init);
-      
-      // Klona svar för att kunna analysera det
-      const clonedResponse = response.clone();
-      
-      // För auth-relaterade anrop, logga alltid respons
-      if (url.includes('/auth/')) {
-        try {
-          const responseData = await clonedResponse.json();
-          logDiagnostic('network', `Supabase fetch success: ${url}`, {
-            status: response.status,
-            hasSession: !!responseData.session,
-            hasUser: !!responseData.user,
-            hasError: !!responseData.error
-          });
-        } catch (e) {
-          // Om inte JSON, logga bara statuskod
-          logDiagnostic('network', `Supabase fetch response: ${url}`, {
-            status: response.status,
-            isJson: false
-          });
-        }
-      }
       
       // Om svaret indikerar fel, hantera det
       if (!response.ok) {
@@ -123,13 +89,6 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         );
         
         if (isPermanentError) {
-          logDiagnostic('error', `Avbryter återförsök: Permanent fel detekterat`, {
-            url,
-            status: response.status,
-            errorCode,
-            errorData: errorData.substring(0, 200) // Begränsa längden
-          });
-          
           console.log(`Avbryter återförsök: Permanent fel detekterat i error`);
           
           // Skicka ett globalt event för att hantera sessionsfel i UI
@@ -157,14 +116,6 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       // Uppdatera det senaste felet
       lastError = error;
       
-      // Logga felet
-      if (url.includes('/auth/')) {
-        logDiagnostic('error', `Fetch-fel för ${url}`, {
-          attempt: retryCount + 1,
-          message: error.message
-        });
-      }
-      
       // Öka antalet försök
       retryCount++;
       
@@ -172,12 +123,6 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       if (retryCount >= MAX_RETRIES) {
         console.error(`Fetch-försök ${retryCount} misslyckades:`, error);
         console.error('Feldetaljer:', error);
-        
-        // Logga slutgiltigt fel
-        logDiagnostic('error', `Alla återförsök misslyckades för ${url}`, {
-          maxRetries: MAX_RETRIES,
-          finalError: error.message
-        });
         
         throw error;
       }
@@ -188,11 +133,6 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       );
       
       if (isPermanentError) {
-        logDiagnostic('error', `Avbryter återförsök: Permanent fel detekterat`, {
-          url,
-          errorMessage: error.message
-        });
-        
         console.log(`Avbryter återförsök: Permanent fel detekterat i error`);
         
         // Skicka ett globalt event för att hantera sessionsfel i UI
@@ -211,13 +151,8 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     }
   }
   
-  // Om vi nått hit utan att returnera något, kasta det senaste felet
-  if (lastError) {
-    throw lastError;
-  }
-  
-  // Detta bör aldrig hända, men TypeScript kräver en returtyp
-  throw new Error('Oväntat fel i fetch-logiken');
+  // Om vi kommer hit har alla återförsök misslyckats
+  throw lastError || new Error('Okänt fel vid fetch');
 };
 
 // Skapa en Supabase-klient för klientsidan med ENDAST cookies

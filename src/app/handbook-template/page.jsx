@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MainLayout } from '@/components/layout/MainLayout';
 import HandbookTemplate from '@/components/HandbookTemplate';
 import EditableHandbook from '@/components/EditableHandbook';
 
@@ -183,33 +187,150 @@ export default function HandbookTemplatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto mb-8">
-          <h1 className="text-4xl font-bold text-center mb-2">Handbok.org Mall</h1>
-          <p className="text-xl text-gray-600 text-center mb-8">
-            Skapa professionella digitala handböcker för bostadsrättsföreningar
-          </p>
+    <MainLayout variant="landing" showHeader={false} noWhiteTop={true}>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="relative max-w-6xl mx-auto px-6 py-16">
+          
+          {/* Hero Section */}
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="mb-6">
+              ✨ Mall för professionella handböcker
+            </Badge>
+            
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Handbok
+              <span className="text-blue-600"> Mall</span>
+            </h1>
+            
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Skapa professionella digitala handböcker för bostadsrättsföreningar med vår moderna, responsiva mall.
+            </p>
+          </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="preview">Förhandsgranskning</TabsTrigger>
-              <TabsTrigger value="edit">Redigera handbok</TabsTrigger>
-            </TabsList>
+          {/* Template Features */}
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <Card className="hover:shadow-lg transition-all duration-200 border-0 shadow-md hover:scale-[1.02] bg-white/70 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">📊</span>
+                </div>
+                <CardTitle className="text-lg">Förhandsgranskning</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-gray-600 text-sm">
+                  Se hur din handbok kommer att se ut med professionell formatering och design.
+                </p>
+              </CardContent>
+            </Card>
             
-            <TabsContent value="preview" className="border rounded-lg bg-white p-6">
-              <HandbookTemplate handbookData={handbookData} />
-            </TabsContent>
+            <Card className="hover:shadow-lg transition-all duration-200 border-0 shadow-md hover:scale-[1.02] bg-white/70 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">✏️</span>
+                </div>
+                <CardTitle className="text-lg">Enkel redigering</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-gray-600 text-sm">
+                  Redigera all information enkelt med användarvänliga formulär och direktpreview.
+                </p>
+              </CardContent>
+            </Card>
             
-            <TabsContent value="edit">
-              <EditableHandbook 
-                initialData={handbookData} 
-                onSave={handleSave} 
-              />
-            </TabsContent>
-          </Tabs>
+            <Card className="hover:shadow-lg transition-all duration-200 border-0 shadow-md hover:scale-[1.02] bg-white/70 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🖨️</span>
+                </div>
+                <CardTitle className="text-lg">Print & PDF</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-gray-600 text-sm">
+                  Exportera som PDF eller skriv ut direkt med optimerad formatting för papper.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Template Tabs */}
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-8">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
+                  <TabsTrigger value="preview" className="text-base font-medium">
+                    📋 Förhandsgranskning
+                  </TabsTrigger>
+                  <TabsTrigger value="edit" className="text-base font-medium">
+                    ✏️ Redigera handbok
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="preview" className="mt-0">
+                  <div className="border rounded-lg bg-white shadow-sm">
+                    <HandbookTemplate handbookData={handbookData} />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="edit" className="mt-0">
+                  <div className="bg-white rounded-lg shadow-sm">
+                    <EditableHandbook 
+                      initialData={handbookData} 
+                      onSave={handleSave} 
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Features Info */}
+          <div className="mt-12">
+            <div className="bg-white/50 backdrop-blur-sm rounded-lg shadow-sm p-8">
+              <h3 className="text-xl font-semibold text-gray-900 text-center mb-6">
+                Komplett mallpaket för bostadsrättsföreningar
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                <div>
+                  <div className="text-lg font-bold text-blue-600 mb-1">13</div>
+                  <div className="text-sm text-gray-600">Huvudsektioner</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-blue-600 mb-1">50+</div>
+                  <div className="text-sm text-gray-600">Innehållsfält</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-blue-600 mb-1">100%</div>
+                  <div className="text-sm text-gray-600">Anpassningsbar</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-blue-600 mb-1">PDF</div>
+                  <div className="text-sm text-gray-600">Export-ready</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Call to Action */}
+          <div className="text-center mt-12">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-8 text-white">
+              <h3 className="text-2xl font-bold mb-4">
+                Redo att skapa din förstenings handbok?
+              </h3>
+              <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+                Använd denna mall som utgångspunkt och anpassa den efter din förenings behov. 
+                Skapa en professionell handbok på några minuter.
+              </p>
+              <Button 
+                size="lg" 
+                className="bg-white text-blue-600 hover:bg-gray-100 font-semibold"
+                onClick={() => window.location.href = '/create-handbook?new=true'}
+              >
+                Skapa handbok nu
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 } 

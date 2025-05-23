@@ -183,70 +183,74 @@ export async function createHandbookWithSectionsAndPages(
   return handbookObj.id;
 }
 
+// Simple cache for handbook data to prevent repeated requests
+const handbookCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 30000; // 30 seconds cache
+
 export async function getHandbookBySubdomain(subdomain: string) {
   console.log('[getHandbookBySubdomain] subdomain:', subdomain);
+  
+  // Check cache first
+  const cacheKey = `handbook_${subdomain}`;
+  const cached = handbookCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log('[getHandbookBySubdomain] Returning cached data for:', subdomain);
+    return cached.data;
+  }
+  
   const supabase = getServiceSupabase();
   
-  const { data: handbook, error: handbookError } = await supabase
-    .from('handbooks')
-    .select('*')
-    .eq('subdomain', subdomain)
-    .single();
+  try {
+    // Use a single query with joins to reduce the number of API calls
+    const { data: handbook, error: handbookError } = await supabase
+      .from('handbooks')
+      .select(`
+        *,
+        sections (
+          id,
+          title,
+          description,
+          order_index,
+          handbook_id,
+          created_at,
+          pages (
+            id,
+            title,
+            content,
+            order_index,
+            section_id
+          )
+        )
+      `)
+      .eq('subdomain', subdomain)
+      .single();
 
-  const handbookObj = Array.isArray(handbook) ? handbook[0] : handbook;
-  if (handbookError || !handbookObj || !handbookObj.id) {
-    console.error('[getHandbookBySubdomain] Error fetching handbook:', handbookError);
+    if (handbookError || !handbook) {
+      console.error('[getHandbookBySubdomain] Error fetching handbook:', handbookError);
+      return null;
+    }
+
+    // Transform the data to match expected structure
+    const handbookObj = {
+      ...handbook,
+      sections: (handbook.sections || [])
+        .sort((a: any, b: any) => a.order_index - b.order_index)
+        .map((section: any) => ({
+          ...section,
+          pages: (section.pages || []).sort((a: any, b: any) => a.order_index - b.order_index)
+        }))
+    };
+
+    console.log('[getHandbookBySubdomain] Successfully fetched handbook with sections and pages:', handbookObj.id);
+    
+    // Cache the result
+    handbookCache.set(cacheKey, { data: handbookObj, timestamp: Date.now() });
+    
+    return handbookObj;
+  } catch (error) {
+    console.error('[getHandbookBySubdomain] Unexpected error:', error);
     return null;
   }
-  console.log('[getHandbookBySubdomain] handbook:', handbookObj);
-
-  const { data: sections, error: sectionsError } = await supabase
-    .from('sections')
-    .select('*')
-    .eq('handbook_id', handbookObj.id)
-    .order('order_index');
-
-  if (sectionsError) {
-    console.error('[getHandbookBySubdomain] Error fetching sections:', sectionsError);
-    return { ...handbookObj, sections: [] };
-  }
-  console.log('[getHandbookBySubdomain] sections:', sections);
-
-  interface SectionWithPages {
-    id: string;
-    title: string;
-    description: string;
-    order_index: number;
-    handbook_id: string;
-    created_at: string;
-    pages: {
-      id: string;
-      title: string;
-      content: string;
-      order_index: number;
-      section_id: string;
-    }[];
-  }
-  
-  const sectionsWithPages: SectionWithPages[] = [];
-  
-  for (const section of sections) {
-    const { data: pages, error: pagesError } = await supabase
-      .from('pages')
-      .select('*')
-      .eq('section_id', section.id)
-      .order('order_index');
-
-    if (pagesError) {
-      console.error('[getHandbookBySubdomain] Error fetching pages:', pagesError);
-      sectionsWithPages.push({ ...section, pages: [] });
-    } else {
-      console.log(`[getHandbookBySubdomain] pages for section ${section.id}:`, pages);
-      sectionsWithPages.push({ ...section, pages: pages || [] });
-    }
-  }
-
-  return { ...handbookObj, sections: sectionsWithPages };
 }
 
 export async function toggleHandbookPublished(id: string, published: boolean) {
