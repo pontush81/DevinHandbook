@@ -1,21 +1,26 @@
 {
+  "functions": {
+    "src/app/handbook/[subdomain]/route.ts": {
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
       "source": "/",
       "has": [
         {
           "type": "host",
-          "value": "(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org"
+          "value": "(?<subdomain>(?!www)[^.]+)\\.handbok\\.org"
         }
       ],
       "destination": "/handbook/:subdomain"
     },
     {
-      "source": "/((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api|_next|favicon).*)",
+      "source": "/((?!api|_next|favicon).*)",
       "has": [
         {
           "type": "host",
-          "value": "(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org"
+          "value": "(?<subdomain>(?!www)[^.]+)\\.handbok\\.org"
         }
       ],
       "destination": "/handbook/:subdomain/$1"
