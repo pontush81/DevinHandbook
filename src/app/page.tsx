@@ -1,8 +1,6 @@
 "use client";
 
-import { headers } from 'next/headers';
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
-import HomeHandbookClient from './HomeHandbookClient';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

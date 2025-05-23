@@ -2,7 +2,7 @@
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
-import SupabaseHandbookApp from '@/components/SupabaseHandbookApp';
+import HandbookClient from '@/components/HandbookClient';
 
 interface Section {
   id: string;
@@ -26,6 +26,22 @@ interface Handbook {
   title: string;
   subdomain: string;
   sections: Section[];
+}
+
+// Interface för HandbookClient
+interface HandbookClientData {
+  id: string;
+  name: string;
+  sections: {
+    id: string;
+    title: string;
+    description: string;
+    pages: {
+      id: string;
+      title: string;
+      content: string;
+    }[];
+  }[];
 }
 
 // Se till att denna sida renderas dynamiskt för att hantera subdomäner korrekt
@@ -90,6 +106,24 @@ export default function HandbookPage({ params }: Props) {
     };
   }, []); // Empty dependency array - only run once on mount
 
+  // Convert handbook data to format expected by HandbookClient
+  const adaptHandbookData = (handbook: Handbook): HandbookClientData => {
+    return {
+      id: handbook.id,
+      name: handbook.title, // HandbookClient expects 'name' instead of 'title'
+      sections: handbook.sections.map(section => ({
+        id: section.id,
+        title: section.title,
+        description: section.description,
+        pages: section.pages.map(page => ({
+          id: page.id,
+          title: page.title,
+          content: page.content
+        }))
+      }))
+    };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white p-8 flex items-center justify-center">
@@ -111,10 +145,13 @@ export default function HandbookPage({ params }: Props) {
     );
   }
 
+  // Use the beautiful HandbookClient instead of basic SupabaseHandbookApp
+  const adaptedHandbook = adaptHandbookData(handbook);
+
   return (
     <>
       <SessionTransferHandler />
-      <SupabaseHandbookApp handbook={handbook} />
+      <HandbookClient handbook={adaptedHandbook} />
     </>
   );
 } 
