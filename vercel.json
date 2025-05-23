@@ -1,11 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/:path((?!api/|edit-handbook|dashboard|create-handbook|login|signup|auth).*)",
+      "source": "/:path((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api).*)",
       "has": [
         {
           "type": "host",
-          "value": "(?<subdomain>[^.]+)\\.handbok\\.org"
+          "value": "(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org"
         }
       ],
       "destination": "https://www.handbok.org/handbook/$subdomain/:path*"
