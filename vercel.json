@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/:path((?!api/).*)",
+      "source": "/:path((?!api/|edit-handbook|dashboard|create-handbook|login|signup|auth).*)",
       "has": [
         {
           "type": "host",

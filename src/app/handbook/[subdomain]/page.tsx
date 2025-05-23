@@ -209,10 +209,13 @@ function AdminButton({ handbookId }: { handbookId: string }) {
 }
 
 export default async function HandbookPage({ params }: Props) {
+  // Await params för Next.js 15 kompatibilitet
+  const { subdomain } = await params;
+  
   // Försök hämta handbook, men med extra felhantering för att undvika redirects
   let handbook = null;
   try {
-    handbook = await getHandbookBySubdomain(params.subdomain);
+    handbook = await getHandbookBySubdomain(subdomain);
   } catch (error) {
     console.error('Error fetching handbook:', error);
     // Visa en fallback istället för notFound() för att undvika redirect
@@ -222,7 +225,7 @@ export default async function HandbookPage({ params }: Props) {
         <p className="text-red-500">
           Det gick inte att ladda handboken just nu. Försök igen senare.
         </p>
-        <p className="text-gray-500 mt-4">Subdomain: {params.subdomain}</p>
+        <p className="text-gray-500 mt-4">Subdomain: {subdomain}</p>
       </div>
     );
   }
@@ -232,7 +235,7 @@ export default async function HandbookPage({ params }: Props) {
     return (
       <div className="min-h-screen bg-white p-8">
         <h1 className="text-2xl font-bold">Handbook Not Found</h1>
-        <p>Handboken "{params.subdomain}" kunde inte hittas.</p>
+        <p>Handboken "{subdomain}" kunde inte hittas.</p>
       </div>
     );
   }

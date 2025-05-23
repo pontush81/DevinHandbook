@@ -12,7 +12,7 @@ import { checkIsSuperAdmin } from "@/lib/user-utils";
 
 interface Handbook {
   id: string;
-  name: string;
+  title: string;
   subdomain: string;
   created_at: string;
   published: boolean;
@@ -180,7 +180,7 @@ export default function DashboardPage() {
                 className="border-0 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
               >
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xl">{handbook.name}</CardTitle>
+                  <CardTitle className="text-xl">{handbook.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-500 mb-4">
