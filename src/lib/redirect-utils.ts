@@ -32,13 +32,21 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
         console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
       }
     } else {
-      // Production: try to transfer session to subdomain
+      // TEMPORARY FIX: Use main domain handbook route until subdomain routing is deployed
+      const handbookUrl = `https://www.handbok.org/handbook/${subdomain}`;
       console.log(`[Redirect to New Handbook] 🌐 Production environment detected`);
-      await transferSessionToSubdomain(subdomain);
+      console.log(`[Redirect to New Handbook] ⚡ TEMP FIX: Using main domain route: ${handbookUrl}`);
+      window.location.href = handbookUrl;
+      
+      // TODO: Switch back to subdomain when vercel deployment is ready
+      // const handbookUrl = `https://${subdomain}.handbok.org`;
+      // await transferSessionToSubdomain(handbookUrl);
     }
   } catch (error) {
-    console.error(`[Redirect to New Handbook] ❌ Error in redirect process:`, error);
-    throw error;
+    console.error('[Redirect to New Handbook] Error during redirect:', error);
+    // Fallback to dashboard
+    console.log('[Redirect to New Handbook] Falling back to dashboard');
+    window.location.href = '/dashboard';
   }
 }
 
