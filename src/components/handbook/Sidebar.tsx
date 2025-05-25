@@ -68,10 +68,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar */}
       <aside className={`
         w-80 bg-white border-r border-gray-200 z-50
+        lg:block lg:relative lg:translate-x-0
+        ${isOpen ? 'block' : 'hidden lg:block'}
         fixed lg:static top-0 left-0 h-full lg:h-auto
         transform transition-transform duration-300 ease-in-out lg:transform-none
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        ${!isOpen ? 'lg:hidden' : 'lg:block'}
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">

@@ -47,11 +47,20 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   currentPageId
 }) => {
   if (!sections || sections.length === 0) {
-    return null;
+    return (
+      <main className="min-h-full bg-white overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8 min-h-full">
+          <div className="text-center py-20">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Inga sektioner hittades</h1>
+            <p className="text-gray-600">Handboken kunde inte laddas korrekt.</p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <main className="flex-1 overflow-y-auto bg-white">
+    <main className="h-full bg-white overflow-y-auto">
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Handbook Header */}
         <header className="mb-12 text-center">

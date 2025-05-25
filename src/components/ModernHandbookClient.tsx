@@ -18,45 +18,52 @@ interface ModernHandbookClientProps {
 export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({ 
   initialData 
 }) => {
-  // Set initial sidebar state based on screen size
+  // Standard responsive behavior: closed on mobile, always open on desktop
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    // Default to closed on mobile, open on desktop
     if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024; // lg breakpoint
+      return window.innerWidth >= 1024; // Always open on desktop
     }
-    return false; // Default to closed for SSR
+    return false; // Closed by default for SSR
   });
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
 
-  // Handle window resize to automatically manage sidebar state
+  // Handle window resize - standard responsive behavior
   useEffect(() => {
     const handleResize = () => {
       const isDesktop = window.innerWidth >= 1024;
-      // On desktop, keep sidebar open unless explicitly closed
-      // On mobile, keep sidebar closed unless explicitly opened
-      if (isDesktop && !sidebarOpen) {
+      if (isDesktop) {
+        // On desktop, sidebar is always open and cannot be closed
         setSidebarOpen(true);
+      } else {
+        // On mobile, keep current state (user can toggle)
+        // Don't auto-close when resizing to mobile
       }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [sidebarOpen]);
+  }, []);
 
   const handlePageSelect = (pageId: string) => {
     setCurrentPageId(pageId);
-    // Only close sidebar on mobile
+    // Always close sidebar on mobile when selecting a page
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
   };
 
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    // Only allow toggling on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(!sidebarOpen);
+    }
   };
 
   const closeSidebar = () => {
-    setSidebarOpen(false);
+    // Only allow closing on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   };
 
   if (!initialData) {
@@ -82,7 +89,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       />
 
       {/* Main layout */}
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
         {/* Sidebar */}
         <Sidebar
           sections={initialData.sections}
@@ -92,8 +99,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           onClose={closeSidebar}
         />
 
-        {/* Main content - responsive margins based on sidebar state */}
-        <div className="flex-1 overflow-hidden">
+        {/* Main content */}
+        <div className="flex-1 bg-gray-50 min-h-full overflow-hidden">
           <ContentArea
             sections={initialData.sections}
             currentPageId={currentPageId}

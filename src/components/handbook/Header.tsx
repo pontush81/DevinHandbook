@@ -57,12 +57,12 @@ export const Header: React.FC<HeaderProps> = ({
       `}</style>
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-          {/* Left section - Just the menu button */}
+          {/* Left section - Menu button only on mobile */}
           <div className="flex items-center min-w-0 flex-shrink-0">
-            {/* Hamburger Menu */}
+            {/* Hamburger Menu - only show on mobile */}
             <button
               onClick={handleMenuClick}
-              className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 flex items-center justify-center"
+              className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 flex items-center justify-center"
               aria-label="Toggle sidebar"
               title={sidebarOpen ? 'Stäng meny' : 'Öppna meny'}
             >
