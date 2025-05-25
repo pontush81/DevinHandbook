@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './button';
 import { Input } from './input';
 import { Textarea } from './textarea';
-import { Check, X, Edit3 } from 'lucide-react';
+import { MarkdownEditor } from './MarkdownEditor';
+import { Check, X, Edit3, FileText } from 'lucide-react';
 
 interface InlineEditProps {
   value: string;
@@ -17,6 +18,7 @@ interface InlineEditProps {
   rows?: number;
   disabled?: boolean;
   showEditIcon?: boolean;
+  useMarkdownEditor?: boolean;
 }
 
 export const InlineEdit: React.FC<InlineEditProps> = ({
@@ -31,7 +33,8 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
   multiline = false,
   rows = 3,
   disabled = false,
-  showEditIcon = true
+  showEditIcon = true,
+  useMarkdownEditor = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -43,7 +46,7 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
   }, [value]);
 
   useEffect(() => {
-    if (isEditing && inputRef.current) {
+    if (isEditing && inputRef.current && !useMarkdownEditor) {
       inputRef.current.focus();
       // Select all text for easier editing
       if (inputRef.current instanceof HTMLInputElement) {
@@ -52,7 +55,7 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
         inputRef.current.setSelectionRange(0, inputRef.current.value.length);
       }
     }
-  }, [isEditing]);
+  }, [isEditing, useMarkdownEditor]);
 
   const handleStartEdit = () => {
     if (disabled) return;
@@ -72,33 +75,57 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey && type !== 'textarea') {
+    if (e.key === 'Enter' && !e.shiftKey && type !== 'textarea' && !multiline) {
       e.preventDefault();
       handleSave();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       handleCancel();
-    } else if (e.key === 'Enter' && e.ctrlKey && type === 'textarea') {
+    } else if (e.key === 'Enter' && e.ctrlKey && (type === 'textarea' || multiline)) {
       e.preventDefault();
       handleSave();
     }
   };
 
   if (isEditing) {
-    const InputComponent = type === 'textarea' || multiline ? Textarea : Input;
+    const isMultilineEdit = type === 'textarea' || multiline;
     
     return (
       <div className={`inline-edit-container ${className}`}>
         <div className="flex flex-col space-y-2">
-          <InputComponent
-            ref={inputRef as any}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className={`inline-edit-input ${editClassName}`}
-            rows={multiline || type === 'textarea' ? rows : undefined}
-          />
+          {/* Editor */}
+          {isMultilineEdit && useMarkdownEditor ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <FileText className="w-4 h-4" />
+                <span>Markdown-editor med förhandsvisning</span>
+              </div>
+              <MarkdownEditor
+                content={editValue}
+                onChange={setEditValue}
+                placeholder={placeholder}
+                className={`inline-edit-input ${editClassName}`}
+                disabled={disabled}
+                rows={rows}
+              />
+            </div>
+          ) : (
+            (() => {
+              const InputComponent = isMultilineEdit ? Textarea : Input;
+              return (
+                <InputComponent
+                  ref={inputRef as any}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={placeholder}
+                  className={`inline-edit-input ${editClassName}`}
+                  rows={isMultilineEdit ? rows : undefined}
+                />
+              );
+            })()
+          )}
+          
           <div className="flex space-x-2">
             <Button
               size="sm"
@@ -117,6 +144,12 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
               <X className="w-3 h-3 mr-1" />
               Avbryt
             </Button>
+            {isMultilineEdit && !useMarkdownEditor && (
+              <div className="text-xs text-gray-500 flex items-center ml-2">
+                <FileText className="w-3 h-3 mr-1" />
+                Tips: Använd Markdown för formatering (**fet**, *kursiv*, # rubriker)
+              </div>
+            )}
           </div>
         </div>
       </div>

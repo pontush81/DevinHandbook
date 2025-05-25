@@ -225,6 +225,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                           multiline={true}
                           rows={8}
                           className="prose prose-gray max-w-none"
+                          useMarkdownEditor={true}
                         />
                       ) : (
                         <div className={isEditMode ? 'hover:bg-blue-50/30 hover:border-blue-200 border border-transparent rounded-lg p-3 transition-all cursor-pointer' : ''}>

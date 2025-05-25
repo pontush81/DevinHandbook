@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
+import { cn } from "@/lib/utils"
 
 // Tab context
 interface TabsContextValue {
@@ -18,89 +20,51 @@ function useTabs() {
   return context
 }
 
-// Tabs
-interface TabsProps {
-  value: string;
-  onValueChange: (value: string) => void;
-  children: React.ReactNode;
-  className?: string;
-}
+const Tabs = TabsPrimitive.Root
 
-export function Tabs({ value, onValueChange, children, className }: TabsProps) {
-  return (
-    <TabsContext.Provider value={{ value, onValueChange }}>
-      <div className={`tabs ${className || ""}`}>{children}</div>
-    </TabsContext.Provider>
-  )
-}
+const TabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      className
+    )}
+    {...props}
+  />
+))
+TabsList.displayName = TabsPrimitive.List.displayName
 
-// TabsList
-interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  className?: string;
-}
+const TabsTrigger = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 
-export function TabsList({ children, className, ...props }: TabsListProps) {
-  return (
-    <div 
-      className={`flex gap-2 border-b ${className || ""}`} 
-      role="tablist"
-      {...props}
-    >
-      {children}
-    </div>
-  )
-}
+const TabsContent = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Content
+    ref={ref}
+    className={cn(
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      className
+    )}
+    {...props}
+  />
+))
+TabsContent.displayName = TabsPrimitive.Content.displayName
 
-// TabsTrigger
-interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  value: string;
-  children: React.ReactNode;
-  className?: string;
-}
-
-export function TabsTrigger({ value, children, className, ...props }: TabsTriggerProps) {
-  const { value: selectedValue, onValueChange } = useTabs()
-  const isSelected = selectedValue === value
-
-  return (
-    <button
-      role="tab"
-      type="button"
-      aria-selected={isSelected}
-      className={`px-3 py-2 text-sm font-medium transition-all border-b-2 ${
-        isSelected 
-          ? "border-blue-500 text-blue-700" 
-          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-      } ${className || ""}`}
-      onClick={() => onValueChange(value)}
-      {...props}
-    >
-      {children}
-    </button>
-  )
-}
-
-// TabsContent
-interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: string;
-  children: React.ReactNode;
-  className?: string;
-}
-
-export function TabsContent({ value, children, className, ...props }: TabsContentProps) {
-  const { value: selectedValue } = useTabs()
-  const isSelected = selectedValue === value
-
-  if (!isSelected) return null
-
-  return (
-    <div
-      role="tabpanel"
-      className={`mt-2 ${className || ""}`}
-      {...props}
-    >
-      {children}
-    </div>
-  )
-} 
+export { Tabs, TabsList, TabsTrigger, TabsContent } 
