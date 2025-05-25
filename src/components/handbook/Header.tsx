@@ -3,6 +3,7 @@ import { Menu, Search, Share, Printer, X } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
+  onCloseSidebar?: () => void;
   handbookTitle: string;
   handbookSubtitle?: string;
   sidebarOpen?: boolean;
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   onToggleSidebar,
+  onCloseSidebar,
   handbookTitle,
   handbookSubtitle,
   sidebarOpen = false
@@ -51,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center min-w-0 flex-shrink-0">
             {/* Hamburger Menu */}
             <button
-              onClick={onToggleSidebar}
+              onClick={sidebarOpen ? (onCloseSidebar || onToggleSidebar) : onToggleSidebar}
               className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 flex items-center justify-center"
               aria-label="Toggle sidebar"
               title={sidebarOpen ? 'Stäng meny' : 'Öppna meny'}

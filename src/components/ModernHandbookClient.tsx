@@ -60,6 +60,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       {/* Header */}
       <Header
         onToggleSidebar={toggleSidebar}
+        onCloseSidebar={closeSidebar}
         handbookTitle={initialData.title}
         handbookSubtitle={initialData.subtitle}
         sidebarOpen={sidebarOpen}
