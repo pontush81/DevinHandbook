@@ -1,103 +1,216 @@
 import React from 'react';
-import { Section, Page } from '@/lib/templates/handbook-template';
+import { Section, Page } from '../../types/handbook';
+import { Calendar, Clock } from 'lucide-react';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { QuickActions } from './QuickActions';
+import { QuickActionCard } from './QuickActionCard';
+import { StatisticCard } from './StatisticCard';
+import { InfoCard } from './InfoCard';
+import { ContactCard } from './ContactCard';
 
 interface ContentAreaProps {
-  section?: Section;
-  page?: Page;
   sections: Section[];
-  onPageChange: (pageId: string) => void;
-  onSectionChange: (sectionId: string) => void;
+  currentPageId?: string;
 }
 
+// Default welcome content for when no page is selected
+const getWelcomeContent = () => {
+  return `
+# Välkommen till din digitala handbok
+
+Den här handboken innehåller all viktig information om ditt boende och föreningen. Navigera genom menyn till vänster för att hitta specifik information.
+
+## Vad du hittar här
+
+### 🏠 Allmän information
+Grundläggande information om föreningen, byggnaden och ditt boende.
+
+### 💰 Ekonomi
+Information om avgifter, budgetar och ekonomisk förvaltning.
+
+### 🔧 Underhåll
+Rutiner för underhåll, reparationer och vem du ska kontakta.
+
+### 📋 Regler
+Ordningsregler, föreningsstadgar och andra viktiga bestämmelser.
+
+### 📞 Kontakt
+Kontaktuppgifter till styrelse, förvaltare och andra viktiga personer.
+
+---
+
+*Denna handbok uppdateras kontinuerligt för att säkerställa att informationen alltid är aktuell.*
+  `;
+};
+
 export const ContentArea: React.FC<ContentAreaProps> = ({
-  section,
-  page,
   sections,
-  onPageChange,
-  onSectionChange
+  currentPageId
 }) => {
-  if (!section) {
+  // Find current page and section
+  let currentPage: Page | undefined;
+  let currentSection: Section | undefined;
+
+  for (const section of sections) {
+    const page = section.pages?.find(p => p.id === currentPageId);
+    if (page) {
+      currentPage = page;
+      currentSection = section;
+      break;
+    }
+  }
+
+  // If no specific page selected, show welcome content (not cards)
+  if (!currentPage || !currentSection) {
     return (
-      <main className="flex-1 p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Laddar handbok...</p>
+      <main className="flex-1 overflow-y-auto bg-white">
+        <article className="max-w-4xl mx-auto px-6 py-8">
+          {/* Welcome Page Metadata */}
+          <div className="mb-8">
+            <div className="flex items-center space-x-6 text-sm text-gray-500">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4" />
+                <span>Uppdaterad {new Date().toLocaleDateString('sv-SE')}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span>3 min läsning</span>
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Welcome Content */}
+          <div className="prose prose-gray max-w-none">
+            <MarkdownRenderer content={getWelcomeContent()} />
+          </div>
+
+          {/* Quick Stats - Minimal and Integrated */}
+          <div className="mt-12 pt-8 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Snabbfakta</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4">
+                <div className="text-2xl font-bold text-blue-600">42</div>
+                <div className="text-sm text-gray-600">Lägenheter</div>
+              </div>
+              <div className="text-center p-4">
+                <div className="text-2xl font-bold text-blue-600">1987</div>
+                <div className="text-sm text-gray-600">Byggår</div>
+              </div>
+              <div className="text-center p-4">
+                <div className="text-2xl font-bold text-blue-600">5</div>
+                <div className="text-sm text-gray-600">Våningar</div>
+              </div>
+              <div className="text-center p-4">
+                <div className="text-2xl font-bold text-blue-600">98%</div>
+                <div className="text-sm text-gray-600">Nöjdhet</div>
+              </div>
+            </div>
+          </div>
+        </article>
       </main>
     );
   }
 
+  // Show actual page content
   return (
-    <main className="flex-1 p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{section.title}</h1>
-          <p className="text-lg text-gray-600 mb-6">{section.description}</p>
-          
-          {section.pages.length > 1 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {section.pages.map((p) => (
-                <button
-                  key={p.id}
-                  className={`
-                    px-4 py-2 rounded-lg font-medium transition-colors
-                    ${page?.id === p.id 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                    }
-                  `}
-                  onClick={() => onPageChange(p.id)}
-                >
-                  {p.title}
-                </button>
-              ))}
+    <main className="flex-1 overflow-y-auto bg-white">
+      <article className="max-w-4xl mx-auto px-6 py-8">
+        {/* Page Header */}
+        <header className="mb-8">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <span>{currentSection.title}</span>
+            <span>•</span>
+            <span className="text-gray-900">{currentPage.title}</span>
+          </div>
+
+          {/* Page Title */}
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">{currentPage.title}</h1>
+
+          {/* Metadata */}
+          {(currentPage.lastUpdated || currentPage.estimatedReadTime) && (
+            <div className="flex items-center space-x-6 text-sm text-gray-500">
+              {currentPage.lastUpdated && (
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Uppdaterad {currentPage.lastUpdated}</span>
+                </div>
+              )}
+              {currentPage.estimatedReadTime && (
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4" />
+                  <span>{currentPage.estimatedReadTime} min läsning</span>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </header>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          {page ? (
-            <MarkdownRenderer content={page.content} />
-          ) : (
-            <div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-                <div className="flex items-start gap-3">
-                  <span className="text-blue-600 text-xl">ℹ️</span>
-                  <div>
-                    <h3 className="font-semibold text-blue-900 mb-1">Välkommen till din digitala handbok!</h3>
-                    <p className="text-blue-700">Navigera genom menyn till vänster för att hitta all information du behöver om föreningen och ditt boende.</p>
-                  </div>
-                </div>
-              </div>
+        {/* Page Content - Focus on content, minimal cards */}
+        <div className="space-y-8">
+          {/* Main Content First */}
+          <div className="prose prose-gray max-w-none">
+            <MarkdownRenderer content={currentPage.content} />
+          </div>
 
-              <QuickActions onSectionChange={onSectionChange} sections={sections} />
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-gray-50 p-6 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-blue-600 mb-2">42</div>
-                  <div className="text-sm text-gray-600 font-medium">Lägenheter</div>
-                </div>
-                <div className="bg-gray-50 p-6 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-blue-600 mb-2">1987</div>
-                  <div className="text-sm text-gray-600 font-medium">Byggår</div>
-                </div>
-                <div className="bg-gray-50 p-6 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-blue-600 mb-2">5</div>
-                  <div className="text-sm text-gray-600 font-medium">Våningar</div>
-                </div>
-                <div className="bg-gray-50 p-6 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-blue-600 mb-2">98%</div>
-                  <div className="text-sm text-gray-600 font-medium">Nöjdhet</div>
-                </div>
+          {/* Quick Actions - Only if they exist and are relevant */}
+          {currentPage.quickActions && currentPage.quickActions.length > 0 && (
+            <div className="border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Snabbåtgärder</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {currentPage.quickActions.map((action) => (
+                  <QuickActionCard key={action.id} action={action} />
+                ))}
               </div>
             </div>
           )}
+
+          {/* Statistics - Integrated naturally */}
+          {currentPage.statisticCards && currentPage.statisticCards.length > 0 && (
+            <div className="border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistik</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {currentPage.statisticCards.map((card, index) => (
+                  <StatisticCard key={index} card={card} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Info Cards - More like documentation sections */}
+          {currentPage.infoCards && currentPage.infoCards.length > 0 && (
+            <div className="border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Viktig information</h3>
+              <div className="space-y-4">
+                {currentPage.infoCards.map((card) => (
+                  <InfoCard key={card.id} card={card} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Contacts - Clean contact section */}
+          {currentPage.contacts && currentPage.contacts.length > 0 && (
+            <div className="border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Kontaktpersoner</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {currentPage.contacts.map((contact, index) => (
+                  <ContactCard key={index} contact={contact} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Last Updated Footer */}
+          {currentPage.lastUpdated && (
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>🕒</span>
+                <span>Senast uppdaterad: {currentPage.lastUpdated}</span>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      </article>
     </main>
   );
 }; 

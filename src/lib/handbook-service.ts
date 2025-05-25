@@ -26,6 +26,13 @@ export async function createHandbookWithSectionsAndPages(
     .from('handbooks')
     .insert({
       title: name,
+      subtitle: template.metadata.subtitle,
+      version: template.metadata.version,
+      organization_name: template.metadata.organization.name,
+      organization_address: template.metadata.organization.address,
+      organization_org_number: template.metadata.organization.orgNumber,
+      organization_phone: template.metadata.organization.phone,
+      organization_email: template.metadata.organization.email,
       subdomain,
       published: true,
       owner_id: userId, // VIKTIGT: Sätt owner_id så smart redirect fungerar
@@ -92,6 +99,8 @@ export async function createHandbookWithSectionsAndPages(
         description: section.description,
         order_index: sectionOrder,
         handbook_id: handbookObj.id,
+        completion_status: section.completionStatus || 100,
+        is_active: section.isActive !== false,
       })
       .select()
       .single();
@@ -165,6 +174,7 @@ export async function createHandbookWithSectionsAndPages(
           order_index: pageOrder,
           section_id: createdSection.id,
           slug,
+          table_of_contents: page.tableOfContents !== false,
         });
 
       if (pageError) {
@@ -212,13 +222,18 @@ export async function getHandbookBySubdomain(subdomain: string) {
           description,
           order_index,
           handbook_id,
+          completion_status,
+          is_active,
           created_at,
+          updated_at,
           pages (
             id,
             title,
             content,
             order_index,
-            section_id
+            section_id,
+            table_of_contents,
+            updated_at
           )
         )
       `)

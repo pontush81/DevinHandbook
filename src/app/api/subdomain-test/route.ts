@@ -9,7 +9,7 @@ async function checkHandbookExists(subdomain: string) {
     const supabase = getServiceSupabase();
     const { data, error } = await supabase
       .from('handbooks')
-      .select('id, name, subdomain')
+      .select('id, title, subdomain')
       .eq('subdomain', subdomain)
       .single();
     

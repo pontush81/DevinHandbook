@@ -105,16 +105,16 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
       {hideHeader ? (
         <div className="relative">
           <Command className="rounded-xl overflow-hidden border border-gray-200 shadow-md bg-white">
-            <div className="flex items-center border-b px-3 py-2">
-              <SearchIcon className="mr-2 h-4 w-4 shrink-0 text-blue-500" />
+            <div className="flex items-center border-b px-4 py-2">
+              <SearchIcon className="mr-4 h-4 w-4 shrink-0 text-blue-500" />
               <CommandInput
                 value={query}
                 onValueChange={setQuery}
                 placeholder="Sök efter förening..."
-                className="flex h-11 w-full rounded-md bg-transparent py-3 text-base outline-hidden placeholder:text-muted-foreground"
+                className="flex h-11 w-full rounded-md bg-transparent py-3 text-base outline-hidden placeholder:text-muted-foreground border-0 focus:ring-0"
               />
               {loading && (
-                <div className="absolute right-4">
+                <div className="ml-3 shrink-0">
                   <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
                 </div>
               )}
@@ -179,16 +179,16 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
             
             <div className="relative">
               <Command className="rounded-xl overflow-hidden border-0 shadow-md bg-white">
-                <div className="flex items-center border-b px-3 py-2">
-                  <SearchIcon className="mr-2 h-4 w-4 shrink-0 text-blue-500" />
+                <div className="flex items-center border-b px-4 py-2">
+                  <SearchIcon className="mr-4 h-4 w-4 shrink-0 text-blue-500" />
                   <CommandInput
                     value={query}
                     onValueChange={setQuery}
                     placeholder="Sök efter förening..."
-                    className="flex h-11 w-full rounded-md bg-transparent py-3 text-base outline-hidden placeholder:text-muted-foreground"
+                    className="flex h-11 w-full rounded-md bg-transparent py-3 text-base outline-hidden placeholder:text-muted-foreground border-0 focus:ring-0"
                   />
                   {loading && (
-                    <div className="absolute right-4">
+                    <div className="ml-3 shrink-0">
                       <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
                     </div>
                   )}

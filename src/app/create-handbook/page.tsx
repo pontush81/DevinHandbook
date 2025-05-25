@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 
 interface Handbook {
   id: string;
-  name: string;
+  title: string;
   subdomain: string;
   created_at: string;
   published: boolean;
@@ -103,7 +103,7 @@ function CreateHandbookContent() {
                 {handbooks.map(handbook => (
                   <li key={handbook.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center">
                     <div>
-                      <h3 className="font-medium text-lg">{handbook.name || handbook.title}</h3>
+                      <h3 className="font-medium text-lg">{handbook.title}</h3>
                       <p className="text-gray-500">www.handbok.org/{handbook.subdomain}</p>
                     </div>
                     <div className="mt-2 md:mt-0 space-x-2">

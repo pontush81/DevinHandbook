@@ -2,7 +2,7 @@
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
-import HandbookClient from '@/components/HandbookClient';
+import { ModernHandbookClient } from '@/components/ModernHandbookClient';
 
 interface Section {
   id: string;
@@ -10,6 +10,9 @@ interface Section {
   description: string;
   order_index: number;
   handbook_id: string;
+  completion_status?: number;
+  is_active?: boolean;
+  updated_at?: string;
   pages: Page[];
 }
 
@@ -19,27 +22,39 @@ interface Page {
   content: string;
   order_index: number;
   section_id: string;
+  table_of_contents?: boolean;
+  updated_at?: string;
 }
 
 interface Handbook {
   id: string;
   title: string;
+  subtitle?: string;
+  version?: string;
+  organization_name?: string;
+  organization_address?: string;
+  organization_org_number?: string;
+  organization_phone?: string;
+  organization_email?: string;
+  updated_at?: string;
   subdomain: string;
   sections: Section[];
 }
 
-// Interface för HandbookClient
-interface HandbookClientData {
+// Interface för ModernHandbookClient
+interface ModernHandbookData {
   id: string;
-  name: string;
+  title: string;
+  subtitle?: string;
   sections: {
     id: string;
     title: string;
-    description: string;
     pages: {
       id: string;
       title: string;
       content: string;
+      lastUpdated?: string;
+      estimatedReadTime?: number;
     }[];
   }[];
 }
@@ -107,22 +122,39 @@ export default function HandbookPage({ params }: Props) {
     };
   }, []); // Empty dependency array - only run once on mount
 
-  // Convert handbook data to format expected by HandbookClient
-  const adaptHandbookData = (handbook: Handbook): HandbookClientData => {
-    return {
+  // Convert handbook data to format expected by ModernHandbookClient
+  const adaptHandbookData = (handbook: Handbook): ModernHandbookData => {
+    console.log('[HandbookPage] Input handbook for adaptation:', handbook);
+    
+    if (!handbook) {
+      console.error('[HandbookPage] Handbook is null/undefined');
+      return null as any;
+    }
+
+    if (!handbook.sections || !Array.isArray(handbook.sections)) {
+      console.error('[HandbookPage] Handbook sections invalid:', handbook.sections);
+      return null as any;
+    }
+
+    const adaptedData = {
       id: handbook.id,
-      name: handbook.title, // HandbookClient expects 'name' instead of 'title'
+      title: handbook.title,
+      subtitle: handbook.subtitle,
       sections: handbook.sections.map(section => ({
         id: section.id,
         title: section.title,
-        description: section.description,
         pages: section.pages.map(page => ({
           id: page.id,
           title: page.title,
-          content: page.content
+          content: page.content,
+          lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
+          estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000)) // Rough estimate
         }))
       }))
     };
+
+    console.log('[HandbookPage] Adapted handbook data for ModernHandbookClient:', adaptedData);
+    return adaptedData;
   };
 
   if (loading) {
@@ -142,17 +174,41 @@ export default function HandbookPage({ params }: Props) {
         <h1 className="text-2xl font-bold">Handbook Not Found</h1>
         <p className="text-red-500">{error}</p>
         <p className="text-gray-500 mt-4">Handbook path: /{handbookName}</p>
+        <p className="text-gray-400 text-sm mt-2">Ingen handbok med subdomain '{handbookName}' hittades i databasen.</p>
       </div>
     );
   }
 
-  // Use the beautiful HandbookClient
+  console.log('[HandbookPage] About to adapt handbook data:', handbook);
+  
+  // Use the modern HandbookClient
   const adaptedHandbook = adaptHandbookData(handbook);
+
+  console.log('[HandbookPage] Final adapted data before passing to ModernHandbookClient:', adaptedHandbook);
+
+  if (!adaptedHandbook) {
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <h1 className="text-2xl font-bold text-red-600">Fel vid databearbetning</h1>
+        <p className="text-gray-600">Handbokdata kunde inte bearbetas korrekt.</p>
+      </div>
+    );
+  }
 
   return (
     <>
       <SessionTransferHandler />
-      <HandbookClient handbook={adaptedHandbook} />
+      {adaptedHandbook && adaptedHandbook.title ? (
+        <ModernHandbookClient initialData={adaptedHandbook} />
+      ) : (
+        <div className="min-h-screen bg-white p-8 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Fel: Ogiltig handbokdata</h1>
+            <p className="text-gray-600">Handbokdata saknar titel eller är ofullständig.</p>
+            <p className="text-sm text-gray-400 mt-2">Debug: {JSON.stringify(adaptedHandbook, null, 2)}</p>
+          </div>
+        </div>
+      )}
     </>
   );
 } 

@@ -10,6 +10,9 @@ interface Section {
   description: string;
   order_index: number;
   handbook_id: string;
+  completion_status?: number;
+  is_active?: boolean;
+  updated_at?: string;
   pages: Page[];
 }
 
@@ -19,27 +22,52 @@ interface Page {
   content: string;
   order_index: number;
   section_id: string;
+  table_of_contents?: boolean;
+  updated_at?: string;
 }
 
 interface Handbook {
   id: string;
   title: string;
+  subtitle?: string;
+  version?: string;
+  organization_name?: string;
+  organization_address?: string;
+  organization_org_number?: string;
+  organization_phone?: string;
+  organization_email?: string;
+  updated_at?: string;
   subdomain: string;
   sections: Section[];
 }
 
-// Interface för HandbookClient
+// Interface för HandbookClient - uppdaterad för nya strukturen
 interface HandbookClientData {
   id: string;
-  name: string;
+  title: string;
+  subtitle?: string;
+  version?: string;
+  organization_name?: string;
+  organization_address?: string;
+  organization_org_number?: string;
+  organization_phone?: string;
+  organization_email?: string;
+  updated_at?: string;
   sections: {
     id: string;
     title: string;
     description: string;
+    order_index: number;
+    is_active?: boolean;
+    completion_status?: number;
+    updated_at?: string;
     pages: {
       id: string;
       title: string;
       content: string;
+      order_index: number;
+      table_of_contents?: boolean;
+      updated_at?: string;
     }[];
   }[];
 }
@@ -110,15 +138,30 @@ export default function HandbookPage({ params }: Props) {
   const adaptHandbookData = (handbook: Handbook): HandbookClientData => {
     return {
       id: handbook.id,
-      name: handbook.title, // HandbookClient expects 'name' instead of 'title'
+      title: handbook.title,
+      subtitle: handbook.subtitle,
+      version: handbook.version,
+      organization_name: handbook.organization_name,
+      organization_address: handbook.organization_address,
+      organization_org_number: handbook.organization_org_number,
+      organization_phone: handbook.organization_phone,
+      organization_email: handbook.organization_email,
+      updated_at: handbook.updated_at,
       sections: handbook.sections.map(section => ({
         id: section.id,
         title: section.title,
         description: section.description,
+        order_index: section.order_index,
+        is_active: section.is_active,
+        completion_status: section.completion_status,
+        updated_at: section.updated_at,
         pages: section.pages.map(page => ({
           id: page.id,
           title: page.title,
-          content: page.content
+          content: page.content,
+          order_index: page.order_index,
+          table_of_contents: page.table_of_contents,
+          updated_at: page.updated_at
         }))
       }))
     };

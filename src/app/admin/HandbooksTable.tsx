@@ -8,7 +8,7 @@ import { Alert } from '@/components/ui/alert';
 
 interface Handbook {
   id: string;
-  name: string;
+  title: string;
   subdomain: string;
   created_at: string;
   published: boolean;
@@ -126,7 +126,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
               handbooks.map((handbook) => (
                 <tr key={handbook.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {handbook.name}
+                    {handbook.title}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {handbook.subdomain}.handbok.org
