@@ -18,19 +18,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  console.log('📋 HEADER RENDERING:', {
-    sidebarOpen,
-    handbookTitle,
-    hasCloseSidebar: !!onCloseSidebar
-  });
-
   const handleMenuClick = () => {
-    console.log('🍔 HAMBURGER CLICKED, sidebarOpen:', sidebarOpen);
     if (sidebarOpen) {
-      console.log('🔴 Using onCloseSidebar');
       (onCloseSidebar || onToggleSidebar)();
     } else {
-      console.log('🔄 Using onToggleSidebar');
       onToggleSidebar();
     }
   };

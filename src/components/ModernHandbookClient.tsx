@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './handbook/Header';
 import { Sidebar } from './handbook/Sidebar';
 import { ContentArea } from './handbook/ContentArea';
@@ -18,39 +18,46 @@ interface ModernHandbookClientProps {
 export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({ 
   initialData 
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Set initial sidebar state based on screen size
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Default to closed on mobile, open on desktop
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024; // lg breakpoint
+    }
+    return false; // Default to closed for SSR
+  });
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
 
-  console.log('🔥 MODERN CLIENT RENDERING:', {
-    handbookTitle: initialData?.title,
-    sectionsCount: initialData?.sections?.length,
-    sectionsData: initialData?.sections,
-    currentPageId: currentPageId || 'welcome-page',
-    sidebarOpen
-  });
+  // Handle window resize to automatically manage sidebar state
+  useEffect(() => {
+    const handleResize = () => {
+      const isDesktop = window.innerWidth >= 1024;
+      // On desktop, keep sidebar open unless explicitly closed
+      // On mobile, keep sidebar closed unless explicitly opened
+      if (isDesktop && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarOpen]);
 
   const handlePageSelect = (pageId: string) => {
-    console.log('📄 PAGE SELECT:', pageId);
     setCurrentPageId(pageId);
-    setSidebarOpen(false); // Close mobile sidebar
+    // Only close sidebar on mobile
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   };
 
   const toggleSidebar = () => {
-    console.log('🔄 TOGGLE SIDEBAR:', !sidebarOpen);
     setSidebarOpen(!sidebarOpen);
   };
 
   const closeSidebar = () => {
-    console.log('🔴 CLOSE SIDEBAR CALLED');
     setSidebarOpen(false);
   };
-
-  console.log('🎯 RENDERING COMPONENTS:', {
-    sidebarOpen,
-    willRenderHeader: true,
-    willRenderSidebar: true,
-    willRenderContent: true
-  });
 
   if (!initialData) {
     return (
@@ -85,8 +92,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           onClose={closeSidebar}
         />
 
-        {/* Main content */}
-        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-0' : 'ml-0'}`}>
+        {/* Main content - responsive margins based on sidebar state */}
+        <div className="flex-1 overflow-hidden">
           <ContentArea
             sections={initialData.sections}
             currentPageId={currentPageId}

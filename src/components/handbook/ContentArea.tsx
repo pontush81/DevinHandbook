@@ -46,10 +46,9 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   sections,
   currentPageId
 }) => {
-  console.log('📄 CONTENT AREA RENDERING:', {
-    sectionsCount: sections?.length,
-    currentPageId
-  });
+  if (!sections || sections.length === 0) {
+    return null;
+  }
 
   return (
     <main className="flex-1 overflow-y-auto bg-white">

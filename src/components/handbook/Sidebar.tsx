@@ -39,15 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose
 }) => {
-  console.log('📱 SIDEBAR RENDERING:', {
-    isOpen,
-    sectionsCount: sections?.length,
-    currentPageId,
-    hasOnClose: !!onClose
-  });
-
   const handleSectionClick = (sectionId: string) => {
-    console.log('📍 SECTION CLICKED:', sectionId);
     // Scroll to the section
     const sectionElement = document.getElementById(`section-${sectionId}`);
     if (sectionElement) {
@@ -55,19 +47,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
     // Only close sidebar on mobile
     if (window.innerWidth < 1024) {
-      console.log('📱 MOBILE: Closing sidebar');
       onClose();
     }
   };
 
   const handleClose = () => {
-    console.log('🔴 SIDEBAR CLOSE CLICKED');
     onClose();
   };
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile overlay - only show on mobile when sidebar is open */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
@@ -77,9 +67,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-80 bg-white border-r border-gray-200 z-50
-        transform transition-transform duration-300 ease-in-out
+        w-80 bg-white border-r border-gray-200 z-50
+        fixed lg:static top-0 left-0 h-full lg:h-auto
+        transform transition-transform duration-300 ease-in-out lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${!isOpen ? 'lg:hidden' : 'lg:block'}
       `}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
