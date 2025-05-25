@@ -8,6 +8,7 @@ interface SidebarProps {
   onPageSelect: (pageId: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  showMobileHeader?: boolean;
 }
 
 const getSectionIcon = (title: string) => {
@@ -37,7 +38,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentPageId,
   onPageSelect,
   isOpen,
-  onClose
+  onClose,
+  showMobileHeader = true
 }) => {
   const handleSectionClick = (sectionId: string) => {
     // Scroll to the section
@@ -68,24 +70,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar */}
       <aside className={`
         w-80 bg-white border-r border-gray-200 z-50
-        lg:block lg:relative lg:translate-x-0
-        ${isOpen ? 'block' : 'hidden lg:block'}
-        fixed lg:static top-0 left-0 h-full lg:h-auto
+        lg:relative lg:h-auto
+        fixed lg:static top-0 left-0 h-full
         transform transition-transform duration-300 ease-in-out lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
-          <h2 className="text-lg font-semibold text-gray-900">Innehållsförteckning</h2>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-md hover:bg-gray-100 transition-colors relative z-10"
-            type="button"
-            style={{ pointerEvents: 'auto' }}
-          >
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
+        {/* Header - only show on mobile */}
+        {showMobileHeader && (
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Innehållsförteckning</h2>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-4 h-full overflow-y-auto">

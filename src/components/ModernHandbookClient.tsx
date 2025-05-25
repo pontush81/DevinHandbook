@@ -26,23 +26,34 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     return false; // Closed by default for SSR
   });
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
+  const [previousIsDesktop, setPreviousIsDesktop] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
 
   // Handle window resize - standard responsive behavior
   useEffect(() => {
     const handleResize = () => {
       const isDesktop = window.innerWidth >= 1024;
-      if (isDesktop) {
-        // On desktop, sidebar is always open and cannot be closed
+      const isMobile = window.innerWidth < 1024;
+      
+      // Only change state when actually transitioning between desktop/mobile
+      if (isDesktop && !previousIsDesktop) {
+        // Transitioning from mobile to desktop - open sidebar
         setSidebarOpen(true);
-      } else {
-        // On mobile, keep current state (user can toggle)
-        // Don't auto-close when resizing to mobile
+        setPreviousIsDesktop(true);
+      } else if (isMobile && previousIsDesktop) {
+        // Transitioning from desktop to mobile - close sidebar
+        setSidebarOpen(false);
+        setPreviousIsDesktop(false);
       }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [previousIsDesktop]);
 
   const handlePageSelect = (pageId: string) => {
     setCurrentPageId(pageId);
@@ -89,18 +100,33 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       />
 
       {/* Main layout */}
-      <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
-        {/* Sidebar */}
-        <Sidebar
-          sections={initialData.sections}
-          currentPageId={currentPageId}
-          onPageSelect={handlePageSelect}
-          isOpen={sidebarOpen}
-          onClose={closeSidebar}
-        />
+      <div className="flex h-[calc(100vh-4rem)] bg-white">
+        {/* Sidebar - only takes space on desktop */}
+        <div className="hidden lg:block">
+          <Sidebar
+            sections={initialData.sections}
+            currentPageId={currentPageId}
+            onPageSelect={handlePageSelect}
+            isOpen={sidebarOpen}
+            onClose={closeSidebar}
+            showMobileHeader={false}
+          />
+        </div>
+
+        {/* Mobile sidebar overlay */}
+        <div className="lg:hidden">
+          <Sidebar
+            sections={initialData.sections}
+            currentPageId={currentPageId}
+            onPageSelect={handlePageSelect}
+            isOpen={sidebarOpen}
+            onClose={closeSidebar}
+            showMobileHeader={true}
+          />
+        </div>
 
         {/* Main content */}
-        <div className="flex-1 bg-gray-50 min-h-full overflow-hidden">
+        <div className="flex-1 bg-white">
           <ContentArea
             sections={initialData.sections}
             currentPageId={currentPageId}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, Search, Share, Printer, X } from 'lucide-react';
 
 interface HeaderProps {
@@ -19,6 +19,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleMenuClick = () => {
+    // Only allow menu interaction on mobile
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      return; // Do nothing on desktop
+    }
+    
     if (sidebarOpen) {
       (onCloseSidebar || onToggleSidebar)();
     } else {
@@ -59,11 +64,11 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16 px-4 lg:px-6">
           {/* Left section - Menu button only on mobile */}
           <div className="flex items-center min-w-0 flex-shrink-0">
-            {/* Hamburger Menu - only show on mobile */}
+            {/* Single toggle button - only show on mobile */}
             <button
               onClick={handleMenuClick}
               className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 flex items-center justify-center"
-              aria-label="Toggle sidebar"
+              aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
               title={sidebarOpen ? 'Stäng meny' : 'Öppna meny'}
             >
               {sidebarOpen ? (
