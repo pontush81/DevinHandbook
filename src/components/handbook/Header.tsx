@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Search, Share, Printer, X } from 'lucide-react';
+import { Menu, Search, Share, Printer, X, Edit, Save, LogIn, Edit3, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -7,6 +10,9 @@ interface HeaderProps {
   handbookTitle: string;
   handbookSubtitle?: string;
   sidebarOpen?: boolean;
+  canEdit?: boolean;
+  isEditMode?: boolean;
+  onToggleEditMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,16 +20,32 @@ export const Header: React.FC<HeaderProps> = ({
   onCloseSidebar,
   handbookTitle,
   handbookSubtitle,
-  sidebarOpen = false
+  sidebarOpen = false,
+  canEdit = false,
+  isEditMode = false,
+  onToggleEditMode
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+  const { user, signOut } = useAuth();
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+    };
+    
+    // Check on mount
+    checkMobile();
+    
+    // Add event listener
+    window.addEventListener('resize', checkMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleMenuClick = () => {
-    // Only allow menu interaction on mobile
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      return; // Do nothing on desktop
-    }
-    
     if (sidebarOpen) {
       (onCloseSidebar || onToggleSidebar)();
     } else {
@@ -65,18 +87,20 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Left section - Menu button only on mobile */}
           <div className="flex items-center min-w-0 flex-shrink-0">
             {/* Single toggle button - only show on mobile */}
-            <button
-              onClick={handleMenuClick}
-              className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 flex items-center justify-center"
-              aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-              title={sidebarOpen ? 'Stäng meny' : 'Öppna meny'}
-            >
-              {sidebarOpen ? (
-                <X className="w-5 h-5 text-gray-600" />
-              ) : (
-                <Menu className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
+            {isMobile && (
+              <button
+                onClick={handleMenuClick}
+                className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 items-center justify-center"
+                aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                title={sidebarOpen ? 'Stäng meny' : 'Öppna meny'}
+              >
+                {sidebarOpen ? (
+                  <X className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <Menu className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+            )}
           </div>
 
           {/* Center section - Search with more space now */}
@@ -97,6 +121,52 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right section - Actions */}
           <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* Edit mode toggle - only show if user can edit */}
+            {canEdit && onToggleEditMode && (
+              <Button
+                variant={isEditMode ? "default" : "outline"}
+                size="sm"
+                onClick={onToggleEditMode}
+                className="hidden sm:flex"
+              >
+                {isEditMode ? (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Spara
+                  </>
+                ) : (
+                  <>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Redigera
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* User authentication */}
+            {user ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 hidden lg:block">
+                  {user.email}
+                </span>
+                <Button
+                  onClick={signOut}
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex"
+                >
+                  Logga ut
+                </Button>
+              </div>
+            ) : (
+              <Link href="/login">
+                <Button variant="outline" size="sm" className="hidden sm:flex">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Logga in
+                </Button>
+              </Link>
+            )}
+
             <button
               onClick={handleShare}
               className="hidden sm:flex p-2 rounded-md hover:bg-gray-100 transition-colors items-center justify-center"
@@ -118,6 +188,27 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Edit mode indicator */}
+        {isEditMode && (
+          <div className="bg-blue-50 border-b border-blue-200 px-4 lg:px-6 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Edit className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">Redigeringsläge aktivt</span>
+                <span className="text-xs text-blue-600">Klicka på innehåll för att redigera</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggleEditMode}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Avsluta redigering
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
     </>
   );

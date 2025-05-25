@@ -3,6 +3,7 @@ import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 import { ModernHandbookClient } from '@/components/ModernHandbookClient';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 interface Section {
   id: string;
@@ -198,18 +199,20 @@ export default function HandbookPage({ params }: Props) {
 
   return (
     <>
-      <SessionTransferHandler />
-      {adaptedHandbook && adaptedHandbook.title ? (
-        <ModernHandbookClient initialData={adaptedHandbook} />
-      ) : (
-        <div className="min-h-screen bg-white p-8 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Fel: Ogiltig handbokdata</h1>
-            <p className="text-gray-600">Handbokdata saknar titel eller är ofullständig.</p>
-            <p className="text-sm text-gray-400 mt-2">Debug: {JSON.stringify(adaptedHandbook, null, 2)}</p>
+      <AuthProvider>
+        <SessionTransferHandler />
+        {adaptedHandbook && adaptedHandbook.title ? (
+          <ModernHandbookClient initialData={adaptedHandbook} />
+        ) : (
+          <div className="min-h-screen bg-white p-8 flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-red-600 mb-4">Fel: Ogiltig handbokdata</h1>
+              <p className="text-gray-600">Handbokdata saknar titel eller är ofullständig.</p>
+              <p className="text-sm text-gray-400 mt-2">Debug: {JSON.stringify(adaptedHandbook, null, 2)}</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </AuthProvider>
     </>
   );
 } 

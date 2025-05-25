@@ -1,4 +1,6 @@
+import React from "react";
 import { Metadata } from 'next';
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export const dynamic = 'force-dynamic';
 
@@ -7,7 +9,11 @@ export default function HandbookLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <AuthProvider>
+      {children}
+    </AuthProvider>
+  );
 }
 
 export async function generateMetadata(): Promise<Metadata> {
