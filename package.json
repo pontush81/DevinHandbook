@@ -45,7 +45,6 @@
     "node-fetch": "^3.3.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-easy-edit": "^2.0.0",
     "react-icons": "^5.5.0",
     "react-markdown": "^8.0.7",
     "remark-gfm": "^3.0.1",

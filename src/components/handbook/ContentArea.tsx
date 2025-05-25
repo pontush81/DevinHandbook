@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import EasyEdit from 'react-easy-edit';
+import { InlineEdit } from '@/components/ui/InlineEdit';
 
 interface ContentAreaProps {
   sections: Section[];
@@ -134,45 +134,17 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                   <div className="flex-1">
                     {isEditMode && onUpdateSection ? (
                       <div className="space-y-2">
-                        <EasyEdit
-                          type="text"
+                        <InlineEdit
                           value={section.title}
                           onSave={(value: string) => onUpdateSection(section.id, { title: value })}
-                          onCancel={() => {}}
-                          saveButtonLabel="Spara"
-                          cancelButtonLabel="Avbryt"
                           placeholder="Sektionsrubrik"
-                          instructions="Klicka för att redigera sektionsrubrik"
-                          inputAttributes={{
-                            style: {
-                              fontSize: '1.875rem',
-                              fontWeight: 'bold',
-                              color: '#111827',
-                              border: '2px solid #3b82f6',
-                              borderRadius: '0.375rem',
-                              padding: '0.5rem',
-                              width: '100%'
-                            }
-                          }}
+                          className="text-3xl font-bold text-gray-900"
                         />
-                        <EasyEdit
-                          type="text"
+                        <InlineEdit
                           value={section.description || ''}
                           onSave={(value: string) => onUpdateSection(section.id, { description: value })}
-                          onCancel={() => {}}
-                          saveButtonLabel="Spara"
-                          cancelButtonLabel="Avbryt"
                           placeholder="Sektionsbeskrivning"
-                          instructions="Klicka för att redigera beskrivning"
-                          inputAttributes={{
-                            style: {
-                              color: '#6b7280',
-                              border: '2px solid #3b82f6',
-                              borderRadius: '0.375rem',
-                              padding: '0.5rem',
-                              width: '100%'
-                            }
-                          }}
+                          className="text-gray-600"
                         />
                       </div>
                     ) : (
@@ -217,26 +189,11 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                     {(section.pages?.length || 0) > 1 && (
                       <div className="mb-6">
                         {isEditMode && onUpdatePage ? (
-                          <EasyEdit
-                            type="text"
+                          <InlineEdit
                             value={page.title}
                             onSave={(value: string) => onUpdatePage(page.id, { title: value })}
-                            onCancel={() => {}}
-                            saveButtonLabel="Spara"
-                            cancelButtonLabel="Avbryt"
                             placeholder="Sidtitel"
-                            instructions="Klicka för att redigera sidtitel"
-                            inputAttributes={{
-                              style: {
-                                fontSize: '1.5rem',
-                                fontWeight: '600',
-                                color: '#374151',
-                                border: '2px solid #3b82f6',
-                                borderRadius: '0.375rem',
-                                padding: '0.5rem',
-                                width: '100%'
-                              }
-                            }}
+                            className="text-2xl font-semibold text-gray-800"
                           />
                         ) : (
                           <h3 className="text-2xl font-semibold text-gray-800 mb-2">
@@ -260,26 +217,14 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                         </div>
                       )}
                       {isEditMode && onUpdatePage ? (
-                        <EasyEdit
+                        <InlineEdit
                           type="textarea"
                           value={page.content || ''}
                           onSave={(value: string) => onUpdatePage(page.id, { content: value })}
-                          onCancel={() => {}}
-                          saveButtonLabel="Spara"
-                          cancelButtonLabel="Avbryt"
                           placeholder="Sidinnehåll (Markdown stöds)"
-                          instructions="Klicka för att redigera innehåll"
-                          inputAttributes={{
-                            style: {
-                              minHeight: '150px',
-                              border: '2px solid #3b82f6',
-                              borderRadius: '0.375rem',
-                              padding: '0.75rem',
-                              width: '100%',
-                              fontFamily: 'inherit'
-                            },
-                            rows: 8
-                          }}
+                          multiline={true}
+                          rows={8}
+                          className="prose prose-gray max-w-none"
                         />
                       ) : (
                         <div className={isEditMode ? 'hover:bg-blue-50/30 hover:border-blue-200 border border-transparent rounded-lg p-3 transition-all cursor-pointer' : ''}>
