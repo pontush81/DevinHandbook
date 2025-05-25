@@ -18,6 +18,23 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
+  console.log('📋 HEADER RENDERING:', {
+    sidebarOpen,
+    handbookTitle,
+    hasCloseSidebar: !!onCloseSidebar
+  });
+
+  const handleMenuClick = () => {
+    console.log('🍔 HAMBURGER CLICKED, sidebarOpen:', sidebarOpen);
+    if (sidebarOpen) {
+      console.log('🔴 Using onCloseSidebar');
+      (onCloseSidebar || onToggleSidebar)();
+    } else {
+      console.log('🔄 Using onToggleSidebar');
+      onToggleSidebar();
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -53,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center min-w-0 flex-shrink-0">
             {/* Hamburger Menu */}
             <button
-              onClick={sidebarOpen ? (onCloseSidebar || onToggleSidebar) : onToggleSidebar}
+              onClick={handleMenuClick}
               className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 flex items-center justify-center"
               aria-label="Toggle sidebar"
               title={sidebarOpen ? 'Stäng meny' : 'Öppna meny'}

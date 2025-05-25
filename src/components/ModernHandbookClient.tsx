@@ -30,6 +30,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   });
 
   const handlePageSelect = (pageId: string) => {
+    console.log('📄 PAGE SELECT:', pageId);
     setCurrentPageId(pageId);
     setSidebarOpen(false); // Close mobile sidebar
   };
@@ -43,6 +44,13 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     console.log('🔴 CLOSE SIDEBAR CALLED');
     setSidebarOpen(false);
   };
+
+  console.log('🎯 RENDERING COMPONENTS:', {
+    sidebarOpen,
+    willRenderHeader: true,
+    willRenderSidebar: true,
+    willRenderContent: true
+  });
 
   if (!initialData) {
     return (
@@ -78,10 +86,12 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         />
 
         {/* Main content */}
-        <ContentArea
-          sections={initialData.sections}
-          currentPageId={currentPageId}
-        />
+        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-0' : 'ml-0'}`}>
+          <ContentArea
+            sections={initialData.sections}
+            currentPageId={currentPageId}
+          />
+        </div>
       </div>
     </div>
   );

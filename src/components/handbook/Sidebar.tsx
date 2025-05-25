@@ -39,7 +39,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose
 }) => {
+  console.log('📱 SIDEBAR RENDERING:', {
+    isOpen,
+    sectionsCount: sections?.length,
+    currentPageId,
+    hasOnClose: !!onClose
+  });
+
   const handleSectionClick = (sectionId: string) => {
+    console.log('📍 SECTION CLICKED:', sectionId);
     // Scroll to the section
     const sectionElement = document.getElementById(`section-${sectionId}`);
     if (sectionElement) {
@@ -47,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
     // Only close sidebar on mobile
     if (window.innerWidth < 1024) {
+      console.log('📱 MOBILE: Closing sidebar');
       onClose();
     }
   };
@@ -71,7 +80,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         fixed top-0 left-0 h-full w-80 bg-white border-r border-gray-200 z-50
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:z-auto
       `}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
