@@ -35,7 +35,13 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   };
 
   const toggleSidebar = () => {
+    console.log('🔄 TOGGLE SIDEBAR:', !sidebarOpen);
     setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    console.log('🔴 CLOSE SIDEBAR CALLED');
+    setSidebarOpen(false);
   };
 
   if (!initialData) {
@@ -67,7 +73,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           currentPageId={currentPageId}
           onPageSelect={handlePageSelect}
           isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
+          onClose={closeSidebar}
         />
 
         {/* Main content */}
