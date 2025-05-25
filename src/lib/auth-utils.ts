@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { getServiceSupabase } from '@/lib/supabase';
 import { Database } from '@/types/supabase';
 
@@ -15,11 +15,12 @@ export async function getServerSession() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set() {}, // Används inte i read-only-operationer
-        remove() {}, // Används inte i read-only-operationer
+        setAll(cookiesToSet) {
+          // This is read-only for server components
+        },
       },
     }
   );
