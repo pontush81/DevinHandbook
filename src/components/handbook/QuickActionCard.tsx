@@ -1,5 +1,5 @@
 import React from 'react';
-import { QuickAction } from '@/lib/templates/handbook-template';
+import { QuickAction } from '@/lib/templates/complete-brf-handbook';
 
 interface QuickActionCardProps {
   action: QuickAction;

@@ -131,7 +131,7 @@ describe('Handbook Icons Mapping', () => {
   });
 
   describe('Real handbook section examples', () => {
-    // Test med verkliga sektionsnamn från handbook-template.ts
+    // Test med verkliga sektionsnamn från complete-brf-handbook.ts
     const realSectionTitles = [
       'Välkommen',
       'Kontaktuppgifter och styrelse',

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
-import { defaultHandbookTemplate } from '@/lib/templates/handbook-template';
+import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 import { redirectToNewlyCreatedHandbook } from '@/lib/redirect-utils';
 
 interface CreateHandbookFormProps {
@@ -154,7 +154,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       const handbookId = await createHandbookWithSectionsAndPages(
         name,
         subdomain,
-        defaultHandbookTemplate,
+        completeBRFHandbook,
         userId
       );
 

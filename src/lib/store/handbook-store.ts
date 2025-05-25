@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { defaultHandbookTemplate, HandbookTemplate } from '../templates/handbook-template';
+import { completeBRFHandbook, HandbookTemplate } from '../templates/complete-brf-handbook';
 
 export interface HandbookState {
   name: string;
@@ -23,7 +23,7 @@ export interface HandbookState {
 export const useHandbookStore = create<HandbookState>((set) => ({
   name: '',
   subdomain: '',
-  template: defaultHandbookTemplate,
+  template: completeBRFHandbook,
   currentStep: 0,
   
   setName: (name) => set({ name }),
@@ -102,7 +102,7 @@ export const useHandbookStore = create<HandbookState>((set) => ({
   resetWizard: () => set({
     name: '',
     subdomain: '',
-    template: defaultHandbookTemplate,
+    template: completeBRFHandbook,
     currentStep: 0
   })
 }));

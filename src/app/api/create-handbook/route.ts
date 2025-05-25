@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
-import { defaultHandbookTemplate } from '@/lib/templates/handbook-template';
+import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 import { supabase } from "@/lib/supabase";
 import { ensureUserProfile } from "@/lib/user-utils";
 
@@ -43,13 +43,13 @@ export async function POST(req: NextRequest) {
     // Säkerställ att användaren har en profil först
     await ensureUserProfile(supabase, user_id, "");
 
-    console.log("[Create Handbook API] Anropar createHandbookWithSectionsAndPages med defaultHandbookTemplate");
+    console.log("[Create Handbook API] Anropar createHandbookWithSectionsAndPages med completeBRFHandbook");
     
     // Använd den rika templaten för att skapa handboken
     const handbookId = await createHandbookWithSectionsAndPages(
       name, 
       subdomain, 
-      defaultHandbookTemplate, 
+      completeBRFHandbook, 
       user_id
     );
 

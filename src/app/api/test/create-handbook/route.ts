@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
-import { HandbookTemplate } from '@/lib/templates/handbook-template';
+import { HandbookTemplate } from '@/lib/templates/complete-brf-handbook';
 import { getServiceSupabase, testDatabaseConnection } from '@/lib/supabase';
 import { createDirectClient, testDirectConnection } from '@/lib/direct-db';
 import { createHandbookViaProxy, testProxyConnection } from '@/lib/proxy-db';

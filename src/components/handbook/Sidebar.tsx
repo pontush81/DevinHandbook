@@ -1,13 +1,32 @@
 import React, { useState } from 'react';
-import { Section, Page } from '../../types/handbook';
+import { Section, Page } from '@/lib/templates/complete-brf-handbook';
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
 
 const sectionIcons: { [key: string]: string } = {
+  // Gamla sektioner (för bakåtkompatibilitet)
   'Allmän information': '🏠',
   'Ekonomi': '💰',
   'Underhåll': '🔧',
   'Regler': '📋',
   'Kontakt': '📞',
+  
+  // Nya BRF-sektioner
+  'Välkommen': '🏠',
+  'Kontaktuppgifter och styrelse': '👥',
+  'Felanmälan': '🚨',
+  'Ekonomi och avgifter': '💰',
+  'Trivselregler': '🤝',
+  'Stadgar och årsredovisning': '📋',
+  'Renoveringar och underhåll': '🔧',
+  'Bopärmar och regler': '📖',
+  'Sopsortering och återvinning': '♻️',
+  'Parkering och garage': '🚗',
+  'Tvättstuga och bokningssystem': '🧺',
+  'Gemensamma utrymmen': '🏢',
+  'Vanliga frågor (FAQ)': '❓',
+  'Dokumentarkiv': '📁',
+  'Säkerhet och trygghet': '🔒',
+  
   'Default': '📄'
 };
 
@@ -51,11 +70,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handlePageClick = (pageId: string) => {
-    onPageSelect(pageId);
+    // Scroll to the page instead of selecting it
+    const pageElement = document.getElementById(`page-${pageId}`);
+    if (pageElement) {
+      pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    onPageSelect(pageId); // Still call this for highlighting
     // Only close sidebar on mobile
     if (window.innerWidth < 1024) {
       onClose();
     }
+  };
+
+  const handleSectionClick = (sectionId: string) => {
+    // Scroll to the section
+    const sectionElement = document.getElementById(`section-${sectionId}`);
+    if (sectionElement) {
+      sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // Toggle expansion
+    toggleSection(sectionId);
   };
 
   return (
@@ -85,6 +119,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-6 px-4">
+            {/* Table of Contents Header */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Innehållsförteckning</h2>
+              <p className="text-sm text-gray-600">Klicka för att navigera till sektioner</p>
+            </div>
+            
             <div className="space-y-3">
               {sections.map((section) => {
                 const isExpanded = expandedSections.has(section.id);
@@ -101,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           : 'hover:bg-gray-50 text-gray-700 hover:shadow-sm border border-transparent hover:border-gray-200'
                         }
                       `}
-                      onClick={() => toggleSection(section.id)}
+                      onClick={() => handleSectionClick(section.id)}
                     >
                       <div className="flex items-center gap-3 flex-1">
                         <span className="text-lg">

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Header } from './handbook/Header';
 import { Sidebar } from './handbook/Sidebar';
 import { ContentArea } from './handbook/ContentArea';
-import { Section, Page } from '../types/handbook';
+import { Section, Page } from '@/lib/templates/complete-brf-handbook';
 
 interface ModernHandbookClientProps {
   initialData: {
@@ -18,12 +18,13 @@ interface ModernHandbookClientProps {
 export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({ 
   initialData 
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
 
   console.log('🔥 MODERN CLIENT RENDERING:', {
     handbookTitle: initialData?.title,
     sectionsCount: initialData?.sections?.length,
+    sectionsData: initialData?.sections,
     currentPageId: currentPageId || 'welcome-page',
     sidebarOpen
   });

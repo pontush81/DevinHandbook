@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { StatisticCard } from '@/components/handbook/StatisticCard';
-import { StatisticCard as StatisticCardType } from '@/lib/templates/handbook-template';
+import { StatisticCard as StatisticCardType } from '@/lib/templates/complete-brf-handbook';
 
 describe('StatisticCard', () => {
   const mockCard: StatisticCardType = {

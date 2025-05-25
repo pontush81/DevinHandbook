@@ -154,6 +154,7 @@ export default function HandbookPage({ params }: Props) {
     };
 
     console.log('[HandbookPage] Adapted handbook data for ModernHandbookClient:', adaptedData);
+    console.log('[HandbookPage] Sections in adapted data:', adaptedData.sections.map(s => ({ id: s.id, title: s.title, pagesCount: s.pages.length })));
     return adaptedData;
   };
 

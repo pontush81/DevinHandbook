@@ -1,5 +1,5 @@
 import React from 'react';
-import { ContactPerson } from '@/lib/templates/handbook-template';
+import { ContactPerson } from '@/lib/templates/complete-brf-handbook';
 
 interface ContactCardProps {
   contact: ContactPerson;

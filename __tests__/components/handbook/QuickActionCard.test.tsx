@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { QuickActionCard } from '@/components/handbook/QuickActionCard';
-import { QuickAction } from '@/lib/templates/handbook-template';
+import { QuickAction } from '@/lib/templates/complete-brf-handbook';
 
 // Mock window.location
 Object.defineProperty(window, 'location', {

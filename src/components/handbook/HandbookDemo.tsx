@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { ModernHandbookClient } from '../ModernHandbookClient';
-import { defaultHandbookTemplate } from '@/lib/templates/handbook-template';
+import { ModernHandbookClient } from '@/components/ModernHandbookClient';
+import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 
 export const HandbookDemo: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
-      <ModernHandbookClient handbookData={defaultHandbookTemplate} />
+      <ModernHandbookClient handbookData={completeBRFHandbook} />
     </div>
   );
 }; 

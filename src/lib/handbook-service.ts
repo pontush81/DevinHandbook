@@ -1,5 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { HandbookTemplate } from '@/lib/templates/handbook-template';
+import { HandbookTemplate } from '@/lib/templates/complete-brf-handbook';
 
 export async function createHandbookWithSectionsAndPages(
   name: string,

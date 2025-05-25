@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatisticCard as StatisticCardType } from '@/lib/templates/handbook-template';
+import { StatisticCard as StatisticCardType } from '@/lib/templates/complete-brf-handbook';
 
 interface StatisticCardProps {
   card: StatisticCardType;

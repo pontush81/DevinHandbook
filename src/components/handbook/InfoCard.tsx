@@ -1,5 +1,5 @@
 import React from 'react';
-import { InfoCard as InfoCardType, contentTypes } from '@/lib/templates/handbook-template';
+import { InfoCard as InfoCardType, contentTypes } from '@/lib/templates/complete-brf-handbook';
 
 interface InfoCardProps {
   card: InfoCardType;

@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
-import { HandbookTemplate, Section } from '@/lib/templates/handbook-template';
+import React, { useState, useEffect } from 'react';
+import { HandbookTemplate, Section } from '@/lib/templates/complete-brf-handbook';
 import { ModernHandbookClient } from './ModernHandbookClient';
 
 console.log('🚀 HandbookClient.tsx IS BEING LOADED - NEW VERSION!');
@@ -65,8 +65,7 @@ const HandbookClient: React.FC<HandbookClientProps> = ({ handbook }) => {
         id: page.id,
         title: page.title,
         content: page.content,
-        lastUpdated: page.lastUpdated,
-        estimatedReadTime: page.estimatedReadTime
+        lastUpdated: page.lastUpdated
       }))
     }))
   };
