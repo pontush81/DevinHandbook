@@ -47,8 +47,8 @@ export const Header: React.FC<HeaderProps> = ({
       `}</style>
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-          {/* Left section - Brand and menu with FORCED alignment */}
-          <div className="flex items-center space-x-3 min-w-0 flex-shrink-0">
+          {/* Left section - Just the menu button */}
+          <div className="flex items-center min-w-0 flex-shrink-0">
             {/* Hamburger Menu */}
             <button
               onClick={onToggleSidebar}
@@ -62,15 +62,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <Menu className="w-5 h-5 text-gray-600" />
               )}
             </button>
-            
-            {/* Brand section - only icon for cleaner design */}
-            <div className="flex items-center space-x-3 min-w-0">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm font-bold leading-none">
-                  {handbookTitle.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* Center section - Search with more space now */}

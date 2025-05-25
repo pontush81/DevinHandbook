@@ -1,42 +1,36 @@
-import React, { useState } from 'react';
-import { Section, Page } from '@/lib/templates/complete-brf-handbook';
-import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
-
-const sectionIcons: { [key: string]: string } = {
-  // Gamla sektioner (för bakåtkompatibilitet)
-  'Allmän information': '🏠',
-  'Ekonomi': '💰',
-  'Underhåll': '🔧',
-  'Regler': '📋',
-  'Kontakt': '📞',
-  
-  // Nya BRF-sektioner
-  'Välkommen': '🏠',
-  'Kontaktuppgifter och styrelse': '👥',
-  'Felanmälan': '🚨',
-  'Ekonomi och avgifter': '💰',
-  'Trivselregler': '🤝',
-  'Stadgar och årsredovisning': '📋',
-  'Renoveringar och underhåll': '🔧',
-  'Bopärmar och regler': '📖',
-  'Sopsortering och återvinning': '♻️',
-  'Parkering och garage': '🚗',
-  'Tvättstuga och bokningssystem': '🧺',
-  'Gemensamma utrymmen': '🏢',
-  'Vanliga frågor (FAQ)': '❓',
-  'Dokumentarkiv': '📁',
-  'Säkerhet och trygghet': '🔒',
-  
-  'Default': '📄'
-};
+import React from 'react';
+import { X, Home, Users, AlertTriangle, DollarSign, FileText, Building, Wrench, Trash2, Car, Shirt, MapPin, HelpCircle, Archive, Shield, Calendar } from 'lucide-react';
+import { HandbookSection } from '../../types/handbook';
 
 interface SidebarProps {
-  sections: Section[];
-  currentPageId?: string;
+  sections: HandbookSection[];
+  currentPageId: string;
   onPageSelect: (pageId: string) => void;
   isOpen: boolean;
   onClose: () => void;
 }
+
+const getSectionIcon = (title: string) => {
+  const iconMap: { [key: string]: React.ComponentType<any> } = {
+    'Välkommen': Home,
+    'Kontaktuppgifter och styrelse': Users,
+    'Felanmälan': AlertTriangle,
+    'Ekonomi och avgifter': DollarSign,
+    'Stadgar och årsredovisning': FileText,
+    'Renoveringar och underhåll': Building,
+    'Bopärmar och regler': Wrench,
+    'Sopsortering och återvinning': Trash2,
+    'Parkering och garage': Car,
+    'Tvättstuga och bokningssystem': Shirt,
+    'Gemensamma utrymmen': MapPin,
+    'Vanliga frågor (FAQ)': HelpCircle,
+    'Dokumentarkiv': Archive,
+    'Säkerhet och trygghet': Shield,
+    'Viktiga datum': Calendar
+  };
+  
+  return iconMap[title] || FileText;
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({
   sections,
@@ -45,189 +39,84 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose
 }) => {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-
-  // Find which section contains the current page and expand it
-  React.useEffect(() => {
-    if (currentPageId) {
-      for (const section of sections) {
-        if (section.pages?.some(page => page.id === currentPageId)) {
-          setExpandedSections(prev => new Set([...prev, section.id]));
-          break;
-        }
-      }
-    }
-  }, [currentPageId, sections]);
-
-  const toggleSection = (sectionId: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(sectionId)) {
-      newExpanded.delete(sectionId);
-    } else {
-      newExpanded.add(sectionId);
-    }
-    setExpandedSections(newExpanded);
-  };
-
-  const handlePageClick = (pageId: string) => {
-    // Scroll to the page instead of selecting it
-    const pageElement = document.getElementById(`page-${pageId}`);
-    if (pageElement) {
-      pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    onPageSelect(pageId); // Still call this for highlighting
-    // Only close sidebar on mobile
-    if (window.innerWidth < 1024) {
-      onClose();
-    }
-  };
-
   const handleSectionClick = (sectionId: string) => {
     // Scroll to the section
     const sectionElement = document.getElementById(`section-${sectionId}`);
     if (sectionElement) {
       sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    // Toggle expansion
-    toggleSection(sectionId);
+    // Only close sidebar on mobile
+    if (window.innerWidth < 1024) {
+      onClose();
+    }
   };
 
   return (
     <>
-      {/* Mobile overlay - only show on mobile */}
+      {/* Mobile overlay */}
       {isOpen && (
-        <div
+        <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
-
+      
       {/* Sidebar */}
-      <aside
-        className={`
-          fixed lg:relative top-0 left-0 h-full bg-white border-r border-gray-200 z-50
-          transition-all duration-300 ease-in-out
-          ${isOpen 
-            ? 'translate-x-0 w-80 lg:w-72' 
-            : '-translate-x-full lg:translate-x-0 lg:w-0 lg:border-r-0'
-          }
-        `}
-      >
-        <div className={`flex flex-col h-full ${!isOpen ? 'lg:hidden' : ''}`}>
-          {/* Header spacer for mobile */}
-          <div className="h-16 lg:hidden border-b border-gray-200"></div>
-          
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-6 px-4">
-            {/* Table of Contents Header */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Innehållsförteckning</h2>
-              <p className="text-sm text-gray-600">Klicka för att navigera till sektioner</p>
-            </div>
-            
-            <div className="space-y-3">
-              {sections.map((section) => {
-                const isExpanded = expandedSections.has(section.id);
-                const hasCurrentPage = section.pages?.some(page => page.id === currentPageId);
-                
-                return (
-                  <div key={section.id} className="space-y-1">
-                    {/* Section Header */}
-                    <button
-                      className={`
-                        w-full flex items-center justify-between p-3 rounded-xl text-left transition-all duration-200
-                        ${hasCurrentPage 
-                          ? 'bg-blue-600 text-white shadow-md' 
-                          : 'hover:bg-gray-50 text-gray-700 hover:shadow-sm border border-transparent hover:border-gray-200'
-                        }
-                      `}
-                      onClick={() => handleSectionClick(section.id)}
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        <span className="text-lg">
-                          {sectionIcons[section.title] || sectionIcons.Default}
-                        </span>
-                        <div className="flex-1">
-                          <span className="font-medium text-sm block">{section.title}</span>
-                          <span className={`text-xs ${hasCurrentPage ? 'text-blue-200' : 'text-gray-500'}`}>
-                            {section.pages?.length || 0} sidor
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {/* Page Count Badge */}
-                        {(section.pages?.length || 0) > 1 && (
-                          <span className={`
-                            px-2 py-1 text-xs rounded-full font-medium
-                            ${hasCurrentPage ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'}
-                          `}>
-                            {section.pages?.length}
-                          </span>
-                        )}
-                        
-                        {/* Expand Arrow */}
-                        {(section.pages?.length || 0) > 0 && (
-                          isExpanded ? (
-                            <ChevronDown className={`w-4 h-4 ${hasCurrentPage ? 'text-blue-200' : 'text-gray-400'}`} />
-                          ) : (
-                            <ChevronRight className={`w-4 h-4 ${hasCurrentPage ? 'text-blue-200' : 'text-gray-400'}`} />
-                          )
-                        )}
-                      </div>
-                    </button>
+      <aside className={`
+        fixed top-0 left-0 h-full w-80 bg-white border-r border-gray-200 z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 lg:static lg:z-auto
+      `}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
+          <h2 className="text-lg font-semibold text-gray-900">Innehållsförteckning</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
 
-                    {/* Sub-pages */}
-                    {isExpanded && section.pages && section.pages.length > 0 && (
-                      <div className="ml-6 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                        {section.pages.map((page) => (
-                          <button
-                            key={page.id}
-                            onClick={() => handlePageClick(page.id)}
-                            className={`
-                              w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all duration-200
-                              ${currentPageId === page.id 
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                                : 'hover:bg-gray-50 text-gray-600 border border-transparent hover:border-gray-200'
-                              }
-                            `}
-                          >
-                            <FileText 
-                              className={`
-                                w-4 h-4 flex-shrink-0
-                                ${currentPageId === page.id ? 'text-blue-500' : 'text-gray-400'}
-                              `} 
-                            />
-                            <span className="text-sm font-medium flex-1 truncate">
-                              {page.title}
-                            </span>
-                            
-                            {currentPageId === page.id && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
+        {/* Content */}
+        <div className="p-4 h-full overflow-y-auto">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4 hidden lg:block">
+            Innehållsförteckning
+          </h3>
+          
+          <nav className="space-y-2">
+            {sections.map((section, index) => {
+              const IconComponent = getSectionIcon(section.title);
+              
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => handleSectionClick(section.id)}
+                  className="w-full flex items-center space-x-3 px-3 py-3 text-left rounded-lg hover:bg-gray-50 transition-colors group"
+                >
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                    <IconComponent className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-medium text-gray-400">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <h4 className="text-sm font-medium text-gray-900 truncate">
+                        {section.title}
+                      </h4>
+                    </div>
+                    {section.description && (
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                        {section.description}
+                      </p>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                </button>
+              );
+            })}
           </nav>
-
-          {/* Footer */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
-            <div className="text-xs text-gray-500 text-center space-y-1">
-              <p className="flex items-center justify-center gap-2">
-                <span>📞</span>
-                <span>Akut: 08-123 456 78</span>
-              </p>
-              <p className="flex items-center justify-center gap-2">
-                <span>📧</span>
-                <span>styrelsen@ekstugan15.se</span>
-              </p>
-            </div>
-          </div>
         </div>
       </aside>
     </>
