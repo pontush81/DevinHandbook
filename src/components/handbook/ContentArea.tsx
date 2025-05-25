@@ -56,16 +56,11 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Handbook Header */}
         <header className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Digital Handbok</h1>
-          <p className="text-xl text-gray-600 mb-6">Bostadsrättsföreningen Ekstugan 15</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Bostadsrättsföreningen Ekstugan 15</h1>
           <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>Uppdaterad {new Date().toLocaleDateString('sv-SE')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span>Komplett handbok</span>
             </div>
           </div>
         </header>

@@ -108,8 +108,8 @@ export const contentTypes = {
 export const completeBRFHandbook: HandbookTemplate = {
   metadata: {
     id: "brf-ekstugan-15",
-    title: "Digital Handbok",
-    subtitle: "Bostadsrättsföreningen Ekstugan 15",
+    title: "Bostadsrättsföreningen Ekstugan 15",
+    subtitle: "",
     version: "3.0",
     lastUpdated: "2024-03-15",
     organization: {
