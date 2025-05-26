@@ -323,6 +323,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             sections={handbookData.sections}
             currentPageId={currentPageId}
             isEditMode={isEditMode}
+            handbookId={initialData.id}
             onUpdateSection={updateSection}
             onUpdatePage={updatePage}
             onAddPage={addPage}

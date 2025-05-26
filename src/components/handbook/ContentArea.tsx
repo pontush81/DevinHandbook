@@ -1,39 +1,152 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Section, Page } from '@/lib/templates/complete-brf-handbook';
-import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users } from 'lucide-react';
+import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { QuickActionCard } from './QuickActionCard';
 import { StatisticCard } from './StatisticCard';
 import { InfoCard } from './InfoCard';
 import { ContactCard } from './ContactCard';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { InlineEdit } from '@/components/ui/InlineEdit';
+import { 
+  WelcomeContentData, 
+  getWelcomeContent, 
+  upsertWelcomeContent, 
+  getDefaultWelcomeContent 
+} from '@/lib/services/welcomeContentService';
 
 interface ContentAreaProps {
   sections: Section[];
   currentPageId?: string;
   isEditMode?: boolean;
+  handbookId?: string;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   onAddPage?: (sectionId: string, title: string, content?: string) => void;
 }
 
-// Modern welcome content with better UX
-const getWelcomeContent = () => {
+interface EditableWelcomeContentProps {
+  data: WelcomeContentData;
+  isEditMode: boolean;
+  onUpdate?: (data: WelcomeContentData) => void;
+}
+
+const EditableWelcomeContent: React.FC<EditableWelcomeContentProps> = ({ 
+  data, 
+  isEditMode, 
+  onUpdate 
+}) => {
+  const [editData, setEditData] = useState<WelcomeContentData>(data);
+
+  const updateData = (updates: Partial<WelcomeContentData>) => {
+    const newData = { ...editData, ...updates };
+    setEditData(newData);
+    onUpdate?.(newData);
+  };
+
+  const updateInfoCard = (index: number, updates: Partial<typeof data.infoCards[0]>) => {
+    const newCards = [...editData.infoCards];
+    newCards[index] = { ...newCards[index], ...updates };
+    updateData({ infoCards: newCards });
+  };
+
+  const updateImportantInfo = (index: number, updates: Partial<typeof data.importantInfo[0]>) => {
+    const newInfo = [...editData.importantInfo];
+    newInfo[index] = { ...newInfo[index], ...updates };
+    updateData({ importantInfo: newInfo });
+  };
+
+  const addInfoCard = () => {
+    const newCard = {
+      id: `card-${Date.now()}`,
+      title: "Ny rubrik",
+      description: "Beskrivning av funktionen",
+      icon: "BookOpen",
+      color: "blue"
+    };
+    updateData({ infoCards: [...editData.infoCards, newCard] });
+  };
+
+  const removeInfoCard = (index: number) => {
+    if (window.confirm('Är du säker på att du vill ta bort detta kort?')) {
+      const newCards = editData.infoCards.filter((_, i) => i !== index);
+      updateData({ infoCards: newCards });
+    }
+  };
+
+  const addImportantInfo = () => {
+    const newInfo = {
+      id: `info-${Date.now()}`,
+      title: "Ny viktig information",
+      description: "Beskrivning av den viktiga informationen",
+      icon: "Clock",
+      color: "blue"
+    };
+    updateData({ importantInfo: [...editData.importantInfo, newInfo] });
+  };
+
+  const removeImportantInfo = (index: number) => {
+    if (window.confirm('Är du säker på att du vill ta bort denna information?')) {
+      const newInfo = editData.importantInfo.filter((_, i) => i !== index);
+      updateData({ importantInfo: newInfo });
+    }
+  };
+
+  const getIconComponent = (iconName: string, className: string) => {
+    const iconMap: Record<string, any> = {
+      BookOpen, Phone, Wrench, DollarSign, Clock, Search, MessageCircle, Users, Zap
+    };
+    const IconComponent = iconMap[iconName] || BookOpen;
+    return <IconComponent className={className} />;
+  };
+
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, { bg: string; text: string }> = {
+      blue: { bg: "bg-blue-100", text: "text-blue-600" },
+      green: { bg: "bg-green-100", text: "text-green-600" },
+      orange: { bg: "bg-orange-100", text: "text-orange-600" },
+      purple: { bg: "bg-purple-100", text: "text-purple-600" },
+      yellow: { bg: "bg-yellow-100", text: "text-yellow-600" },
+      red: { bg: "bg-red-100", text: "text-red-600" },
+    };
+    return colorMap[color] || colorMap.blue;
+  };
+
   return (
     <div className="space-y-16">
       {/* Hero Section */}
       <section className="text-center py-12 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl px-8">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-            Välkommen till Ekstugan 15! 🏡
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            Vi är glada att du är en del av vår gemenskap. Denna digitala handbok är din guide till allt som rör ditt boende och vår förening.
-          </p>
+          {isEditMode ? (
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={editData.heroTitle}
+                onChange={(e) => updateData({ heroTitle: e.target.value })}
+                className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6 w-full bg-transparent border-2 border-dashed border-gray-300 rounded p-2 text-center"
+                placeholder="Huvudrubrik"
+              />
+              <textarea
+                value={editData.heroSubtitle}
+                onChange={(e) => updateData({ heroSubtitle: e.target.value })}
+                className="text-xl text-gray-600 mb-8 leading-relaxed w-full bg-transparent border-2 border-dashed border-gray-300 rounded p-2 text-center resize-none"
+                rows={3}
+                placeholder="Underrubrik"
+              />
+            </div>
+          ) : (
+            <>
+              <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+                {editData.heroTitle}
+              </h1>
+              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+                {editData.heroSubtitle}
+              </p>
+            </>
+          )}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
               <Wrench className="w-5 h-5 mr-2" />
@@ -48,88 +161,217 @@ const getWelcomeContent = () => {
       </section>
 
       {/* Information Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-            <BookOpen className="w-6 h-6 text-blue-600" />
+      {(editData.showInfoCards || isEditMode) && (
+        <section>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-bold text-gray-900">Snabbfakta</h2>
+              {isEditMode && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="showInfoCards"
+                    checked={editData.showInfoCards}
+                    onChange={(e) => updateData({ showInfoCards: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="showInfoCards" className="text-sm text-gray-600">
+                    Visa sektion
+                  </label>
+                </div>
+              )}
+            </div>
+            {isEditMode && editData.showInfoCards && (
+              <Button onClick={addInfoCard} size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Lägg till kort
+              </Button>
+            )}
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Komplett information</h3>
-          <p className="text-gray-600 text-sm">Allt om föreningen, regler och rutiner på ett ställe</p>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-            <Phone className="w-6 h-6 text-green-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Snabb kontakt</h3>
-          <p className="text-gray-600 text-sm">Kontaktuppgifter till styrelse och viktiga personer</p>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
-            <Wrench className="w-6 h-6 text-orange-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Felanmälan</h3>
-          <p className="text-gray-600 text-sm">Rapportera problem snabbt och enkelt</p>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-            <DollarSign className="w-6 h-6 text-purple-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Ekonomi & avgifter</h3>
-          <p className="text-gray-600 text-sm">Transparent information om föreningens ekonomi</p>
-        </div>
-      </section>
+          {editData.showInfoCards && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {editData.infoCards.map((card, index) => {
+                const colors = getColorClasses(card.color);
+                return (
+                  <div key={card.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative group">
+                    {isEditMode && (
+                      <div className="absolute top-2 right-2">
+                        <Button
+                          onClick={() => removeInfoCard(index)}
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full shadow-sm border border-red-200"
+                          title="Ta bort kort"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    )}
+                    <div className={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center mb-4`}>
+                      {getIconComponent(card.icon, `w-6 h-6 ${colors.text}`)}
+                    </div>
+                    {isEditMode ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={card.title}
+                          onChange={(e) => updateInfoCard(index, { title: e.target.value })}
+                          className="text-lg font-semibold text-gray-900 w-full bg-transparent border border-gray-300 rounded p-1"
+                        />
+                        <textarea
+                          value={card.description}
+                          onChange={(e) => updateInfoCard(index, { description: e.target.value })}
+                          className="text-gray-600 text-sm w-full bg-transparent border border-gray-300 rounded p-1 resize-none"
+                          rows={2}
+                        />
+                        <div className="flex gap-2">
+                          <select
+                            value={card.color}
+                            onChange={(e) => updateInfoCard(index, { color: e.target.value })}
+                            className="text-xs border border-gray-300 rounded p-1"
+                          >
+                            <option value="blue">Blå</option>
+                            <option value="green">Grön</option>
+                            <option value="orange">Orange</option>
+                            <option value="purple">Lila</option>
+                            <option value="yellow">Gul</option>
+                            <option value="red">Röd</option>
+                          </select>
+                          <select
+                            value={card.icon}
+                            onChange={(e) => updateInfoCard(index, { icon: e.target.value })}
+                            className="text-xs border border-gray-300 rounded p-1"
+                          >
+                            <option value="BookOpen">Bok</option>
+                            <option value="Phone">Telefon</option>
+                            <option value="Wrench">Verktyg</option>
+                            <option value="DollarSign">Pengar</option>
+                            <option value="Users">Personer</option>
+                            <option value="Clock">Klocka</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{card.title}</h3>
+                        <p className="text-gray-600 text-sm">{card.description}</p>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Important Information */}
-      <section className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <Zap className="w-6 h-6 text-yellow-500 mr-3" />
-          Viktigt att veta från start
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex items-start space-x-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="w-5 h-5 text-blue-600" />
+      {(editData.showImportantInfo || isEditMode) && (
+        <section className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                <Zap className="w-6 h-6 text-yellow-500 mr-3" />
+                Viktigt att veta från start
+              </h2>
+              {isEditMode && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="showImportantInfo"
+                    checked={editData.showImportantInfo}
+                    onChange={(e) => updateData({ showImportantInfo: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="showImportantInfo" className="text-sm text-gray-600">
+                    Visa sektion
+                  </label>
+                </div>
+              )}
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-1">Löpande uppdateringar</h4>
-              <p className="text-gray-600 text-sm">Handboken uppdateras kontinuerligt med aktuell information</p>
-            </div>
+            {isEditMode && editData.showImportantInfo && (
+              <Button onClick={addImportantInfo} size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Lägg till info
+              </Button>
+            )}
           </div>
-          
-          <div className="flex items-start space-x-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Search className="w-5 h-5 text-green-600" />
+          {editData.showImportantInfo && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {editData.importantInfo.map((info, index) => {
+                const colors = getColorClasses(info.color);
+                return (
+                  <div key={info.id} className="flex items-start space-x-4 relative group">
+                    {isEditMode && (
+                      <Button
+                        onClick={() => removeImportantInfo(index)}
+                        size="sm"
+                        variant="ghost"
+                        className="absolute top-0 right-0 h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full shadow-sm border border-red-200"
+                        title="Ta bort information"
+                      >
+                        ×
+                      </Button>
+                    )}
+                    <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      {getIconComponent(info.icon, `w-5 h-5 ${colors.text}`)}
+                    </div>
+                    <div className="flex-1">
+                      {isEditMode ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={info.title}
+                            onChange={(e) => updateImportantInfo(index, { title: e.target.value })}
+                            className="font-semibold text-gray-900 w-full bg-transparent border border-gray-300 rounded p-1"
+                          />
+                          <textarea
+                            value={info.description}
+                            onChange={(e) => updateImportantInfo(index, { description: e.target.value })}
+                            className="text-gray-600 text-sm w-full bg-transparent border border-gray-300 rounded p-1 resize-none"
+                            rows={2}
+                          />
+                          <div className="flex gap-2">
+                            <select
+                              value={info.color}
+                              onChange={(e) => updateImportantInfo(index, { color: e.target.value })}
+                              className="text-xs border border-gray-300 rounded p-1"
+                            >
+                              <option value="blue">Blå</option>
+                              <option value="green">Grön</option>
+                              <option value="orange">Orange</option>
+                              <option value="purple">Lila</option>
+                              <option value="yellow">Gul</option>
+                              <option value="red">Röd</option>
+                            </select>
+                            <select
+                              value={info.icon}
+                              onChange={(e) => updateImportantInfo(index, { icon: e.target.value })}
+                              className="text-xs border border-gray-300 rounded p-1"
+                            >
+                              <option value="Clock">Klocka</option>
+                              <option value="Search">Sök</option>
+                              <option value="MessageCircle">Meddelande</option>
+                              <option value="Users">Personer</option>
+                              <option value="BookOpen">Bok</option>
+                              <option value="Wrench">Verktyg</option>
+                            </select>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 className="font-semibold text-gray-900 mb-1">{info.title}</h4>
+                          <p className="text-gray-600 text-sm">{info.description}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-1">Sökfunktion</h4>
-              <p className="text-gray-600 text-sm">Använd sökfunktionen för att snabbt hitta det du letar efter</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-1">Kontakta styrelsen</h4>
-              <p className="text-gray-600 text-sm">Har du frågor som inte besvaras här? Kontakta oss direkt</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Users className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-1">Delta aktivt</h4>
-              <p className="text-gray-600 text-sm">Gå gärna på våra möten och aktiviteter för att stärka gemenskapen</p>
-            </div>
-          </div>
-        </div>
-      </section>
+          )}
+        </section>
+      )}
     </div>
   );
 };
@@ -138,6 +380,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   sections,
   currentPageId,
   isEditMode = false,
+  handbookId,
   onUpdateSection,
   onUpdatePage,
   onAddPage
@@ -146,9 +389,60 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [newPageTitle, setNewPageTitle] = useState('');
   const [newPageContent, setNewPageContent] = useState('');
+  const [welcomeContent, setWelcomeContent] = useState<WelcomeContentData>(getDefaultWelcomeContent());
+  const [isLoadingWelcomeContent, setIsLoadingWelcomeContent] = useState(false);
   
   // Use ref to track last scrolled page to avoid unnecessary scrolling
   const lastScrolledPageRef = useRef<string | null>(null);
+
+  // Load welcome content from database when handbookId changes
+  useEffect(() => {
+    if (handbookId) {
+      loadWelcomeContent();
+    }
+  }, [handbookId]);
+
+  const loadWelcomeContent = async () => {
+    if (!handbookId) return;
+    
+    setIsLoadingWelcomeContent(true);
+    try {
+      const content = await getWelcomeContent(handbookId);
+      if (content) {
+        setWelcomeContent(content);
+      } else {
+        // Ingen data finns, använd default och spara den
+        const defaultContent = getDefaultWelcomeContent();
+        setWelcomeContent(defaultContent);
+        if (isEditMode) {
+          await upsertWelcomeContent(handbookId, defaultContent);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading welcome content:', error);
+      setWelcomeContent(getDefaultWelcomeContent());
+    } finally {
+      setIsLoadingWelcomeContent(false);
+    }
+  };
+
+  // Save welcome content to database when it changes
+  const handleWelcomeContentUpdate = async (data: WelcomeContentData) => {
+    setWelcomeContent(data);
+    
+    if (handbookId && isEditMode) {
+      try {
+        const success = await upsertWelcomeContent(handbookId, data);
+        if (!success) {
+          console.error('Failed to save welcome content');
+          // Optionally show user feedback here
+        }
+      } catch (error) {
+        console.error('Error saving welcome content:', error);
+        // Optionally show user feedback here
+      }
+    }
+  };
 
   // Debug: Log sections and pages
   useEffect(() => {
@@ -213,7 +507,14 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
     return (
       <main className="main-content">
         <div className="content-container">
-          {getWelcomeContent()}
+          {isLoadingWelcomeContent ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Laddar välkomstinnehåll...</span>
+            </div>
+          ) : (
+            <EditableWelcomeContent data={welcomeContent} isEditMode={isEditMode} onUpdate={handleWelcomeContentUpdate} />
+          )}
         </div>
       </main>
     );
@@ -225,7 +526,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
         {/* Welcome content if no specific page is selected */}
         {!currentPageId && (
           <div className="welcome-section">
-            {getWelcomeContent()}
+            <EditableWelcomeContent data={welcomeContent} isEditMode={isEditMode} onUpdate={handleWelcomeContentUpdate} />
           </div>
         )}
 
