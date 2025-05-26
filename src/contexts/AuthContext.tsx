@@ -130,6 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         console.log('User signed in or token refreshed');
         
+        // Återställ failure counter vid lyckad auth
+        if (typeof window !== 'undefined' && window.authStorageFallback) {
+          window.authStorageFallback.resetFailureCount();
+        }
+        
         // Uppdatera state
         setSession(session);
         setUser(session?.user ?? null);
@@ -177,33 +182,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (authErrorShown) return;
 
       const errorMessage = event.detail?.message || 'Ett autentiseringsfel inträffade';
+      const shouldSignOut = event.detail?.shouldSignOut || false;
       
       // Kontrollera specifikt för refresh token fel
       const isRefreshTokenError = errorMessage.includes('refresh_token_not_found') || 
-                                 errorMessage.includes('Invalid Refresh Token');
+                                 errorMessage.includes('Invalid Refresh Token') ||
+                                 errorMessage.includes('invalid_refresh_token') ||
+                                 errorMessage.includes('token_expired') ||
+                                 shouldSignOut;
       
       if (isRefreshTokenError) {
-        // Rensa session state
+        console.log('Auth error detected, cleaning up session:', errorMessage);
+        
+        // Rensa session state omedelbart
         setSession(null);
         setUser(null);
         
+        // Rensa all auth-relaterad data
+        if (typeof window !== 'undefined') {
+          try {
+            // Rensa localStorage
+            Object.keys(localStorage).forEach(key => {
+              if (key.startsWith('sb-') || key.includes('supabase')) {
+                localStorage.removeItem(key);
+              }
+            });
+            
+            // Rensa cookies
+            document.cookie.split(";").forEach(cookie => {
+              const eqPos = cookie.indexOf("=");
+              const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+              if (name.startsWith('sb-')) {
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.handbok.org`;
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+              }
+            });
+            
+            // Rensa memory storage
+            if (window.memoryStorage) {
+              Object.keys(window.memoryStorage).forEach(key => {
+                if (key.startsWith('sb-') || key.includes('supabase')) {
+                  delete window.memoryStorage[key];
+                }
+              });
+            }
+          } catch (e) {
+            console.warn('Error clearing auth data:', e);
+          }
+        }
+        
         // Visa ett meddelande till användaren och omdirigera efter bekräftelse
         setAuthErrorShown(true);
-        const confirmRelogin = window.confirm(
-          'Din session har gått ut. Klicka OK för att logga in igen.'
-        );
         
-        if (confirmRelogin) {
-          // Rensa eventuella tokens innan vi navigerar till login
-          try {
-            supabase.auth.signOut();
-          } catch (e) {
-            // Ignorera eventuella fel vid utloggning
-          }
+        // Använd setTimeout för att undvika att blockera UI
+        setTimeout(() => {
+          const confirmRelogin = window.confirm(
+            'Din session har gått ut. Klicka OK för att logga in igen.'
+          );
           
-          // Navigera till login-sidan
-          router.push('/login');
-        }
+          if (confirmRelogin) {
+            // Navigera till login-sidan
+            window.location.href = '/login';
+          } else {
+            // Om användaren inte vill logga in igen, navigera till startsidan
+            window.location.href = '/';
+          }
+        }, 100);
       } else {
         // Hantera andra typer av auth-fel
         console.error('Auth error:', errorMessage);

@@ -17,6 +17,10 @@ interface Window {
   };
   safeLocalStorage?: SafeStorage;
   memoryStorage?: Record<string, string>;
+  authStorageFallback?: {
+    clearAllAuthData: () => void;
+    resetFailureCount: () => void;
+  };
 }
 
 export {}; 

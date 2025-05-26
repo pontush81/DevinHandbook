@@ -50,7 +50,10 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     'refresh_token_not_found',    // Refresh token saknas helt
     'refresh_token_invalid',      // Refresh token är ogiltig
     'refresh_token_revoked',      // Refresh token har återkallats
-    'invalid_grant'               // Generellt OAuth-relaterat fel
+    'invalid_grant',              // Generellt OAuth-relaterat fel
+    'invalid_refresh_token',      // Ogiltig refresh token
+    'token_expired',              // Token har gått ut
+    'session_not_found'           // Session hittades inte
   ];
   
   while (retryCount < MAX_RETRIES) {
@@ -96,20 +99,26 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         // Kontrollera om detta är ett permanent fel som inte bör återförsökas
         const isPermanentError = PERMANENT_ERROR_CODES.some(code => 
           errorData.includes(code) || errorCode === code
-        );
+        ) || (response.status === 400 && url.includes('/auth/v1/token'));
         
         if (isPermanentError) {
           console.log(`Avbryter återförsök: Permanent fel detekterat i error`);
           
-          // Skicka ett globalt event för att hantera sessionsfel i UI
-          if (typeof window !== 'undefined') {
-            const errorEvent = new CustomEvent('supabase.auth.error', { 
-              detail: { 
-                error: lastError,
-                message: lastError?.message || 'Permanent auth error'
-              }
-            });
-            window.dispatchEvent(errorEvent);
+          // För auth-fel, rensa session och omdirigera
+          if (url.includes('/auth/v1/token') || PERMANENT_ERROR_CODES.some(code => 
+            errorData.includes(code) || errorCode === code
+          )) {
+            // Skicka ett globalt event för att hantera sessionsfel i UI
+            if (typeof window !== 'undefined') {
+              const errorEvent = new CustomEvent('supabase.auth.error', { 
+                detail: { 
+                  error: { message: `Auth error: ${errorData}` },
+                  message: 'Permanent auth error',
+                  shouldSignOut: true
+                }
+              });
+              window.dispatchEvent(errorEvent);
+            }
           }
           
           break; // Avbryt återförsök för permanenta fel
