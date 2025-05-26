@@ -41,6 +41,14 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const [canEdit, setCanEdit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Search state
+  const [searchResults, setSearchResults] = useState<Array<{
+    pageId: string;
+    pageTitle: string;
+    sectionTitle: string;
+    snippet: string;
+  }>>([]);
+
   // Auth context
   const { user, isLoading: authLoading } = useAuth();
 
@@ -117,6 +125,26 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       setSidebarOpen(false);
     }
   };
+
+  // Handle page selection from search results via URL hash
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#page-')) {
+        const pageId = hash.substring(6); // Remove '#page-'
+        handlePageSelect(pageId);
+        // Clear the hash
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+
+    // Check initial hash
+    handleHashChange();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const toggleSidebar = () => {
     // Only allow toggling on mobile
@@ -293,6 +321,56 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
   const visibleSections = getVisibleSections(handbookData.sections);
 
+  // Search function
+  const handleSearch = (query: string) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results: Array<{
+      pageId: string;
+      pageTitle: string;
+      sectionTitle: string;
+      snippet: string;
+    }> = [];
+
+    const searchTerm = query.toLowerCase();
+
+    visibleSections.forEach(section => {
+      section.pages.forEach(page => {
+        const titleMatch = page.title.toLowerCase().includes(searchTerm);
+        const contentMatch = page.content?.toLowerCase().includes(searchTerm);
+
+        if (titleMatch || contentMatch) {
+          // Create snippet
+          let snippet = '';
+          if (contentMatch && page.content) {
+            const contentLower = page.content.toLowerCase();
+            const index = contentLower.indexOf(searchTerm);
+            const start = Math.max(0, index - 50);
+            const end = Math.min(page.content.length, index + searchTerm.length + 50);
+            snippet = page.content.substring(start, end);
+            if (start > 0) snippet = '...' + snippet;
+            if (end < page.content.length) snippet = snippet + '...';
+          } else if (titleMatch) {
+            snippet = page.content?.substring(0, 100) || '';
+            if (page.content && page.content.length > 100) snippet += '...';
+          }
+
+          results.push({
+            pageId: page.id,
+            pageTitle: page.title,
+            sectionTitle: section.title,
+            snippet: snippet.replace(/[#*]/g, '').trim() // Remove markdown formatting
+          });
+        }
+      });
+    });
+
+    setSearchResults(results);
+  };
+
   if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -327,6 +405,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         canEdit={canEdit}
         isEditMode={isEditMode}
         onToggleEditMode={toggleEditMode}
+        onSearch={handleSearch}
+        searchResults={searchResults}
       />
 
       {/* Main layout */}

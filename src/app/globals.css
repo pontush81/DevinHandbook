@@ -46,7 +46,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   
   /* Updated color palette */
   --background: 0 0% 100%;
@@ -57,7 +57,7 @@
   --popover-foreground: 222.2 84% 4.9%;
   
   /* Primary colors - Blue theme */
-  --primary: 221 83% 53%;
+  --primary: 222.2 47.4% 11.2%;
   --primary-foreground: 210 40% 98%;
   --primary-hover: 221 83% 45%;
   --primary-light: 221 83% 95%;
@@ -81,16 +81,19 @@
   --gray-50: 210 40% 98%;
   --gray-100: 210 40% 96%;
   --gray-200: 214 32% 91%;
-  --gray-300: 213 27% 84%;
-  --gray-600: 215 14% 34%;
-  --gray-800: 217 19% 27%;
-  --gray-900: 222 47% 11%;
+  --gray-300: 214.3 31.8% 91.4%;
+  --gray-400: 215.4 16.3% 56.9%;
+  --gray-500: 215.4 16.3% 46.9%;
+  --gray-600: 215.4 16.3% 36.9%;
+  --gray-700: 215.4 16.3% 26.9%;
+  --gray-800: 215.4 16.3% 16.9%;
+  --gray-900: 222.2 84% 4.9%;
   
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 221 83% 53%;
+  --ring: 222.2 84% 4.9%;
   
   /* Chart colors */
   --chart-1: 12 76% 61%;
@@ -117,21 +120,19 @@
   --colors-messageSuccessText: #fff !important;
   
   /* New spacing system - 8px based */
-  --space-1: 0.25rem;    /* 4px */
-  --space-2: 0.5rem;     /* 8px */
-  --space-3: 0.75rem;    /* 12px */
-  --space-4: 1rem;       /* 16px */
-  --space-5: 1.25rem;    /* 20px */
-  --space-6: 1.5rem;     /* 24px */
-  --space-8: 2rem;       /* 32px */
-  --space-10: 2.5rem;    /* 40px */
-  --space-12: 3rem;      /* 48px */
-  --space-16: 4rem;      /* 64px */
+  --space-0-5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-2-5: 0.625rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-10: 2.5rem;
   
   /* Shadow system */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
@@ -204,6 +205,7 @@ html, body {
 .main-content {
   min-height: calc(100vh - 4rem);
   background: hsl(var(--gray-50));
+  padding-top: 4rem; /* Account for fixed header */
 }
 
 .content-container {
@@ -218,17 +220,39 @@ html, body {
    ============================================== */
 
 .app-header {
-  background: white;
-  border-bottom: 1px solid hsl(var(--border));
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid hsl(var(--border) / 0.8);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-sm);
-  position: sticky;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
   height: 4rem;
   padding: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-header.header-visible {
+  transform: translateY(0);
+}
+
+.app-header.header-hidden {
+  transform: translateY(-100%);
+  box-shadow: none;
+}
+
+/* Enhanced header when scrolled */
+.app-header:not(.header-hidden) {
+  background: rgba(255, 255, 255, 0.98);
+  border-bottom-color: hsl(var(--border));
 }
 
 .header-container {
@@ -288,31 +312,35 @@ html, body {
 
 .header-center {
   flex: 1;
-  max-width: 24rem;
-  margin: 0 var(--space-8);
+  max-width: 28rem;
+  margin: 0 var(--space-6);
+  display: flex;
+  justify-content: center;
 }
 
 .search-container {
   position: relative;
   width: 100%;
+  max-width: 24rem;
 }
 
 .search-input {
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   padding-left: var(--space-10);
   border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: hsl(var(--gray-50));
   font-size: 0.875rem;
   transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .search-input:focus {
   outline: none;
   border-color: hsl(var(--primary));
   background: white;
-  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1), var(--shadow-md);
 }
 
 .search-icon {
@@ -321,7 +349,8 @@ html, body {
   top: 50%;
   transform: translateY(-50%);
   color: hsl(var(--gray-400));
-  font-size: 0.875rem;
+  font-size: 1rem;
+  pointer-events: none;
 }
 
 .header-right {
@@ -329,27 +358,6 @@ html, body {
   align-items: center;
   gap: var(--space-3);
   flex-shrink: 0;
-}
-
-.support-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
-  background: white;
-  color: hsl(var(--gray-700));
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.support-btn:hover {
-  background: hsl(var(--gray-50));
-  border-color: hsl(var(--gray-300));
 }
 
 .user-menu {
@@ -489,14 +497,14 @@ html, body {
 .nav-items {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-0-5);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
   border-radius: var(--radius);
   text-align: left;
   transition: all 0.2s ease;
@@ -505,25 +513,38 @@ html, body {
   width: 100%;
   cursor: pointer;
   position: relative;
+  margin-bottom: 1px;
 }
 
 .nav-item:hover {
   background: hsl(var(--gray-50));
   transform: translateX(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .nav-item.active {
-  background: hsl(var(--primary) / 0.1);
+  background: hsl(var(--primary) / 0.08);
   color: hsl(var(--primary));
   border-left: 3px solid hsl(var(--primary));
   padding-left: calc(var(--space-3) - 3px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .nav-icon {
-  font-size: 1rem;
+  font-size: 0.875rem;
   flex-shrink: 0;
   width: 1.25rem;
   text-align: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.nav-item:hover .nav-icon {
+  opacity: 1;
+}
+
+.nav-item.active .nav-icon {
+  opacity: 1;
 }
 
 .nav-content {
@@ -590,6 +611,58 @@ html, body {
   font-weight: 400;
 }
 
+/* Minimal icon style - subtle color indicators */
+.nav-icon-minimal {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 0.5rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.nav-item:hover .nav-icon-minimal {
+  opacity: 1;
+}
+
+.nav-item.active .nav-icon-minimal {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+/* Compact navigation mode */
+.nav-item-compact {
+  padding: var(--space-2) var(--space-3);
+}
+
+.nav-item-compact .nav-title {
+  font-size: 0.8rem;
+}
+
+/* Alternative: Text-only navigation */
+.nav-item-text-only {
+  padding-left: var(--space-4);
+}
+
+.nav-item-text-only .nav-title {
+  font-weight: 500;
+  position: relative;
+}
+
+.nav-item-text-only .nav-title::before {
+  content: '';
+  position: absolute;
+  left: -1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.25rem;
+  height: 0.25rem;
+  background: currentColor;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
 /* ==============================================
    RESPONSIVE DESIGN
    ============================================== */
@@ -600,12 +673,12 @@ html, body {
   }
   
   .header-center {
-    max-width: 16rem;
+    max-width: 20rem;
     margin: 0 var(--space-4);
   }
   
-  .support-text {
-    display: none;
+  .search-container {
+    max-width: 18rem;
   }
   
   .user-name {
@@ -619,8 +692,12 @@ html, body {
   }
   
   .header-center {
-    max-width: 12rem;
-    margin: 0 var(--space-2);
+    max-width: 16rem;
+    margin: 0 var(--space-3);
+  }
+  
+  .search-container {
+    max-width: 14rem;
   }
   
   .brand-text {
@@ -633,27 +710,39 @@ html, body {
   
   .search-input {
     font-size: 0.8rem;
-    padding: 0.375rem 0.5rem;
-    padding-left: 2rem;
+    padding: 0.5rem 0.75rem;
+    padding-left: 2.25rem;
   }
   
   .search-icon {
-    left: 0.5rem;
+    left: 0.75rem;
+    font-size: 0.875rem;
   }
 }
 
 @media (max-width: 640px) {
   .header-center {
-    max-width: 8rem;
-    margin: 0 var(--space-1);
+    max-width: 12rem;
+    margin: 0 var(--space-2);
+  }
+  
+  .search-container {
+    max-width: 10rem;
+  }
+  
+  .search-input {
+    padding: 0.375rem 0.5rem;
+    padding-left: 2rem;
+    font-size: 0.75rem;
+  }
+  
+  .search-icon {
+    left: 0.5rem;
+    font-size: 0.8rem;
   }
   
   .header-right {
     gap: var(--space-2);
-  }
-  
-  .support-btn {
-    padding: var(--space-2);
   }
   
   .user-btn {

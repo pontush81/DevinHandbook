@@ -17,6 +17,8 @@ interface SidebarProps {
   showMobileHeader?: boolean;
   canEdit?: boolean;
   onAddSection?: (title: string) => void;
+  iconStyle?: 'emoji' | 'minimal' | 'none';
+  compactMode?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -27,7 +29,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   showMobileHeader = true,
   canEdit = false,
-  onAddSection
+  onAddSection,
+  iconStyle = 'emoji',
+  compactMode = false
 }) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newSectionTitle, setNewSectionTitle] = useState('');
@@ -81,6 +85,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
       return section.pages.some(page => page.id === currentPageId);
     }
     return item.section === currentPageId;
+  };
+
+  const getColorForSection = (title: string): string => {
+    const normalizedTitle = title.toLowerCase()
+      .replace(/[^a-zåäö\s]/g, '')
+      .trim();
+    
+    // Color mapping for sections
+    const colorMap: Record<string, string> = {
+      'välkommen': '#3B82F6',
+      'kontakt': '#10B981',
+      'kontaktuppgifter': '#10B981',
+      'styrelse': '#10B981',
+      'felanmälan': '#F59E0B',
+      'fel': '#F59E0B',
+      'regler': '#6366F1',
+      'bopärmar': '#6366F1',
+      'sopsortering': '#059669',
+      'återvinning': '#059669',
+      'tvättstuga': '#06B6D4',
+      'parkering': '#8B5CF6',
+      'ekonomi': '#DC2626',
+      'avgifter': '#DC2626',
+      'stadgar': '#7C3AED',
+      'årsredovisning': '#7C3AED',
+      'renovering': '#EA580C',
+      'underhåll': '#EA580C',
+      'gemensamma': '#0891B2',
+      'utrymmen': '#0891B2',
+      'dokument': '#4B5563',
+      'arkiv': '#4B5563',
+      'säkerhet': '#DC2626',
+      'faq': '#6B7280',
+      'frågor': '#6B7280',
+    };
+    
+    // Try exact match first
+    if (colorMap[normalizedTitle]) {
+      return colorMap[normalizedTitle];
+    }
+    
+    // Try partial matches
+    for (const [key, color] of Object.entries(colorMap)) {
+      if (normalizedTitle.includes(key) || key.includes(normalizedTitle)) {
+        return color;
+      }
+    }
+    
+    return '#6B7280'; // Default gray
   };
 
   return (
@@ -160,6 +213,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Navigation items - simple flat list */}
           <div className="nav-items">
             {menuItems.map((item) => {
+              const renderIcon = () => {
+                if (iconStyle === 'none') return null;
+                
+                if (iconStyle === 'minimal') {
+                  return (
+                    <div 
+                      className="nav-icon-minimal"
+                      style={{ backgroundColor: getColorForSection(item.title) }}
+                    />
+                  );
+                }
+                
+                // Default emoji style
+                return (
+                  <span className="nav-icon">
+                    {item.icon}
+                  </span>
+                );
+              };
+
               return (
                 <button
                   key={item.id}
@@ -168,16 +241,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={`
                     nav-item
                     ${isItemActive(item) ? 'active' : ''}
+                    ${compactMode ? 'nav-item-compact' : ''}
                   `}
                 >
-                  <span className="nav-icon">
-                    {item.icon}
-                  </span>
+                  {renderIcon()}
                   <div className="nav-content">
                     <div className="nav-title">
                       {item.title}
                     </div>
-                    {item.description && (
+                    {item.description && !compactMode && (
                       <div className="nav-description">
                         {item.description}
                       </div>

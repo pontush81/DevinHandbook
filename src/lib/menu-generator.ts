@@ -12,7 +12,7 @@ export interface MenuItemConfig {
   isActive?: boolean;
 }
 
-// Icon mapping for common section types
+// Icon mapping for common section types - with subtle alternatives
 const SECTION_ICON_MAP: Record<string, string> = {
   'välkommen': '👋',
   'welcome': '👋',
@@ -56,6 +56,35 @@ const SECTION_ICON_MAP: Record<string, string> = {
   'faq': '❓',
   'frågor': '❓',
   'vanliga': '❓',
+};
+
+// Subtle color-coded indicators as alternative to emoji
+const SECTION_COLOR_MAP: Record<string, string> = {
+  'välkommen': '#3B82F6', // Blue
+  'kontakt': '#10B981', // Green
+  'kontaktuppgifter': '#10B981',
+  'styrelse': '#10B981',
+  'felanmälan': '#F59E0B', // Amber
+  'fel': '#F59E0B',
+  'regler': '#6366F1', // Indigo
+  'bopärmar': '#6366F1',
+  'sopsortering': '#059669', // Emerald
+  'återvinning': '#059669',
+  'tvättstuga': '#06B6D4', // Cyan
+  'parkering': '#8B5CF6', // Violet
+  'ekonomi': '#DC2626', // Red
+  'avgifter': '#DC2626',
+  'stadgar': '#7C3AED', // Purple
+  'årsredovisning': '#7C3AED',
+  'renovering': '#EA580C', // Orange
+  'underhåll': '#EA580C',
+  'gemensamma': '#0891B2', // Sky
+  'utrymmen': '#0891B2',
+  'dokument': '#4B5563', // Gray
+  'arkiv': '#4B5563',
+  'säkerhet': '#DC2626', // Red
+  'faq': '#6B7280', // Gray
+  'frågor': '#6B7280',
 };
 
 // Priority mapping based on section importance

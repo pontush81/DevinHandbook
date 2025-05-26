@@ -41,28 +41,25 @@ export default function HomePage() {
   return (
     <MainLayout variant="landing" showHeader={false} noWhiteTop={true}>
       {/* Hero section */}
-      <section className="py-16 md:py-24">
+      <section className="py-12 md:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-center">
             <div>
-              <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-4 leading-tight">
                 Digital handbok för din bostadsrättsförening
               </h1>
-              <p className="text-lg text-gray-600 mb-8">
-                Slut på pappershantering och förvirring. Skapa en professionell digital handbok 
+              <p className="text-base sm:text-lg text-gray-600 mb-6 md:mb-8 leading-relaxed">
+                Skapa en professionell digital handbok 
                 som alltid är uppdaterad och tillgänglig för alla medlemmar.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                   <Link href="/create-handbook?new=true">Kom igång nu</Link>
-                </Button>
-                <Button variant="outline" size="lg">
-                  <Link href="#features">Se funktioner</Link>
                 </Button>
               </div>
             </div>
-            <div className="rounded-lg overflow-hidden shadow-xl">
-              <div className="relative h-64 md:h-96 bg-white border border-gray-200">
+            <div className="rounded-lg overflow-hidden shadow-xl mt-8 md:mt-0">
+              <div className="relative h-48 sm:h-64 md:h-96 bg-white border border-gray-200">
                 <div className="absolute inset-0">
                   {/* Header mockup */}
                   <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
@@ -109,16 +106,8 @@ export default function HomePage() {
                         <div className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors">
                           <span className="text-gray-600 text-xs">👥</span>
                           <div>
-                            <div className="text-xs font-medium text-gray-700">Styrelsen</div>
+                            <div className="text-xs font-medium text-gray-700">Kontakter</div>
                             <div className="text-xs text-gray-500">Kontakter</div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                          <span className="text-gray-600 text-xs">🔧</span>
-                          <div>
-                            <div className="text-xs font-medium text-gray-700">Felanmälan</div>
-                            <div className="text-xs text-gray-500">Rapportera fel</div>
                           </div>
                         </div>
                         
@@ -166,13 +155,13 @@ export default function HomePage() {
       </section>
 
       {/* Search section */}
-      <section className="py-16 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <section className="py-12 md:py-16 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 md:mb-4">
               Är din förening redan med?
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
               Sök efter din bostadsrättsförening för att få direkt tillgång till er digitala handbok.
             </p>
           </div>
@@ -193,16 +182,16 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-16 bg-white">
+      <section id="features" className="py-12 md:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Fördelar med en digital handbok</h2>
-            <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Fördelar med en digital handbok</h2>
+            <p className="mt-3 md:mt-4 text-base sm:text-lg text-gray-600 max-w-3xl mx-auto px-4">
               Enkel tillgång till viktig information för alla medlemmar i föreningen
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             <div className="rounded-lg p-6 shadow">
               <div className="h-12 w-12 rounded-md flex items-center justify-center mb-4 bg-muted">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -243,11 +232,11 @@ export default function HomePage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-16 bg-gray-50">
+      <section id="pricing" className="py-12 md:py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Enkelt och förutsägbart pris</h2>
-            <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Enkelt och förutsägbart pris</h2>
+            <p className="mt-3 md:mt-4 text-base sm:text-lg text-gray-600 max-w-3xl mx-auto px-4">
               Ingen krånglig prissättning. En fast årskostnad för obegränsad användning.
             </p>
           </div>
@@ -326,9 +315,9 @@ export default function HomePage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-16">
+      <section id="faq" className="py-12 md:py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Vanliga frågor</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 md:mb-12">Vanliga frågor</h2>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
               <AccordionTrigger>Vad ingår i priset på 990 kr/år?</AccordionTrigger>
@@ -397,25 +386,25 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-12">
+      <section className="py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold sm:text-4xl">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold">
               Redo att förenkla informationsdelningen?
             </h2>
-            <p className="mt-4 text-lg leading-6">
+            <p className="mt-3 md:mt-4 text-base sm:text-lg leading-6 px-4">
               Skapa er digitala handbok på mindre än 10 minuter. Komma igång direkt!
             </p>
-            <div className="mt-8 flex justify-center">
+            <div className="mt-6 md:mt-8 flex flex-col sm:flex-row justify-center gap-3">
               <div className="inline-flex rounded-md shadow">
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Link href="/create-handbook?new=true">
                     Skapa handbok nu
                   </Link>
                 </Button>
               </div>
-              <div className="ml-3 inline-flex">
-                <Button variant="secondary">
+              <div className="inline-flex">
+                <Button variant="secondary" className="w-full sm:w-auto">
                   <Link href="/contact">
                     Kontakta oss
                   </Link>

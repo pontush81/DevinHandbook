@@ -146,7 +146,7 @@ function CreateHandbookContent() {
             Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.
           </p>
           {handbooks.length > 0 && (
-            <Button variant="outline" className="mb-4" onClick={() => setShowCreateForm(false)}>
+            <Button variant="outline" className="mb-4" onClick={() => router.push('/dashboard')}>
               Visa mina handböcker
             </Button>
           )}

@@ -271,55 +271,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
 
       {success && (
         <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-md transition-all duration-300 ease-in-out">
-          {creationStep === 'success' && (
-            <CheckCircle2 size={16} className="animate-bounce" />
-          )}
-          {creationStep === 'redirecting' && (
-            <Loader2 size={16} className="animate-spin" />
-          )}
           <span>{success}</span>
-        </div>
-      )}
-
-      {/* Creation progress indicator */}
-      {creationStep !== 'idle' && (
-        <div className="space-y-3 p-4 bg-blue-50 rounded-md border border-blue-200">
-          <div className="flex items-center justify-between text-sm font-medium text-blue-900">
-            <span>Skapar din handbok</span>
-            <span>
-              {creationStep === 'creating' && '1/3'}
-              {creationStep === 'success' && '2/3'}
-              {creationStep === 'redirecting' && '3/3'}
-            </span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2 text-sm">
-              <div className={`w-2 h-2 rounded-full ${creationStep === 'creating' ? 'bg-blue-500 animate-pulse' : 'bg-green-500'}`}></div>
-              <span className={creationStep === 'creating' ? 'text-blue-700' : 'text-green-700'}>
-                Skapar handbok och sektioner
-              </span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm">
-              <div className={`w-2 h-2 rounded-full ${
-                creationStep === 'creating' ? 'bg-gray-300' : 
-                creationStep === 'success' ? 'bg-blue-500 animate-pulse' : 'bg-green-500'
-              }`}></div>
-              <span className={
-                creationStep === 'creating' ? 'text-gray-500' :
-                creationStep === 'success' ? 'text-blue-700' : 'text-green-700'
-              }>
-                Handboken är klar
-              </span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm">
-              <div className={`w-2 h-2 rounded-full ${
-                creationStep === 'redirecting' ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'
-              }`}></div>
-              <span className={creationStep === 'redirecting' ? 'text-blue-700' : 'text-gray-500'}>
-                Omdirigerar till din handbok
-              </span>
-            </div>
-          </div>
         </div>
       )}
 
