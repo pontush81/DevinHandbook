@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Section, Page } from '@/lib/templates/complete-brf-handbook';
-import { Calendar, Clock, Edit3, Plus } from 'lucide-react';
+import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users } from 'lucide-react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { QuickActionCard } from './QuickActionCard';
 import { StatisticCard } from './StatisticCard';
@@ -21,34 +21,117 @@ interface ContentAreaProps {
   onAddPage?: (sectionId: string, title: string, content?: string) => void;
 }
 
-// Default welcome content for when no page is selected
+// Modern welcome content with better UX
 const getWelcomeContent = () => {
-  return `
-# Välkommen till din digitala handbok
+  return (
+    <div className="space-y-16">
+      {/* Hero Section */}
+      <section className="text-center py-12 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl px-8">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+            Välkommen till Ekstugan 15! 🏡
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+            Vi är glada att du är en del av vår gemenskap. Denna digitala handbok är din guide till allt som rör ditt boende och vår förening.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+              <Wrench className="w-5 h-5 mr-2" />
+              Rapportera fel
+            </Button>
+            <Button variant="outline" size="lg" className="px-8 py-3 rounded-lg font-semibold border-2 hover:bg-gray-50">
+              <Phone className="w-5 h-5 mr-2" />
+              Kontakta oss
+            </Button>
+          </div>
+        </div>
+      </section>
 
-Den här handboken innehåller all viktig information om ditt boende och föreningen. Navigera genom menyn till vänster för att hitta specifik information.
+      {/* Information Cards */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+            <BookOpen className="w-6 h-6 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Komplett information</h3>
+          <p className="text-gray-600 text-sm">Allt om föreningen, regler och rutiner på ett ställe</p>
+        </div>
+        
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <Phone className="w-6 h-6 text-green-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Snabb kontakt</h3>
+          <p className="text-gray-600 text-sm">Kontaktuppgifter till styrelse och viktiga personer</p>
+        </div>
+        
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+            <Wrench className="w-6 h-6 text-orange-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Felanmälan</h3>
+          <p className="text-gray-600 text-sm">Rapportera problem snabbt och enkelt</p>
+        </div>
+        
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <DollarSign className="w-6 h-6 text-purple-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Ekonomi & avgifter</h3>
+          <p className="text-gray-600 text-sm">Transparent information om föreningens ekonomi</p>
+        </div>
+      </section>
 
-## Vad du hittar här
-
-### 🏠 Allmän information
-Grundläggande information om föreningen, byggnaden och ditt boende.
-
-### 💰 Ekonomi
-Information om avgifter, budgetar och ekonomisk förvaltning.
-
-### 🔧 Underhåll
-Rutiner för underhåll, reparationer och vem du ska kontakta.
-
-### 📋 Regler
-Ordningsregler, föreningsstadgar och andra viktiga bestämmelser.
-
-### 📞 Kontakt
-Kontaktuppgifter till styrelse, förvaltare och andra viktiga personer.
-
----
-
-*Denna handbok uppdateras kontinuerligt för att säkerställa att informationen alltid är aktuell.*
-  `;
+      {/* Important Information */}
+      <section className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+          <Zap className="w-6 h-6 text-yellow-500 mr-3" />
+          Viktigt att veta från start
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex items-start space-x-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Clock className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Löpande uppdateringar</h4>
+              <p className="text-gray-600 text-sm">Handboken uppdateras kontinuerligt med aktuell information</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Search className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Sökfunktion</h4>
+              <p className="text-gray-600 text-sm">Använd sökfunktionen för att snabbt hitta det du letar efter</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <MessageCircle className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Kontakta styrelsen</h4>
+              <p className="text-gray-600 text-sm">Har du frågor som inte besvaras här? Kontakta oss direkt</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Users className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Delta aktivt</h4>
+              <p className="text-gray-600 text-sm">Gå gärna på våra möten och aktiviteter för att stärka gemenskapen</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 };
 
 export const ContentArea: React.FC<ContentAreaProps> = ({
@@ -64,6 +147,53 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   const [newPageTitle, setNewPageTitle] = useState('');
   const [newPageContent, setNewPageContent] = useState('');
 
+  // Debug: Log sections and pages
+  useEffect(() => {
+    // Removed debug logging for cleaner console
+  }, [sections]);
+
+  // Auto-scroll to selected page/section
+  useEffect(() => {
+    if (currentPageId) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        let targetElement: HTMLElement | null = null;
+        
+        // First try to find the section that contains this page
+        for (const section of sections) {
+          if (section.pages?.some(page => page.id === currentPageId)) {
+            targetElement = document.getElementById(`section-${section.id}`);
+            break;
+          }
+        }
+        
+        // If no section found, try to find the specific page
+        if (!targetElement) {
+          targetElement = document.getElementById(`page-${currentPageId}`);
+        }
+        
+        // If still no page found, try to find the section directly
+        if (!targetElement) {
+          targetElement = document.getElementById(`section-${currentPageId}`);
+        }
+
+        // Scroll to the target element using scrollIntoView
+        if (targetElement) {
+          targetElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+          
+          // Add a small offset after scrolling to account for header
+          setTimeout(() => {
+            window.scrollBy(0, -60);
+          }, 300);
+        }
+      }, 100);
+    }
+  }, [currentPageId, sections]);
+
   const handleAddPage = () => {
     if (newPageTitle.trim() && selectedSectionId && onAddPage) {
       onAddPage(selectedSectionId, newPageTitle.trim(), newPageContent.trim());
@@ -76,44 +206,34 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
 
   if (!sections || sections.length === 0) {
     return (
-      <main className="h-[calc(100vh-4rem)] bg-white overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8 min-h-full">
-          <div className="text-center py-20">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Inga sektioner hittades</h1>
-            <p className="text-gray-600">Handboken kunde inte laddas korrekt.</p>
-            {isEditMode && (
-              <p className="text-blue-600 mt-4">Använd sidomenyn för att lägga till din första sektion.</p>
-            )}
-          </div>
+      <main className="main-content">
+        <div className="content-container">
+          {getWelcomeContent()}
         </div>
       </main>
     );
   }
 
   return (
-    <main className="h-[calc(100vh-4rem)] bg-white overflow-y-auto">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Handbook Header */}
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Bostadsrättsföreningen Ekstugan 15</h1>
-          <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>Uppdaterad {new Date().toLocaleDateString('sv-SE')}</span>
-            </div>
+    <main className="main-content">
+      <div className="content-container">
+        {/* Welcome content if no specific page is selected */}
+        {!currentPageId && (
+          <div className="welcome-section">
+            {getWelcomeContent()}
           </div>
-        </header>
+        )}
 
         {/* All Sections */}
-        <div className="space-y-16">
+        <div className="sections-container">
           {/* Edit mode indicator */}
           {isEditMode && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-              <div className="flex items-center space-x-2">
-                <Edit3 className="w-5 h-5 text-blue-600" />
+            <div className="edit-mode-banner">
+              <div className="edit-mode-banner-content">
+                <Edit3 className="w-6 h-6 text-blue-600" />
                 <div>
-                  <h3 className="text-sm font-medium text-blue-800">Redigeringsläge aktivt</h3>
-                  <p className="text-xs text-blue-600">Klicka på text för att redigera. Hover över sektioner för att se edit-knappar.</p>
+                  <h3 className="edit-mode-banner-title">Redigeringsläge aktivt</h3>
+                  <p className="edit-mode-banner-subtitle">Klicka på text för att redigera. Hover över sektioner för att se edit-knappar.</p>
                 </div>
               </div>
             </div>
@@ -123,17 +243,17 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
             <section 
               key={section.id} 
               id={`section-${section.id}`}
-              className="scroll-mt-20"
+              className="scroll-mt-20 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
             >
               {/* Section Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 border-b border-gray-100">
+                <div className="flex items-start gap-6">
+                  <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                     {sectionIndex + 1}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     {isEditMode && onUpdateSection ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <InlineEdit
                           value={section.title}
                           onSave={(value: string) => onUpdateSection(section.id, { title: value })}
@@ -144,13 +264,15 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                           value={section.description || ''}
                           onSave={(value: string) => onUpdateSection(section.id, { description: value })}
                           placeholder="Sektionsbeskrivning"
-                          className="text-gray-600"
+                          className="text-lg text-gray-600"
                         />
                       </div>
                     ) : (
                       <div>
-                        <h2 className="text-3xl font-bold text-gray-900">{section.title}</h2>
-                        <p className="text-gray-600 mt-1">{section.description}</p>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-2">{section.title}</h2>
+                        {section.description && (
+                          <p className="text-lg text-gray-600">{section.description}</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -164,17 +286,17 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                         setSelectedSectionId(section.id);
                         setShowAddPageDialog(true);
                       }}
+                      className="flex-shrink-0"
                     >
-                      <Plus className="w-3 h-3 mr-1" />
+                      <Plus className="w-4 h-4 mr-2" />
                       Lägg till sida
                     </Button>
                   )}
                 </div>
-                <div className="h-1 bg-gradient-to-r from-blue-600 to-blue-300 rounded-full w-24"></div>
               </div>
 
               {/* Section Pages */}
-              <div className="space-y-12">
+              <div className="p-8 space-y-12">
                 {section.pages?.map((page, pageIndex) => (
                   <article 
                     key={page.id}
@@ -187,7 +309,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                   >
                     {/* Page Header - only show if there are multiple pages in section */}
                     {(section.pages?.length || 0) > 1 && (
-                      <div className="mb-6">
+                      <div className="mb-6 pb-4 border-b border-gray-100">
                         {isEditMode && onUpdatePage ? (
                           <InlineEdit
                             value={page.title}
@@ -196,41 +318,37 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                             className="text-2xl font-semibold text-gray-800"
                           />
                         ) : (
-                          <h3 className="text-2xl font-semibold text-gray-800 mb-2">
+                          <h3 className="text-2xl font-semibold text-gray-800">
                             {page.title}
                           </h3>
                         )}
                         {page.lastUpdated && (
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Calendar className="w-4 h-4" />
+                          <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+                            <Clock className="w-4 h-4" />
                             <span>Uppdaterad {page.lastUpdated}</span>
+                            {page.estimatedReadTime && (
+                              <>
+                                <span>•</span>
+                                <span>{page.estimatedReadTime} min läsning</span>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
                     )}
 
                     {/* Page Content */}
-                    <div className={`prose prose-gray max-w-none mb-8 ${isEditMode ? 'relative group' : ''}`}>
-                      {isEditMode && onUpdatePage && (
-                        <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-100 rounded-full p-1">
-                          <Edit3 className="w-3 h-3 text-blue-600" />
-                        </div>
-                      )}
+                    <div className="prose prose-lg max-w-none">
                       {isEditMode && onUpdatePage ? (
                         <InlineEdit
-                          type="textarea"
-                          value={page.content || ''}
+                          value={page.content}
                           onSave={(value: string) => onUpdatePage(page.id, { content: value })}
-                          placeholder="Sidinnehåll (Markdown stöds)"
-                          multiline={true}
-                          rows={8}
-                          className="prose prose-gray max-w-none"
-                          useMarkdownEditor={true}
+                          placeholder="Sidinnehåll"
+                          multiline
+                          className="min-h-32"
                         />
                       ) : (
-                        <div className={isEditMode ? 'hover:bg-blue-50/30 hover:border-blue-200 border border-transparent rounded-lg p-3 transition-all cursor-pointer' : ''}>
-                          <MarkdownRenderer content={page.content} />
-                        </div>
+                        <MarkdownRenderer content={page.content} />
                       )}
                     </div>
 
@@ -281,62 +399,16 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                         </div>
                       </div>
                     )}
-
-                    {/* Page separator - only if not last page in section */}
-                    {pageIndex < (section.pages?.length || 0) - 1 && (
-                      <div className="border-t border-gray-200 pt-8 mt-8"></div>
-                    )}
                   </article>
                 ))}
-
-                {/* Add page prompt if no pages in section and in edit mode */}
-                {isEditMode && (!section.pages || section.pages.length === 0) && (
-                  <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                    <p className="text-gray-500 mb-4">Inga sidor i denna sektion</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedSectionId(section.id);
-                        setShowAddPageDialog(true);
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Lägg till första sidan
-                    </Button>
-                  </div>
-                )}
               </div>
-
-              {/* Section separator - only if not last section */}
-              {sectionIndex < sections.length - 1 && (
-                <div className="mt-16 pt-8 border-t-2 border-gray-100"></div>
-              )}
             </section>
           ))}
         </div>
 
-        {/* Footer */}
-        <footer className="mt-20 pt-12 border-t border-gray-200 text-center text-gray-500">
-          <div className="space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <span>📞</span>
-              <span>Akut: 08-123 456 78</span>
-              <span className="mx-4">•</span>
-              <span>📧</span>
-              <span>styrelsen@ekstugan15.se</span>
-            </div>
-            <p className="text-sm">
-              Denna handbok uppdateras kontinuerligt för att säkerställa att informationen alltid är aktuell.
-            </p>
-            <p className="text-xs">
-              Senast uppdaterad: {new Date().toLocaleDateString('sv-SE')}
-            </p>
-          </div>
-        </footer>
-
-        {/* Add Page Dialog */}
+        {/* Add page dialog */}
         <Dialog open={showAddPageDialog} onOpenChange={setShowAddPageDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Lägg till ny sida</DialogTitle>
               <DialogDescription>
@@ -347,7 +419,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
               <div>
                 <label className="text-sm font-medium text-gray-700">Sidtitel</label>
                 <Input
-                  placeholder="Titel på sidan"
+                  placeholder="Ange sidtitel"
                   value={newPageTitle}
                   onChange={(e) => setNewPageTitle(e.target.value)}
                 />
@@ -355,10 +427,10 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
               <div>
                 <label className="text-sm font-medium text-gray-700">Innehåll (valfritt)</label>
                 <Textarea
-                  placeholder="Sidinnehåll (Markdown stöds)"
+                  placeholder="Skriv sidinnehåll här..."
                   value={newPageContent}
                   onChange={(e) => setNewPageContent(e.target.value)}
-                  className="min-h-[100px]"
+                  rows={6}
                 />
               </div>
               <div className="flex space-x-2">

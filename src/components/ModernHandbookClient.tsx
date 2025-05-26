@@ -49,15 +49,16 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     const checkEditPermissions = async () => {
       if (authLoading) return;
       
-      // Development mode - allow everyone to edit
-      if (process.env.NODE_ENV === 'development') {
-        setCanEdit(true);
+      // Require user to be logged in even in development
+      if (!user) {
+        setCanEdit(false);
         setIsLoading(false);
         return;
       }
       
-      if (!user) {
-        setCanEdit(false);
+      // Development mode - allow logged-in users to edit
+      if (process.env.NODE_ENV === 'development') {
+        setCanEdit(true);
         setIsLoading(false);
         return;
       }
@@ -185,13 +186,13 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   };
 
   // Add new section
-  const addSection = async (title: string, description: string = '') => {
+  const addSection = async (title: string) => {
     try {
       const { data, error } = await supabase
         .from('sections')
         .insert({
           title,
-          description,
+          description: '',
           order_index: handbookData.sections.length,
           handbook_id: initialData.id
         })
@@ -201,9 +202,16 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       if (error) throw error;
 
       // Update local state
+      const newSection: Section = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        pages: []
+      };
+
       setHandbookData(prev => ({
         ...prev,
-        sections: [...prev.sections, { ...data, pages: [] }]
+        sections: [...prev.sections, newSection]
       }));
     } catch (error) {
       console.error('Error adding section:', error);
@@ -280,19 +288,18 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       />
 
       {/* Main layout */}
-      <div className="flex h-[calc(100vh-4rem)] bg-white">
+      <div className="flex bg-white">
         {/* Sidebar - only takes space on desktop */}
         <div className="hidden lg:block">
           <Sidebar
             sections={handbookData.sections}
-            currentPageId={currentPageId}
+            currentPageId={currentPageId || ''}
             onPageSelect={handlePageSelect}
             isOpen={sidebarOpen}
             onClose={closeSidebar}
             showMobileHeader={false}
-            isEditMode={isEditMode}
+            canEdit={canEdit}
             onAddSection={addSection}
-            onUpdateSection={updateSection}
           />
         </div>
 
@@ -300,19 +307,18 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         <div className="lg:hidden">
           <Sidebar
             sections={handbookData.sections}
-            currentPageId={currentPageId}
+            currentPageId={currentPageId || ''}
             onPageSelect={handlePageSelect}
             isOpen={sidebarOpen}
             onClose={closeSidebar}
             showMobileHeader={true}
-            isEditMode={isEditMode}
+            canEdit={canEdit}
             onAddSection={addSection}
-            onUpdateSection={updateSection}
           />
         </div>
 
         {/* Main content */}
-        <div className="flex-1 bg-white">
+        <div className="flex-1">
           <ContentArea
             sections={handbookData.sections}
             currentPageId={currentPageId}
