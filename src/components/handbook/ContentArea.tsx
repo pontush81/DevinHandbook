@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Section, Page } from '@/lib/templates/complete-brf-handbook';
 import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users } from 'lucide-react';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -146,30 +146,35 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [newPageTitle, setNewPageTitle] = useState('');
   const [newPageContent, setNewPageContent] = useState('');
+  
+  // Use ref to track last scrolled page to avoid unnecessary scrolling
+  const lastScrolledPageRef = useRef<string | null>(null);
 
   // Debug: Log sections and pages
   useEffect(() => {
     // Removed debug logging for cleaner console
   }, [sections]);
 
-  // Auto-scroll to selected page/section
+  // Optimized auto-scroll to selected page/section
   useEffect(() => {
-    if (currentPageId) {
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
+    if (currentPageId && currentPageId !== lastScrolledPageRef.current) {
+      lastScrolledPageRef.current = currentPageId;
+      
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
         let targetElement: HTMLElement | null = null;
         
-        // First try to find the section that contains this page
-        for (const section of sections) {
-          if (section.pages?.some(page => page.id === currentPageId)) {
-            targetElement = document.getElementById(`section-${section.id}`);
-            break;
-          }
-        }
+        // Try to find the specific page first (most common case)
+        targetElement = document.getElementById(`page-${currentPageId}`);
         
-        // If no section found, try to find the specific page
+        // If no page found, try to find the section that contains this page
         if (!targetElement) {
-          targetElement = document.getElementById(`page-${currentPageId}`);
+          for (const section of sections) {
+            if (section.pages?.some(page => page.id === currentPageId)) {
+              targetElement = document.getElementById(`section-${section.id}`);
+              break;
+            }
+          }
         }
         
         // If still no page found, try to find the section directly
@@ -190,7 +195,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
             window.scrollBy(0, -60);
           }, 300);
         }
-      }, 100);
+      });
     }
   }, [currentPageId, sections]);
 

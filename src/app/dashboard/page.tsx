@@ -28,43 +28,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      console.log("Ingen användare hittad, kontrollerar om det finns en aktiv session...");
+      console.log("Ingen användare hittad, omdirigerar till login...");
       
-      // Gör en robust kontroll mot Supabase för att se om det finns en aktiv session
-      // använd polling för att ge cookies tid att ladda
-      let attempts = 0;
-      const maxAttempts = 5;
-      const checkInterval = 800; // 800ms mellan varje kontroll
+      // Enklare och mindre aggressiv omdirigering
+      const timeoutId = setTimeout(() => {
+        router.push("/login");
+      }, 1000); // Ge AuthContext tid att ladda
       
-      const checkSessionStatus = async () => {
-        attempts++;
-        console.log(`Kontrollerar session på dashboard (försök ${attempts}/${maxAttempts})...`);
-        
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            console.log("Session hittad, laddar om sidan för att uppdatera AuthContext");
-            window.location.reload();
-            return;
-          } else if (attempts >= maxAttempts) {
-            console.log("Ingen session hittad efter max antal försök, omdirigerar till login");
-            window.location.href = "/login";
-          } else {
-            console.log("Ingen session hittad ännu, väntar och försöker igen...");
-            setTimeout(checkSessionStatus, checkInterval);
-          }
-        } catch (error) {
-          console.error("Fel vid kontroll av session:", error);
-          if (attempts >= maxAttempts) {
-            window.location.href = "/login";
-          } else {
-            setTimeout(checkSessionStatus, checkInterval);
-          }
-        }
-      };
-      
-      // Starta sessionskontrollerna efter en initial fördröjning
-      setTimeout(checkSessionStatus, 500);
+      return () => clearTimeout(timeoutId);
     }
   }, [user, isLoading, router]);
 

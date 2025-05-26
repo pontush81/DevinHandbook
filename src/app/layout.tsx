@@ -102,144 +102,27 @@ export default function RootLayout({
         {/* Load critical utilities before anything else */}
         <Script src="/js-fallback.js" strategy="beforeInteractive" />
         
-        {/* Emergency script to handle loading issues */}
+        {/* Simplified emergency script - moved complex logic to separate files */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             try {
-              // Redirect loop detection
-              const detectRedirects = () => {
-                let redirectCount = 0;
-                try { 
-                  redirectCount = parseInt(sessionStorage.getItem('redirect_count') || '0');
-                } catch(e) { 
-                  console.warn('Session storage error:', e);
-                }
-                
-                if (redirectCount > 3) {
-                  console.error('Redirect loop detected - applying emergency mode');
-                  // Reset counter
-                  try { sessionStorage.setItem('redirect_count', '0'); } catch(e) {}
-                  return true;
-                } else {
-                  try { 
-                    sessionStorage.setItem('redirect_count', (redirectCount + 1).toString());
-                    
-                    // Auto-reset after 3 seconds if page loads normally
-                    setTimeout(() => {
-                      try { sessionStorage.setItem('redirect_count', '0'); } catch(e) {}
-                    }, 3000);
-                  } catch(e) {}
-                  return false;
-                }
-              };
-              
-              // Only run emergency checks on subdomain
-              const currentHost = window.location.hostname;
-              
-              // Bestäm om vi är i staging eller produktion
-              const isStaging = currentHost.includes('staging.handbok.org') || 
-                               currentHost.endsWith('.staging.handbok.org');
-                                
-              const isSubdomain = currentHost.endsWith('.handbok.org') && 
-                                 currentHost !== 'handbok.org' &&
-                                 currentHost !== 'www.handbok.org' &&
-                                 currentHost !== 'staging.handbok.org';
-              
-              if (isSubdomain) {
-                const isRedirectLoop = detectRedirects();
-                
-                if (isRedirectLoop) {
-                  // Apply emergency styles
-                  const style = document.createElement('style');
-                  style.innerHTML = 'body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }';
-                  document.head.appendChild(style);
-                  
-                  // Show emergency notice when DOM is loaded
-                  window.addEventListener('DOMContentLoaded', () => {
-                    const div = document.createElement('div');
-                    div.className = 'emergency-notice';
-                    div.innerHTML = '<strong>Nödfallsläge:</strong> Sidan visas med begränsad formatering på grund av laddningsproblem.';
-                    if (document.body) document.body.prepend(div);
-                  });
-                }
-                
-                // Fix for static resource loading
-                const fixStaticResources = () => {
-                  // Direct DOM fixing for resources
-                  document.querySelectorAll('link[href^="/_next/"], script[src^="/_next/"], img[src^="/_next/"]').forEach(el => {
-                    const attrName = el.hasAttribute('href') ? 'href' : 'src';
-                    const url = el.getAttribute(attrName);
-                    if (url && url.startsWith('/_next/')) {
-                      el.setAttribute(attrName, 'https://www.handbok.org' + url);
-                    }
-                  });
-                };
-                
-                // Run resource fix both immediately and when DOM is loaded
-                if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', fixStaticResources);
-                } else {
-                  fixStaticResources();
-                }
-                
-                // Fix JS-filer som returnerar HTML istället för JavaScript
-                const fixJsResources = () => {
-                  // Specifika problematiska filer som rapporterats
-                  const problematicFiles = [
-                    'main-app-6cb4d4205dbe6682.js',
-                    'not-found-c44b5e0471063abc.js',
-                    '1684-dd509a3db56295d1.js',
-                    'layout-0c33b245aae4c126.js',
-                    '851-c6952f3282869f27.js', 
-                    '6874-19a86d48fe6904b6.js',
-                    'page-deedaeca2a6f4416.js',
-                    '4bd1b696-6406cd3a0eb1deaf.js',
-                    'webpack-59fcb2c1b9dd853e.js',
-                    '792-f5f0dba6c4a6958b.js'
-                  ];
-                  
-                  // Hitta och fixa script-taggar för problematiska filer
-                  document.querySelectorAll('script[src]').forEach(script => {
-                    const src = script.getAttribute('src');
-                    if (!src) return;
-                    
-                    const isProblematic = problematicFiles.some(file => src.includes(file));
-                    const needsRewrite = src.includes('-') && !src.includes('https://www.handbok.org');
-                    
-                    if (isProblematic || needsRewrite) {
-                      // Rewrite the URL to use the main domain
-                      const newSrc = src.startsWith('/') 
-                        ? 'https://www.handbok.org' + src 
-                        : src.includes('://') ? src : 'https://www.handbok.org/' + src;
-                      
-                      // Sätt upp ett attribut för att visa att detta har fixats
-                      script.setAttribute('data-fixed', 'true');
-                      script.setAttribute('src', newSrc);
-                    }
-                  });
-                };
-                
-                // Kör JS-fix direkt och när DOM är laddad
-                if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', fixJsResources);
-                } else {
-                  fixJsResources();
-                }
-              }
-              
-              // Font loading fallback
+              // Basic font fallback
               if (document.fonts && document.fonts.ready) {
                 document.fonts.ready.then(() => {
                   if (!document.fonts.check('1em Geist')) {
-                    console.warn('Font loading failed - applying fallbacks');
                     const style = document.createElement('style');
-                    style.innerHTML = '.font-sans, .font-geist-sans, [class*="--font-geist-sans"] { font-family: Arial, sans-serif !important; } .font-mono, .font-geist-mono, [class*="--font-geist-mono"] { font-family: "Courier New", monospace !important; }';
+                    style.innerHTML = '.font-sans { font-family: Arial, sans-serif !important; } .font-mono { font-family: "Courier New", monospace !important; }';
                     document.head.appendChild(style);
                   }
-                }).catch(e => console.error('Font loading error:', e));
+                }).catch(() => {
+                  // Fallback if font loading fails
+                  const style = document.createElement('style');
+                  style.innerHTML = '.font-sans { font-family: Arial, sans-serif !important; } .font-mono { font-family: "Courier New", monospace !important; }';
+                  document.head.appendChild(style);
+                });
               }
             } catch(e) {
-              console.error('Error in emergency script:', e);
+              console.warn('Font loading error:', e);
             }
           })();
         `}} />

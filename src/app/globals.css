@@ -191,12 +191,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
-  overflow: hidden; /* Prevent page-level scroll */
 }
 
 #__next {
   height: 100%;
-  overflow: hidden;
 }
 
 /* ==============================================
@@ -204,9 +202,7 @@ html, body {
    ============================================== */
 
 .main-content {
-  height: calc(100vh - 4rem);
-  overflow-y: auto;
-  overflow-x: hidden;
+  min-height: calc(100vh - 4rem);
   background: hsl(var(--gray-50));
 }
 
@@ -481,7 +477,8 @@ html, body {
    ============================================== */
 
 .sidebar-container {
-  height: calc(100vh - 4rem);
+  /* Allow flexible height instead of fixed viewport height */
+  min-height: calc(100vh - 4rem);
   overflow-y: auto;
   overflow-x: hidden;
   background: white;

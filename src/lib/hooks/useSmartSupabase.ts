@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSmartClient } from '../smart-supabase-client';
 import type { SmartSupabaseClient } from '../smart-supabase-client';
 
@@ -19,49 +19,47 @@ export function useSmartSupabase() {
   const [client] = useState<SmartSupabaseClient>(() => getSmartClient());
   const [status, setStatus] = useState<ConnectionStatus>({
     isConnected: false,
-    isLoading: true,
+    isLoading: false,
     lastError: null,
     connectionMethod: 'unknown',
     lastUpdated: new Date(),
     cloudflareIssueDetected: false
   });
 
-  // Diagnostik-funktion
+  // Använd refs för att undvika infinite loops i useEffect
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
+  /**
+   * Kör diagnostik för att kontrollera anslutningsstatus
+   */
   const runDiagnostics = useCallback(async () => {
     try {
       setStatus(prev => ({ ...prev, isLoading: true }));
       
-      // Kör diagnostik via klienten
-      const diagnostics = await client.diagnose();
+      const result = await client.testConnection();
       
-      // Uppdatera status baserat på diagnostiken
-      setStatus({
-        isConnected: diagnostics.results.direct.success || diagnostics.results.proxy.success,
+      setStatus(prev => ({
+        ...prev,
         isLoading: false,
-        lastError: diagnostics.results.direct.success 
-          ? null 
-          : diagnostics.results.proxy.success 
-            ? null 
-            : diagnostics.results.direct.error || diagnostics.results.proxy.error || null,
-        connectionMethod: diagnostics.results.direct.success 
-          ? 'direct' 
-          : diagnostics.results.proxy.success 
-            ? 'proxy' 
-            : 'unknown',
+        isConnected: result.success,
+        lastError: result.error || null,
+        connectionMethod: result.source === 'direct' ? 'direct' : result.source === 'proxy' ? 'proxy' : 'unknown',
         lastUpdated: new Date(),
-        cloudflareIssueDetected: diagnostics.cloudflareCheck?.isCloudflareError || false
-      });
-      
-      return diagnostics;
-    } catch (err) {
-      // Hantera fel vid diagnostik
-      setStatus(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        isConnected: false, 
-        lastError: err.message || 'Kunde inte köra diagnostik' 
+        cloudflareIssueDetected: result.cloudflareIssue || false
       }));
-      return null;
+      
+      return result;
+    } catch (error) {
+      setStatus(prev => ({
+        ...prev,
+        isLoading: false,
+        isConnected: false,
+        lastError: error instanceof Error ? error.message : 'Ett okänt fel inträffade',
+        lastUpdated: new Date()
+      }));
+      
+      return { success: false, error: error instanceof Error ? error.message : 'Ett okänt fel inträffade' };
     }
   }, [client]);
   
@@ -72,13 +70,14 @@ export function useSmartSupabase() {
     // Automatisk hälsokontroll var 5:e minut
     const intervalId = setInterval(() => {
       // Bara kör om klienten inte är i användning eller varit offline
-      if (!status.isConnected || status.lastError) {
+      // Använd ref för att undvika dependency på status
+      if (!statusRef.current.isConnected || statusRef.current.lastError) {
         runDiagnostics();
       }
     }, 5 * 60 * 1000); // 5 minuter
     
     return () => clearInterval(intervalId);
-  }, [runDiagnostics, status.isConnected, status.lastError]);
+  }, [runDiagnostics]); // Ta bort status dependencies
   
   /**
    * Generisk select-funktion med felhantering och statusuppdatering

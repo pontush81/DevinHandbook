@@ -41,6 +41,7 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   
   // Max antal återförsök för auth-relaterade anrop
   const MAX_RETRIES = 3; // Reducerat från 5 till 3 för att minska DOS-risken
+  const REQUEST_TIMEOUT = 10000; // 10 sekunder timeout
   let retryCount = 0;
   let lastError: Error | null = null;
   
@@ -67,7 +68,16 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         await new Promise(resolve => setTimeout(resolve, delay));
       }
       
-      const response = await fetch(input, init);
+      // Lägg till timeout för att förhindra hängningar
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      
+      const response = await fetch(input, {
+        ...init,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       // Om svaret indikerar fel, hantera det
       if (!response.ok) {
