@@ -2,14 +2,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { BookOpenIcon, SearchIcon } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from "@/components/ui/command";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface HandbookResult {
@@ -28,14 +20,14 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const commandRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (query.length < 2) {
       setResults([]);
       setLoading(false);
       setError(null);
+      setOpen(false);
       return;
     }
     
@@ -65,10 +57,7 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
           } else {
             const foundResults = data.results || [];
             setResults(foundResults);
-            // Öppna Command automatiskt när vi får resultat
-            if (foundResults.length > 0) {
-              setOpen(true);
-            }
+            setOpen(true);
           }
         })
         .catch(err => {
@@ -82,10 +71,10 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
     return () => clearTimeout(timeout);
   }, [query]);
 
-  // Hantera klick utanför Command
+  // Hantera klick utanför
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (commandRef.current && !commandRef.current.contains(event.target as Node)) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     };
@@ -97,72 +86,94 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
   }, []);
 
   const handleSelect = (subdomain: string) => {
-    window.location.href = `https://${subdomain}.handbok.org`;
+    // Under utveckling, navigera till en testsida som visar vilken förening som valdes
+    if (process.env.NODE_ENV === 'development') {
+      window.location.href = `/test-search/${subdomain}`;
+    } else {
+      // I produktion, navigera till den riktiga externa domänen
+      window.location.href = `https://${subdomain}.handbok.org`;
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+  };
+
+  const handleInputFocus = () => {
+    if (query.length >= 2 && results.length > 0) {
+      setOpen(true);
+    }
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto" ref={commandRef}>
+    <div className="w-full max-w-xl mx-auto" ref={searchRef}>
       {hideHeader ? (
         <div className="relative">
-          <Command className="rounded-xl overflow-hidden border border-gray-200 shadow-md bg-white">
-            <div className="flex items-center border-b px-4 py-2">
-              <SearchIcon className="mr-4 h-4 w-4 shrink-0 text-blue-500" />
-              <CommandInput
+          <div className="rounded-xl overflow-hidden border border-gray-200 shadow-md bg-white">
+            <div className="relative">
+              <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
                 value={query}
-                onValueChange={setQuery}
+                onChange={handleInputChange}
+                onFocus={handleInputFocus}
                 placeholder="Sök efter förening..."
-                className="flex h-11 w-full rounded-md bg-transparent py-3 text-base outline-hidden placeholder:text-muted-foreground border-0 focus:ring-0"
+                className="w-full h-11 pl-12 pr-12 py-3 text-base bg-transparent border-0 outline-none focus:ring-0 placeholder:text-gray-400"
               />
               {loading && (
-                <div className="ml-3 shrink-0">
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                   <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
                 </div>
               )}
             </div>
-            {open && (query.length >= 2) && (
-              <CommandList className="max-h-96 overflow-y-auto py-2">
+            
+            {open && query.length >= 2 && (
+              <div className="border-t border-gray-100 max-h-96 overflow-y-auto">
                 {results.length > 0 ? (
-                  <CommandGroup heading="Föreningar">
+                  <div className="py-2">
+                    <div className="px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Föreningar
+                    </div>
                     {results.map((handbook) => (
-                      <CommandItem
+                      <button
                         key={handbook.id}
-                        onSelect={() => handleSelect(handbook.subdomain)}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors"
+                        onClick={() => handleSelect(handbook.subdomain)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left"
                       >
-                        <div className="bg-blue-100 p-2 rounded-full">
+                        <div className="bg-blue-100 p-2 rounded-full flex-shrink-0">
                           <BookOpenIcon className="h-5 w-5 text-blue-600" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{handbook.title}</span>
-                          <span className="text-xs text-gray-500">{handbook.subdomain}.handbok.org</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium text-gray-900 truncate">{handbook.title}</span>
+                          <span className="text-xs text-gray-500 truncate">{handbook.subdomain}.handbok.org</span>
                         </div>
-                      </CommandItem>
+                      </button>
                     ))}
-                  </CommandGroup>
+                  </div>
                 ) : (
-                  <CommandEmpty>
+                  <div className="py-8">
                     {error ? (
-                      <div className="flex flex-col items-center py-8">
+                      <div className="flex flex-col items-center">
                         <div className="bg-red-50 p-2 rounded-full mb-2">
                           <AlertCircle className="h-6 w-6 text-red-400" />
                         </div>
-                        <span className="text-gray-600">{error}</span>
+                        <span className="text-gray-600 text-sm">{error}</span>
                       </div>
                     ) : (
                       query.length >= 2 && !loading && (
-                        <div className="flex flex-col items-center py-8">
+                        <div className="flex flex-col items-center">
                           <div className="bg-gray-100 p-2 rounded-full mb-2">
                             <AlertCircle className="h-6 w-6 text-gray-400" />
                           </div>
-                          <span className="text-gray-600">Ingen förening hittades</span>
+                          <span className="text-gray-600 text-sm">Ingen förening hittades</span>
                         </div>
                       )
                     )}
-                  </CommandEmpty>
+                  </div>
                 )}
-              </CommandList>
+              </div>
             )}
-          </Command>
+          </div>
         </div>
       ) : (
         <Card className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 border-0 shadow-lg">
@@ -178,65 +189,71 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
             </div>
             
             <div className="relative">
-              <Command className="rounded-xl overflow-hidden border-0 shadow-md bg-white">
-                <div className="flex items-center border-b px-4 py-2">
-                  <SearchIcon className="mr-4 h-4 w-4 shrink-0 text-blue-500" />
-                  <CommandInput
+              <div className="rounded-xl overflow-hidden border-0 shadow-md bg-white">
+                <div className="relative">
+                  <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
                     value={query}
-                    onValueChange={setQuery}
+                    onChange={handleInputChange}
+                    onFocus={handleInputFocus}
                     placeholder="Sök efter förening..."
-                    className="flex h-11 w-full rounded-md bg-transparent py-3 text-base outline-hidden placeholder:text-muted-foreground border-0 focus:ring-0"
+                    className="w-full h-11 pl-12 pr-12 py-3 text-base bg-transparent border-0 outline-none focus:ring-0 placeholder:text-gray-400"
                   />
                   {loading && (
-                    <div className="ml-3 shrink-0">
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                       <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
                     </div>
                   )}
                 </div>
-                {open && (query.length >= 2) && (
-                  <CommandList className="max-h-96 overflow-y-auto py-2">
+                
+                {open && query.length >= 2 && (
+                  <div className="border-t border-gray-100 max-h-96 overflow-y-auto">
                     {results.length > 0 ? (
-                      <CommandGroup heading="Föreningar">
+                      <div className="py-2">
+                        <div className="px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Föreningar
+                        </div>
                         {results.map((handbook) => (
-                          <CommandItem
+                          <button
                             key={handbook.id}
-                            onSelect={() => handleSelect(handbook.subdomain)}
-                            className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors"
+                            onClick={() => handleSelect(handbook.subdomain)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left"
                           >
-                            <div className="bg-blue-100 p-2 rounded-full">
+                            <div className="bg-blue-100 p-2 rounded-full flex-shrink-0">
                               <BookOpenIcon className="h-5 w-5 text-blue-600" />
                             </div>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-gray-900">{handbook.title}</span>
-                              <span className="text-xs text-gray-500">{handbook.subdomain}.handbok.org</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-medium text-gray-900 truncate">{handbook.title}</span>
+                              <span className="text-xs text-gray-500 truncate">{handbook.subdomain}.handbok.org</span>
                             </div>
-                          </CommandItem>
+                          </button>
                         ))}
-                      </CommandGroup>
+                      </div>
                     ) : (
-                      <CommandEmpty>
+                      <div className="py-8">
                         {error ? (
-                          <div className="flex flex-col items-center py-8">
+                          <div className="flex flex-col items-center">
                             <div className="bg-red-50 p-2 rounded-full mb-2">
                               <AlertCircle className="h-6 w-6 text-red-400" />
                             </div>
-                            <span className="text-gray-600">{error}</span>
+                            <span className="text-gray-600 text-sm">{error}</span>
                           </div>
                         ) : (
                           query.length >= 2 && !loading && (
-                            <div className="flex flex-col items-center py-8">
+                            <div className="flex flex-col items-center">
                               <div className="bg-gray-100 p-2 rounded-full mb-2">
                                 <AlertCircle className="h-6 w-6 text-gray-400" />
                               </div>
-                              <span className="text-gray-600">Ingen förening hittades</span>
+                              <span className="text-gray-600 text-sm">Ingen förening hittades</span>
                             </div>
                           )
                         )}
-                      </CommandEmpty>
+                      </div>
                     )}
-                  </CommandList>
+                  </div>
                 )}
-              </Command>
+              </div>
             </div>
           </CardContent>
         </Card>

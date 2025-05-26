@@ -3,6 +3,10 @@ import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 import HandbookClient from '@/components/HandbookClient';
+import Link from 'next/link';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { Button } from '@/components/ui/button';
+import { BookOpenIcon, ArrowLeftIcon } from 'lucide-react';
 
 interface Section {
   id: string;
@@ -185,11 +189,50 @@ export default function HandbookPage({ params }: Props) {
 
   if (error || !handbook) {
     return (
-      <div className="min-h-screen bg-white p-8">
-        <h1 className="text-2xl font-bold">Handbook Not Found</h1>
-        <p className="text-red-500">{error}</p>
-        <p className="text-gray-500 mt-4">Subdomain: {subdomain}</p>
-      </div>
+      <MainLayout>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="text-center">
+              <div className="flex justify-center items-center mb-6">
+                <div className="bg-blue-100 p-4 rounded-full">
+                  <BookOpenIcon className="h-12 w-12 text-blue-600" />
+                </div>
+              </div>
+              
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                Handbok vald!
+              </h1>
+              
+              <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+                  Du valde föreningen:
+                </h2>
+                <div className="bg-blue-50 rounded-lg p-6">
+                  <p className="text-xl font-medium text-blue-800 mb-2">
+                    {subdomain}
+                  </p>
+                  <p className="text-blue-600">
+                    {subdomain}.handbok.org
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+                <p className="text-yellow-800 text-sm">
+                  <strong>Utvecklingsläge:</strong> I produktion skulle du nu navigeras till den riktiga handboken på {subdomain}.handbok.org
+                </p>
+              </div>
+              
+              <Link href="/">
+                <Button className="inline-flex items-center gap-2">
+                  <ArrowLeftIcon className="h-4 w-4" />
+                  Tillbaka till startsidan
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
     );
   }
 

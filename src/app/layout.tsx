@@ -53,10 +53,83 @@ export default function RootLayout({
   return (
     <html lang="sv" suppressHydrationWarning className={inter.className}>
       <head>
-        <title>Handbok.org - Digital handbok för bostadsrättsföreningar</title>
-        <meta name="description" content="Skapa en digital handbok för din bostadsrättsförening" />
+        <title>Handbok.org - Digital handbok för bostadsrättsföreningar | 990 kr/år</title>
+        <meta name="description" content="Skapa en digital handbok för din bostadsrättsförening. Samla stadgar, regler, kontakter och information på ett ställe. Tillgängligt dygnet runt för alla medlemmar. Endast 990 kr per år." />
+        <meta name="keywords" content="bostadsrättsförening, digital handbok, stadgar, regler, föreningshandbok, brf handbok, bostadsrätt, förening, medlemsinformation" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://handbok.org/" />
+        <meta property="og:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
+        <meta property="og:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 990 kr per år." />
+        <meta property="og:image" content="https://handbok.org/og-image.jpg" />
+        <meta property="og:locale" content="sv_SE" />
+        <meta property="og:site_name" content="Handbok.org" />
+        
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://handbok.org/" />
+        <meta property="twitter:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
+        <meta property="twitter:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 990 kr per år." />
+        <meta property="twitter:image" content="https://handbok.org/og-image.jpg" />
+        
+        {/* Additional SEO */}
+        <meta name="robots" content="index, follow" />
+        <meta name="author" content="Handbok.org" />
+        <meta name="language" content="Swedish" />
+        <meta name="geo.region" content="SE" />
+        <meta name="geo.country" content="Sweden" />
+        <link rel="canonical" href="https://handbok.org/" />
+        
+        {/* Structured Data for Organization */}
+        <script type="application/ld+json">
+          {`
+            {
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Handbok.org",
+              "url": "https://handbok.org",
+              "logo": "https://handbok.org/logo.png",
+              "description": "Digital handbok för bostadsrättsföreningar",
+              "address": {
+                "@type": "PostalAddress",
+                "addressCountry": "SE"
+              },
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "email": "info@handbok.org",
+                "contactType": "customer service"
+              }
+            }
+          `}
+        </script>
+        
+        {/* Structured Data for Service */}
+        <script type="application/ld+json">
+          {`
+            {
+              "@context": "https://schema.org",
+              "@type": "Service",
+              "name": "Digital handbok för bostadsrättsföreningar",
+              "description": "Skapa och hantera digital handbok för din bostadsrättsförening med stadgar, regler och viktig information",
+              "provider": {
+                "@type": "Organization",
+                "name": "Handbok.org"
+              },
+              "areaServed": "Sweden",
+              "offers": {
+                "@type": "Offer",
+                "price": "990",
+                "priceCurrency": "SEK",
+                "priceValidUntil": "2025-12-31",
+                "description": "Årsabonnemang för digital föreningshandbok"
+              }
+            }
+          `}
+        </script>
+        
         <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
         <meta httpEquiv="Cross-Origin-Embedder-Policy" content="unsafe-none" />
         <meta httpEquiv="Cross-Origin-Opener-Policy" content="unsafe-none" />
@@ -84,23 +157,11 @@ export default function RootLayout({
           `}
         </Script>
         
-        {/* Resource fix script for cross-domain resources */}
-        <Script src="/static-resource-fix.js" strategy="beforeInteractive" />
-        
-        {/* Auth storage fallback script */}
-        <Script src="/auth-storage-fallback.js" strategy="beforeInteractive" />
-        
-        {/* Inline critical CSS för att förhindra FOUC och garantera grundläggande styling */}
-        <style dangerouslySetInnerHTML={{ __html: `` }} />
-        
         {/* Preconnect to main domain for faster resource loading */}
         <link rel="preconnect" href="https://www.handbok.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.handbok.org" />
         <link rel="preconnect" href="https://staging.handbok.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://staging.handbok.org" />
-        
-        {/* Load critical utilities before anything else */}
-        <Script src="/js-fallback.js" strategy="beforeInteractive" />
         
         {/* Simplified emergency script - moved complex logic to separate files */}
         <script dangerouslySetInnerHTML={{ __html: `

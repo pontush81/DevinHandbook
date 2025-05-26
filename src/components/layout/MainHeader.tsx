@@ -37,6 +37,7 @@ export function MainHeader({ variant = 'landing', showAuth = true, sections, nav
   const defaultNavLinks = [
     { href: '#features', label: 'Funktioner' },
     { href: '#pricing', label: 'Pris' },
+    { href: '/search', label: 'Hitta förening' },
     { href: '#faq', label: 'Vanliga frågor' },
     { href: '/contact', label: 'Kontakt' }
   ];

@@ -38,7 +38,7 @@ export default function HandbookOnboardingBanner() {
           <ul className="list-disc ml-5 mt-2 space-y-1">
             <li>Klicka på <strong>Redigera</strong> för att anpassa sektioner och sidor.</li>
             <li>Bjud in styrelsemedlemmar eller boende under <strong>Användare</strong>.</li>
-            <li>Behöver du hjälp? <Link href="/documentation" className="underline font-medium">Läs vår dokumentation</Link> eller <Link href="/contact" className="underline font-medium">kontakta supporten</Link>.</li>
+            <li>Behöver du hjälp? <Link href="/#faq" className="underline font-medium">Läs våra vanliga frågor</Link> eller <Link href="/contact" className="underline font-medium">kontakta supporten</Link>.</li>
           </ul>
         </div>
       </AlertDescription>
