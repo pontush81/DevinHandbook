@@ -247,10 +247,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
             >
               {/* Section Header */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 border-b border-gray-100">
-                <div className="flex items-start gap-6">
-                  <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
-                    {sectionIndex + 1}
-                  </div>
+                <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     {isEditMode && onUpdateSection ? (
                       <div className="space-y-3">
