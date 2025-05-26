@@ -26,6 +26,7 @@ interface ContentAreaProps {
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   onAddPage?: (sectionId: string, title: string, content?: string) => void;
+  onDeleteSection?: (sectionId: string) => void;
 }
 
 interface EditableWelcomeContentProps {
@@ -129,11 +130,12 @@ const EditableWelcomeContent: React.FC<EditableWelcomeContentProps> = ({
                 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6 w-full bg-transparent border-2 border-dashed border-gray-300 rounded p-2 text-center"
                 placeholder="Huvudrubrik"
               />
+              {/* Större textarea för bättre redigering */}
               <textarea
                 value={editData.heroSubtitle}
                 onChange={(e) => updateData({ heroSubtitle: e.target.value })}
-                className="text-xl text-gray-600 mb-8 leading-relaxed w-full bg-transparent border-2 border-dashed border-gray-300 rounded p-2 text-center resize-none"
-                rows={3}
+                className="text-xl text-gray-600 mb-8 leading-relaxed w-full bg-transparent border-2 border-dashed border-gray-300 rounded p-4 text-center resize-y min-h-[120px]"
+                rows={6}
                 placeholder="Underrubrik"
               />
             </div>
@@ -383,7 +385,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   handbookId,
   onUpdateSection,
   onUpdatePage,
-  onAddPage
+  onAddPage,
+  onDeleteSection
 }) => {
   const [showAddPageDialog, setShowAddPageDialog] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
@@ -391,9 +394,19 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   const [newPageContent, setNewPageContent] = useState('');
   const [welcomeContent, setWelcomeContent] = useState<WelcomeContentData>(getDefaultWelcomeContent());
   const [isLoadingWelcomeContent, setIsLoadingWelcomeContent] = useState(false);
+  const [visibleSections, setVisibleSections] = useState<Record<string, boolean>>({});
   
   // Use ref to track last scrolled page to avoid unnecessary scrolling
   const lastScrolledPageRef = useRef<string | null>(null);
+
+  // Initialize all sections as visible
+  useEffect(() => {
+    const initialVisibility: Record<string, boolean> = {};
+    sections.forEach(section => {
+      initialVisibility[section.id] = true;
+    });
+    setVisibleSections(initialVisibility);
+  }, [sections]);
 
   // Load welcome content from database when handbookId changes
   useEffect(() => {
@@ -503,6 +516,19 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
     }
   };
 
+  const toggleSectionVisibility = (sectionId: string) => {
+    setVisibleSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
+
+  const handleDeleteSection = (sectionId: string) => {
+    if (window.confirm('Är du säker på att du vill ta bort hela denna sektion? Detta kan inte ångras.')) {
+      onDeleteSection?.(sectionId);
+    }
+  };
+
   if (!sections || sections.length === 0) {
     return (
       <main className="main-content">
@@ -525,13 +551,13 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
       <div className="content-container">
         {/* Welcome content if no specific page is selected */}
         {!currentPageId && (
-          <div className="welcome-section">
+          <div className="welcome-section mb-16">
             <EditableWelcomeContent data={welcomeContent} isEditMode={isEditMode} onUpdate={handleWelcomeContentUpdate} />
           </div>
         )}
 
         {/* All Sections */}
-        <div className="sections-container">
+        <div className="sections-container space-y-8">
           {/* Edit mode indicator */}
           {isEditMode && (
             <div className="edit-mode-banner">
@@ -545,168 +571,206 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
             </div>
           )}
           
-          {sections.map((section, sectionIndex) => (
-            <section 
-              key={section.id} 
-              id={`section-${section.id}`}
-              className="scroll-mt-20 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-            >
-              {/* Section Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 border-b border-gray-100">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    {isEditMode && onUpdateSection ? (
-                      <div className="space-y-3">
-                        <InlineEdit
-                          value={section.title}
-                          onSave={(value: string) => onUpdateSection(section.id, { title: value })}
-                          placeholder="Sektionsrubrik"
-                          className="text-3xl font-bold text-gray-900"
-                        />
-                        <InlineEdit
-                          value={section.description || ''}
-                          onSave={(value: string) => onUpdateSection(section.id, { description: value })}
-                          placeholder="Sektionsbeskrivning"
-                          className="text-lg text-gray-600"
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">{section.title}</h2>
-                        {section.description && (
-                          <p className="text-lg text-gray-600">{section.description}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Add page button in edit mode */}
-                  {isEditMode && onAddPage && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSectionId(section.id);
-                        setShowAddPageDialog(true);
-                      }}
-                      className="flex-shrink-0"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Lägg till sida
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Section Pages */}
-              <div className="p-8 space-y-12">
-                {section.pages?.map((page, pageIndex) => (
-                  <article 
-                    key={page.id}
-                    id={`page-${page.id}`}
-                    className={`
-                      scroll-mt-20 
-                      ${currentPageId === page.id ? 'ring-2 ring-blue-200 bg-blue-50/30 rounded-lg p-6 -m-6' : ''}
-                      ${isEditMode ? 'relative group' : ''}
-                    `}
-                  >
-                    {/* Page Header - only show if there are multiple pages in section */}
-                    {(section.pages?.length || 0) > 1 && (
-                      <div className="mb-6 pb-4 border-b border-gray-100">
-                        {isEditMode && onUpdatePage ? (
+          {sections.map((section, sectionIndex) => {
+            const isSectionVisible = visibleSections[section.id] ?? true;
+            
+            // Only render section if it's visible OR we're in edit mode
+            if (!isSectionVisible && !isEditMode) {
+              return null;
+            }
+            
+            return (
+              <section 
+                key={section.id} 
+                id={`section-${section.id}`}
+                className="scroll-mt-20 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative"
+              >
+                {/* Section Header */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 border-b border-gray-100">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      {isEditMode && onUpdateSection ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-4 mb-3">
+                            <input
+                              type="checkbox"
+                              id={`show-section-${section.id}`}
+                              checked={isSectionVisible}
+                              onChange={() => toggleSectionVisibility(section.id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <label htmlFor={`show-section-${section.id}`} className="text-sm text-gray-600">
+                              Visa sektion
+                            </label>
+                          </div>
                           <InlineEdit
-                            value={page.title}
-                            onSave={(value: string) => onUpdatePage(page.id, { title: value })}
-                            placeholder="Sidtitel"
-                            className="text-2xl font-semibold text-gray-800"
+                            value={section.title}
+                            onSave={(value: string) => onUpdateSection(section.id, { title: value })}
+                            placeholder="Sektionsrubrik"
+                            className="text-3xl font-bold text-gray-900"
                           />
-                        ) : (
-                          <h3 className="text-2xl font-semibold text-gray-800">
-                            {page.title}
-                          </h3>
-                        )}
-                        {page.lastUpdated && (
-                          <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
-                            <Clock className="w-4 h-4" />
-                            <span>Uppdaterad {page.lastUpdated}</span>
-                            {page.estimatedReadTime && (
-                              <>
-                                <span>•</span>
-                                <span>{page.estimatedReadTime} min läsning</span>
-                              </>
+                          <InlineEdit
+                            value={section.description || ''}
+                            onSave={(value: string) => onUpdateSection(section.id, { description: value })}
+                            placeholder="Sektionsbeskrivning"
+                            className="text-lg text-gray-600"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <h2 className="text-3xl font-bold text-gray-900 mb-2">{section.title}</h2>
+                          {section.description && (
+                            <p className="text-lg text-gray-600">{section.description}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {/* Delete section button */}
+                      {isEditMode && onDeleteSection && (
+                        <Button
+                          onClick={() => handleDeleteSection(section.id)}
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full shadow-sm border border-red-200"
+                          title="Ta bort sektion"
+                        >
+                          ×
+                        </Button>
+                      )}
+                      
+                      {/* Add page button in edit mode */}
+                      {isEditMode && onAddPage && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedSectionId(section.id);
+                            setShowAddPageDialog(true);
+                          }}
+                          className="flex-shrink-0"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Lägg till sida
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Pages - only show if section is visible or in edit mode */}
+                {(isSectionVisible || isEditMode) && (
+                  <div className="p-8 space-y-12">
+                    {section.pages?.map((page, pageIndex) => (
+                      <article 
+                        key={page.id}
+                        id={`page-${page.id}`}
+                        className={`
+                          scroll-mt-20 
+                          ${currentPageId === page.id ? 'ring-2 ring-blue-200 bg-blue-50/30 rounded-lg p-6 -m-6' : ''}
+                          ${isEditMode ? 'relative group' : ''}
+                        `}
+                      >
+                        {/* Page Header - only show if there are multiple pages in section OR if page title differs from section title */}
+                        {((section.pages?.length || 0) > 1 || page.title !== section.title) && (
+                          <div className="mb-6 pb-4 border-b border-gray-100">
+                            {isEditMode && onUpdatePage ? (
+                              <InlineEdit
+                                value={page.title}
+                                onSave={(value: string) => onUpdatePage(page.id, { title: value })}
+                                placeholder="Sidtitel"
+                                className="text-2xl font-semibold text-gray-800"
+                              />
+                            ) : (
+                              <h3 className="text-2xl font-semibold text-gray-800">
+                                {page.title}
+                              </h3>
+                            )}
+                            {page.lastUpdated && (
+                              <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+                                <Clock className="w-4 h-4" />
+                                <span>Uppdaterad {page.lastUpdated}</span>
+                                {page.estimatedReadTime && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{page.estimatedReadTime} min läsning</span>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    {/* Page Content */}
-                    <div className="prose prose-lg max-w-none">
-                      {isEditMode && onUpdatePage ? (
-                        <InlineEdit
-                          value={page.content}
-                          onSave={(value: string) => onUpdatePage(page.id, { content: value })}
-                          placeholder="Sidinnehåll"
-                          multiline
-                          className="min-h-32"
-                        />
-                      ) : (
-                        <MarkdownRenderer content={page.content} />
-                      )}
-                    </div>
-
-                    {/* Quick Actions */}
-                    {page.quickActions && page.quickActions.length > 0 && (
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Snabbåtgärder</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {page.quickActions.map((action) => (
-                            <QuickActionCard key={action.id} action={action} />
-                          ))}
+                        {/* Page Content */}
+                        <div className="prose prose-lg max-w-none">
+                          {isEditMode && onUpdatePage ? (
+                            <InlineEdit
+                              value={page.content}
+                              onSave={(value: string) => onUpdatePage(page.id, { content: value })}
+                              placeholder="Sidinnehåll"
+                              multiline
+                              className="min-h-32"
+                            />
+                          ) : (
+                            <MarkdownRenderer content={page.content} />
+                          )}
                         </div>
-                      </div>
-                    )}
 
-                    {/* Statistics */}
-                    {page.statisticCards && page.statisticCards.length > 0 && (
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Statistik</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {page.statisticCards.map((card, index) => (
-                            <StatisticCard key={index} card={card} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                        {/* Quick Actions */}
+                        {page.quickActions && page.quickActions.length > 0 && (
+                          <div className="mb-8">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Snabbåtgärder</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {page.quickActions.map((action) => (
+                                <QuickActionCard key={action.id} action={action} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                    {/* Info Cards */}
-                    {page.infoCards && page.infoCards.length > 0 && (
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Viktig information</h4>
-                        <div className="space-y-4">
-                          {page.infoCards.map((card) => (
-                            <InfoCard key={card.id} card={card} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                        {/* Statistics */}
+                        {page.statisticCards && page.statisticCards.length > 0 && (
+                          <div className="mb-8">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Statistik</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                              {page.statisticCards.map((card, index) => (
+                                <StatisticCard key={index} card={card} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                    {/* Contacts */}
-                    {page.contacts && page.contacts.length > 0 && (
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Kontaktpersoner</h4>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {page.contacts.map((contact, index) => (
-                            <ContactCard key={index} contact={contact} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
+                        {/* Info Cards */}
+                        {page.infoCards && page.infoCards.length > 0 && (
+                          <div className="mb-8">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Viktig information</h4>
+                            <div className="space-y-4">
+                              {page.infoCards.map((card) => (
+                                <InfoCard key={card.id} card={card} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Contacts */}
+                        {page.contacts && page.contacts.length > 0 && (
+                          <div className="mb-8">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Kontaktpersoner</h4>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              {page.contacts.map((contact, index) => (
+                                <ContactCard key={index} contact={contact} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
 
         {/* Add page dialog */}

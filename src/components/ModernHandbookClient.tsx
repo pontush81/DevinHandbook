@@ -251,6 +251,35 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
+  // Delete section
+  const deleteSection = async (sectionId: string) => {
+    try {
+      // First delete all pages in the section
+      const { error: pagesError } = await supabase
+        .from('pages')
+        .delete()
+        .eq('section_id', sectionId);
+
+      if (pagesError) throw pagesError;
+
+      // Then delete the section
+      const { error: sectionError } = await supabase
+        .from('sections')
+        .delete()
+        .eq('id', sectionId);
+
+      if (sectionError) throw sectionError;
+
+      // Update local state
+      setHandbookData(prev => ({
+        ...prev,
+        sections: prev.sections.filter(section => section.id !== sectionId)
+      }));
+    } catch (error) {
+      console.error('Error deleting section:', error);
+    }
+  };
+
   if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -327,6 +356,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             onUpdateSection={updateSection}
             onUpdatePage={updatePage}
             onAddPage={addPage}
+            onDeleteSection={deleteSection}
           />
         </div>
       </div>

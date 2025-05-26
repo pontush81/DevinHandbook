@@ -107,17 +107,17 @@ export const contentTypes = {
 
 export const completeBRFHandbook: HandbookTemplate = {
   metadata: {
-    id: "brf-ekstugan-15",
-    title: "Bostadsrättsföreningen Ekstugan 15",
+    id: "brf-template",
+    title: "Bostadsrättsföreningen",
     subtitle: "",
     version: "3.0",
     lastUpdated: "2024-03-15",
     organization: {
-      name: "Bostadsrättsföreningen Ekstugan 15",
-      address: "Ekstugan 15, 123 45 Stockholm",
-      orgNumber: "769600-1234",
+      name: "Bostadsrättsföreningen",
+      address: "Adress, Postnummer Ort",
+      orgNumber: "123456-7890",
       phone: "08-123 45 67",
-      email: "styrelsen@ekstugan15.se"
+      email: "styrelsen@exempel.se"
     }
   },
   sections: [
@@ -134,9 +134,7 @@ export const completeBRFHandbook: HandbookTemplate = {
         {
           id: generateId(),
           title: "Översikt och snabbfakta",
-          content: `# Välkommen till Bostadsrättsföreningen Ekstugan 15! 🏠
-
-Vi är glada att du är en del av vår gemenskap. Denna digitala handbok är din guide till allt som rör ditt boende och vår förening.
+          content: `Vi är glada att du är en del av vår gemenskap. Denna digitala handbok är din guide till allt som rör ditt boende och vår förening.
 
 ## Vad du hittar här
 
@@ -188,7 +186,7 @@ Vi är glada att du är en del av vår gemenskap. Denna digitala handbok är din
               description: "Snabb anmälan av fel och störningar",
               icon: "🚨",
               actionType: "link",
-              actionValue: "/felanmalan",
+              actionValue: "https://exempel.se/felanmalan",
               isPrimary: true
             },
             {
@@ -197,7 +195,7 @@ Vi är glada att du är en del av vår gemenskap. Denna digitala handbok är din
               description: "Skicka meddelande till styrelsen",
               icon: "📧",
               actionType: "email", 
-              actionValue: "styrelsen@ekstugan15.se",
+              actionValue: "styrelsen@exempel.se",
               isPrimary: false
             },
             {
@@ -227,9 +225,7 @@ Vi är glada att du är en del av vår gemenskap. Denna digitala handbok är din
         {
           id: generateId(),
           title: "Styrelsen 2024",
-          content: `# Styrelsen 2024 👥
-
-Vår styrelse arbetar ideellt för alla medlemmars bästa. Kontakta oss gärna med frågor, förslag eller synpunkter.
+          content: `Vår styrelse arbetar ideellt för alla medlemmars bästa. Kontakta oss gärna med frågor, förslag eller synpunkter.
 
 ## Styrelsens sammansättning
 
@@ -237,7 +233,7 @@ Styrelsen består av fem ledamöter som väljs på årsstämman för ett år i t
 
 ## Så kontaktar du styrelsen
 
-**Allmänna frågor:** styrelsen@ekstugan15.se  
+**Allmänna frågor:** styrelsen@exempel.se  
 **Akuta ärenden:** Ring ordföranden direkt  
 **Styrelsemöten:** Första onsdagen varje månad kl. 19:00
 
@@ -304,9 +300,7 @@ Styrelsen består av fem ledamöter som väljs på årsstämman för ett år i t
         {
           id: generateId(),
           title: "Gör en felanmälan",
-          content: `# Felanmälan - Snabbt och enkelt 🚨
-
-Vi har gjort det enkelt att rapportera fel och få hjälp snabbt. Följ vår guide nedan för bästa resultat.
+          content: `Vi har gjort det enkelt att rapportera fel och få hjälp snabbt. Följ vår guide nedan för bästa resultat.
 
 ## Tre sätt att anmäla fel
 
@@ -336,7 +330,7 @@ Vi har gjort det enkelt att rapportera fel och få hjälp snabbt. Följ vår gui
               description: "Anmäl fel online - rekommenderas",
               icon: "💻", 
               actionType: "link",
-              actionValue: "https://ekstugan15.se/felanmalan",
+              actionValue: "https://exempel.se/felanmalan",
               isPrimary: true
             },
             {
@@ -366,9 +360,7 @@ Vi har gjort det enkelt att rapportera fel och få hjälp snabbt. Följ vår gui
         {
           id: generateId(),
           title: "Månadsavgifter och kostnader",
-          content: `# Ekonomi och avgifter 💰
-
-Här hittar du all information om föreningens ekonomi och dina avgifter som medlem.
+          content: `Här hittar du all information om föreningens ekonomi och dina avgifter som medlem.
 
 ## Månadsavgift 2024
 
@@ -434,9 +426,7 @@ Avgiften varierar beroende på lägenhetsstorlek och inkluderar de flesta drifts
         {
           id: generateId(),
           title: "Regler för gemenskap",
-          content: `# Trivselregler för en bra gemenskap 🤝
-
-Våra trivselregler skapar förutsättningar för att alla ska kunna trivas och känna sig trygga i vår förening.
+          content: `Våra trivselregler skapar förutsättningar för att alla ska kunna trivas och känna sig trygga i vår förening.
 
 ## Grundprinciper
 
@@ -480,9 +470,7 @@ Våra trivselregler skapar förutsättningar för att alla ska kunna trivas och 
         {
           id: generateId(),
           title: "Föreningens stadgar",
-          content: `# Föreningens stadgar 📋
-
-Stadgarna är föreningens grundläggande regelverk som styr hur vi fungerar som bostadsrättsförening.
+          content: `Stadgarna är föreningens grundläggande regelverk som styr hur vi fungerar som bostadsrättsförening.
 
 ## Vad stadgarna innehåller
 
@@ -536,9 +524,7 @@ Stadgarna antogs senast på årsstämman 2023 med följande ändringar:
         {
           id: generateId(),
           title: "Renoveringsregler",
-          content: `# Renoveringsregler och tillstånd 🔧
-
-Innan du påbörjar renoveringar i din lägenhet måste du följa våra regler och få nödvändiga tillstånd.
+          content: `Innan du påbörjar renoveringar i din lägenhet måste du följa våra regler och få nödvändiga tillstånd.
 
 ## Vad kräver tillstånd från styrelsen?
 
@@ -607,9 +593,7 @@ Innan du påbörjar renoveringar i din lägenhet måste du följa våra regler o
         {
           id: generateId(),
           title: "Bopärm för din lägenhet",
-          content: `# Bopärm för din lägenhet 📖
-
-Varje lägenhet har en bopärm med viktig information om installationer och system.
+          content: `Varje lägenhet har en bopärm med viktig information om installationer och system.
 
 ## Vad finns i bopärmen?
 
@@ -667,9 +651,7 @@ Varje lägenhet har en bopärm med viktig information om installationer och syst
         {
           id: generateId(),
           title: "Sorteringsguide",
-          content: `# Sopsortering och återvinning ♻️
-
-Korrekt sopsortering är viktigt för miljön och håller nere kostnaderna för föreningen.
+          content: `Korrekt sopsortering är viktigt för miljön och håller nere kostnaderna för föreningen.
 
 ## Sopsortering i fastigheten
 
@@ -755,9 +737,7 @@ Korrekt sopsortering är viktigt för miljön och håller nere kostnaderna för 
         {
           id: generateId(),
           title: "Parkeringsregler",
-          content: `# Parkering och garage 🚗
-
-Information om parkeringsplatser, regler och tillgänglighet.
+          content: `Information om parkeringsplatser, regler och tillgänglighet.
 
 ## Parkeringsplatser
 
@@ -816,7 +796,7 @@ Information om parkeringsplatser, regler och tillgänglighet.
               description: "Anmäl intresse för parkeringsplats",
               icon: "📝",
               actionType: "email",
-              actionValue: "styrelsen@ekstugan15.se",
+              actionValue: "styrelsen@exempel.se",
               isPrimary: true
             }
           ]
@@ -837,14 +817,12 @@ Information om parkeringsplatser, regler och tillgänglighet.
         {
           id: generateId(),
           title: "Tvättstugeregler",
-          content: `# Tvättstuga och bokningssystem 🧺
-
-Vår tvättstuga är ett gemensamt utrymme som alla medlemmar kan använda enligt våra regler.
+          content: `Vår tvättstuga är ett gemensamt utrymme som alla medlemmar kan använda enligt våra regler.
 
 ## Bokningssystem
 
 ### Online-bokning
-- **Hemsida:** ekstugan15.se/tvattstuga
+- **Hemsida:** exempel.se/tvattstuga
 - **Inloggning:** Använd ditt lägenhetsnummer och kod
 - **Bokningstid:** Max 7 dagar i förväg
 - **Tid per bokning:** 3 timmar (tvättning + torkning)
@@ -885,7 +863,7 @@ Vår tvättstuga är ett gemensamt utrymme som alla medlemmar kan använda enlig
               description: "Online-bokning av tvättstuga",
               icon: "📅",
               actionType: "link",
-              actionValue: "https://ekstugan15.se/tvattstuga",
+              actionValue: "https://exempel.se/tvattstuga",
               isPrimary: true
             },
             {
@@ -894,7 +872,7 @@ Vår tvättstuga är ett gemensamt utrymme som alla medlemmar kan använda enlig
               description: "Anmäl problem med tvättstugan",
               icon: "🚨",
               actionType: "email",
-              actionValue: "styrelsen@ekstugan15.se",
+              actionValue: "styrelsen@exempel.se",
               isPrimary: false
             }
           ],
@@ -923,9 +901,7 @@ Vår tvättstuga är ett gemensamt utrymme som alla medlemmar kan använda enlig
         {
           id: generateId(),
           title: "Föreningslokal och gård",
-          content: `# Gemensamma utrymmen 🏢
-
-Våra gemensamma utrymmen är till för alla medlemmar att njuta av och ta ansvar för.
+          content: `Våra gemensamma utrymmen är till för alla medlemmar att njuta av och ta ansvar för.
 
 ## Föreningslokal
 
@@ -970,7 +946,7 @@ Våra gemensamma utrymmen är till för alla medlemmar att njuta av och ta ansva
               description: "Reservera lokalen för event",
               icon: "🎉",
               actionType: "email",
-              actionValue: "styrelsen@ekstugan15.se",
+              actionValue: "styrelsen@exempel.se",
               isPrimary: true
             }
           ],
@@ -999,9 +975,7 @@ Våra gemensamma utrymmen är till för alla medlemmar att njuta av och ta ansva
         {
           id: generateId(),
           title: "Ofta ställda frågor",
-          content: `# Vanliga frågor och svar ❓
-
-Här hittar du svar på de vanligaste frågorna som medlemmar ställer.
+          content: `Här hittar du svar på de vanligaste frågorna som medlemmar ställer.
 
 ## Ekonomi och avgifter
 
@@ -1053,7 +1027,7 @@ Rökning på balkonger är inte förbjuden, men vi uppmanar till hänsyn mot gra
               description: "Kontakta styrelsen med din fråga",
               icon: "💬",
               actionType: "email",
-              actionValue: "styrelsen@ekstugan15.se",
+              actionValue: "styrelsen@exempel.se",
               isPrimary: true
             }
           ]
@@ -1074,9 +1048,7 @@ Rökning på balkonger är inte förbjuden, men vi uppmanar till hänsyn mot gra
         {
           id: generateId(),
           title: "Viktiga dokument",
-          content: `# Dokumentarkiv 📁
-
-Här hittar du alla viktiga dokument och formulär som rör föreningen.
+          content: `Här hittar du alla viktiga dokument och formulär som rör föreningen.
 
 ## Grundläggande dokument
 
@@ -1137,7 +1109,7 @@ Alla protokoll från årsstämmor finns tillgängliga för medlemmar. Kontakta s
               description: "Begär specifika dokument från styrelsen",
               icon: "📧",
               actionType: "email",
-              actionValue: "styrelsen@ekstugan15.se",
+              actionValue: "styrelsen@exempel.se",
               isPrimary: false
             }
           ],
@@ -1166,9 +1138,7 @@ Alla protokoll från årsstämmor finns tillgängliga för medlemmar. Kontakta s
         {
           id: generateId(),
           title: "Brandskydd och säkerhet",
-          content: `# Säkerhet och trygghet 🔒
-
-Din säkerhet och trygghet är vår högsta prioritet. Här hittar du viktig säkerhetsinformation.
+          content: `Din säkerhet och trygghet är vår högsta prioritet. Här hittar du viktig säkerhetsinformation.
 
 ## Brandskydd
 

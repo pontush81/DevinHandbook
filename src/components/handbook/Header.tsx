@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Professional Brand */}
           <div className="brand">
             <span className="brand-icon">🏠</span>
-            <span className="brand-text">Ekstugan 15</span>
+            <span className="brand-text">{handbookTitle}</span>
           </div>
         </div>
 
