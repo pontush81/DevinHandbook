@@ -42,6 +42,7 @@ interface Section {
   description: string;
   order_index: number;
   handbook_id: string;
+  is_public?: boolean;
   pages: Page[];
 }
 

@@ -13,6 +13,7 @@ interface Section {
   handbook_id: string;
   completion_status?: number;
   is_active?: boolean;
+  is_public?: boolean;
   updated_at?: string;
   pages: Page[];
 }
@@ -137,11 +138,15 @@ export default function HandbookPage({ params }: Props) {
       return null as any;
     }
 
+    // Filter sections based on public status for non-admin users
+    // Note: For public handbook pages, we always filter to only show public sections
+    const visibleSections = handbook.sections.filter(section => section.is_public !== false);
+
     const adaptedData = {
       id: handbook.id,
       title: handbook.title,
       subtitle: handbook.subtitle,
-      sections: handbook.sections.map(section => ({
+      sections: visibleSections.map(section => ({
         id: section.id,
         title: section.title,
         pages: section.pages.map(page => ({

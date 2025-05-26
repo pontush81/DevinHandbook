@@ -60,6 +60,7 @@ export interface Section {
   order: number;
   pages: Page[];
   isActive: boolean;
+  is_public?: boolean;
   lastUpdated?: string;
   completionStatus?: number; // 0-100%
 }

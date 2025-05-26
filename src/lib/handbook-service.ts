@@ -101,6 +101,7 @@ export async function createHandbookWithSectionsAndPages(
         handbook_id: handbookObj.id,
         completion_status: section.completionStatus || 100,
         is_active: section.isActive !== false,
+        is_public: section.is_public !== false,
       })
       .select()
       .single();
@@ -224,6 +225,7 @@ export async function getHandbookBySubdomain(subdomain: string) {
           handbook_id,
           completion_status,
           is_active,
+          is_public,
           created_at,
           updated_at,
           pages (

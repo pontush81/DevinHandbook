@@ -591,17 +591,31 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                     <div className="flex-1 min-w-0">
                       {isEditMode && onUpdateSection ? (
                         <div className="space-y-3">
-                          <div className="flex items-center gap-4 mb-3">
-                            <input
-                              type="checkbox"
-                              id={`show-section-${section.id}`}
-                              checked={isSectionVisible}
-                              onChange={() => toggleSectionVisibility(section.id)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <label htmlFor={`show-section-${section.id}`} className="text-sm text-gray-600">
-                              Visa sektion
-                            </label>
+                          <div className="flex items-center gap-6 mb-3">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`show-section-${section.id}`}
+                                checked={isSectionVisible}
+                                onChange={() => toggleSectionVisibility(section.id)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <label htmlFor={`show-section-${section.id}`} className="text-sm text-gray-600">
+                                Visa sektion
+                              </label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`public-section-${section.id}`}
+                                checked={section.is_public !== false}
+                                onChange={(e) => onUpdateSection(section.id, { is_public: e.target.checked })}
+                                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              />
+                              <label htmlFor={`public-section-${section.id}`} className="text-sm text-gray-600">
+                                Publik sektion
+                              </label>
+                            </div>
                           </div>
                           <InlineEdit
                             value={section.title}

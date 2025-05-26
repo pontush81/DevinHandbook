@@ -280,6 +280,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
+  // Filter sections based on user permissions and public status
+  const getVisibleSections = (sections: Section[]) => {
+    // If user can edit (is admin), show all sections
+    if (canEdit) {
+      return sections;
+    }
+    
+    // For regular users, only show public sections
+    return sections.filter(section => section.is_public !== false);
+  };
+
+  const visibleSections = getVisibleSections(handbookData.sections);
+
   if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -321,7 +334,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         {/* Sidebar - only takes space on desktop */}
         <div className="hidden lg:block">
           <Sidebar
-            sections={handbookData.sections}
+            sections={visibleSections}
             currentPageId={currentPageId || ''}
             onPageSelect={handlePageSelect}
             isOpen={sidebarOpen}
@@ -335,7 +348,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         {/* Mobile sidebar overlay */}
         <div className="lg:hidden">
           <Sidebar
-            sections={handbookData.sections}
+            sections={visibleSections}
             currentPageId={currentPageId || ''}
             onPageSelect={handlePageSelect}
             isOpen={sidebarOpen}
@@ -349,7 +362,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         {/* Main content */}
         <div className="flex-1">
           <ContentArea
-            sections={handbookData.sections}
+            sections={visibleSections}
             currentPageId={currentPageId}
             isEditMode={isEditMode}
             handbookId={initialData.id}

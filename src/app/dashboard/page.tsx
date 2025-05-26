@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSuperadmin, setIsSuperadmin] = useState<boolean>(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -90,6 +91,33 @@ export default function DashboardPage() {
       fetchHandbooks();
     }
   }, [user, fetchHandbooks, isSuperadmin]);
+
+  const deleteHandbook = async (handbookId: string, title: string) => {
+    if (!confirm(`Är du säker på att du vill radera handboken "${title}"? Detta kan inte ångras.`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(handbookId);
+      
+      // Delete the handbook
+      const { error } = await supabase
+        .from("handbooks")
+        .delete()
+        .eq("id", handbookId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setHandbooks(prev => prev.filter(h => h.id !== handbookId));
+      
+    } catch (err: unknown) {
+      console.error("Error deleting handbook:", err);
+      setError("Kunde inte radera handboken. Försök igen senare.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -176,10 +204,14 @@ export default function DashboardPage() {
                     >
                       Visa
                     </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/edit-handbook/${handbook.id}`}>
-                        Redigera
-                      </Link>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => deleteHandbook(handbook.id, handbook.title)}
+                      disabled={deletingId === handbook.id}
+                      className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 disabled:opacity-50"
+                    >
+                      {deletingId === handbook.id ? "Raderar..." : "Radera"}
                     </Button>
                   </div>
                 </CardContent>

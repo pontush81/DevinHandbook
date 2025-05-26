@@ -12,6 +12,7 @@ interface Section {
   handbook_id: string;
   completion_status?: number;
   is_active?: boolean;
+  is_public?: boolean;
   updated_at?: string;
   pages: Page[];
 }
@@ -136,6 +137,10 @@ export default function HandbookPage({ params }: Props) {
 
   // Convert handbook data to format expected by HandbookClient
   const adaptHandbookData = (handbook: Handbook): HandbookClientData => {
+    // Filter sections based on public status for non-admin users
+    // Note: For public handbook pages, we always filter to only show public sections
+    const visibleSections = handbook.sections.filter(section => section.is_public !== false);
+
     return {
       id: handbook.id,
       title: handbook.title,
@@ -147,7 +152,7 @@ export default function HandbookPage({ params }: Props) {
       organization_phone: handbook.organization_phone,
       organization_email: handbook.organization_email,
       updated_at: handbook.updated_at,
-      sections: handbook.sections.map(section => ({
+      sections: visibleSections.map(section => ({
         id: section.id,
         title: section.title,
         description: section.description,
