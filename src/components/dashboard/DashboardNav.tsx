@@ -41,16 +41,6 @@ export function DashboardNav() {
               Dashboard
             </Link>
             
-            <Link
-              href="/dashboard"
-              className={`flex items-center space-x-1 text-sm ${
-                pathname === "/dashboard" ? "text-blue-600 font-medium" : "text-gray-600"
-              }`}
-            >
-              <Book size={16} />
-              <span>Mina handböcker</span>
-            </Link>
-            
             {isSuperAdmin && (
               <Link
                 href="/admin"

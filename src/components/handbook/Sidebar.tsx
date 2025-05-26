@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   showMobileHeader = true,
   canEdit = false,
   onAddSection,
-  iconStyle = 'emoji',
+  iconStyle = 'minimal',
   compactMode = false
 }) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -171,7 +171,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Navigation content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* Icon style toggle */}
+          <div className="mb-4 pb-3 border-b border-gray-100">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Vy:</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => {/* We'll implement this later */}}
+                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                    iconStyle === 'minimal' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+                  }`}
+                  title="Minimala ikoner"
+                >
+                  ●
+                </button>
+                <button
+                  onClick={() => {/* We'll implement this later */}}
+                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                    iconStyle === 'emoji' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+                  }`}
+                  title="Emoji ikoner"
+                >
+                  😊
+                </button>
+                <button
+                  onClick={() => {/* We'll implement this later */}}
+                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                    iconStyle === 'none' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+                  }`}
+                  title="Endast text"
+                >
+                  T
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Add section button for editors */}
           {canEdit && (
             <div className="mb-6">
@@ -242,6 +278,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     nav-item
                     ${isItemActive(item) ? 'active' : ''}
                     ${compactMode ? 'nav-item-compact' : ''}
+                    ${iconStyle === 'none' ? 'nav-item-text-only' : ''}
                   `}
                 >
                   {renderIcon()}
