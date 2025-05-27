@@ -194,87 +194,8 @@ export const supabase = createClient<Database>(
         secure: process.env.NODE_ENV === 'production',
         httpOnly: false // Tillåt JavaScript att läsa för att underlätta debugging
       },
-      // Custom storage fallback istället för att använda null
-      storage: {
-        getItem: (key: string) => {
-          try {
-            if (typeof window !== 'undefined') {
-              // Prova först i window.safeStorage om det finns
-              if (window.safeStorage) {
-                return window.safeStorage.getItem(key);
-              }
-
-              // Sedan prova localStorage direkt
-              try {
-                return localStorage.getItem(key);
-              } catch (e) {
-                // Local storage error, might be blocked
-              }
-
-              // Fallback till memoryStorage om det finns
-              if (window.memoryStorage && window.memoryStorage[key]) {
-                return window.memoryStorage[key];
-              }
-            }
-            return null;
-          } catch (e) {
-            console.warn('Error accessing storage in getItem:', e);
-            return null;
-          }
-        },
-        setItem: (key: string, value: string) => {
-          try {
-            if (typeof window !== 'undefined') {
-              // Prova först i window.safeStorage om det finns
-              if (window.safeStorage) {
-                window.safeStorage.setItem(key, value);
-                return;
-              }
-
-              // Sedan prova localStorage direkt
-              try {
-                localStorage.setItem(key, value);
-                return;
-              } catch (e) {
-                // Local storage error, might be blocked
-              }
-
-              // Fallback till memoryStorage om det finns
-              if (window.memoryStorage) {
-                window.memoryStorage[key] = value;
-              }
-            }
-          } catch (e) {
-            console.warn('Error accessing storage in setItem:', e);
-          }
-        },
-        removeItem: (key: string) => {
-          try {
-            if (typeof window !== 'undefined') {
-              // Prova först i window.safeStorage om det finns
-              if (window.safeStorage) {
-                window.safeStorage.removeItem(key);
-                return;
-              }
-
-              // Sedan prova localStorage direkt
-              try {
-                localStorage.removeItem(key);
-                return;
-              } catch (e) {
-                // Local storage error, might be blocked
-              }
-
-              // Fallback till memoryStorage om det finns
-              if (window.memoryStorage) {
-                delete window.memoryStorage[key];
-              }
-            }
-          } catch (e) {
-            console.warn('Error accessing storage in removeItem:', e);
-          }
-        }
-      }
+      // Använd null för att tvinga cookie-baserad lagring och undvika localStorage-fel
+      storage: null
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,

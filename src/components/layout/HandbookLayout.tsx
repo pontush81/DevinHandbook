@@ -56,7 +56,7 @@ export function HandbookLayout({
             <div className="flex flex-1 items-center justify-end">
               {showAuth && (
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login" className="text-sm">
+                  <Link href="/login" className="text-sm flex items-center">
                     <User className="mr-2 h-4 w-4" />
                     Logga in
                   </Link>
