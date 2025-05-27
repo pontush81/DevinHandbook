@@ -17,7 +17,7 @@ interface SidebarProps {
   showMobileHeader?: boolean;
   canEdit?: boolean;
   onAddSection?: (title: string) => void;
-  iconStyle?: 'emoji' | 'minimal' | 'none';
+  iconStyle?: 'emoji' | 'minimal' | 'none' | 'hybrid';
   compactMode?: boolean;
 }
 
@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   showMobileHeader = true,
   canEdit = false,
   onAddSection,
-  iconStyle = 'minimal',
+  iconStyle = 'hybrid',
   compactMode = false
 }) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -57,26 +57,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handlePageClick = (item: MenuItemConfig) => {
-    // Find the actual section
-    const section = sections.find(s => s.id === item.section);
+    // Clear current page selection to show all sections
+    onPageSelect('');
     
-    if (section) {
-      // If section has pages, navigate to first page
-      if (section.pages && section.pages.length > 0) {
-        onPageSelect(section.pages[0].id);
-      } else {
-        // If no pages, navigate to section itself
-        onPageSelect(section.id);
-      }
-    } else {
-      // Fallback: use the item section ID directly
-      onPageSelect(item.section);
-    }
-    
-    // Close sidebar on mobile
+    // Close sidebar on mobile first
     if (window.innerWidth < 1024) {
       onClose();
     }
+    
+    // Wait a bit for the page to render, then scroll to section
+    setTimeout(() => {
+      const sectionElement = document.getElementById(`section-${item.section}`);
+      if (sectionElement) {
+        sectionElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   const isItemActive = (item: MenuItemConfig): boolean => {
@@ -141,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Overlay for mobile */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+          className="sidebar-overlay fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
           onClick={onClose}
         />
       )}
@@ -162,7 +161,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <h2 className="font-semibold text-gray-900">Navigation</h2>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors focus-visible"
+                aria-label="Stäng navigation"
               >
                 ✕
               </button>
@@ -172,53 +172,143 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {/* Icon style toggle */}
+          {/* Icon style toggle - REMOVED for cleaner interface
           <div className="mb-4 pb-3 border-b border-gray-100">
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>Vy:</span>
               <div className="flex gap-1">
                 <button
-                  onClick={() => {/* We'll implement this later */}}
-                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                  onClick={() => {}}
+                  className={`px-2 py-1 rounded text-xs transition-colors focus-visible ${
                     iconStyle === 'minimal' ? 'bg-primary text-white' : 'hover:bg-gray-100'
                   }`}
                   title="Minimala ikoner"
+                  aria-label="Minimala ikoner"
                 >
                   ●
                 </button>
                 <button
-                  onClick={() => {/* We'll implement this later */}}
-                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                  onClick={() => {}}
+                  className={`px-2 py-1 rounded text-xs transition-colors focus-visible ${
+                    iconStyle === 'hybrid' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+                  }`}
+                  title="Små ikoner"
+                  aria-label="Små ikoner"
+                >
+                  🔸
+                </button>
+                <button
+                  onClick={() => {}}
+                  className={`px-2 py-1 rounded text-xs transition-colors focus-visible ${
                     iconStyle === 'emoji' ? 'bg-primary text-white' : 'hover:bg-gray-100'
                   }`}
                   title="Emoji ikoner"
+                  aria-label="Emoji ikoner"
                 >
                   😊
                 </button>
                 <button
-                  onClick={() => {/* We'll implement this later */}}
-                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                  onClick={() => {}}
+                  className={`px-2 py-1 rounded text-xs transition-colors focus-visible ${
                     iconStyle === 'none' ? 'bg-primary text-white' : 'hover:bg-gray-100'
                   }`}
-                  title="Endast text"
+                  title="Ingen ikon"
+                  aria-label="Ingen ikon"
                 >
                   T
                 </button>
               </div>
             </div>
           </div>
+          */}
+
+          {/* Navigation items */}
+          <nav className="sidebar-nav space-y-1" role="navigation" aria-label="Huvudnavigation">
+            {menuItems.map((item, index) => {
+              const isActive = isItemActive(item);
+              
+              const renderIcon = () => {
+                if (iconStyle === 'none') return null;
+                
+                if (iconStyle === 'minimal') {
+                  const color = getColorForSection(item.title);
+                  return (
+                    <span 
+                      className="nav-icon-minimal"
+                      style={{ backgroundColor: color }}
+                      aria-hidden="true"
+                    />
+                  );
+                }
+                
+                if (iconStyle === 'hybrid') {
+                  return (
+                    <span className="nav-icon-hybrid" aria-hidden="true">
+                      🔸
+                    </span>
+                  );
+                }
+                
+                // emoji style
+                return (
+                  <span className="nav-icon-emoji" aria-hidden="true">
+                    {item.emoji || '📄'}
+                  </span>
+                );
+              };
+
+              return (
+                <button
+                  key={`${item.section}-${index}`}
+                  onClick={() => handlePageClick(item)}
+                  className={`
+                    nav-item w-full text-left transition-all duration-200 ease-in-out
+                    focus-visible
+                    ${isActive 
+                      ? 'nav-item-active bg-blue-50 border-l-3 border-blue-500 text-blue-700' 
+                      : 'nav-item-inactive text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    }
+                    ${compactMode ? 'py-2' : 'py-3'}
+                  `}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <div className="nav-item-content flex items-center gap-3">
+                    {renderIcon()}
+                    <div className="flex-1 min-w-0">
+                      <div className={`
+                        nav-title font-medium truncate
+                        ${isActive ? 'font-semibold' : ''}
+                      `}>
+                        {item.title}
+                      </div>
+                      {item.description && !compactMode && (
+                        <div className="nav-description text-xs text-gray-500 mt-0.5 line-clamp-1">
+                          {item.description}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
 
           {/* Add section button for editors */}
-          {canEdit && (
-            <div className="mb-6">
+          {canEdit && onAddSection && (
+            <div className="mt-6 pt-4 border-t border-gray-100">
               <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full button-responsive focus-visible"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
-                    Lägg till sektion
+                    <span className="hidden sm:inline">Lägg till sektion</span>
+                    <span className="sm:hidden">Lägg till</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="dialog-content">
                   <DialogHeader>
                     <DialogTitle>Lägg till ny sektion</DialogTitle>
                     <DialogDescription>
@@ -226,17 +316,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <Input
-                      placeholder="Sektionsnamn"
-                      value={newSectionTitle}
-                      onChange={(e) => setNewSectionTitle(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddSection()}
-                    />
-                    <div className="flex gap-2">
-                      <Button onClick={handleAddSection} disabled={!newSectionTitle.trim()}>
-                        Skapa
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Sektionsrubrik</label>
+                      <Input
+                        placeholder="Ange sektionsrubrik"
+                        value={newSectionTitle}
+                        onChange={(e) => setNewSectionTitle(e.target.value)}
+                        className="form-input"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddSection();
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="button-group flex space-x-2">
+                      <Button 
+                        onClick={handleAddSection} 
+                        disabled={!newSectionTitle.trim()}
+                        className="button-responsive"
+                      >
+                        Skapa sektion
                       </Button>
-                      <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowAddDialog(false)}
+                        className="button-responsive"
+                      >
                         Avbryt
                       </Button>
                     </div>
@@ -245,81 +351,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </Dialog>
             </div>
           )}
-
-          {/* Navigation items - simple flat list */}
-          <div className="nav-items">
-            {menuItems.map((item) => {
-              const renderIcon = () => {
-                if (iconStyle === 'none') return null;
-                
-                if (iconStyle === 'minimal') {
-                  return (
-                    <div 
-                      className="nav-icon-minimal"
-                      style={{ backgroundColor: getColorForSection(item.title) }}
-                    />
-                  );
-                }
-                
-                // Default emoji style
-                return (
-                  <span className="nav-icon">
-                    {item.icon}
-                  </span>
-                );
-              };
-
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handlePageClick(item)}
-                  data-priority={item.priority}
-                  className={`
-                    nav-item
-                    ${isItemActive(item) ? 'active' : ''}
-                    ${compactMode ? 'nav-item-compact' : ''}
-                    ${iconStyle === 'none' ? 'nav-item-text-only' : ''}
-                  `}
-                >
-                  {renderIcon()}
-                  <div className="nav-content">
-                    <div className="nav-title">
-                      {item.title}
-                    </div>
-                    {item.description && !compactMode && (
-                      <div className="nav-description">
-                        {item.description}
-                      </div>
-                    )}
-                  </div>
-                  {isItemActive(item) && (
-                    <div className="nav-indicator" />
-                  )}
-                </button>
-              );
-            })}
-
-            {/* Empty state */}
-            {menuItems.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <div className="text-4xl mb-4">📚</div>
-                <p className="text-sm">Inga sektioner än</p>
-                {canEdit && (
-                  <p className="text-xs mt-2">Klicka på "Lägg till sektion" för att komma igång</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="text-xs text-gray-500 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <span>🏠</span>
-              <span>Handbok.org</span>
-            </div>
-          </div>
         </div>
       </aside>
     </>

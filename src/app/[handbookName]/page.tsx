@@ -138,9 +138,23 @@ export default function HandbookPage({ params }: Props) {
       return null as any;
     }
 
+    console.log('[HandbookPage] Raw sections from database:', handbook.sections.map(s => ({
+      id: s.id,
+      title: s.title,
+      is_public: s.is_public,
+      pagesCount: s.pages?.length || 0
+    })));
+
     // Filter sections based on public status for non-admin users
     // Note: For public handbook pages, we always filter to only show public sections
     const visibleSections = handbook.sections.filter(section => section.is_public !== false);
+
+    console.log('[HandbookPage] Visible sections after filtering:', visibleSections.map(s => ({
+      id: s.id,
+      title: s.title,
+      is_public: s.is_public,
+      pagesCount: s.pages?.length || 0
+    })));
 
     const adaptedData = {
       id: handbook.id,
