@@ -241,21 +241,27 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
 
                   <div className="section-content bg-white rounded-b-xl p-6 space-y-6">
                     {section.pages && section.pages.length > 0 ? (
-                      <div className="pages-grid grid gap-4">
+                      <div className="pages-content space-y-8">
                         {section.pages.map((page) => (
-                          <div 
+                          <article 
                             key={page.id}
-                            className="page-preview bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                            id={`page-${page.id}`}
+                            className="page-content-full border-l-4 border-blue-200 pl-6"
                           >
-                            <h3 className="page-preview-title text-lg font-semibold text-gray-900 mb-2">
-                              {page.title}
-                            </h3>
-                            {page.description && (
-                              <p className="page-preview-description text-sm text-gray-600 line-clamp-2">
-                                {page.description}
-                              </p>
-                            )}
-                          </div>
+                            <header className="page-header mb-4">
+                              <h3 className="page-title text-2xl font-bold text-gray-900 mb-2">
+                                {page.title}
+                              </h3>
+                              {page.description && (
+                                <p className="page-description text-lg text-gray-600 mb-4">
+                                  {page.description}
+                                </p>
+                              )}
+                            </header>
+                            <div className="page-content prose prose-lg max-w-none">
+                              <MarkdownRenderer content={page.content} />
+                            </div>
+                          </article>
                         ))}
                       </div>
                     ) : (
