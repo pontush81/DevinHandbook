@@ -2,8 +2,10 @@
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
-import { ModernHandbookClient } from '@/components/ModernHandbookClient';
+import { HandbookLayout } from '@/components/layout/HandbookLayout';
+import { ContentArea } from '@/components/handbook/ContentArea';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { HandbookSection, HandbookPage } from '@/types/handbook';
 
 interface Section {
   id: string;
@@ -43,24 +45,6 @@ interface Handbook {
   sections: Section[];
 }
 
-// Interface för ModernHandbookClient
-interface ModernHandbookData {
-  id: string;
-  title: string;
-  subtitle?: string;
-  sections: {
-    id: string;
-    title: string;
-    pages: {
-      id: string;
-      title: string;
-      content: string;
-      lastUpdated?: string;
-      estimatedReadTime?: number;
-    }[];
-  }[];
-}
-
 // Se till att denna sida renderas dynamiskt för att hantera handböcker korrekt
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +61,7 @@ export default function HandbookPage({ params }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [handbookName, setHandbookName] = useState<string>('');
+  const [currentPageId, setCurrentPageId] = useState<string>('');
 
   useEffect(() => {
     let isMounted = true; // Flag to prevent state updates after unmount
@@ -124,18 +109,18 @@ export default function HandbookPage({ params }: Props) {
     };
   }, []); // Empty dependency array - only run once on mount
 
-  // Convert handbook data to format expected by ModernHandbookClient
-  const adaptHandbookData = (handbook: Handbook): ModernHandbookData => {
+  // Convert handbook data to format expected by HandbookLayout
+  const adaptHandbookData = (handbook: Handbook): HandbookSection[] => {
     console.log('[HandbookPage] Input handbook for adaptation:', handbook);
     
     if (!handbook) {
       console.error('[HandbookPage] Handbook is null/undefined');
-      return null as any;
+      return [];
     }
 
     if (!handbook.sections || !Array.isArray(handbook.sections)) {
       console.error('[HandbookPage] Handbook sections invalid:', handbook.sections);
-      return null as any;
+      return [];
     }
 
     console.log('[HandbookPage] Raw sections from database:', handbook.sections.map(s => ({
@@ -156,26 +141,43 @@ export default function HandbookPage({ params }: Props) {
       pagesCount: s.pages?.length || 0
     })));
 
-    const adaptedData = {
-      id: handbook.id,
-      title: handbook.title,
-      subtitle: handbook.subtitle,
-      sections: visibleSections.map(section => ({
-        id: section.id,
-        title: section.title,
-        pages: section.pages.map(page => ({
-          id: page.id,
-          title: page.title,
-          content: page.content,
-          lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
-          estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000)) // Rough estimate
-        }))
+    const adaptedSections: HandbookSection[] = visibleSections.map(section => ({
+      id: section.id,
+      title: section.title,
+      description: section.description,
+      order_index: section.order_index,
+      handbook_id: section.handbook_id,
+      is_public: section.is_public,
+      pages: section.pages.map(page => ({
+        id: page.id,
+        title: page.title,
+        content: page.content,
+        order_index: page.order_index,
+        section_id: page.section_id,
+        lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
+        estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000)) // Rough estimate
       }))
-    };
+    }));
 
-    console.log('[HandbookPage] Adapted handbook data for ModernHandbookClient:', adaptedData);
-    console.log('[HandbookPage] Sections in adapted data:', adaptedData.sections.map(s => ({ id: s.id, title: s.title, pagesCount: s.pages.length })));
-    return adaptedData;
+    console.log('[HandbookPage] Adapted handbook sections for HandbookLayout:', adaptedSections);
+    return adaptedSections;
+  };
+
+  const handlePageSelect = (pageId: string) => {
+    setCurrentPageId(pageId);
+  };
+
+  const handleSectionSelect = (sectionId: string) => {
+    // Rensa vald sida för att visa hela sektionen
+    setCurrentPageId('');
+    
+    // Scrolla till sektionen
+    setTimeout(() => {
+      const element = document.getElementById(`section-${sectionId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   if (loading) {
@@ -202,16 +204,16 @@ export default function HandbookPage({ params }: Props) {
 
   console.log('[HandbookPage] About to adapt handbook data:', handbook);
   
-  // Use the modern HandbookClient
-  const adaptedHandbook = adaptHandbookData(handbook);
+  // Use the new HandbookLayout with ModernSidebar
+  const adaptedSections = adaptHandbookData(handbook);
 
-  console.log('[HandbookPage] Final adapted data before passing to ModernHandbookClient:', adaptedHandbook);
+  console.log('[HandbookPage] Final adapted sections before passing to HandbookLayout:', adaptedSections);
 
-  if (!adaptedHandbook) {
+  if (!adaptedSections || adaptedSections.length === 0) {
     return (
       <div className="min-h-screen bg-white p-8">
         <h1 className="text-2xl font-bold text-red-600">Fel vid databearbetning</h1>
-        <p className="text-gray-600">Handbokdata kunde inte bearbetas korrekt.</p>
+        <p className="text-gray-600">Handbokdata kunde inte bearbetas korrekt eller inga sektioner hittades.</p>
       </div>
     );
   }
@@ -220,17 +222,28 @@ export default function HandbookPage({ params }: Props) {
     <>
       <AuthProvider>
         <SessionTransferHandler />
-        {adaptedHandbook && adaptedHandbook.title ? (
-          <ModernHandbookClient initialData={adaptedHandbook} />
-        ) : (
-          <div className="min-h-screen bg-white p-8 flex items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-red-600 mb-4">Fel: Ogiltig handbokdata</h1>
-              <p className="text-gray-600">Handbokdata saknar titel eller är ofullständig.</p>
-              <p className="text-sm text-gray-400 mt-2">Debug: {JSON.stringify(adaptedHandbook, null, 2)}</p>
-            </div>
-          </div>
-        )}
+        <HandbookLayout
+          sections={adaptedSections}
+          currentPageId={currentPageId}
+          onPageSelect={handlePageSelect}
+          onSectionSelect={handleSectionSelect}
+          handbookTitle={handbook.title}
+          showAuth={true}
+        >
+          <ContentArea
+            sections={adaptedSections}
+            currentPageId={currentPageId}
+            isEditMode={false}
+            handbookId={handbook.id}
+            onUpdateSection={() => {}}
+            onUpdatePage={() => {}}
+            onAddPage={() => {}}
+            onAddSection={() => {}}
+            onMoveSection={() => {}}
+            onDeleteSection={() => {}}
+            onExitEditMode={() => {}}
+          />
+        </HandbookLayout>
       </AuthProvider>
     </>
   );

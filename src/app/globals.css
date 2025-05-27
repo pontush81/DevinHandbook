@@ -47,7 +47,7 @@
 
 :root {
   --radius: 0.5rem;
-  
+
   /* Updated color palette */
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -55,14 +55,14 @@
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  
+
   /* Primary colors - Blue theme */
   --primary: 222.2 47.4% 11.2%;
   --primary-foreground: 210 40% 98%;
   --primary-hover: 221 83% 45%;
   --primary-light: 221 83% 95%;
   --primary-dark: 221 83% 35%;
-  
+
   /* Secondary colors */
   --secondary: 210 40% 96%;
   --secondary-foreground: 222.2 84% 4.9%;
@@ -70,13 +70,13 @@
   --muted-foreground: 215.4 16.3% 46.9%;
   --accent: 210 40% 96%;
   --accent-foreground: 222.2 84% 4.9%;
-  
+
   /* Semantic colors */
   --success: 142 76% 36%;
   --warning: 38 92% 50%;
   --error: 0 84% 60%;
   --info: 199 89% 48%;
-  
+
   /* Neutrals */
   --gray-50: 210 40% 98%;
   --gray-100: 210 40% 96%;
@@ -88,20 +88,20 @@
   --gray-700: 215.4 16.3% 26.9%;
   --gray-800: 215.4 16.3% 16.9%;
   --gray-900: 222.2 84% 4.9%;
-  
+
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
-  
+
   /* Chart colors */
   --chart-1: 12 76% 61%;
   --chart-2: 173 58% 39%;
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
-  
+
   /* Sidebar colors */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -111,14 +111,14 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
-  
+
   /* Brand colors */
   --colors-brand: #2563eb !important;
   --colors-brandAccent: #1d4ed8 !important;
   --colors-brandButtonText: #fff !important;
   --colors-messageSuccessBackground: #2563eb !important;
   --colors-messageSuccessText: #fff !important;
-  
+
   /* New spacing system - 8px based */
   --space-0-5: 0.125rem;
   --space-1: 0.25rem;
@@ -128,7 +128,7 @@
   --space-4: 1rem;
   --space-6: 1.5rem;
   --space-10: 2.5rem;
-  
+
   /* Shadow system */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -220,7 +220,7 @@ html, body {
   .main-content {
     padding-top: 4rem; /* Ensure header space on mobile */
   }
-  
+
   .content-container {
     padding: 1rem;
   }
@@ -576,7 +576,7 @@ html, body {
     padding: var(--space-4);
     min-height: 48px; /* Larger touch targets on mobile */
   }
-  
+
   .nav-item.active {
     padding-left: calc(var(--space-4) - 2px);
   }
@@ -796,20 +796,20 @@ html, body {
   .header-container {
     padding: 0 1rem;
   }
-  
+
   .header-center {
     max-width: 20rem;
     margin: 0 var(--space-4);
   }
-  
+
   .search-container {
     max-width: 18rem;
   }
-  
+
   .user-name {
     display: none;
   }
-  
+
   /* Ensure content doesn't overlap with mobile sidebar */
   .main-content {
     position: relative;
@@ -821,30 +821,30 @@ html, body {
   .header-container {
     padding: 0 0.75rem;
   }
-  
+
   .header-center {
     max-width: 16rem;
     margin: 0 var(--space-3);
   }
-  
+
   .search-container {
     max-width: 14rem;
   }
-  
+
   .brand-text {
     display: none;
   }
-  
+
   .content-container {
     padding: 1rem;
   }
-  
+
   .search-input {
     font-size: 0.8rem;
     padding: 0.5rem 0.75rem;
     padding-left: 2.25rem;
   }
-  
+
   .search-icon {
     left: 0.75rem;
     font-size: 0.875rem;
@@ -857,30 +857,30 @@ html, body {
     max-width: 12rem;
     margin: 0 var(--space-2);
   }
-  
+
   .search-container {
     max-width: 10rem;
   }
-  
+
   .search-input {
     padding: 0.375rem 0.5rem;
     padding-left: 2rem;
     font-size: 0.75rem;
   }
-  
+
   .search-icon {
     left: 0.5rem;
     font-size: 0.8rem;
   }
-  
+
   .header-right {
     gap: var(--space-2);
   }
-  
+
   .user-btn {
     padding: var(--space-2);
   }
-  
+
   .content-container {
     padding: 0.75rem;
   }
@@ -891,20 +891,20 @@ html, body {
   .header-container {
     padding: 0 0.5rem;
   }
-  
+
   .header-center {
     display: none; /* Hide search on very small screens */
   }
-  
+
   .brand-icon {
     font-size: 1rem;
   }
-  
+
   .mobile-menu-btn {
     width: 2.25rem;
     height: 2.25rem;
   }
-  
+
   .content-container {
     padding: 0.5rem;
   }
@@ -915,12 +915,12 @@ html, body {
   .sidebar-container {
     height: 100vh;
   }
-  
+
   .nav-item {
     padding: var(--space-2) var(--space-4);
     min-height: 40px;
   }
-  
+
   .nav-description {
     display: none;
   }
@@ -947,7 +947,7 @@ html, body {
   --ring: 222.2 84% 4.9%;
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
-  
+
   /* Gray scale */
   --gray-50: 210 40% 98%;
   --gray-100: 210 40% 96%;
@@ -959,13 +959,13 @@ html, body {
   --gray-700: 215.3 25% 26.7%;
   --gray-800: 217.2 32.6% 17.5%;
   --gray-900: 222.2 84% 4.9%;
-  
+
   /* Accent colors */
   --orange-50: 33 100% 96%;
   --orange-700: 24.6 95% 53.1%;
   --green-50: 138 76% 97%;
   --green-700: 142.1 76.2% 36.3%;
-  
+
   /* Spacing */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -977,12 +977,12 @@ html, body {
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
-  
+
   /* Border radius */
   --radius: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -1062,17 +1062,17 @@ html, body {
     padding: 0.75rem 1rem;
     margin-bottom: 1.5rem;
   }
-  
+
   .edit-mode-banner-content {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .edit-mode-banner-title {
     font-size: 0.9rem;
   }
-  
+
   .edit-mode-banner-subtitle {
     font-size: 0.8rem;
   }
@@ -1102,7 +1102,7 @@ html, body {
   .section-header {
     padding: 1.5rem 1rem;
   }
-  
+
   .section-content {
     padding: 1.5rem 1rem;
   }
@@ -1112,7 +1112,7 @@ html, body {
   .section-header {
     padding: 1rem;
   }
-  
+
   .section-content {
     padding: 1rem;
   }
@@ -1149,7 +1149,7 @@ html, body {
   .page-title {
     font-size: 1.25rem;
   }
-  
+
   .page-meta {
     flex-direction: column;
     align-items: flex-start;
@@ -1207,22 +1207,22 @@ html, body {
     font-size: 0.9rem;
     line-height: 1.6;
   }
-  
+
   .prose h1 {
     font-size: 1.5rem;
     margin-top: 1.5rem;
   }
-  
+
   .prose h2 {
     font-size: 1.25rem;
     margin-top: 1.25rem;
   }
-  
+
   .prose h3 {
     font-size: 1.125rem;
     margin-top: 1rem;
   }
-  
+
   .prose ul, .prose ol {
     padding-left: 1.25rem;
   }
@@ -1256,13 +1256,13 @@ html, body {
     gap: 0.75rem;
     margin-bottom: 1.5rem;
   }
-  
+
   .statistics-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
     margin-bottom: 1.5rem;
   }
-  
+
   .contacts-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -1315,11 +1315,11 @@ html, body {
   .section-title {
     font-size: 1.5rem;
   }
-  
+
   .section-description {
     font-size: 1rem;
   }
-  
+
   .subsection-title {
     font-size: 1rem;
     margin-bottom: 0.75rem;
@@ -1330,11 +1330,11 @@ html, body {
   .section-title {
     font-size: 1.25rem;
   }
-  
+
   .section-description {
     font-size: 0.9rem;
   }
-  
+
   .subsection-title {
     font-size: 0.9rem;
   }
@@ -1361,7 +1361,7 @@ html, body {
     align-items: flex-start;
     gap: 0.75rem;
   }
-  
+
   .edit-checkbox-group {
     font-size: 0.8rem;
   }
@@ -1380,7 +1380,7 @@ html, body {
     align-items: stretch;
     gap: 0.5rem;
   }
-  
+
   .button-group button {
     width: 100%;
   }
@@ -1400,11 +1400,11 @@ html, body {
   .main-content {
     scroll-behavior: smooth;
   }
-  
+
   .page-article {
     scroll-margin-top: 6rem; /* More space on mobile for header */
   }
-  
+
   /* Improve touch scrolling */
   .main-content,
   .content-container {
@@ -1422,27 +1422,27 @@ html, body {
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
   }
-  
+
   .sidebar-container {
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   }
-  
+
   /* Improve sidebar scrolling on mobile */
   .sidebar-nav {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
-  
+
   /* Better touch targets */
   .nav-item {
     min-height: 48px; /* Better touch target */
     padding: var(--space-3) var(--space-4);
   }
-  
+
   .nav-item-content {
     align-items: center;
   }
-  
+
   .nav-description {
     font-size: 0.8rem;
     line-height: 1.3;
@@ -1455,11 +1455,11 @@ html, body {
     width: 100vw;
     max-width: none;
   }
-  
+
   .nav-item {
     padding: var(--space-2) var(--space-3);
   }
-  
+
   .nav-description {
     display: none; /* Hide descriptions on very small screens */
   }
@@ -1492,11 +1492,11 @@ html, body {
   .welcome-hero {
     padding: 2rem 0;
   }
-  
+
   .welcome-title {
     font-size: 1.875rem;
   }
-  
+
   .welcome-subtitle {
     font-size: 1.125rem;
     margin-bottom: 1.5rem;
@@ -1507,11 +1507,11 @@ html, body {
   .welcome-hero {
     padding: 1.5rem 0;
   }
-  
+
   .welcome-title {
     font-size: 1.5rem;
   }
-  
+
   .welcome-subtitle {
     font-size: 1rem;
   }
@@ -1629,7 +1629,7 @@ html, body {
   .nav-item {
     border: 1px solid;
   }
-  
+
   .section-card {
     border: 2px solid;
   }

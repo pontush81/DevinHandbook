@@ -486,8 +486,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   return (
     <main className="flex-1 bg-gradient-to-br from-gray-50 to-white min-h-screen pt-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome content */}
-        {(!sections || sections.length === 0) && (
+        {/* Welcome content - only show when no sections exist at all */}
+        {(!sections || sections.length === 0) && !currentPageId && (
           <div className="mb-12">
             <EditableWelcomeContent data={welcomeContent} isEditMode={isEditMode} />
           </div>
@@ -496,11 +496,6 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
         {/* All sections displayed vertically */}
         {sections && sections.length > 0 && (
           <div className="space-y-16">
-            {/* Welcome section at the top */}
-            <div className="mb-16">
-              <EditableWelcomeContent data={welcomeContent} isEditMode={isEditMode} />
-            </div>
-
             {/* Add section button before first section */}
             {isEditMode && onAddSection && (
               <section className="mb-16">
