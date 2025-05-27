@@ -22,6 +22,17 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'tru
   console.log('Node Environment:', process.env.NODE_ENV);
   console.log('Is Edge Runtime:', typeof EdgeRuntime !== 'undefined');
   console.log('Vercel Deployment:', process.env.VERCEL_URL || 'inte i Vercel');
+  
+  // Lägg till produktionsspecifik diagnostik
+  if (typeof window !== 'undefined') {
+    console.log('Current hostname:', window.location.hostname);
+    console.log('NEXT_PUBLIC_HANDBOOK_DOMAIN:', process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN || 'not set');
+    const cookieDomain = process.env.NODE_ENV === 'production' ? 
+      (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` :
+       (window.location.hostname.includes('handbok.org') ? '.handbok.org' : undefined)) : 
+      undefined;
+    console.log('Cookie domain will be:', cookieDomain || 'undefined');
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -188,7 +199,11 @@ export const supabase = createClient<Database>(
       cookieOptions: {
         name: 'sb-auth',
         lifetime: 60 * 60 * 24 * 7,
-        domain: process.env.NODE_ENV === 'production' ? '.handbok.org' : undefined,
+        // Använd miljövariabel för domän, fallback till automatisk detektion
+        domain: process.env.NODE_ENV === 'production' ? 
+          (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` :
+           (typeof window !== 'undefined' && window.location.hostname.includes('handbok.org') ? '.handbok.org' : undefined)) : 
+          undefined,
         path: '/',
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
@@ -424,3 +439,52 @@ export type Database = {
     };
   };
 };
+
+// Hjälpfunktion för att diagnostisera auth-problem i produktion
+export async function diagnoseAuthIssues() {
+  if (typeof window === 'undefined') return null;
+  
+  const diagnostics = {
+    environment: process.env.NODE_ENV,
+    hostname: window.location.hostname,
+    cookieDomain: process.env.NODE_ENV === 'production' ? 
+      (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` :
+       (window.location.hostname.includes('handbok.org') ? '.handbok.org' : undefined)) : 
+      undefined,
+    hasSupabaseUrl: !!supabaseUrl,
+    hasAnonKey: !!supabaseAnonKey,
+    cookies: document.cookie,
+    localStorage: null as any,
+    sessionStorage: null as any,
+    authSession: null as any
+  };
+  
+  // Testa localStorage access
+  try {
+    localStorage.getItem('test');
+    diagnostics.localStorage = 'accessible';
+  } catch (e) {
+    diagnostics.localStorage = `blocked: ${e.message}`;
+  }
+  
+  // Testa sessionStorage access
+  try {
+    sessionStorage.getItem('test');
+    diagnostics.sessionStorage = 'accessible';
+  } catch (e) {
+    diagnostics.sessionStorage = `blocked: ${e.message}`;
+  }
+  
+  // Testa Supabase session
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    diagnostics.authSession = session ? 'active' : 'none';
+    if (error) {
+      diagnostics.authSession = `error: ${error.message}`;
+    }
+  } catch (e) {
+    diagnostics.authSession = `failed: ${e.message}`;
+  }
+  
+  return diagnostics;
+}
