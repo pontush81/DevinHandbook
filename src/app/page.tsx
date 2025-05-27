@@ -53,7 +53,7 @@ export default function HomePage() {
                 som alltid är uppdaterad och tillgänglig för alla medlemmar.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto" asChild>
                   <Link href="/create-handbook?new=true">Kom igång nu</Link>
                 </Button>
               </div>
@@ -397,14 +397,14 @@ export default function HomePage() {
             </p>
             <div className="mt-6 md:mt-8 flex flex-col sm:flex-row justify-center gap-3">
               <div className="inline-flex rounded-md shadow">
-                <Button className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white" asChild>
                   <Link href="/create-handbook?new=true">
                     Skapa handbok nu
                   </Link>
                 </Button>
               </div>
               <div className="inline-flex">
-                <Button variant="secondary" className="w-full sm:w-auto">
+                <Button variant="secondary" className="w-full sm:w-auto" asChild>
                   <Link href="/contact">
                     Kontakta oss
                   </Link>
