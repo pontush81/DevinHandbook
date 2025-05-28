@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from './handbook/Header';
-import { Sidebar } from './handbook/Sidebar';
+import { ModernSidebar, SidebarTrigger } from './handbook/ModernSidebar';
 import { ContentArea } from './handbook/ContentArea';
 import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { MainFooter } from '@/components/layout/MainFooter';
 
 interface ModernHandbookClientProps {
   initialData: {
@@ -22,20 +24,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   initialData,
   defaultEditMode = false
 }) => {
-  // Standard responsive behavior: closed on mobile, always open on desktop
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024; // Always open on desktop
-    }
-    return false; // Closed by default for SSR
-  });
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
-  const [previousIsDesktop, setPreviousIsDesktop] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024;
-    }
-    return false;
-  });
 
   // Edit mode state - use defaultEditMode prop
   const [isEditMode, setIsEditMode] = useState(defaultEditMode);
@@ -126,36 +115,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     checkEditPermissions();
   }, [user, authLoading, initialData.id]);
 
-  // Handle window resize - standard responsive behavior
-  useEffect(() => {
-    const handleResize = () => {
-      const isDesktop = window.innerWidth >= 1024;
-      const isMobile = window.innerWidth < 1024;
-      
-      // Only change state when actually transitioning between desktop/mobile
-      if (isDesktop && !previousIsDesktop) {
-        // Transitioning from mobile to desktop - open sidebar
-        setSidebarOpen(true);
-        setPreviousIsDesktop(true);
-      } else if (isMobile && previousIsDesktop) {
-        // Transitioning from desktop to mobile - close sidebar
-        setSidebarOpen(false);
-        setPreviousIsDesktop(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [previousIsDesktop]);
-
-  const handlePageSelect = (pageId: string) => {
-    setCurrentPageId(pageId);
-    // Always close sidebar on mobile when selecting a page
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  };
-
   // Handle page selection from search results via URL hash
   useEffect(() => {
     const handleHashChange = () => {
@@ -189,24 +148,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     return () => window.removeEventListener('toggleEditMode', handleToggleEditMode);
   }, [canEdit, isEditMode]);
 
-  const toggleSidebar = () => {
-    // Only allow toggling on mobile
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(!sidebarOpen);
-    }
-  };
-
-  const closeSidebar = () => {
-    // Only allow closing on mobile
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const toggleEditMode = () => {
-    if (canEdit) {
-      setIsEditMode(!isEditMode);
-    }
+  const handlePageSelect = (pageId: string) => {
+    setCurrentPageId(pageId);
   };
 
   // Update section
@@ -567,66 +510,65 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      {/* Header */}
-      <Header
-        onToggleSidebar={toggleSidebar}
-        onCloseSidebar={closeSidebar}
-        handbookTitle={handbookData.title}
-        handbookSubtitle={handbookData.subtitle}
-        sidebarOpen={sidebarOpen}
-        canEdit={canEdit}
-        isEditMode={isEditMode}
-        onToggleEditMode={toggleEditMode}
-        onSearch={handleSearch}
-        searchResults={searchResults}
-      />
-
-      {/* Main layout */}
-      <div className="flex">
-        {/* Sidebar - only takes space on desktop */}
-        <div className="hidden lg:block">
-          <Sidebar
-            sections={visibleSections}
-            currentPageId={currentPageId || ''}
-            onPageSelect={handlePageSelect}
-            isOpen={sidebarOpen}
-            onClose={closeSidebar}
-            showMobileHeader={false}
-            canEdit={canEdit}
-            onAddSection={addSection}
-          />
-        </div>
-
-        {/* Mobile sidebar overlay */}
-        <div className="lg:hidden">
-          <Sidebar
-            sections={visibleSections}
-            currentPageId={currentPageId || ''}
-            onPageSelect={handlePageSelect}
-            isOpen={sidebarOpen}
-            onClose={closeSidebar}
-            showMobileHeader={true}
-            canEdit={canEdit}
-            onAddSection={addSection}
-          />
-        </div>
-
-        {/* Main content */}
-        <ContentArea
-          sections={visibleSections}
-          currentPageId={currentPageId}
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen w-full flex flex-col">
+        {/* Header */}
+        <Header
+          handbookTitle={handbookData.title}
+          handbookSubtitle={handbookData.subtitle}
+          canEdit={canEdit}
           isEditMode={isEditMode}
-          handbookId={initialData.id}
-          onUpdateSection={updateSection}
-          onUpdatePage={updatePage}
-          onAddPage={addPage}
-          onAddSection={addSection}
-          onMoveSection={moveSection}
-          onDeleteSection={deleteSection}
-          onExitEditMode={() => setIsEditMode(false)}
+          onToggleEditMode={() => setIsEditMode(!isEditMode)}
+          onSearch={handleSearch}
+          searchResults={searchResults}
         />
+
+        {/* Main layout with sidebar */}
+        <div className="flex-1 flex relative">
+          {/* Modern Sidebar */}
+          <div className="relative z-30">
+            <ModernSidebar
+              sections={visibleSections}
+              currentPageId={currentPageId || ''}
+              onPageSelect={handlePageSelect}
+              onSectionSelect={(sectionId) => {
+                // Handle section selection
+                setCurrentPageId(undefined);
+                // Scroll to section
+                setTimeout(() => {
+                  const element = document.getElementById(`section-${sectionId}`);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 100);
+              }}
+            />
+          </div>
+          
+          {/* Main content area */}
+          <SidebarInset className="flex-1 flex flex-col min-w-0">
+            {/* Main content */}
+            <main className="flex-1 overflow-auto w-full">
+              <ContentArea
+                sections={visibleSections}
+                currentPageId={currentPageId}
+                isEditMode={isEditMode}
+                handbookId={initialData.id}
+                onUpdateSection={updateSection}
+                onUpdatePage={updatePage}
+                onAddPage={addPage}
+                onAddSection={addSection}
+                onMoveSection={moveSection}
+                onDeleteSection={deleteSection}
+                onExitEditMode={() => setIsEditMode(false)}
+              />
+            </main>
+            
+            {/* Footer */}
+            <MainFooter variant="app" />
+          </SidebarInset>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }; 

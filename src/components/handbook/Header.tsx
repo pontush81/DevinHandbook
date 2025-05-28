@@ -3,6 +3,7 @@ import { Menu, Search, User, X, Edit, Save, LogIn, ChevronDown, Bell, Settings }
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +16,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 interface HeaderProps {
-  onToggleSidebar: () => void;
-  onCloseSidebar?: () => void;
   handbookTitle: string;
   handbookSubtitle?: string;
-  sidebarOpen?: boolean;
   canEdit?: boolean;
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
@@ -33,11 +31,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  onToggleSidebar,
-  onCloseSidebar,
   handbookTitle,
   handbookSubtitle,
-  sidebarOpen = false,
   canEdit = false,
   isEditMode = false,
   onToggleEditMode,
@@ -45,51 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   searchResults = []
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMobile, setIsMobile] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const { user, signOut } = useAuth();
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Smart scroll behavior - hide on scroll down, show on scroll up
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDifference = Math.abs(currentScrollY - lastScrollY);
-      
-      // Always show header at the very top
-      if (currentScrollY < 10) {
-        setIsHeaderVisible(true);
-      }
-      // Only hide/show if user has scrolled a meaningful amount
-      else if (scrollDifference > 5) {
-        // Hide when scrolling down past 100px
-        if (currentScrollY > lastScrollY && currentScrollY > 100) {
-          setIsHeaderVisible(false);
-        } 
-        // Show when scrolling up
-        else if (currentScrollY < lastScrollY) {
-          setIsHeaderVisible(true);
-        }
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
 
   // Debounce search
   useEffect(() => {
@@ -120,14 +72,6 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleMenuClick = () => {
-    if (sidebarOpen) {
-      (onCloseSidebar || onToggleSidebar)();
-    } else {
-      onToggleSidebar();
-    }
-  };
-
   const handleSignOut = async () => {
     await signOut();
   };
@@ -140,53 +84,33 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className={`
-      fixed top-0 left-0 right-0 z-50 
-      bg-white/95 backdrop-blur-md border-b border-gray-200/50
-      shadow-sm transition-all duration-300 ease-in-out
-      ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}
-    `}>
+    <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
       {/* Edit mode banner */}
       {isEditMode && (
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Edit className="w-4 h-4" />
-              <span className="text-sm font-medium">Redigeringsläge aktivt</span>
-            </div>
+        <div className="bg-blue-600 text-white px-4 py-2 text-center text-sm">
+          <div className="flex items-center justify-center space-x-2">
+            <Edit className="w-4 h-4" />
+            <span>Redigeringsläge aktivt</span>
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleEditMode}
-              className="text-white hover:bg-white/20 h-8"
+              className="text-white hover:bg-blue-700 ml-4"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4 mr-1" />
               Spara och avsluta
             </Button>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Main header */}
+      <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left section - Brand */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* Mobile menu button */}
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMenuClick}
-                className="lg:hidden"
-                aria-label={sidebarOpen ? "Stäng meny" : "Öppna meny"}
-              >
-                {sidebarOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </Button>
-            )}
+            {/* Sidebar trigger */}
+            <SidebarTrigger className="lg:hidden" />
             
             {/* Professional Brand */}
             <div className="flex items-center space-x-2 sm:space-x-3">
