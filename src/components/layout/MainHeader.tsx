@@ -197,11 +197,6 @@ export function MainHeader({
                       Logga in
                     </Link>
                   </Button>
-                  <Button size="sm" asChild>
-                    <Link href="/create-handbook?new=true" className="text-xs">
-                      Skapa handbok
-                    </Link>
-                  </Button>
                 </>
               )}
             </nav>
