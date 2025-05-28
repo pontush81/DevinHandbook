@@ -66,11 +66,8 @@ export function MainHeader({
 
   return (
     <header className={cn(
-      "sticky top-0 z-50 w-full border-b transition-all duration-200",
-      isScrolled 
-        ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm" 
-        : "bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/40"
-    )}>
+      "sticky top-0 z-50 w-full border-b transition-all duration-200 bg-white shadow-sm"
+    )} style={{ backgroundColor: '#ffffff' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-12 items-center">
         
         {/* Sidebar trigger för handbook variant */}

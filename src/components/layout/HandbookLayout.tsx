@@ -65,7 +65,7 @@ export function HandbookLayout({
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen w-full flex flex-col">
         {/* Header bar - ligger ovanför allt */}
-        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+        <header className="sticky top-0 z-40 w-full border-b bg-white/100 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
           <div className="flex h-14 items-center px-4">
             {/* Vänster sida - Toggle + Logo */}
             <div className="flex items-center gap-3">
