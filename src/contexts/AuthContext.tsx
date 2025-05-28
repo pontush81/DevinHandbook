@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
+import { toast } from '@/components/ui/use-toast';
 
 type AuthContextType = {
   user: User | null;
@@ -100,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setUser(null);
       
-      // Rensa auth-relaterad data från localStorage och cookies
+      // Rensa all auth-data från storage
       if (typeof window !== 'undefined') {
         try {
           // Rensa localStorage
@@ -110,54 +111,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           });
           
-          // Rensa sessionStorage
-          Object.keys(sessionStorage).forEach(key => {
-            if (key.startsWith('sb-') || key.includes('supabase')) {
-              sessionStorage.removeItem(key);
-            }
-          });
-          
           // Rensa cookies
-          document.cookie.split(';').forEach(c => {
-            const cookieName = c.split('=')[0].trim();
-            if (cookieName.startsWith('sb-')) {
-              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-              if (process.env.NODE_ENV === 'production') {
-                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.handbok.org;`;
-              }
+          document.cookie.split(";").forEach(cookie => {
+            const eqPos = cookie.indexOf("=");
+            const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            if (name.startsWith('sb-') || name.includes('supabase')) {
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.handbok.org`;
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
             }
           });
-          
-          // Rensa memory storage
-          if (window.memoryStorage) {
-            Object.keys(window.memoryStorage).forEach(key => {
-              if (key.startsWith('sb-') || key.includes('supabase')) {
-                delete window.memoryStorage[key];
-              }
-            });
-          }
         } catch (e) {
           console.warn('Error clearing auth data:', e);
         }
       }
       
-      // Visa ett meddelande till användaren och omdirigera efter bekräftelse
+      // Visa toast-meddelande istället för popup
       setAuthErrorShown(true);
       
-      // Använd setTimeout för att undvika att blockera UI
+      toast({
+        title: "Session har gått ut",
+        description: "Du omdirigeras till inloggningssidan...",
+        variant: "destructive",
+      });
+      
+      // Automatisk omdirigering efter kort fördröjning
       setTimeout(() => {
-        const confirmRelogin = window.confirm(
-          'Din session har gått ut. Klicka OK för att logga in igen.'
-        );
-        
-        if (confirmRelogin) {
-          // Navigera till login-sidan
-          window.location.href = '/login';
-        } else {
-          // Om användaren inte vill logga in igen, navigera till startsidan
-          window.location.href = '/';
-        }
-      }, 100);
+        window.location.href = '/login';
+      }, 2000);
     } else if (
       errorMessage.toLowerCase().includes('email not confirmed') || 
       errorMessage.toLowerCase().includes('email is not confirmed') ||
@@ -171,15 +151,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setAuthErrorShown(true);
       
+      toast({
+        title: "E-post inte bekräftad",
+        description: "Du omdirigeras till inloggningssidan där du kan skicka ett nytt bekräftelsemail.",
+        variant: "destructive",
+      });
+      
+      // Automatisk omdirigering efter kort fördröjning
       setTimeout(() => {
-        const confirmResend = window.confirm(
-          'Din e-postadress har inte bekräftats än. Du måste klicka på länken i bekräftelsemailet som skickades när du registrerade dig.\n\nKlicka OK för att gå till inloggningssidan där du kan skicka ett nytt bekräftelsemail om det behövs.'
-        );
-        
-        if (confirmResend) {
-          window.location.href = '/login';
-        }
-      }, 100);
+        window.location.href = '/login';
+      }, 3000);
     } else {
       // Hantera andra typer av auth-fel
       console.error('Other auth error:', errorMessage);
@@ -187,15 +168,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // För andra fel, visa ett generiskt meddelande
       setAuthErrorShown(true);
       
+      toast({
+        title: "Autentiseringsfel",
+        description: "Du omdirigeras till inloggningssidan...",
+        variant: "destructive",
+      });
+      
+      // Automatisk omdirigering efter kort fördröjning
       setTimeout(() => {
-        const confirmRetry = window.confirm(
-          'Ett autentiseringsfel uppstod. Klicka OK för att försöka logga in igen.'
-        );
-        
-        if (confirmRetry) {
-          window.location.href = '/login';
-        }
-      }, 100);
+        window.location.href = '/login';
+      }, 2000);
     }
   }, [authErrorShown]);
 
