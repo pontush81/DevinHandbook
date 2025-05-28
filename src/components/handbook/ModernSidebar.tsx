@@ -12,10 +12,9 @@ import {
   Recycle, 
   Car,
   Heart,
-  BookOpen,
-  ChevronRight
+  BookOpen
 } from 'lucide-react';
-import { HandbookSection, HandbookPage } from '@/types/handbook';
+import { HandbookSection } from '@/types/handbook';
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +25,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 
 interface ModernSidebarProps {
   sections: HandbookSection[];
@@ -123,12 +121,11 @@ export function ModernSidebar({
   const { setOpenMobile } = useSidebar();
 
   const handleSectionClick = (sectionId: string) => {
+    console.log('🎯 Section clicked for scrolling:', sectionId);
+    
+    // Call section select callback for scrolling
     onSectionSelect?.(sectionId);
     setOpenMobile(false); // Stäng mobil-meny vid navigation
-  };
-
-  const isSectionActive = (section: HandbookSection): boolean => {
-    return section.pages?.some(page => page.id === currentPageId) || false;
   };
 
   return (
@@ -140,20 +137,18 @@ export function ModernSidebar({
               {sections.map((section) => {
                 const menuItem = getMenuItemForSection(section);
                 const IconComponent = menuItem.icon;
-                const isActive = isSectionActive(section);
 
                 return (
                   <SidebarMenuItem key={section.id}>
                     <SidebarMenuButton
-                      isActive={isActive}
                       onClick={() => handleSectionClick(section.id)}
                       tooltip={section.description || section.title}
-                      className="group hover:bg-accent hover:text-accent-foreground transition-colors duration-200 text-sm py-2 px-3 rounded-md cursor-pointer touch-manipulation min-h-[44px] flex items-center gap-3"
+                      className="group hover:bg-accent hover:text-accent-foreground transition-colors duration-200 text-sm py-2 px-3 rounded-md cursor-pointer touch-manipulation min-h-[44px] flex items-center gap-3 w-full"
                     >
                       <IconComponent 
                         className={`h-4 w-4 ${menuItem.color} group-hover:scale-110 transition-transform duration-200`} 
                       />
-                      <span className="font-medium">{section.title}</span>
+                      <span className="font-medium flex-1">{section.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -183,4 +178,4 @@ export function ModernSidebar({
 }
 
 // Export trigger för att använda i header
-export { SidebarTrigger } from "@/components/ui/sidebar"; 
+export { SidebarTrigger } from "@/components/ui/sidebar";

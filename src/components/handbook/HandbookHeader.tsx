@@ -41,16 +41,16 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b transition-all duration-200 bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-12 items-center justify-between">
+      <div className="w-full px-6 sm:px-8 lg:px-12 flex h-12 items-center justify-between">
         
-        {/* Left section - Sidebar trigger först, sedan Brand */}
-        <div className="flex items-center space-x-3">
+        {/* Left section - Sidebar trigger and Brand pushed to far left */}
+        <div className="flex items-center space-x-3 flex-shrink-0 min-w-0">
           {/* Sidebar trigger längst till vänster */}
-          <SidebarTrigger />
+          <SidebarTrigger className="flex-shrink-0" />
           
-          {/* Brand */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <Link href="/" className="flex items-center space-x-2">
+          {/* Brand section with tighter spacing */}
+          <div className="flex items-center space-x-2 min-w-0">
+            <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
               <div className="h-5 w-5 rounded bg-blue-600 flex items-center justify-center">
                 <span className="text-white text-xs font-bold">H</span>
               </div>
@@ -59,18 +59,18 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
               </span>
             </Link>
             
-            {/* Handbook title */}
-            <div className="hidden sm:block">
-              <span className="text-gray-400 text-sm">/</span>
-              <span className="ml-2 text-sm font-medium text-gray-900 truncate max-w-[200px]">
+            {/* Handbook title with separator */}
+            <div className="hidden sm:flex items-center min-w-0">
+              <span className="text-gray-300 text-sm mx-2">|</span>
+              <span className="text-sm font-medium text-gray-900 truncate max-w-[200px] md:max-w-[300px]">
                 {handbookTitle}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Right section - Edit button + User menu längst till höger */}
-        <div className="flex items-center space-x-3">
+        {/* Right section - Edit button + User menu pushed to far right */}
+        <div className="flex items-center space-x-4 flex-shrink-0">
           
           {/* Edit button - only show if user can edit */}
           {canEdit && (
@@ -81,7 +81,7 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
               className="hidden sm:flex items-center gap-2"
             >
               <Edit className="h-3 w-3" />
-              {isEditMode ? "Avsluta redigering" : "Redigera"}
+              {isEditMode ? "Avsluta" : "Redigera"}
             </Button>
           )}
           
@@ -98,7 +98,7 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuContent className="w-56 dropdown-menu-content" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
@@ -114,7 +114,7 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
                 {/* Mobile edit button */}
                 {canEdit && (
                   <>
-                    <DropdownMenuItem onClick={handleToggleEdit} className="sm:hidden">
+                    <DropdownMenuItem onClick={handleToggleEdit} className="sm:hidden dropdown-menu-item">
                       <Edit className="mr-2 h-4 w-4" />
                       {isEditMode ? "Avsluta redigering" : "Redigera"}
                     </DropdownMenuItem>
@@ -122,14 +122,14 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
                   </>
                 )}
                 
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard">
+                <DropdownMenuItem className="dropdown-menu-item">
+                  <Link href="/dashboard" className="flex items-center w-full">
                     <Settings className="mr-2 h-4 w-4" />
                     Dashboard
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
+                <DropdownMenuItem onClick={handleSignOut} className="dropdown-menu-item">
                   <LogOut className="mr-2 h-4 w-4" />
                   Logga ut
                 </DropdownMenuItem>

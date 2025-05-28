@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
-import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image, ChevronUp, ChevronDown } from 'lucide-react';
+import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image, ChevronUp, ChevronDown, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { QuickActionCard } from './QuickActionCard';
@@ -155,62 +155,36 @@ interface MarkdownToolbarProps {
 }
 
 const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onInsert }) => {
-  const formatButtons = [
-    { icon: Bold, label: 'Fet text', format: '**text**', offset: 2 },
-    { icon: Italic, label: 'Kursiv text', format: '*text*', offset: 1 },
+  const buttons = [
+    { icon: Bold, label: 'Fet', format: '**text**', offset: 2 },
+    { icon: Italic, label: 'Kursiv', format: '*text*', offset: 1 },
+    { icon: List, label: 'Lista', format: '- ', offset: 0 },
+    { icon: ListOrdered, label: 'Numrerad', format: '1. ', offset: 0 },
     { icon: Quote, label: 'Citat', format: '> ', offset: 0 },
     { icon: Code, label: 'Kod', format: '`kod`', offset: 1 },
-    { icon: Link2, label: 'Länk', format: '[länktext](url)', offset: 1 },
-    { icon: List, label: 'Punktlista', format: '- ', offset: 0 },
-    { icon: ListOrdered, label: 'Numrerad lista', format: '1. ', offset: 0 },
-    { icon: Image, label: 'Bild', format: '![alt text](bildurl)', offset: 2 },
-  ];
-
-  const headerButtons = [
-    { label: 'H1', format: '# ', offset: 0 },
-    { label: 'H2', format: '## ', offset: 0 },
-    { label: 'H3', format: '### ', offset: 0 },
+    { icon: Link2, label: 'Länk', format: '[länktext](url)', offset: 5 },
+    { icon: Image, label: 'Bild', format: '![alt text](url)', offset: 5 },
   ];
 
   return (
-    <div className="flex flex-wrap gap-1">
-      {/* Header buttons */}
-      <div className="flex gap-1 mr-2">
-        {headerButtons.map((btn) => (
+    <>
+      {buttons.map((btn, index) => {
+        const IconComponent = btn.icon;
+        return (
           <Button
             key={btn.label}
             variant="ghost"
             size="sm"
             onClick={() => onInsert(btn.format, btn.offset)}
-            className="h-8 px-2 text-xs font-mono"
-            title={`Rubrik ${btn.label}`}
+            className="h-9 w-full sm:w-auto sm:h-8 p-2 sm:px-3 flex items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs hover:bg-blue-100 hover:text-blue-700 transition-colors"
+            title={btn.label}
           >
-            {btn.label}
+            <IconComponent className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline text-xs font-medium">{btn.label}</span>
           </Button>
-        ))}
-      </div>
-      
-      <Separator orientation="vertical" className="h-6 mx-1" />
-      
-      {/* Format buttons */}
-      <div className="flex gap-1">
-        {formatButtons.map((btn) => {
-          const IconComponent = btn.icon;
-          return (
-            <Button
-              key={btn.label}
-              variant="ghost"
-              size="sm"
-              onClick={() => onInsert(btn.format, btn.offset)}
-              className="h-8 w-8 p-0"
-              title={btn.label}
-            >
-              <IconComponent className="w-4 h-4" />
-            </Button>
-          );
-        })}
-      </div>
-    </div>
+        );
+      })}
+    </>
   );
 };
 
@@ -222,7 +196,6 @@ interface RobustTextareaProps {
   className?: string;
   minRows?: number;
   pageId: string;
-  onSave?: () => void;
   onSaveAndExit?: () => void;
 }
 
@@ -232,11 +205,23 @@ const RobustTextarea: React.FC<RobustTextareaProps> = ({
   placeholder,
   className,
   pageId,
-  onSave,
   onSaveAndExit
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isPreview, setIsPreview] = useState(false);
+  const [showToolbar, setShowToolbar] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Insert markdown function with scroll fix
   const insertMarkdown = (text: string, cursorOffset: number = 0) => {
@@ -279,50 +264,78 @@ const RobustTextarea: React.FC<RobustTextareaProps> = ({
 
   return (
     <div className="space-y-0">
-      {/* Enhanced toolbar with preview and save */}
-      <div className="border border-gray-200 rounded-t-lg bg-gray-50 p-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1">
-          <MarkdownToolbar onInsert={insertMarkdown} />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={isPreview ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsPreview(!isPreview)}
-            className="h-8 px-3 text-xs"
-          >
-            {isPreview ? "Redigera" : "Förhandsgranska"}
-          </Button>
-          {onSave && (
+      {/* Enhanced toolbar with mobile-optimized layout */}
+      <div className="border border-gray-200 rounded-t-lg bg-gray-50 p-2 sm:p-3">
+        {/* Top row: Preview toggle and toolbar toggle (mobile) */}
+        <div className="flex items-center justify-between mb-2 sm:mb-0">
+          <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant={isPreview ? "default" : "outline"}
               size="sm"
-              onClick={onSave}
-              className="h-8 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              onClick={() => setIsPreview(!isPreview)}
+              className="h-9 px-3 text-xs sm:text-sm font-medium"
             >
-              💾 Spara
+              {isPreview ? (
+                <>
+                  <Edit3 className="w-4 h-4 mr-1" />
+                  Redigera
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 mr-1" />
+                  Förhandsgranska
+                </>
+              )}
             </Button>
-          )}
-          {onSaveAndExit && (
+            
+            {/* Toolbar toggle for mobile */}
             <Button
-              variant="default"
+              variant="ghost"
               size="sm"
-              onClick={onSaveAndExit}
-              className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => setShowToolbar(!showToolbar)}
+              className="h-9 px-2 sm:hidden"
+              title={showToolbar ? "Dölj verktygsfält" : "Visa verktygsfält"}
             >
-              💾 Spara och avsluta
+              {showToolbar ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </Button>
-          )}
+          </div>
+          
+          {/* Save buttons - always visible */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            {onSaveAndExit && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onSaveAndExit}
+                className="h-9 px-2 sm:px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <span className="hidden sm:inline">💾 Spara och avsluta</span>
+                <span className="sm:hidden">✓</span>
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Markdown toolbar - collapsible on mobile */}
+        {!isPreview && (showToolbar || !isMobile) && (
+          <div className="border-t border-gray-200 pt-2 mt-2 sm:border-t-0 sm:pt-0 sm:mt-0">
+            <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-1 sm:gap-2">
+              <MarkdownToolbar onInsert={insertMarkdown} />
+            </div>
+            <div className="mt-2 text-xs text-gray-500 hidden sm:block">
+              💡 Tips: Markera text först för att formatera den, eller klicka för att lägga till ny formatering
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content area - either textarea or preview */}
       {isPreview ? (
         <div className={`
           min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm 
-          rounded-t-none border-t-0 overflow-auto
+          rounded-t-none border-t-0 overflow-auto max-h-[70vh] sm:max-h-none
         `}>
-          <div className="prose prose-gray max-w-none">
+          <div className="prose prose-gray max-w-none prose-sm sm:prose-base">
             <MarkdownRenderer content={value || '*Inget innehåll att förhandsgranska*'} />
           </div>
         </div>
@@ -332,17 +345,18 @@ const RobustTextarea: React.FC<RobustTextareaProps> = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          rows={8}
+          rows={isMobile ? 6 : 8}
           className={`
             flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm 
             ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none 
             focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 
             disabled:cursor-not-allowed disabled:opacity-50 resize-y
             ${className} rounded-t-none border-t-0
+            sm:min-h-[250px] max-h-[70vh] sm:max-h-none
           `}
           style={{
             fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-            fontSize: '14px',
+            fontSize: isMobile ? '16px' : '14px',
             lineHeight: '1.5'
           }}
         />
@@ -445,14 +459,19 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
     sections.flatMap(s => s.pages || []).find(p => p.id === currentPageId) : 
     null;
 
-  console.log('[ContentArea] Current page:', currentPage ? `${currentPage.title} (${currentPage.id})` : 'None');
+  console.log('[ContentArea] Current page lookup:', {
+    currentPageId,
+    currentPage: currentPage ? `${currentPage.title} (${currentPage.id})` : 'None',
+    allPages: sections.flatMap(s => s.pages || []).map(p => ({ id: p.id, title: p.title }))
+  });
 
   // If a specific page is selected, show that page
   if (currentPage) {
+    console.log('[ContentArea] Rendering individual page:', currentPage.title);
     const section = sections.find(s => s.pages?.some(p => p.id === currentPageId));
     
     return (
-      <main className="flex-1 bg-gradient-to-br from-gray-50 to-white min-h-screen pt-4">
+      <div className="w-full h-full overflow-y-auto bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-6">
@@ -478,36 +497,36 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
             </CardContent>
           </Card>
         </div>
-      </main>
+      </div>
     );
   }
 
   // Show all sections as a long scrollable page
   return (
-    <main className="flex-1 bg-gradient-to-br from-gray-50 to-white min-h-screen pt-4">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="w-full h-full content-area-scroll bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
         {/* Welcome content - only show when no sections exist at all */}
         {(!sections || sections.length === 0) && !currentPageId && (
-          <div className="mb-12">
+          <div className="mb-8 sm:mb-16">
             <EditableWelcomeContent data={welcomeContent} isEditMode={isEditMode} />
           </div>
         )}
 
         {/* All sections displayed vertically */}
         {sections && sections.length > 0 && (
-          <div className="space-y-16">
+          <div className="space-y-8 sm:space-y-12">
             {/* Add section button before first section */}
             {isEditMode && onAddSection && (
-              <section className="mb-16">
-                <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors bg-gray-50/50">
-                  <CardContent className="flex items-center justify-center py-12">
+              <section className="mb-8 sm:mb-16">
+                <Card className="border-2 border-dashed border-blue-300 hover:border-blue-400 transition-colors bg-blue-50/30 backdrop-blur-sm">
+                  <CardContent className="flex items-center justify-center py-8 sm:py-12">
                     <Button 
                       variant="outline" 
                       size="lg" 
                       onClick={() => onAddSection('Ny sektion', 0)}
-                      className="space-x-2"
+                      className="space-x-2 h-10 sm:h-12 px-4 sm:px-6 text-sm sm:text-base border-blue-300 text-blue-700 hover:bg-blue-100"
                     >
-                      <Plus className="w-5 h-5" />
+                      <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>Lägg till ny sektion</span>
                     </Button>
                   </CardContent>
@@ -520,46 +539,42 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
               const IconComponent = getSectionIcon(section.title);
               
               return (
-                <section 
-                  key={section.id} 
-                  id={`section-${section.id}`}
-                  className="scroll-mt-24"
-                >
-                  {/* Section Header */}
-                  <div className="mb-8">
-                    <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-                      <CardHeader className="pb-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                              <IconComponent className="w-6 h-6 text-white" />
+                <section key={section.id} className="mb-8 sm:mb-12">
+                  <Card 
+                    id={`section-${section.id}`}
+                    className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-white/90 backdrop-blur-sm overflow-hidden group"
+                  >
+                    {/* Beautiful gradient header */}
+                    <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-100/50">
+                      <CardHeader className="pb-4 sm:pb-6">
+                        <div className="flex items-start justify-between gap-3 sm:gap-4">
+                          <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                            <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
+                              <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
-                              </div>
+                            <div className="flex-1 min-w-0">
                               {isEditMode ? (
                                 <div className="space-y-2">
-                                  <Input
+                                  <InlineEdit
                                     value={section.title}
-                                    onChange={(e) => onUpdateSection?.(section.id, { title: e.target.value })}
-                                    className="text-2xl font-bold border-dashed border-gray-300"
-                                    placeholder="Sektionsnamn"
+                                    onSave={(newTitle) => onUpdateSection?.(section.id, { title: newTitle })}
+                                    className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900"
+                                    placeholder="Sektionsrubrik"
                                   />
-                                  <Textarea
+                                  <InlineEdit
                                     value={section.description || ''}
-                                    onChange={(e) => onUpdateSection?.(section.id, { description: e.target.value })}
-                                    className="text-lg border-dashed border-gray-300 resize-none"
-                                    placeholder="Beskrivning (valfritt)"
-                                    rows={2}
+                                    onSave={(newDescription) => onUpdateSection?.(section.id, { description: newDescription })}
+                                    className="text-sm sm:text-base text-gray-600"
+                                    placeholder="Beskrivning av sektionen"
                                   />
                                 </div>
                               ) : (
                                 <>
-                                  <CardTitle className="text-3xl font-bold text-gray-900 leading-tight">
+                                  <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 leading-tight">
                                     {section.title}
                                   </CardTitle>
                                   {section.description && (
-                                    <CardDescription className="text-lg text-gray-600 mt-2 leading-relaxed">
+                                    <CardDescription className="text-sm sm:text-base text-gray-600 leading-relaxed">
                                       {section.description}
                                     </CardDescription>
                                   )}
@@ -567,200 +582,174 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                               )}
                             </div>
                           </div>
+
+                          {/* Section controls - mobile optimized */}
                           {isEditMode && (
-                            <div className="flex items-center space-x-2">
-                              {onMoveSection && (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onMoveSection(section.id, 'up')}
-                                    disabled={sectionIndex === 0}
-                                    className="text-gray-600 hover:text-blue-600"
-                                    title="Flytta upp"
-                                  >
-                                    <ChevronUp className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onMoveSection(section.id, 'down')}
-                                    disabled={sectionIndex === sections.length - 1}
-                                    className="text-gray-600 hover:text-blue-600"
-                                    title="Flytta ner"
-                                  >
-                                    <ChevronDown className="w-4 h-4" />
-                                  </Button>
-                                </>
+                            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
+                              {onMoveSection && sectionIndex > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onMoveSection(section.id, 'up')}
+                                  className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
+                                  title="Flytta upp"
+                                >
+                                  <ChevronUp className="w-4 h-4" />
+                                </Button>
                               )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onDeleteSection?.(section.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              {onMoveSection && sectionIndex < sections.length - 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onMoveSection(section.id, 'down')}
+                                  className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
+                                  title="Flytta ner"
+                                >
+                                  <ChevronDown className="w-4 h-4" />
+                                </Button>
+                              )}
+                              {onDeleteSection && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onDeleteSection(section.id)}
+                                  className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
+                                  title="Ta bort sektion"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
                           )}
                         </div>
                       </CardHeader>
-                    </Card>
-                  </div>
+                    </div>
 
-                  {/* Section Pages */}
-                  {section.pages && section.pages.length > 0 && (
-                    <div className="space-y-8 ml-4 border-l-2 border-gray-200 pl-8">
-                      {section.pages.map((page, pageIndex) => (
-                        <div key={page.id} className="relative">
-                          {/* Page indicator dot */}
-                          <div className="absolute -left-10 top-6 w-4 h-4 bg-blue-500 rounded-full border-4 border-white shadow-sm"></div>
-                          
-                          <Card className="border-0 shadow-md bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200">
-                            <CardHeader className="pb-4">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center space-x-3">
-                                  {page.lastUpdated && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      <Calendar className="w-3 h-3 mr-1" />
-                                      {page.lastUpdated}
-                                    </Badge>
+                    <CardContent className="pt-6 sm:pt-8">
+                      {/* Pages in this section */}
+                      {section.pages && section.pages.length > 0 ? (
+                        <div className="space-y-6 sm:space-y-8">
+                          {section.pages.map((page, pageIndex) => (
+                            <div key={page.id} className="relative">
+                              {/* Page header */}
+                              <div className="flex items-start justify-between gap-3 mb-4 sm:mb-6">
+                                <div className="flex-1 min-w-0">
+                                  {isEditMode ? (
+                                    <InlineEdit
+                                      value={page.title}
+                                      onSave={(newTitle) => onUpdatePage?.(page.id, { title: newTitle })}
+                                      className="text-lg sm:text-xl font-semibold text-gray-800"
+                                      placeholder="Sidtitel"
+                                    />
+                                  ) : (
+                                    <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 leading-tight">
+                                      {page.title}
+                                    </h3>
                                   )}
-                                </div>
-                              </div>
-                              {isEditMode ? (
-                                <Input
-                                  value={page.title}
-                                  onChange={(e) => onUpdatePage?.(page.id, { title: e.target.value })}
-                                  className="text-xl font-semibold border-dashed border-gray-300"
-                                  placeholder="Sidtitel"
-                                />
-                              ) : (
-                                <CardTitle className="text-2xl font-semibold text-gray-900 leading-tight">
-                                  {page.title}
-                                </CardTitle>
-                              )}
-                            </CardHeader>
-                            <CardContent>
-                              {isEditMode ? (
-                                <div className="space-y-0">
-                                  <RobustTextarea
-                                    value={getPageContent(page)}
-                                    onChange={(newValue) => handleContentChange(page.id, newValue)}
-                                    placeholder="Skriv innehåll här... (Markdown stöds)"
-                                    className="min-h-[200px] font-mono text-sm border-dashed border-gray-300 rounded-t-none border-t-0"
-                                    pageId={page.id}
-                                    onSave={() => handleManualSave(page.id)}
-                                    onSaveAndExit={() => handleSaveAndExit(page.id)}
-                                  />
-                                  {/* Save status indicator */}
-                                  <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-                                    <div className="flex items-center space-x-2">
-                                      {getSaveStatus(page.id) === 'saving' && (
-                                        <span className="flex items-center space-x-1 text-blue-600">
-                                          <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                          <span>Sparar...</span>
-                                        </span>
-                                      )}
-                                      {getSaveStatus(page.id) === 'saved' && (
-                                        <span className="flex items-center space-x-1 text-green-600">
-                                          <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                                          <span>Sparat</span>
-                                        </span>
-                                      )}
-                                      {getSaveStatus(page.id) === 'unsaved' && (
-                                        <span className="flex items-center space-x-1 text-orange-600">
-                                          <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
-                                          <span>Osparade ändringar</span>
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span className="text-gray-400">
-                                      Sparas automatiskt efter 0.5s
-                                    </span>
+                                  
+                                  {/* Page metadata - mobile optimized */}
+                                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                                    {page.lastUpdated && (
+                                      <div className="flex items-center gap-1">
+                                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                                        <span>Uppdaterad {page.lastUpdated}</span>
+                                      </div>
+                                    )}
+                                    {page.estimatedReadTime && (
+                                      <div className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                                        <span>{page.estimatedReadTime} min läsning</span>
+                                      </div>
+                                    )}
+                                    {getSaveStatus(page.id) !== 'saved' && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {getSaveStatus(page.id) === 'saving' ? 'Sparar...' : 'Osparad'}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
-                              ) : (
-                                <div className="prose prose-gray max-w-none">
-                                  <MarkdownRenderer content={page.content || ''} />
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
+
+                                {/* Page controls - mobile optimized */}
+                                {isEditMode && onAddPage && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onAddPage(section.id, `Ny sida ${pageIndex + 2}`)}
+                                    className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600 flex-shrink-0"
+                                    title="Lägg till sida"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+
+                              {/* Page content */}
+                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100/50 overflow-hidden shadow-sm">
+                                {isEditMode ? (
+                                  <div className="space-y-0">
+                                    <RobustTextarea
+                                      value={getPageContent(page)}
+                                      onChange={(newValue) => handleContentChange(page.id, newValue)}
+                                      placeholder="Skriv innehåll här... (Markdown stöds)"
+                                      className="min-h-[200px] font-mono text-sm border-dashed border-gray-300 rounded-t-none border-t-0"
+                                      pageId={page.id}
+                                      onSaveAndExit={() => handleSaveAndExit(page.id)}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="p-4 sm:p-6 lg:p-8">
+                                    <div className="prose prose-gray max-w-none prose-sm sm:prose-base lg:prose-lg">
+                                      <MarkdownRenderer content={getPageContent(page)} />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Empty section message */}
-                  {(!section.pages || section.pages.length === 0) && (
-                    <div className="ml-4 border-l-2 border-gray-200 pl-8">
-                      <Card className="border-2 border-dashed border-gray-300 bg-gray-50/50">
-                        <CardContent className="flex items-center justify-center py-12">
-                          <div className="text-center">
-                            <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500 mb-4">Inga sidor i denna sektion än</p>
-                            {isEditMode && onAddPage && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => onAddPage(section.id, 'Ny sida')}
-                              >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Lägg till sida
-                              </Button>
-                            )}
+                      ) : (
+                        /* Empty section state */
+                        <div className="text-center py-12 sm:py-16 text-gray-500">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                            <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                           </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Section separator */}
-                  {sectionIndex < sections.length - 1 && (
-                    <div className="mt-16 mb-8">
-                      <Separator className="bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-                      {/* Add section button between sections */}
-                      {isEditMode && onAddSection && (
-                        <div className="flex justify-center mt-8 mb-8">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => onAddSection('Ny sektion', sectionIndex + 1)}
-                            className="space-x-2 text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
-                          >
-                            <Plus className="w-4 h-4" />
-                            <span>Lägg till ny sektion</span>
-                          </Button>
+                          <p className="text-sm sm:text-base mb-4 sm:mb-6 font-medium">Denna sektion har inga sidor än</p>
+                          {isEditMode && onAddPage && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onAddPage(section.id, 'Första sidan')}
+                              className="space-x-2 h-9 sm:h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>Lägg till första sidan</span>
+                            </Button>
+                          )}
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Add section button after each section */}
+                  {isEditMode && onAddSection && (
+                    <div className="mt-6 sm:mt-8 flex justify-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onAddSection('Ny sektion', sectionIndex + 1)}
+                        className="border-2 border-dashed border-blue-300 hover:border-blue-400 hover:bg-blue-50 transition-colors space-x-2 h-10 sm:h-12 px-4 sm:px-6 text-sm text-blue-700"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Lägg till sektion</span>
+                      </Button>
                     </div>
                   )}
                 </section>
               );
             })}
-
-            {/* Add section button for editors */}
-            {isEditMode && onAddSection && (
-              <section className="mt-16">
-                <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors bg-gray-50/50">
-                  <CardContent className="flex items-center justify-center py-16">
-                    <Button 
-                      variant="outline" 
-                      size="lg" 
-                      onClick={() => onAddSection('Ny sektion')}
-                      className="space-x-2"
-                    >
-                      <Plus className="w-5 h-5" />
-                      <span>Lägg till ny sektion</span>
-                    </Button>
-                  </CardContent>
-                </Card>
-              </section>
-            )}
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }; 

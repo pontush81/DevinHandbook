@@ -26,19 +26,20 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 }) => {
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Edit mode state - use defaultEditMode prop
   const [isEditMode, setIsEditMode] = useState(defaultEditMode);
   const [handbookData, setHandbookData] = useState(initialData);
   const [canEdit, setCanEdit] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Auth context
   const { user, isLoading: authLoading } = useAuth();
 
-  // Prevent hydration mismatch
+  // Hydration fix - vänta tills komponenten är mounted på klienten
   useEffect(() => {
     setMounted(true);
+    setIsLoading(false);
   }, []);
 
   console.log('🎯 ModernHandbookClient render state:', {
@@ -314,13 +315,24 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       const section = handbookData.sections.find(s => s.id === sectionId);
       if (!section) return;
 
+      // Generate slug from title
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-åäöÅÄÖ]/g, '') // Allow Swedish characters
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+
       const { data, error } = await supabase
         .from('pages')
         .insert({
           title,
           content,
           order_index: section.pages.length,
-          section_id: sectionId
+          section_id: sectionId,
+          slug: slug || 'ny-sida', // Fallback slug if title is empty
+          is_published: true,
+          table_of_contents: true
         })
         .select()
         .single();
@@ -465,33 +477,61 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             sections={visibleSections}
             currentPageId={currentPageId}
             onPageSelect={setCurrentPageId}
-            isEditMode={isEditMode}
-            onMoveSection={moveSection}
+            onSectionSelect={(sectionId) => {
+              console.log('🎯 Section selected for scrolling:', sectionId);
+              
+              // Clear any selected page to show full overview
+              setCurrentPageId(undefined);
+              
+              // Scroll to the section
+              setTimeout(() => {
+                const sectionElement = document.getElementById(`section-${sectionId}`);
+                if (sectionElement) {
+                  console.log('📍 Scrolling to section:', sectionId);
+                  
+                  // Calculate offset for fixed header (64px header + 16px padding)
+                  const headerOffset = 80;
+                  const elementPosition = sectionElement.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                  
+                  window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                  });
+                } else {
+                  console.warn('⚠️ Section element not found:', `section-${sectionId}`);
+                }
+              }, 100); // Small delay to ensure DOM is updated
+            }}
           />
 
           {/* Main content area */}
           <SidebarInset className="flex-1 overflow-hidden">
-            {/* Main content - Reduced top padding */}
-            <main className="flex-1 overflow-auto w-full pt-2">
-              <ContentArea
-                sections={visibleSections}
-                currentPageId={currentPageId}
-                isEditMode={isEditMode}
-                handbookId={initialData.id}
-                onUpdateSection={updateSection}
-                onUpdatePage={updatePage}
-                onAddPage={addPage}
-                onAddSection={addSection}
-                onMoveSection={moveSection}
-                onDeleteSection={deleteSection}
-                onExitEditMode={() => setIsEditMode(false)}
-              />
-            </main>
+            {/* Main content - Proper height for scrolling with footer space */}
+            <div className="h-full w-full flex flex-col">
+              <div className="flex-1 overflow-hidden">
+                <ContentArea
+                  sections={visibleSections}
+                  currentPageId={currentPageId}
+                  isEditMode={isEditMode}
+                  handbookId={initialData.id}
+                  onUpdateSection={updateSection}
+                  onUpdatePage={updatePage}
+                  onAddPage={addPage}
+                  onAddSection={addSection}
+                  onMoveSection={moveSection}
+                  onDeleteSection={deleteSection}
+                  onExitEditMode={() => setIsEditMode(false)}
+                />
+              </div>
+              
+              {/* Footer - positioned within the content area */}
+              <div className="flex-shrink-0">
+                <MainFooter />
+              </div>
+            </div>
           </SidebarInset>
         </div>
-
-        {/* Footer */}
-        <MainFooter />
       </div>
     </SidebarProvider>
   );

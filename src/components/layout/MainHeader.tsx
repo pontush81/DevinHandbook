@@ -68,25 +68,46 @@ export function MainHeader({
     <header className={cn(
       "sticky top-0 z-50 w-full border-b transition-all duration-200 bg-white shadow-sm"
     )} style={{ backgroundColor: '#ffffff' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-12 items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-12 items-center justify-between">
         
-        {/* Sidebar trigger för handbook variant */}
-        {showSidebarTrigger && variant === 'handbook' && (
-          <div className="mr-3 md:hidden">
-            <SidebarTrigger />
-          </div>
-        )}
-
-        {/* Logo/Brand */}
-        <div className="mr-4 hidden md:flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <div className="h-5 w-5 rounded bg-blue-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">H</span>
+        {/* Left section - Brand and Navigation */}
+        <div className="flex items-center space-x-6">
+          {/* Sidebar trigger för handbook variant */}
+          {showSidebarTrigger && variant === 'handbook' && (
+            <div className="md:hidden">
+              <SidebarTrigger />
             </div>
-            <span className="hidden font-bold sm:inline-block text-blue-600 text-sm">
-              Handbok.org
-            </span>
-          </Link>
+          )}
+
+          {/* Logo/Brand */}
+          <div className="flex-shrink-0">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="h-5 w-5 rounded bg-blue-600 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">H</span>
+              </div>
+              <span className="hidden font-bold sm:inline-block text-blue-600 text-sm">
+                Handbok.org
+              </span>
+            </Link>
+          </div>
+
+          {/* Desktop Navigation - moved to left side for better balance */}
+          {variant === 'landing' && (
+            <nav className="hidden md:flex items-center space-x-1">
+              {linksToRender.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "inline-flex h-8 items-center justify-center rounded-md px-3 py-1 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                    isActive(link.href) && "bg-accent text-accent-foreground"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
 
         {/* Mobile menu för landing/app variants */}
@@ -96,7 +117,7 @@ export function MainHeader({
               <Button
                 variant="ghost"
                 size="sm"
-                className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
+                className="px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
               >
                 <Menu className="h-4 w-4" />
                 <span className="sr-only">Växla meny</span>
@@ -133,24 +154,6 @@ export function MainHeader({
           </Sheet>
         )}
 
-        {/* Desktop Navigation */}
-        {variant === 'landing' && (
-          <nav className="hidden md:flex items-center space-x-1">
-            {linksToRender.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "inline-flex h-8 items-center justify-center rounded-md px-3 py-1 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
-                  isActive(link.href) && "bg-accent text-accent-foreground"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        )}
-
         {/* App variant sections (fallback för gamla implementationen) */}
         {variant === 'app' && sections && sections.length > 0 && (
           <div className="md:hidden">
@@ -181,14 +184,10 @@ export function MainHeader({
           </div>
         )}
 
-        {/* Right side - Auth buttons */}
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="w-full flex-1 md:w-auto md:flex-none">
-            {/* Search could go here if needed */}
-          </div>
-          
+        {/* Right section - Auth and actions */}
+        <div className="flex items-center space-x-3">
           {showAuth && (
-            <nav className="flex items-center space-x-1">
+            <nav className="flex items-center space-x-2">
               {pathname !== '/login' && pathname !== '/signup' && (
                 <>
                   <Button variant="ghost" size="sm" asChild>

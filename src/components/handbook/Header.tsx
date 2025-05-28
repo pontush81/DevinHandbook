@@ -106,28 +106,28 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Main header */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-4">
           {/* Left section - Brand */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-3 sm:space-x-4 flex-shrink-0 min-w-0">
             {/* Sidebar trigger */}
-            <SidebarTrigger className="lg:hidden" />
+            <SidebarTrigger className="lg:hidden flex-shrink-0" />
             
             {/* Professional Brand */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-lg">🏠</span>
               </div>
-              <div className="block">
-                <h1 className="text-lg font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-none">{handbookTitle}</h1>
+              <div className="min-w-0">
+                <h1 className="text-lg font-semibold text-gray-900 truncate max-w-[180px] sm:max-w-[250px]">{handbookTitle}</h1>
                 {handbookSubtitle && (
-                  <p className="text-xs text-gray-500 hidden sm:block">{handbookSubtitle}</p>
+                  <p className="text-xs text-gray-500 hidden sm:block truncate max-w-[250px]">{handbookSubtitle}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Center section - Search */}
-          <div className="flex-1 max-w-lg mx-2 sm:mx-4">
+          <div className="flex-1 max-w-md mx-4 sm:mx-6">
             <div className="search-container relative">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -174,7 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right section - Actions */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
             {/* Edit mode toggle */}
             {canEdit && !isEditMode && (
               <Button

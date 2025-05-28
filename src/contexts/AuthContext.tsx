@@ -82,6 +82,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       
       try {
+        // Kontrollera om vi är på klientsidan och har tillgång till storage
+        if (typeof window === 'undefined') {
+          console.log('🖥️ AuthContext: Running on server, skipping session check');
+          setIsLoading(false);
+          return;
+        }
+
+        // Säker kontroll av storage access
+        let hasStorageAccess = false;
+        try {
+          localStorage.getItem('test');
+          hasStorageAccess = true;
+        } catch (e) {
+          console.warn('⚠️ AuthContext: No storage access, using fallback auth');
+          hasStorageAccess = false;
+        }
+
         // Hämta aktuell session
         console.log('📡 AuthContext: Getting current session from Supabase...');
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
@@ -97,8 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           console.error('❌ AuthContext: Error getting session:', error);
           
-          // Försök återställa session från cookies om det finns
-          if (typeof document !== 'undefined' && document.cookie.includes('sb-auth')) {
+          // Försök återställa session från cookies om det finns och vi har storage access
+          if (hasStorageAccess && typeof document !== 'undefined' && document.cookie.includes('sb-auth')) {
             console.log('🍪 AuthContext: Found auth cookies, attempting session restore...');
             
             // Vänta lite och försök igen
@@ -134,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }, 1000);
             return; // Avsluta här för att vänta på retry
           } else {
-            console.log('🚫 AuthContext: No auth cookies found');
+            console.log('🚫 AuthContext: No auth cookies found or no storage access');
             setSession(null);
             setUser(null);
           }
