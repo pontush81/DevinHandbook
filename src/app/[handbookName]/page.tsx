@@ -2,9 +2,7 @@
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
-import { HandbookLayout } from '@/components/layout/HandbookLayout';
-import { ContentArea } from '@/components/handbook/ContentArea';
-import { HandbookSection, HandbookPage } from '@/types/handbook';
+import { ModernHandbookClient } from '@/components/ModernHandbookClient';
 
 interface Section {
   id: string;
@@ -60,7 +58,6 @@ export default function HandbookPage({ params }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [handbookName, setHandbookName] = useState<string>('');
-  const [currentPageId, setCurrentPageId] = useState<string>('');
 
   useEffect(() => {
     let isMounted = true; // Flag to prevent state updates after unmount
@@ -108,18 +105,18 @@ export default function HandbookPage({ params }: Props) {
     };
   }, []); // Empty dependency array - only run once on mount
 
-  // Convert handbook data to format expected by HandbookLayout
-  const adaptHandbookData = (handbook: Handbook): HandbookSection[] => {
+  // Convert handbook data to format expected by ModernHandbookClient
+  const adaptHandbookData = (handbook: Handbook) => {
     console.log('[HandbookPage] Input handbook for adaptation:', handbook);
     
     if (!handbook) {
       console.error('[HandbookPage] Handbook is null/undefined');
-      return [];
+      return null;
     }
 
     if (!handbook.sections || !Array.isArray(handbook.sections)) {
       console.error('[HandbookPage] Handbook sections invalid:', handbook.sections);
-      return [];
+      return null;
     }
 
     console.log('[HandbookPage] Raw sections from database:', handbook.sections.map(s => ({
@@ -129,54 +126,32 @@ export default function HandbookPage({ params }: Props) {
       pagesCount: s.pages?.length || 0
     })));
 
-    // Filter sections based on public status for non-admin users
-    // Note: For public handbook pages, we always filter to only show public sections
-    const visibleSections = handbook.sections.filter(section => section.is_public !== false);
-
-    console.log('[HandbookPage] Visible sections after filtering:', visibleSections.map(s => ({
-      id: s.id,
-      title: s.title,
-      is_public: s.is_public,
-      pagesCount: s.pages?.length || 0
-    })));
-
-    const adaptedSections: HandbookSection[] = visibleSections.map(section => ({
-      id: section.id,
-      title: section.title,
-      description: section.description,
-      order_index: section.order_index,
-      handbook_id: section.handbook_id,
-      is_public: section.is_public,
-      pages: section.pages.map(page => ({
-        id: page.id,
-        title: page.title,
-        content: page.content,
-        order_index: page.order_index,
-        section_id: page.section_id,
-        lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
-        estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000)) // Rough estimate
+    // Convert to format expected by ModernHandbookClient
+    const adaptedHandbook = {
+      id: handbook.id,
+      title: handbook.title,
+      subtitle: handbook.subtitle,
+      sections: handbook.sections.map(section => ({
+        id: section.id,
+        title: section.title,
+        description: section.description,
+        order_index: section.order_index,
+        handbook_id: section.handbook_id,
+        is_public: section.is_public,
+        pages: section.pages.map(page => ({
+          id: page.id,
+          title: page.title,
+          content: page.content,
+          order_index: page.order_index,
+          section_id: page.section_id,
+          lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
+          estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000))
+        }))
       }))
-    }));
+    };
 
-    console.log('[HandbookPage] Adapted handbook sections for HandbookLayout:', adaptedSections);
-    return adaptedSections;
-  };
-
-  const handlePageSelect = (pageId: string) => {
-    setCurrentPageId(pageId);
-  };
-
-  const handleSectionSelect = (sectionId: string) => {
-    // Rensa vald sida för att visa hela sektionen
-    setCurrentPageId('');
-    
-    // Scrolla till sektionen
-    setTimeout(() => {
-      const element = document.getElementById(`section-${sectionId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
+    console.log('[HandbookPage] Adapted handbook for ModernHandbookClient:', adaptedHandbook);
+    return adaptedHandbook;
   };
 
   if (loading) {
@@ -203,12 +178,10 @@ export default function HandbookPage({ params }: Props) {
 
   console.log('[HandbookPage] About to adapt handbook data:', handbook);
   
-  // Use the new HandbookLayout with ModernSidebar
-  const adaptedSections = adaptHandbookData(handbook);
+  // Use ModernHandbookClient for inline editing functionality
+  const adaptedHandbook = adaptHandbookData(handbook);
 
-  console.log('[HandbookPage] Final adapted sections before passing to HandbookLayout:', adaptedSections);
-
-  if (!adaptedSections || adaptedSections.length === 0) {
+  if (!adaptedHandbook) {
     return (
       <div className="min-h-screen bg-white p-8">
         <h1 className="text-2xl font-bold text-red-600">Fel vid databearbetning</h1>
@@ -220,29 +193,10 @@ export default function HandbookPage({ params }: Props) {
   return (
     <>
       <SessionTransferHandler />
-      <HandbookLayout
-        sections={adaptedSections}
-        currentPageId={currentPageId}
-        onPageSelect={handlePageSelect}
-        onSectionSelect={handleSectionSelect}
-        handbookTitle={handbook.title}
-        showAuth={true}
-        handbookId={handbook.id}
-      >
-        <ContentArea
-          sections={adaptedSections}
-          currentPageId={currentPageId}
-          isEditMode={false}
-          handbookId={handbook.id}
-          onUpdateSection={() => {}}
-          onUpdatePage={() => {}}
-          onAddPage={() => {}}
-          onAddSection={() => {}}
-          onMoveSection={() => {}}
-          onDeleteSection={() => {}}
-          onExitEditMode={() => {}}
-        />
-      </HandbookLayout>
+      <ModernHandbookClient 
+        initialData={adaptedHandbook}
+        defaultEditMode={false}
+      />
     </>
   );
 } 

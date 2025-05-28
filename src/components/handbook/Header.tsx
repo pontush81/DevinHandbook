@@ -267,9 +267,6 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Edit className="w-4 h-4" />
                 <span>Redigera</span>
-                {process.env.NODE_ENV === 'development' && (
-                  <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">DEV</span>
-                )}
               </Button>
             )}
 
@@ -303,9 +300,6 @@ export const Header: React.FC<HeaderProps> = ({
                       <DropdownMenuItem onClick={onToggleEditMode}>
                         <Edit className="mr-2 h-4 w-4" />
                         <span>{isEditMode ? 'Avsluta redigering' : 'Redigera handbok'}</span>
-                        {process.env.NODE_ENV === 'development' && (
-                          <span className="ml-auto text-xs bg-yellow-100 text-yellow-800 px-1 rounded">DEV</span>
-                        )}
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Settings className="mr-2 h-4 w-4" />

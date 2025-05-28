@@ -113,7 +113,7 @@ function CreateHandbookContent() {
                         </a>
                       </Button>
                       <Button asChild size="sm">
-                        <a href={`/edit-handbook/${handbook.id}`}>
+                        <a href={`https://www.handbok.org/${handbook.subdomain}`}>
                           Redigera
                         </a>
                       </Button>

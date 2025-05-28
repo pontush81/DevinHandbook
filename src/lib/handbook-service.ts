@@ -48,9 +48,7 @@ export async function createHandbookWithSectionsAndPages(
 
   console.log('[Handbook] Handbok skapad med ID:', handbookObj.id, 'och owner_id:', userId);
 
-  // NYTT: Lägg till skaparen som admin i handbook_members (för framtida funktionalitet)
-  // Temporärt kommenterat för att fokusera på redirect-problemet
-  /*
+  // Lägg till skaparen som admin i handbook_members
   if (userId) {
     const { error: permError } = await supabase
       .from('handbook_members')
@@ -61,12 +59,11 @@ export async function createHandbookWithSectionsAndPages(
       });
     if (permError) {
       console.error('[Handbook] Kunde inte lägga till skaparen i handbook_members:', permError);
-      // Fortsätt ändå - detta är inte kritiskt
+      // Fortsätt ändå - detta är inte kritiskt för handbokens funktion
     } else {
       console.log('[Handbook] Skapare tillagd som admin i handbook_members');
     }
   }
-  */
 
   const activeSections = template.sections
     .filter(section => section.isActive)
@@ -266,6 +263,78 @@ export async function getHandbookBySubdomain(subdomain: string) {
     return handbookObj;
   } catch (error) {
     console.error('[getHandbookBySubdomain] Unexpected error:', error);
+    return null;
+  }
+}
+
+export async function getHandbookById(id: string) {
+  console.log('[getHandbookById] id:', id);
+  
+  // Check cache first
+  const cacheKey = `handbook_id_${id}`;
+  const cached = handbookCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log('[getHandbookById] Returning cached data for:', id);
+    return cached.data;
+  }
+  
+  const supabase = getServiceSupabase();
+  
+  try {
+    // Use a single query with joins to reduce the number of API calls
+    const { data: handbook, error: handbookError } = await supabase
+      .from('handbooks')
+      .select(`
+        *,
+        sections (
+          id,
+          title,
+          description,
+          order_index,
+          handbook_id,
+          completion_status,
+          is_active,
+          is_public,
+          created_at,
+          updated_at,
+          pages (
+            id,
+            title,
+            content,
+            order_index,
+            section_id,
+            table_of_contents,
+            updated_at
+          )
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (handbookError || !handbook) {
+      console.error('[getHandbookById] Error fetching handbook:', handbookError);
+      return null;
+    }
+
+    // Transform the data to match expected structure
+    const handbookObj = {
+      ...handbook,
+      sections: (handbook.sections || [])
+        .sort((a: any, b: any) => a.order_index - b.order_index)
+        .map((section: any) => ({
+          ...section,
+          pages: (section.pages || []).sort((a: any, b: any) => a.order_index - b.order_index)
+        }))
+    };
+
+    console.log('[getHandbookById] Successfully fetched handbook with sections and pages:', handbookObj.id);
+    
+    // Cache the result
+    handbookCache.set(cacheKey, { data: handbookObj, timestamp: Date.now() });
+    
+    return handbookObj;
+  } catch (error) {
+    console.error('[getHandbookById] Unexpected error:', error);
     return null;
   }
 }

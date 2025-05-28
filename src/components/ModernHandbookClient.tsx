@@ -15,10 +15,12 @@ interface ModernHandbookClientProps {
     subtitle?: string;
     sections: Section[];
   };
+  defaultEditMode?: boolean;
 }
 
 export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({ 
-  initialData 
+  initialData,
+  defaultEditMode = false
 }) => {
   // Standard responsive behavior: closed on mobile, always open on desktop
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -35,8 +37,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     return false;
   });
 
-  // Edit mode state
-  const [isEditMode, setIsEditMode] = useState(false);
+  // Edit mode state - use defaultEditMode prop
+  const [isEditMode, setIsEditMode] = useState(defaultEditMode);
   const [handbookData, setHandbookData] = useState(initialData);
   const [canEdit, setCanEdit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,21 +54,15 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Auth context
   const { user, isLoading: authLoading } = useAuth();
 
-  // Temporary development override - show edit buttons for any logged-in user
-  const canEditOverride = process.env.NODE_ENV === 'development' && !!user;
-  const effectiveCanEdit = canEditOverride || canEdit;
-
   console.log('🎯 ModernHandbookClient render state:', {
     user: !!user,
     authLoading,
     canEdit,
-    canEditOverride,
-    effectiveCanEdit,
     isEditMode,
-    environment: process.env.NODE_ENV
+    handbookId: initialData.id
   });
 
-  // Check if user can edit this handbook
+  // Check if user can edit this handbook (admin role required)
   useEffect(() => {
     const checkEditPermissions = async () => {
       console.log('🔍 Checking edit permissions...', {
@@ -74,7 +70,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         user: !!user,
         userId: user?.id,
         userEmail: user?.email,
-        environment: process.env.NODE_ENV,
         handbookId: initialData.id
       });
       
@@ -83,7 +78,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         return;
       }
       
-      // Require user to be logged in even in development
+      // Require user to be logged in
       if (!user) {
         console.log('❌ No user found, setting canEdit to false');
         setCanEdit(false);
@@ -93,38 +88,32 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       
       console.log('✅ User found:', {
         id: user.id,
-        email: user.email,
-        metadata: user.user_metadata
+        email: user.email
       });
-      
-      // Development mode - allow logged-in users to edit
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Development mode: allowing edit for logged-in user');
-        setCanEdit(true);
-        setIsLoading(false);
-        return;
-      }
 
       try {
-        console.log('🔍 Checking handbook ownership...');
-        // Check if user owns this handbook or has edit permissions
-        const { data: handbook, error } = await supabase
-          .from('handbooks')
-          .select('owner_id')
-          .eq('id', initialData.id)
-          .single();
+        console.log('🔍 Checking handbook admin permissions...');
+        // Check if user is admin for this handbook
+        const { data: memberData, error } = await supabase
+          .from('handbook_members')
+          .select('role')
+          .eq('handbook_id', initialData.id)
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
 
         if (error) {
-          console.error('❌ Error checking handbook permissions:', error);
+          console.error('❌ Error checking handbook admin permissions:', error);
           setCanEdit(false);
         } else {
-          const canUserEdit = handbook.owner_id === user.id;
-          console.log('📋 Handbook ownership check:', {
-            handbookOwnerId: handbook.owner_id,
-            currentUserId: user.id,
-            canEdit: canUserEdit
+          const isAdmin = !!memberData;
+          console.log('📋 Handbook admin check:', {
+            handbookId: initialData.id,
+            userId: user.id,
+            isAdmin,
+            memberData
           });
-          setCanEdit(canUserEdit);
+          setCanEdit(isAdmin);
         }
       } catch (error) {
         console.error('❌ Error checking edit permissions:', error);
@@ -187,6 +176,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Listen for edit mode toggle from header
+  useEffect(() => {
+    const handleToggleEditMode = () => {
+      if (canEdit) {
+        console.log('🔧 Toggling edit mode from header event');
+        setIsEditMode(!isEditMode);
+      }
+    };
+
+    window.addEventListener('toggleEditMode', handleToggleEditMode);
+    return () => window.removeEventListener('toggleEditMode', handleToggleEditMode);
+  }, [canEdit, isEditMode]);
+
   const toggleSidebar = () => {
     // Only allow toggling on mobile
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -202,7 +204,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   };
 
   const toggleEditMode = () => {
-    if (effectiveCanEdit) {
+    if (canEdit) {
       setIsEditMode(!isEditMode);
     }
   };
@@ -428,7 +430,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Filter sections based on user permissions and public status
   const getVisibleSections = (sections: Section[]) => {
     // If user can edit (is admin), show all sections
-    if (effectiveCanEdit) {
+    if (canEdit) {
       return sections;
     }
     
@@ -573,7 +575,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         handbookTitle={handbookData.title}
         handbookSubtitle={handbookData.subtitle}
         sidebarOpen={sidebarOpen}
-        canEdit={effectiveCanEdit}
+        canEdit={canEdit}
         isEditMode={isEditMode}
         onToggleEditMode={toggleEditMode}
         onSearch={handleSearch}
@@ -591,7 +593,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             isOpen={sidebarOpen}
             onClose={closeSidebar}
             showMobileHeader={false}
-            canEdit={effectiveCanEdit}
+            canEdit={canEdit}
             onAddSection={addSection}
           />
         </div>
@@ -605,7 +607,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             isOpen={sidebarOpen}
             onClose={closeSidebar}
             showMobileHeader={true}
-            canEdit={effectiveCanEdit}
+            canEdit={canEdit}
             onAddSection={addSection}
           />
         </div>

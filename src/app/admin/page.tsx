@@ -232,7 +232,7 @@ export default function AdminDashboardPage() {
                           {handbook.published ? "Publicerad" : "Utkast"}
                         </Badge>
                         <div className="flex space-x-2">
-                          <Link href={`/admin/content?handbook=${handbook.id}`}>
+                          <Link href={`/${handbook.subdomain}`}>
                             <Button variant="outline" size="sm">
                               <Edit className="h-4 w-4" />
                             </Button>

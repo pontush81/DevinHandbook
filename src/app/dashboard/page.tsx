@@ -200,7 +200,7 @@ export default function DashboardPage() {
                       size="sm"
                       asChild
                     >
-                      <Link href={`/admin/content?handbook=${handbook.id}`}>
+                      <Link href={`/${handbook.subdomain}`}>
                         Redigera
                       </Link>
                     </Button>

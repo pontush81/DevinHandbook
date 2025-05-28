@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { HandbookSection } from '@/types/handbook';
 import { ModernSidebar, SidebarTrigger } from '@/components/handbook/ModernSidebar';
 import { MainFooter } from '@/components/layout/MainFooter';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { User, Menu, LogOut, Settings, Edit } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,17 +44,64 @@ export function HandbookLayout({
   handbookId
 }: HandbookLayoutProps) {
   const { user, signOut, isLoading } = useAuth();
+  const [canEdit, setCanEdit] = useState(false);
+  const [checkingPermissions, setCheckingPermissions] = useState(true);
 
-  // Edit functionality - allow editing for logged in users in both dev and production
-  const canEdit = !!user; // Any logged in user can edit (in production you'd check handbook ownership)
+  // Check if user is admin for this handbook
+  useEffect(() => {
+    const checkEditPermissions = async () => {
+      if (!user || !handbookId) {
+        setCanEdit(false);
+        setCheckingPermissions(false);
+        return;
+      }
+
+      try {
+        console.log('🔍 HandbookLayout checking admin permissions...', {
+          userId: user.id,
+          handbookId
+        });
+
+        // Check if user is admin for this handbook
+        const { data: memberData, error } = await supabase
+          .from('handbook_members')
+          .select('role')
+          .eq('handbook_id', handbookId)
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (error) {
+          console.error('❌ Error checking handbook admin permissions:', error);
+          setCanEdit(false);
+        } else {
+          const isAdmin = !!memberData;
+          console.log('📋 HandbookLayout admin check:', {
+            handbookId,
+            userId: user.id,
+            isAdmin,
+            memberData
+          });
+          setCanEdit(isAdmin);
+        }
+      } catch (error) {
+        console.error('❌ Error checking edit permissions:', error);
+        setCanEdit(false);
+      } finally {
+        setCheckingPermissions(false);
+      }
+    };
+
+    checkEditPermissions();
+  }, [user, handbookId]);
 
   console.log('🎯 HandbookLayout render state:', {
     user: !!user,
     isLoading,
     canEdit,
-    environment: process.env.NODE_ENV,
+    checkingPermissions,
     handbookId,
-    editLinkWillBe: handbookId ? `/admin/content?handbook=${handbookId}` : '/dashboard'
+    editLinkWillBe: handbookId ? `/edit/${handbookId}` : '/dashboard'
   });
 
   const handleSignOut = async () => {
@@ -89,18 +137,14 @@ export function HandbookLayout({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  asChild
                   onClick={() => {
-                    console.log('🔧 Edit button clicked!', {
-                      handbookId,
-                      targetUrl: handbookId ? `/admin/content?handbook=${handbookId}` : '/dashboard'
-                    });
+                    console.log('🔧 Edit button clicked - toggling edit mode');
+                    // Instead of navigating, we'll emit an event that the handbook can listen to
+                    window.dispatchEvent(new CustomEvent('toggleEditMode'));
                   }}
                 >
-                  <Link href={handbookId ? `/admin/content?handbook=${handbookId}` : '/dashboard'} className="flex items-center space-x-2">
-                    <Edit className="w-4 h-4" />
-                    <span>Redigera</span>
-                  </Link>
+                  <Edit className="w-4 h-4 mr-2" />
+                  <span>Redigera</span>
                 </Button>
               )}
 
