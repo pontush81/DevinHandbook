@@ -62,15 +62,21 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
           if (error.message.toLowerCase().includes("email not confirmed") || 
               error.message.toLowerCase().includes("email is not confirmed") ||
               error.message.toLowerCase().includes("not confirmed") ||
+              error.message.toLowerCase().includes("email_not_confirmed") ||
+              error.message.toLowerCase().includes("signup requires email confirmation") ||
+              error.code === "email_not_confirmed" ||
               error.code === "401" || 
               error.code === "422") {
             setError(
-              "Din e-postadress har inte bekräftats. Klicka på länken i bekräftelsemailet som skickades " +
-              "när du registrerade dig."
+              "Din e-postadress har inte bekräftats än. Du måste klicka på länken i bekräftelsemailet som skickades " +
+              "när du registrerade dig för att aktivera ditt konto."
             );
             setShowResendButton(true);
+          } else if (error.message.toLowerCase().includes("invalid login credentials") ||
+                     error.message.toLowerCase().includes("invalid credentials")) {
+            setError("Felaktig e-postadress eller lösenord. Kontrollera dina uppgifter och försök igen.");
           } else {
-            setError(`Fel vid inloggning: ${error.message} (Kod: ${error.code})`);
+            setError(`Fel vid inloggning: ${error.message}${error.code ? ` (Kod: ${error.code})` : ''}`);
           }
         } else if (!data.session) {
           setError("Kunde inte skapa en aktiv session. Försök igen eller kontakta support.");
