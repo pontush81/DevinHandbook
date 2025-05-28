@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MainHeader } from './layout/MainHeader';
+import { HandbookHeader } from './handbook/HandbookHeader';
 import { ModernSidebar, SidebarTrigger } from './handbook/ModernSidebar';
 import { ContentArea } from './handbook/ContentArea';
 import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
@@ -409,32 +409,21 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         .eq('id', targetSection.id);
 
       // Update local state
-      setHandbookData(prev => {
-        const newSections = [...prev.sections];
-        
-        // Swap the sections
-        [newSections[currentIndex], newSections[newIndex]] = [newSections[newIndex], newSections[currentIndex]];
-        
-        // Update their order_index in local state too
-        newSections[currentIndex] = {
-          ...newSections[currentIndex],
-          order_index: currentIndex
-        };
-        newSections[newIndex] = {
-          ...newSections[newIndex],
-          order_index: newIndex
-        };
+      const newSections = [...handbookData.sections];
+      [newSections[currentIndex], newSections[newIndex]] = [newSections[newIndex], newSections[currentIndex]];
+      
+      setHandbookData(prev => ({
+        ...prev,
+        sections: newSections
+      }));
 
-        return {
-          ...prev,
-          sections: newSections
-        };
-      });
-
-      console.log(`Moved section ${direction}:`, { currentIndex, newIndex });
     } catch (error) {
       console.error('Error moving section:', error);
     }
+  };
+
+  const handleToggleEditMode = () => {
+    setIsEditMode(!isEditMode);
   };
 
   if (isLoading || authLoading || !mounted) {
@@ -462,58 +451,47 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen w-full flex flex-col">
-        {/* Header - Using MainHeader for clean design like landing page */}
-        <MainHeader
-          variant="handbook"
-          showSidebarTrigger={true}
-          showAuth={false}
+        {/* Header - Using new HandbookHeader with edit functionality */}
+        <HandbookHeader 
+          handbookTitle={handbookData.title}
+          canEdit={canEdit}
+          isEditMode={isEditMode}
+          onToggleEditMode={handleToggleEditMode}
         />
 
-        {/* Main layout with sidebar */}
-        <div className="flex-1 flex relative">
-          {/* Modern Sidebar */}
-          <div className="relative z-30">
-            <ModernSidebar
-              sections={visibleSections}
-              currentPageId={currentPageId || ''}
-              onPageSelect={handlePageSelect}
-              onSectionSelect={(sectionId) => {
-                // Handle section selection
-                setCurrentPageId(undefined);
-                // Scroll to section
-                setTimeout(() => {
-                  const element = document.getElementById(`section-${sectionId}`);
-                  if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }, 100);
-              }}
-            />
-          </div>
-          
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <ModernSidebar
+            sections={visibleSections}
+            currentPageId={currentPageId}
+            onPageSelect={setCurrentPageId}
+            isEditMode={isEditMode}
+            onMoveSection={moveSection}
+          />
+
           {/* Main content area */}
-          <SidebarInset className="flex-1 flex flex-col min-w-0">
+          <SidebarInset className="flex-1 overflow-hidden">
             {/* Main content - Reduced top padding */}
             <main className="flex-1 overflow-auto w-full pt-2">
               <ContentArea
                 sections={visibleSections}
                 currentPageId={currentPageId}
-                isEditMode={false}
+                isEditMode={isEditMode}
                 handbookId={initialData.id}
-                onUpdateSection={undefined}
-                onUpdatePage={undefined}
-                onAddPage={undefined}
-                onAddSection={undefined}
-                onMoveSection={undefined}
-                onDeleteSection={undefined}
-                onExitEditMode={undefined}
+                onUpdateSection={updateSection}
+                onUpdatePage={updatePage}
+                onAddPage={addPage}
+                onAddSection={addSection}
+                onMoveSection={moveSection}
+                onDeleteSection={deleteSection}
+                onExitEditMode={() => setIsEditMode(false)}
               />
             </main>
-            
-            {/* Footer */}
-            <MainFooter variant="app" />
           </SidebarInset>
         </div>
+
+        {/* Footer */}
+        <MainFooter />
       </div>
     </SidebarProvider>
   );
