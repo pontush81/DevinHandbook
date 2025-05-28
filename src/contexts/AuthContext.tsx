@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
-import { useToast } from '@/components/ui/use-toast';
+import { showToast } from '@/components/ui/use-toast';
 
 type AuthContextType = {
   user: User | null;
@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authErrorShown, setAuthErrorShown] = useState(false);
   const router = useRouter();
-  const { toast } = useToast();
 
   // Funktion för att skapa användarprofil om den inte finns
   const createUserProfileIfNeeded = useCallback(async (userId: string, email: string) => {
@@ -78,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Hantera auth-fel och visa lämpliga meddelanden
-  const handleAuthError = useCallback((event: CustomEvent) => {
+  const handleAuthError = (event: CustomEvent) => {
     if (authErrorShown) return; // Förhindra flera meddelanden
     
     const error = event.detail?.error || event.detail;
@@ -129,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Visa toast-meddelande istället för popup
       setAuthErrorShown(true);
       
-      toast({
+      showToast({
         title: "Session har gått ut",
         description: "Du omdirigeras till inloggningssidan...",
         variant: "destructive",
@@ -152,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setAuthErrorShown(true);
       
-      toast({
+      showToast({
         title: "E-post inte bekräftad",
         description: "Du omdirigeras till inloggningssidan där du kan skicka ett nytt bekräftelsemail.",
         variant: "destructive",
@@ -169,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // För andra fel, visa ett generiskt meddelande
       setAuthErrorShown(true);
       
-      toast({
+      showToast({
         title: "Autentiseringsfel",
         description: "Du omdirigeras till inloggningssidan...",
         variant: "destructive",
@@ -180,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.location.href = '/login';
       }, 2000);
     }
-  }, [authErrorShown]);
+  };
 
   // Initiera session från Supabase
   useEffect(() => {
@@ -395,7 +394,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.removeEventListener('supabase.auth.error', handleAuthError as EventListener);
       }
     };
-  }, [handleAuthError]);
+  }, []);
 
   // Implementera de olika auth-funktionerna
   const signIn = async (email: string, password: string) => {
