@@ -7,32 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { redirectToNewlyCreatedHandbook } from '@/lib/redirect-utils';
-
-// Simple template for new handbooks
-const simpleHandbookTemplate = {
-  sections: [
-    {
-      title: "Välkommen",
-      description: "Introduktion till handboken",
-      pages: [
-        {
-          title: "Översikt",
-          content: "Välkommen till din digitala handbok! Här hittar du all viktig information om din bostadsrättsförening."
-        }
-      ]
-    },
-    {
-      title: "Kontaktuppgifter",
-      description: "Viktiga kontakter",
-      pages: [
-        {
-          title: "Styrelse och förvaltning",
-          content: "Här hittar du kontaktuppgifter till styrelsen och förvaltningen."
-        }
-      ]
-    }
-  ]
-};
+import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 
 interface CreateHandbookFormProps {
   userId: string;
@@ -179,7 +154,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
       const handbookId = await createHandbookWithSectionsAndPages(
         name,
         subdomain,
-        simpleHandbookTemplate,
+        completeBRFHandbook,
         userId
       );
 
@@ -320,7 +295,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
 
       <Button
         type="submit"
-        className="w-full"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
         disabled={isLoading || isRedirecting || isSubdomainAvailable === false || creationStep !== 'idle'}
       >
         {creationStep === 'creating' && (
