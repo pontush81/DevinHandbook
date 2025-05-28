@@ -41,11 +41,11 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b transition-all duration-200 bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-12 items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-12 items-center justify-between">
         
-        {/* Left section - Sidebar trigger + Brand */}
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          {/* Sidebar trigger för både mobil och desktop */}
+        {/* Left section - Sidebar trigger först, sedan Brand */}
+        <div className="flex items-center space-x-3">
+          {/* Sidebar trigger längst till vänster */}
           <SidebarTrigger />
           
           {/* Brand */}
@@ -69,8 +69,8 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right section - Edit button + User menu */}
-        <div className="flex flex-1 items-center justify-end space-x-2">
+        {/* Right section - Edit button + User menu längst till höger */}
+        <div className="flex items-center space-x-3">
           
           {/* Edit button - only show if user can edit */}
           {canEdit && (
