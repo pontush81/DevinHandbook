@@ -198,7 +198,7 @@ export default function HandbookPage({ params }: Props) {
     );
   }
 
-  // Use the beautiful HandbookClient instead of basic SupabaseHandbookApp
+  // Use ModernHandbookClient for modern handbook display
   const adaptedHandbook = adaptHandbookData(handbook);
 
   return (

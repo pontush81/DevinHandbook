@@ -2,22 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { supabase } from "@/lib/supabase";
 import { ensureUserProfile } from "@/lib/user-utils";
-
-// Simple template for API
-const simpleTemplate = {
-  sections: [
-    {
-      title: "Välkommen",
-      description: "Introduktion till handboken",
-      pages: [
-        {
-          title: "Översikt",
-          content: "Välkommen till din digitala handbok! Här hittar du all viktig information."
-        }
-      ]
-    }
-  ]
-};
+import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,7 +49,7 @@ export async function POST(req: NextRequest) {
     const handbookId = await createHandbookWithSectionsAndPages(
       name, 
       subdomain, 
-      simpleTemplate, 
+      completeBRFHandbook, 
       user_id
     );
 

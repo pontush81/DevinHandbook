@@ -118,7 +118,7 @@ export const completeBRFHandbook: HandbookTemplate = {
       id: "rules",
       title: "Regler och ordningsföreskrifter",
       description: "Föreningens regler och bestämmelser",
-      isActive: false,
+      isActive: true,
       pages: [
         {
           id: "house-rules",
@@ -131,7 +131,7 @@ export const completeBRFHandbook: HandbookTemplate = {
       id: "economy",
       title: "Ekonomi",
       description: "Ekonomisk information och avgifter",
-      isActive: false,
+      isActive: true,
       pages: [
         {
           id: "fees",
@@ -144,7 +144,7 @@ export const completeBRFHandbook: HandbookTemplate = {
       id: "maintenance",
       title: "Underhåll och reparationer",
       description: "Information om underhåll och felanmälan",
-      isActive: false,
+      isActive: true,
       pages: [
         {
           id: "reporting",
@@ -157,7 +157,7 @@ export const completeBRFHandbook: HandbookTemplate = {
       id: "facilities",
       title: "Gemensamma utrymmen",
       description: "Tvättstuga, förråd och andra faciliteter",
-      isActive: false,
+      isActive: true,
       pages: [
         {
           id: "laundry",
