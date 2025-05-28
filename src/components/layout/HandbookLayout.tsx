@@ -44,15 +44,13 @@ export function HandbookLayout({
 }: HandbookLayoutProps) {
   const { user, signOut, isLoading } = useAuth();
 
-  // Edit functionality - similar to ModernHandbookClient
-  const canEditOverride = process.env.NODE_ENV === 'development' && !!user;
-  const canEdit = canEditOverride; // In production, this would check handbook ownership
+  // Edit functionality - allow editing for logged in users in both dev and production
+  const canEdit = !!user; // Any logged in user can edit (in production you'd check handbook ownership)
 
   console.log('🎯 HandbookLayout render state:', {
     user: !!user,
     isLoading,
     canEdit,
-    canEditOverride,
     environment: process.env.NODE_ENV,
     handbookId
   });
@@ -91,9 +89,6 @@ export function HandbookLayout({
                   <Link href="/dashboard" className="flex items-center space-x-2">
                     <Edit className="w-4 h-4" />
                     <span>Redigera</span>
-                    {process.env.NODE_ENV === 'development' && (
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">DEV</span>
-                    )}
                   </Link>
                 </Button>
               )}
@@ -126,29 +121,11 @@ export function HandbookLayout({
                           </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {canEdit && (
-                          <>
-                            <DropdownMenuItem asChild>
-                              <Link href="/dashboard">
-                                <Edit className="mr-2 h-4 w-4" />
-                                <span>Redigera handbok</span>
-                                {process.env.NODE_ENV === 'development' && (
-                                  <span className="ml-auto text-xs bg-yellow-100 text-yellow-800 px-1 rounded">DEV</span>
-                                )}
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                          </>
-                        )}
                         <DropdownMenuItem asChild>
                           <Link href="/dashboard">
                             <Settings className="mr-2 h-4 w-4" />
                             <span>Dashboard</span>
                           </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Settings className="mr-2 h-4 w-4" />
-                          <span>Inställningar</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleSignOut}>

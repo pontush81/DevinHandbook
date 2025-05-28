@@ -182,7 +182,7 @@ export default function LoginClient() {
               ) : (
                 <>
                   <Link href="/dashboard">
-                    <Button className="w-full">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                       Gå till dashboard
                     </Button>
                   </Link>
