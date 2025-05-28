@@ -72,7 +72,7 @@ export const contentTypes = {
 
 export const completeBRFHandbook: HandbookTemplate = {
   metadata: {
-    subtitle: "Digital handbok för bostadsrättsföreningen",
+    subtitle: "",
     version: "1.0",
     organization: {
       name: "",

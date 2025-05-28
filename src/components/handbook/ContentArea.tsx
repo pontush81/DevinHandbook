@@ -452,7 +452,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
     const section = sections.find(s => s.pages?.some(p => p.id === currentPageId));
     
     return (
-      <main className="flex-1 bg-gradient-to-br from-gray-50 to-white min-h-screen pt-20">
+      <main className="flex-1 bg-gradient-to-br from-gray-50 to-white min-h-screen pt-4">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-6">
@@ -484,7 +484,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
 
   // Show all sections as a long scrollable page
   return (
-    <main className="flex-1 bg-gradient-to-br from-gray-50 to-white min-h-screen pt-20">
+    <main className="flex-1 bg-gradient-to-br from-gray-50 to-white min-h-screen pt-4">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome content - only show when no sections exist at all */}
         {(!sections || sections.length === 0) && !currentPageId && (
