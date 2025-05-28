@@ -159,22 +159,40 @@ export function CreateHandbookForm() {
 
       toast({
         title: "Handbok skapad!",
-        description: `Din handbok har skapats och kommer att vara tillgänglig på ${values.subdomain}.handbok.org`,
+        description: `Din handbok har skapats och kommer att vara tillgänglig på www.handbok.org/${values.subdomain}`,
       });
 
       // Vänta lite innan vi redirectar för att användaren ska se meddelandet
       setTimeout(() => {
-        // Redirecta till den nya handboken
-        window.location.href = `https://${values.subdomain}.handbok.org`;
+        // Redirecta till den nya handboken med ny URL-struktur
+        const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+        const handbookUrl = isDevelopment 
+          ? `http://localhost:3000/${values.subdomain}`
+          : `https://www.handbok.org/${values.subdomain}`;
+        
+        window.location.href = handbookUrl;
       }, 2000);
 
     } catch (error) {
       console.error("Fel vid skapande av handbok:", error);
-      toast({
-        title: "Något gick fel",
-        description: "Det gick inte att skapa handboken. Försök igen senare.",
-        variant: "destructive",
-      });
+      
+      const errorMessage = error instanceof Error ? error.message : "Ett fel uppstod vid skapande av handbok";
+      
+      // Kontrollera om det är handboksbegränsningsfel
+      if (errorMessage.includes("endast skapa en handbok gratis") || errorMessage.includes("Uppgradera till Pro")) {
+        toast({
+          title: "Handboksbegränsning nådd",
+          description: "Du kan endast skapa en handbok gratis. Uppgradera till Pro för att skapa fler handböcker.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Något gick fel",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+      
       setIsCreating(false);
       clearSimulation(); // Stoppa simuleringen
       setCreationProgress(0);

@@ -75,7 +75,7 @@ async function transferSessionToSubdomain(subdomain: string): Promise<void> {
 
 /**
  * Smart redirect logic based on user's handbooks
- * - 0 handbooks: Go to dashboard (to create first)
+ * - 0 handbooks: Go to create-handbook (improved onboarding)
  * - 1 handbook: Go directly to the handbook (most users)
  * - Multiple handbooks: Go to dashboard (to choose)
  * 
@@ -98,8 +98,8 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
     }
 
     if (!userId) {
-      console.log('[Smart Redirect] No user found, redirecting to dashboard');
-      window.location.href = '/dashboard';
+      console.log('[Smart Redirect] No user found, redirecting to create-handbook for onboarding');
+      window.location.href = '/create-handbook?new=true';
       return;
     }
 
@@ -114,8 +114,8 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
 
     if (error) {
       console.error('[Smart Redirect] Error fetching handbooks:', error);
-      // Fallback to dashboard on error
-      window.location.href = '/dashboard';
+      // Fallback to create-handbook for better onboarding experience
+      window.location.href = '/create-handbook?new=true';
       return;
     }
 
@@ -124,9 +124,9 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
     console.log(`[Smart Redirect] Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map(h => h.subdomain));
 
     if (handbookCount === 0) {
-      // No handbooks - go to dashboard to create first one
-      console.log('[Smart Redirect] No handbooks found, redirecting to dashboard');
-      window.location.href = '/dashboard';
+      // No handbooks - go to create-handbook for better onboarding
+      console.log('[Smart Redirect] No handbooks found, redirecting to create-handbook for onboarding');
+      window.location.href = '/create-handbook?new=true';
       
     } else if (handbookCount === 1) {
       // One handbook - go directly to it (most common case)
@@ -149,8 +149,8 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
     
   } catch (error) {
     console.error('[Smart Redirect] Unexpected error:', error);
-    // Fallback to dashboard on any error
-    window.location.href = '/dashboard';
+    // Fallback to create-handbook for better onboarding experience
+    window.location.href = '/create-handbook?new=true';
   }
 }
 
@@ -189,8 +189,8 @@ export async function smartRedirectWithPolling(
       if (!userId) {
         console.log(`[Smart Redirect Polling] Attempt ${attempts}: No user found`);
         if (attempts >= maxAttempts) {
-          console.log('[Smart Redirect Polling] Max attempts reached with no user, redirecting to dashboard');
-          window.location.href = '/dashboard';
+          console.log('[Smart Redirect Polling] Max attempts reached with no user, redirecting to create-handbook for onboarding');
+          window.location.href = '/create-handbook?new=true';
         } else {
           console.log(`[Smart Redirect Polling] Retrying in ${intervalMs}ms...`);
           setTimeout(attemptRedirect, intervalMs);
@@ -210,8 +210,8 @@ export async function smartRedirectWithPolling(
       if (error) {
         console.error(`[Smart Redirect Polling] Attempt ${attempts}: Error fetching handbooks:`, error);
         if (attempts >= maxAttempts) {
-          console.log('[Smart Redirect Polling] Max attempts reached, falling back to dashboard');
-          window.location.href = '/dashboard';
+          console.log('[Smart Redirect Polling] Max attempts reached, falling back to create-handbook for onboarding');
+          window.location.href = '/create-handbook?new=true';
         } else {
           console.log(`[Smart Redirect Polling] Retrying in ${intervalMs}ms...`);
           setTimeout(attemptRedirect, intervalMs);
@@ -224,8 +224,8 @@ export async function smartRedirectWithPolling(
 
       if (handbookCount === 0) {
         if (attempts >= maxAttempts) {
-          console.log('[Smart Redirect Polling] Max attempts reached with no handbooks, redirecting to dashboard');
-          window.location.href = '/dashboard';
+          console.log('[Smart Redirect Polling] Max attempts reached with no handbooks, redirecting to create-handbook for onboarding');
+          window.location.href = '/create-handbook?new=true';
         } else {
           console.log('[Smart Redirect Polling] No handbooks yet, retrying...');
           setTimeout(attemptRedirect, intervalMs);
@@ -252,8 +252,8 @@ export async function smartRedirectWithPolling(
     } catch (error) {
       console.error(`[Smart Redirect Polling] Attempt ${attempts}: Unexpected error:`, error);
       if (attempts >= maxAttempts) {
-        console.log('[Smart Redirect Polling] Max attempts reached due to error, falling back to dashboard');
-        window.location.href = '/dashboard';
+        console.log('[Smart Redirect Polling] Max attempts reached due to error, falling back to create-handbook for onboarding');
+        window.location.href = '/create-handbook?new=true';
       } else {
         console.log(`[Smart Redirect Polling] Retrying after error in ${intervalMs}ms...`);
         setTimeout(attemptRedirect, intervalMs);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { supabase } from "@/lib/supabase";
-import { ensureUserProfile } from "@/lib/user-utils";
+import { ensureUserProfile, checkIsSuperAdmin } from "@/lib/user-utils";
 import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 
 export async function POST(req: NextRequest) {
@@ -42,6 +42,34 @@ export async function POST(req: NextRequest) {
 
     // Säkerställ att användaren har en profil först
     await ensureUserProfile(supabase, user_id, "");
+
+    // Kontrollera om användaren är superadmin
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(user_id);
+    const userEmail = userData?.user?.email || "";
+    const isSuperAdmin = await checkIsSuperAdmin(supabase, user_id, userEmail);
+
+    // Kontrollera handboksbegränsning för icke-superadmins
+    if (!isSuperAdmin) {
+      const { data: userHandbooks, error: handbooksError } = await supabase
+        .from("handbooks")
+        .select("id")
+        .eq("owner_id", user_id);
+
+      if (handbooksError) {
+        console.error("Fel vid kontroll av användarens handböcker:", handbooksError);
+        return NextResponse.json(
+          { error: "Kunde inte kontrollera befintliga handböcker" },
+          { status: 500 }
+        );
+      }
+
+      if (userHandbooks && userHandbooks.length >= 1) {
+        return NextResponse.json(
+          { error: "Du kan endast skapa en handbok gratis. Uppgradera till Pro för fler handböcker." },
+          { status: 403 }
+        );
+      }
+    }
 
     console.log("[Create Handbook API] Anropar createHandbookWithSectionsAndPages med completeBRFHandbook");
     
