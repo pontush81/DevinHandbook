@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Search, Phone, User, X, Edit, Save, LogIn, ChevronDown, Bell, Settings } from 'lucide-react';
+import { Menu, Search, User, X, Edit, Save, LogIn, ChevronDown, Bell, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left section - Brand */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Mobile menu button */}
             {isMobile && (
               <Button
@@ -189,27 +189,27 @@ export const Header: React.FC<HeaderProps> = ({
             )}
             
             {/* Professional Brand */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <span className="text-white text-lg">🏠</span>
               </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-gray-900">{handbookTitle}</h1>
+              <div className="block">
+                <h1 className="text-lg font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-none">{handbookTitle}</h1>
                 {handbookSubtitle && (
-                  <p className="text-xs text-gray-500">{handbookSubtitle}</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">{handbookSubtitle}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Center section - Search */}
-          <div className="flex-1 max-w-lg mx-4">
+          <div className="flex-1 max-w-lg mx-2 sm:mx-4">
             <div className="search-container relative">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Sök i handboken..."
+                  placeholder="Sök..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg 
@@ -250,23 +250,17 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right section - Actions */}
-          <div className="flex items-center space-x-3">
-            {/* Support button */}
-            <Button variant="outline" size="sm" className="hidden sm:flex items-center space-x-2">
-              <Phone className="w-4 h-4" />
-              <span>Support</span>
-            </Button>
-
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {/* Edit mode toggle */}
             {canEdit && !isEditMode && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onToggleEditMode}
-                className="hidden sm:flex items-center space-x-2"
+                className="flex items-center space-x-1 sm:space-x-2"
               >
                 <Edit className="w-4 h-4" />
-                <span>Redigera</span>
+                <span className="hidden sm:inline">Redigera</span>
               </Button>
             )}
 
@@ -301,9 +295,11 @@ export const Header: React.FC<HeaderProps> = ({
                         <Edit className="mr-2 h-4 w-4" />
                         <span>{isEditMode ? 'Avsluta redigering' : 'Redigera handbok'}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Inställningar</span>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
