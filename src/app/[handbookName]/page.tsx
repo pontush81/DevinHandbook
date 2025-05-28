@@ -1,6 +1,5 @@
-"use client";
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 import { ModernHandbookClient } from '@/components/ModernHandbookClient';
 import { notFound } from 'next/navigation';
@@ -52,153 +51,93 @@ type Props = {
   params: Promise<PageParams>;
 };
 
-export default function HandbookPage({ params }: Props) {
-  const [handbook, setHandbook] = useState<Handbook | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [handbookName, setHandbookName] = useState<string>('');
+// Convert handbook data to format expected by ModernHandbookClient
+const adaptHandbookData = (handbook: Handbook) => {
+  console.log('[HandbookPage] Input handbook for adaptation:', handbook);
+  
+  if (!handbook) {
+    console.error('[HandbookPage] Handbook is null/undefined');
+    return null;
+  }
 
-  useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates after unmount
-    
-    const loadHandbook = async () => {
-      try {
-        const resolvedParams = await params;
-        const { handbookName: handbookNameParam } = resolvedParams;
-        
-        if (!isMounted) return; // Exit if component is unmounted
-        
-        console.log(`[Handbook Page] 🏁 RENDERING HANDBOOK PAGE FOR PATH: /${handbookNameParam}`);
-        console.log(`[Handbook Page] 📍 This is path-based routing (handbok.org/${handbookNameParam})`);
-        
-        setHandbookName(handbookNameParam);
-        
-        // Använd handbookName som subdomain för att hitta handboken
-        const handbookData = await getHandbookBySubdomain(handbookNameParam);
-        console.log(`[Handbook Page] ✅ HANDBOOK FOUND:`, handbookData ? `ID: ${handbookData.id}, Title: ${handbookData.title}` : 'NULL');
-        
-        if (!isMounted) return; // Exit if component is unmounted
-        
-        if (handbookData) {
-          setHandbook(handbookData);
-        } else {
-          // Use notFound() for proper 404 handling instead of error state
-          console.log(`[Handbook Page] 📍 Handbook "${handbookNameParam}" not found, calling notFound()`);
-          notFound();
-        }
-      } catch (err) {
-        console.error('Error fetching handbook:', err);
-        if (isMounted) {
-          // For unexpected errors, still show error page but log the issue
-          setError('Det gick inte att ladda handboken just nu. Försök igen senare.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
+  if (!handbook.sections || !Array.isArray(handbook.sections)) {
+    console.error('[HandbookPage] Handbook sections invalid:', handbook.sections);
+    return null;
+  }
 
-    loadHandbook();
-    
-    // Cleanup function to prevent memory leaks
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Empty dependency array - only run once on mount
+  console.log('[HandbookPage] Raw sections from database:', handbook.sections.map(s => ({
+    id: s.id,
+    title: s.title,
+    is_public: s.is_public,
+    pagesCount: s.pages?.length || 0
+  })));
 
-  // Convert handbook data to format expected by ModernHandbookClient
-  const adaptHandbookData = (handbook: Handbook) => {
-    console.log('[HandbookPage] Input handbook for adaptation:', handbook);
-    
-    if (!handbook) {
-      console.error('[HandbookPage] Handbook is null/undefined');
-      return null;
-    }
-
-    if (!handbook.sections || !Array.isArray(handbook.sections)) {
-      console.error('[HandbookPage] Handbook sections invalid:', handbook.sections);
-      return null;
-    }
-
-    console.log('[HandbookPage] Raw sections from database:', handbook.sections.map(s => ({
-      id: s.id,
-      title: s.title,
-      is_public: s.is_public,
-      pagesCount: s.pages?.length || 0
-    })));
-
-    // Convert to format expected by ModernHandbookClient
-    const adaptedHandbook = {
-      id: handbook.id,
-      title: handbook.title,
-      subtitle: handbook.subtitle,
-      sections: handbook.sections.map(section => ({
-        id: section.id,
-        title: section.title,
-        description: section.description,
-        order_index: section.order_index,
-        handbook_id: section.handbook_id,
-        is_public: section.is_public,
-        pages: section.pages.map(page => ({
-          id: page.id,
-          title: page.title,
-          content: page.content,
-          order_index: page.order_index,
-          section_id: page.section_id,
-          lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
-          estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000))
-        }))
+  // Convert to format expected by ModernHandbookClient
+  const adaptedHandbook = {
+    id: handbook.id,
+    title: handbook.title,
+    subtitle: handbook.subtitle,
+    sections: handbook.sections.map(section => ({
+      id: section.id,
+      title: section.title,
+      description: section.description,
+      order_index: section.order_index,
+      handbook_id: section.handbook_id,
+      is_public: section.is_public,
+      pages: section.pages.map(page => ({
+        id: page.id,
+        title: page.title,
+        content: page.content,
+        order_index: page.order_index,
+        section_id: page.section_id,
+        lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
+        estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000))
       }))
-    };
-
-    console.log('[HandbookPage] Adapted handbook for ModernHandbookClient:', adaptedHandbook);
-    return adaptedHandbook;
+    }))
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white p-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Laddar handbok...</p>
-        </div>
-      </div>
-    );
-  }
+  console.log('[HandbookPage] Adapted handbook for ModernHandbookClient:', adaptedHandbook);
+  return adaptedHandbook;
+};
 
-  if (error || !handbook) {
-    return (
-      <div className="min-h-screen bg-white p-8">
-        <h1 className="text-2xl font-bold">Handbook Not Found</h1>
-        <p className="text-red-500">{error}</p>
-        <p className="text-gray-500 mt-4">Handbook path: /{handbookName}</p>
-        <p className="text-gray-400 text-sm mt-2">Ingen handbok med subdomain '{handbookName}' hittades i databasen.</p>
-      </div>
-    );
-  }
-
-  console.log('[HandbookPage] About to adapt handbook data:', handbook);
+export default async function HandbookPage({ params }: Props) {
+  const resolvedParams = await params;
+  const { handbookName } = resolvedParams;
   
-  // Use ModernHandbookClient for inline editing functionality
-  const adaptedHandbook = adaptHandbookData(handbook);
+  console.log(`[Handbook Page] 🏁 RENDERING HANDBOOK PAGE FOR PATH: /${handbookName}`);
+  console.log(`[Handbook Page] 📍 This is path-based routing (handbok.org/${handbookName})`);
+  
+  try {
+    // Använd handbookName som subdomain för att hitta handboken
+    const handbookData = await getHandbookBySubdomain(handbookName);
+    console.log(`[Handbook Page] ✅ HANDBOOK FOUND:`, handbookData ? `ID: ${handbookData.id}, Title: ${handbookData.title}` : 'NULL');
+    
+    if (!handbookData) {
+      // Use notFound() for proper 404 handling - this works on server side
+      console.log(`[Handbook Page] 📍 Handbook "${handbookName}" not found, calling notFound()`);
+      notFound();
+    }
 
-  if (!adaptedHandbook) {
+    // Use ModernHandbookClient for inline editing functionality
+    const adaptedHandbook = adaptHandbookData(handbookData);
+
+    if (!adaptedHandbook) {
+      console.error('[HandbookPage] Failed to adapt handbook data');
+      notFound();
+    }
+
     return (
-      <div className="min-h-screen bg-white p-8">
-        <h1 className="text-2xl font-bold text-red-600">Fel vid databearbetning</h1>
-        <p className="text-gray-600">Handbokdata kunde inte bearbetas korrekt eller inga sektioner hittades.</p>
-      </div>
+      <>
+        <SessionTransferHandler />
+        <ModernHandbookClient 
+          initialData={adaptedHandbook}
+          defaultEditMode={false}
+        />
+      </>
     );
+  } catch (err) {
+    console.error('Error fetching handbook:', err);
+    // For unexpected errors, throw to trigger 500 error page
+    throw new Error(`Failed to load handbook: ${err}`);
   }
-
-  return (
-    <>
-      <SessionTransferHandler />
-      <ModernHandbookClient 
-        initialData={adaptedHandbook}
-        defaultEditMode={false}
-      />
-    </>
-  );
 } 
