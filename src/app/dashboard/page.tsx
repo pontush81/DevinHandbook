@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { checkIsSuperAdmin } from "@/lib/user-utils";
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ interface Handbook {
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
   const [error, setError] = useState<string | null>(null);

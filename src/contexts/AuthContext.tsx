@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 type AuthContextType = {
   user: User | null;
@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authErrorShown, setAuthErrorShown] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   // Funktion för att skapa användarprofil om den inte finns
   const createUserProfileIfNeeded = useCallback(async (userId: string, email: string) => {

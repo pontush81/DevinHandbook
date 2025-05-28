@@ -4,12 +4,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function TestAuthPage() {
   const { user, session, isLoading } = useAuth();
   const [supabaseSession, setSupabaseSession] = useState<any>(null);
   const [cookies, setCookies] = useState<string>('');
   const [localStorage, setLocalStorage] = useState<any>({});
+  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -51,27 +59,61 @@ export default function TestAuthPage() {
     checkAuth();
   }, []);
 
-  const handleLogin = async () => {
-    const email = prompt('Email:');
-    const password = prompt('Password:');
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (email && password) {
+    if (!loginEmail || !loginPassword) {
+      toast({
+        title: "Fält saknas",
+        description: "Ange både email och lösenord",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoggingIn(true);
+    
+    try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+        email: loginEmail,
+        password: loginPassword
       });
       
       if (error) {
-        alert('Login error: ' + error.message);
+        toast({
+          title: "Inloggningsfel",
+          description: error.message,
+          variant: "destructive"
+        });
       } else {
-        alert('Login successful!');
+        toast({
+          title: "Inloggning lyckades!",
+          description: "Du är nu inloggad",
+          variant: "success"
+        });
+        setShowLoginForm(false);
+        setLoginEmail('');
+        setLoginPassword('');
         window.location.reload();
       }
+    } catch (err) {
+      toast({
+        title: "Oväntat fel",
+        description: "Ett fel uppstod vid inloggning",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    toast({
+      title: "Utloggad",
+      description: "Du har loggats ut",
+      variant: "success"
+    });
     window.location.reload();
   };
 
@@ -137,6 +179,49 @@ export default function TestAuthPage() {
         </div>
       </div>
 
+      {/* Login Form */}
+      {showLoginForm && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Test Login</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium mb-1">Email:</label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="din@email.com"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium mb-1">Lösenord:</label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Ditt lösenord"
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={isLoggingIn}>
+                  {isLoggingIn ? 'Loggar in...' : 'Logga in'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowLoginForm(false)}>
+                  Avbryt
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
       <div className="mt-8 flex gap-4">
         {user ? (
@@ -144,7 +229,7 @@ export default function TestAuthPage() {
             Logout
           </Button>
         ) : (
-          <Button onClick={handleLogin}>
+          <Button onClick={() => setShowLoginForm(true)}>
             Login
           </Button>
         )}
