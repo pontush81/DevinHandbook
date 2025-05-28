@@ -2,7 +2,7 @@
 import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
-import HandbookClient from '@/components/HandbookClient';
+import { ModernHandbookClient } from '@/components/ModernHandbookClient';
 import Link from 'next/link';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -44,37 +44,6 @@ interface Handbook {
   updated_at?: string;
   subdomain: string;
   sections: Section[];
-}
-
-// Interface för HandbookClient - uppdaterad för nya strukturen
-interface HandbookClientData {
-  id: string;
-  title: string;
-  subtitle?: string;
-  version?: string;
-  organization_name?: string;
-  organization_address?: string;
-  organization_org_number?: string;
-  organization_phone?: string;
-  organization_email?: string;
-  updated_at?: string;
-  sections: {
-    id: string;
-    title: string;
-    description: string;
-    order_index: number;
-    is_active?: boolean;
-    completion_status?: number;
-    updated_at?: string;
-    pages: {
-      id: string;
-      title: string;
-      content: string;
-      order_index: number;
-      table_of_contents?: boolean;
-      updated_at?: string;
-    }[];
-  }[];
 }
 
 // Se till att denna sida renderas dynamiskt för att hantera subdomäner korrekt
@@ -139,8 +108,8 @@ export default function HandbookPage({ params }: Props) {
     };
   }, []); // Empty dependency array - only run once on mount
 
-  // Convert handbook data to format expected by HandbookClient
-  const adaptHandbookData = (handbook: Handbook): HandbookClientData => {
+  // Convert handbook data to format expected by ModernHandbookClient
+  const adaptHandbookData = (handbook: Handbook) => {
     // Filter sections based on public status for non-admin users
     // Note: For public handbook pages, we always filter to only show public sections
     const visibleSections = handbook.sections.filter(section => section.is_public !== false);
@@ -149,28 +118,21 @@ export default function HandbookPage({ params }: Props) {
       id: handbook.id,
       title: handbook.title,
       subtitle: handbook.subtitle,
-      version: handbook.version,
-      organization_name: handbook.organization_name,
-      organization_address: handbook.organization_address,
-      organization_org_number: handbook.organization_org_number,
-      organization_phone: handbook.organization_phone,
-      organization_email: handbook.organization_email,
-      updated_at: handbook.updated_at,
       sections: visibleSections.map(section => ({
         id: section.id,
         title: section.title,
         description: section.description,
         order_index: section.order_index,
-        is_active: section.is_active,
-        completion_status: section.completion_status,
-        updated_at: section.updated_at,
+        handbook_id: section.handbook_id,
+        is_public: section.is_public,
         pages: section.pages.map(page => ({
           id: page.id,
           title: page.title,
           content: page.content,
           order_index: page.order_index,
-          table_of_contents: page.table_of_contents,
-          updated_at: page.updated_at
+          section_id: page.section_id,
+          lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
+          estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000))
         }))
       }))
     };
@@ -242,7 +204,10 @@ export default function HandbookPage({ params }: Props) {
   return (
     <>
       <SessionTransferHandler />
-      <HandbookClient handbook={adaptedHandbook} />
+      <ModernHandbookClient 
+        initialData={adaptedHandbook}
+        defaultEditMode={false}
+      />
     </>
   );
 } 

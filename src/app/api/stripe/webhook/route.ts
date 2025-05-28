@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { constructEventFromPayload, isTestMode } from '@/lib/stripe';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
-import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
+
+// Simple template for webhook
+const simpleTemplate = {
+  sections: [
+    {
+      title: "Välkommen",
+      description: "Introduktion till handboken",
+      pages: [
+        {
+          title: "Översikt",
+          content: "Välkommen till din digitala handbok!"
+        }
+      ]
+    }
+  ]
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,7 +59,7 @@ export async function POST(req: NextRequest) {
 
 async function createHandbookInSupabase(name: string, subdomain: string, userId: string | null) {
   try {
-    return await createHandbookWithSectionsAndPages(name, subdomain, completeBRFHandbook, userId);
+    return await createHandbookWithSectionsAndPages(name, subdomain, simpleTemplate, userId);
   } catch (error: unknown) {
     console.error('Error creating handbook in Supabase:', error);
     throw error;
