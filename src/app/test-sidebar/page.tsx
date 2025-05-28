@@ -1,9 +1,8 @@
 "use client"
 
-import React, { useState } from 'react';
-import { HandbookLayout } from '@/components/layout/HandbookLayout';
+import React from 'react';
+import { ModernHandbookClient } from '@/components/ModernHandbookClient';
 import { HandbookSection } from '@/types/handbook';
-import { ContentArea } from '@/components/handbook/ContentArea';
 
 // Test-data med svenska menyalternativ
 const testSections: HandbookSection[] = [
@@ -190,47 +189,15 @@ const testSections: HandbookSection[] = [
 ];
 
 export default function TestSidebarPage() {
-  const [currentPageId, setCurrentPageId] = useState<string>('');
-
-  const handlePageSelect = (pageId: string) => {
-    setCurrentPageId(pageId);
-  };
-
-  const handleSectionSelect = (sectionId: string) => {
-    // Rensa vald sida för att visa hela sektionen
-    setCurrentPageId('');
-    
-    // Scrolla till sektionen
-    setTimeout(() => {
-      const element = document.getElementById(`section-${sectionId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
-  };
-
   return (
-    <HandbookLayout
-      sections={testSections}
-      currentPageId={currentPageId}
-      onPageSelect={handlePageSelect}
-      onSectionSelect={handleSectionSelect}
-      handbookTitle="Test Handbok"
-      showAuth={true}
-    >
-      <ContentArea
-        sections={testSections}
-        currentPageId={currentPageId}
-        isEditMode={false}
-        handbookId="test-handbook"
-        onUpdateSection={() => {}}
-        onUpdatePage={() => {}}
-        onAddPage={() => {}}
-        onAddSection={() => {}}
-        onMoveSection={() => {}}
-        onDeleteSection={() => {}}
-        onExitEditMode={() => {}}
-      />
-    </HandbookLayout>
+    <ModernHandbookClient
+      initialData={{
+        id: 'test-handbook',
+        title: 'Test Handbok',
+        subtitle: 'En testhandbok för att visa alla funktioner',
+        sections: testSections
+      }}
+      defaultEditMode={false}
+    />
   );
 } 

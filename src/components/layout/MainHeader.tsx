@@ -11,7 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { SidebarTrigger } from '@/components/handbook/ModernSidebar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from 'react';
 
