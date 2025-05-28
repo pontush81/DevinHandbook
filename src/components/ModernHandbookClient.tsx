@@ -25,6 +25,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   defaultEditMode = false
 }) => {
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
+  const [mounted, setMounted] = useState(false);
 
   // Edit mode state - use defaultEditMode prop
   const [isEditMode, setIsEditMode] = useState(defaultEditMode);
@@ -43,12 +44,18 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Auth context
   const { user, isLoading: authLoading } = useAuth();
 
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   console.log('🎯 ModernHandbookClient render state:', {
     user: !!user,
     authLoading,
     canEdit,
     isEditMode,
-    handbookId: initialData.id
+    handbookId: initialData.id,
+    mounted
   });
 
   // Check if user can edit this handbook (admin role required)
@@ -487,7 +494,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
-  if (isLoading || authLoading) {
+  if (isLoading || authLoading || !mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
         <div className="text-center">
