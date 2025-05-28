@@ -2,6 +2,7 @@ import React from "react";
 import { Metadata } from 'next';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from 'react-error-boundary';
+import { headers } from 'next/headers';
 
 function ErrorFallback({error, resetErrorBoundary}: {error: Error, resetErrorBoundary: () => void}) {
   return (
@@ -28,7 +29,9 @@ function ErrorFallback({error, resetErrorBoundary}: {error: Error, resetErrorBou
   );
 }
 
+// Force dynamic rendering and disable all caching
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function HandbookLayout({
   children,

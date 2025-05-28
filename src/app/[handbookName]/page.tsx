@@ -3,6 +3,8 @@ import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 import { ModernHandbookClient } from '@/components/ModernHandbookClient';
+import { notFound } from 'next/navigation';
+import { HandbookSection } from '@/types/handbook';
 
 interface Section {
   id: string;
@@ -42,8 +44,9 @@ interface Handbook {
   sections: Section[];
 }
 
-// Se till att denna sida renderas dynamiskt för att hantera handböcker korrekt
+// Force dynamic rendering and disable caching
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type PageParams = {
   handbookName: string;

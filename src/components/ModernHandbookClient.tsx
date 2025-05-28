@@ -55,7 +55,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     canEdit,
     isEditMode,
     handbookId: initialData.id,
-    mounted
+    mounted,
+    timestamp: new Date().toISOString() // Cache buster for deployment
   });
 
   // Check if user can edit this handbook (admin role required)
