@@ -68,18 +68,34 @@
   });
   
   // 3. Säker localStorage-hantering
-  window.safeStorage = {
-    getItem: function(key) {
-      try { return localStorage.getItem(key); } 
-      catch(e) { return null; }
-    },
-    setItem: function(key, value) {
-      try { localStorage.setItem(key, value); } 
-      catch(e) { /* ignore */ }
-    },
-    removeItem: function(key) {
-      try { localStorage.removeItem(key); } 
-      catch(e) { /* ignore */ }
+  if (!window.safeStorage) {
+    // Test localStorage access once
+    let localStorageAvailable = false;
+    try {
+      const testKey = '__js_fallback_test__';
+      localStorage.setItem(testKey, 'test');
+      localStorage.removeItem(testKey);
+      localStorageAvailable = true;
+    } catch (e) {
+      // Silent fallback to memory storage
     }
-  };
+
+    window.safeStorage = {
+      getItem: function(key) {
+        if (!localStorageAvailable) return null;
+        try { return localStorage.getItem(key); } 
+        catch(e) { return null; }
+      },
+      setItem: function(key, value) {
+        if (!localStorageAvailable) return;
+        try { localStorage.setItem(key, value); } 
+        catch(e) { /* ignore */ }
+      },
+      removeItem: function(key) {
+        if (!localStorageAvailable) return;
+        try { localStorage.removeItem(key); } 
+        catch(e) { /* ignore */ }
+      }
+    };
+  }
 })(); 

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 import { HandbookLayout } from '@/components/layout/HandbookLayout';
 import { ContentArea } from '@/components/handbook/ContentArea';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { HandbookSection, HandbookPage } from '@/types/handbook';
 
 interface Section {
@@ -220,31 +219,30 @@ export default function HandbookPage({ params }: Props) {
 
   return (
     <>
-      <AuthProvider>
-        <SessionTransferHandler />
-        <HandbookLayout
+      <SessionTransferHandler />
+      <HandbookLayout
+        sections={adaptedSections}
+        currentPageId={currentPageId}
+        onPageSelect={handlePageSelect}
+        onSectionSelect={handleSectionSelect}
+        handbookTitle={handbook.title}
+        showAuth={true}
+        handbookId={handbook.id}
+      >
+        <ContentArea
           sections={adaptedSections}
           currentPageId={currentPageId}
-          onPageSelect={handlePageSelect}
-          onSectionSelect={handleSectionSelect}
-          handbookTitle={handbook.title}
-          showAuth={true}
-        >
-          <ContentArea
-            sections={adaptedSections}
-            currentPageId={currentPageId}
-            isEditMode={false}
-            handbookId={handbook.id}
-            onUpdateSection={() => {}}
-            onUpdatePage={() => {}}
-            onAddPage={() => {}}
-            onAddSection={() => {}}
-            onMoveSection={() => {}}
-            onDeleteSection={() => {}}
-            onExitEditMode={() => {}}
-          />
-        </HandbookLayout>
-      </AuthProvider>
+          isEditMode={false}
+          handbookId={handbook.id}
+          onUpdateSection={() => {}}
+          onUpdatePage={() => {}}
+          onAddPage={() => {}}
+          onAddSection={() => {}}
+          onMoveSection={() => {}}
+          onDeleteSection={() => {}}
+          onExitEditMode={() => {}}
+        />
+      </HandbookLayout>
     </>
   );
 } 

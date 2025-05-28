@@ -7,7 +7,17 @@ import { MainFooter } from '@/components/layout/MainFooter';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { User, Menu } from 'lucide-react';
+import { User, Menu, LogOut, Settings, Edit } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface HandbookLayoutProps {
   children: React.ReactNode;
@@ -18,6 +28,7 @@ interface HandbookLayoutProps {
   handbookTitle?: string;
   showAuth?: boolean;
   className?: string;
+  handbookId?: string;
 }
 
 export function HandbookLayout({
@@ -28,8 +39,28 @@ export function HandbookLayout({
   onSectionSelect,
   handbookTitle = "Digital Handbok",
   showAuth = true,
-  className
+  className,
+  handbookId
 }: HandbookLayoutProps) {
+  const { user, signOut, isLoading } = useAuth();
+
+  // Edit functionality - similar to ModernHandbookClient
+  const canEditOverride = process.env.NODE_ENV === 'development' && !!user;
+  const canEdit = canEditOverride; // In production, this would check handbook ownership
+
+  console.log('🎯 HandbookLayout render state:', {
+    user: !!user,
+    isLoading,
+    canEdit,
+    canEditOverride,
+    environment: process.env.NODE_ENV,
+    handbookId
+  });
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen w-full flex flex-col">
@@ -53,14 +84,88 @@ export function HandbookLayout({
             </div>
 
             {/* Höger sida - Auth */}
-            <div className="flex flex-1 items-center justify-end">
-              {showAuth && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login" className="text-sm flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    Logga in
+            <div className="flex flex-1 items-center justify-end space-x-3">
+              {/* Edit button */}
+              {canEdit && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard" className="flex items-center space-x-2">
+                    <Edit className="w-4 h-4" />
+                    <span>Redigera</span>
+                    {process.env.NODE_ENV === 'development' && (
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">DEV</span>
+                    )}
                   </Link>
                 </Button>
+              )}
+
+              {showAuth && (
+                <>
+                  {isLoading ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                  ) : user ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email} />
+                            <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
+                              {user.email?.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-56" align="end" forceMount>
+                        <DropdownMenuLabel className="font-normal">
+                          <div className="flex flex-col space-y-1">
+                            <p className="text-sm font-medium leading-none">
+                              {user.user_metadata?.full_name || 'Användare'}
+                            </p>
+                            <p className="text-xs leading-none text-muted-foreground">
+                              {user.email}
+                            </p>
+                          </div>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {canEdit && (
+                          <>
+                            <DropdownMenuItem asChild>
+                              <Link href="/dashboard">
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Redigera handbok</span>
+                                {process.env.NODE_ENV === 'development' && (
+                                  <span className="ml-auto text-xs bg-yellow-100 text-yellow-800 px-1 rounded">DEV</span>
+                                )}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard">
+                            <Settings className="mr-2 h-4 w-4" />
+                            <span>Dashboard</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Inställningar</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleSignOut}>
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Logga ut</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/login" className="text-sm flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Logga in
+                      </Link>
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

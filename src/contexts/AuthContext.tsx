@@ -28,6 +28,7 @@ type AuthContextType = {
     data: { user: unknown } | null;
   }>;
   hasRole: (role: string) => boolean;
+  refreshAuth: () => Promise<{ success: boolean; message: string }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,36 +78,114 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initiera session från Supabase
   useEffect(() => {
     const setData = async () => {
+      console.log('🔄 AuthContext: Initializing auth state...');
       setIsLoading(true);
       
       try {
         // Hämta aktuell session
+        console.log('📡 AuthContext: Getting current session from Supabase...');
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
+        console.log('📊 AuthContext: Session result:', {
+          hasSession: !!currentSession,
+          hasUser: !!currentSession?.user,
+          error: error?.message,
+          userId: currentSession?.user?.id,
+          email: currentSession?.user?.email
+        });
+        
         if (error) {
-          console.error('Fel vid hämtning av session:', error);
-          setSession(null);
-          setUser(null);
+          console.error('❌ AuthContext: Error getting session:', error);
+          
+          // Försök återställa session från cookies om det finns
+          if (typeof document !== 'undefined' && document.cookie.includes('sb-auth')) {
+            console.log('🍪 AuthContext: Found auth cookies, attempting session restore...');
+            
+            // Vänta lite och försök igen
+            setTimeout(async () => {
+              try {
+                const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession();
+                console.log('🔄 AuthContext: Retry session result:', {
+                  hasSession: !!retrySession,
+                  hasUser: !!retrySession?.user,
+                  error: retryError?.message
+                });
+                
+                if (!retryError && retrySession) {
+                  console.log('✅ AuthContext: Session restored from cookies');
+                  setSession(retrySession);
+                  setUser(retrySession.user);
+                  
+                  if (retrySession.user.id && retrySession.user.email) {
+                    createUserProfileIfNeeded(retrySession.user.id, retrySession.user.email);
+                  }
+                } else {
+                  console.log('❌ AuthContext: Failed to restore session from cookies');
+                  setSession(null);
+                  setUser(null);
+                }
+              } catch (e) {
+                console.error('❌ AuthContext: Error during session restore:', e);
+                setSession(null);
+                setUser(null);
+              } finally {
+                setIsLoading(false);
+              }
+            }, 1000);
+            return; // Avsluta här för att vänta på retry
+          } else {
+            console.log('🚫 AuthContext: No auth cookies found');
+            setSession(null);
+            setUser(null);
+          }
         } else if (currentSession) {
-          console.log('Hittade aktiv session från Supabase', {
+          console.log('✅ AuthContext: Found active session', {
             userId: currentSession.user?.id,
             expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
           });
           
-          setSession(currentSession);
-          setUser(currentSession.user);
-          
-          // Säkerställ att användarprofilen finns
-          if (currentSession.user.id && currentSession.user.email) {
-            createUserProfileIfNeeded(currentSession.user.id, currentSession.user.email);
+          // Kontrollera om sessionen har gått ut
+          if (currentSession.expires_at && currentSession.expires_at * 1000 < Date.now()) {
+            console.log('⏰ AuthContext: Session expired, attempting refresh...');
+            
+            try {
+              const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+              
+              if (!refreshError && refreshedSession) {
+                console.log('✅ AuthContext: Session refreshed successfully');
+                setSession(refreshedSession);
+                setUser(refreshedSession.user);
+                
+                if (refreshedSession.user.id && refreshedSession.user.email) {
+                  createUserProfileIfNeeded(refreshedSession.user.id, refreshedSession.user.email);
+                }
+              } else {
+                console.error('❌ AuthContext: Could not refresh session:', refreshError);
+                setSession(null);
+                setUser(null);
+              }
+            } catch (refreshErr) {
+              console.error('❌ AuthContext: Error refreshing session:', refreshErr);
+              setSession(null);
+              setUser(null);
+            }
+          } else {
+            console.log('✅ AuthContext: Session is valid, setting user state');
+            setSession(currentSession);
+            setUser(currentSession.user);
+            
+            // Säkerställ att användarprofilen finns
+            if (currentSession.user.id && currentSession.user.email) {
+              createUserProfileIfNeeded(currentSession.user.id, currentSession.user.email);
+            }
           }
         } else {
-          console.log('Ingen aktiv session hittades');
+          console.log('ℹ️ AuthContext: No active session found');
           setSession(null);
           setUser(null);
         }
       } catch (e) {
-        console.error('Fel vid inläsning av auth-status:', e);
+        console.error('❌ AuthContext: Error during auth initialization:', e);
         setSession(null);
         setUser(null);
       } finally {
@@ -201,12 +280,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Rensa all auth-relaterad data
         if (typeof window !== 'undefined') {
           try {
-            // Rensa localStorage
-            Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('sb-') || key.includes('supabase')) {
+            // Rensa localStorage - use safe access
+            const safeRemoveItem = (key: string) => {
+              try {
                 localStorage.removeItem(key);
+              } catch (e) {
+                // Silent fail if localStorage is blocked
               }
-            });
+            };
+
+            // Safe iteration over localStorage keys
+            try {
+              Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sb-') || key.includes('supabase')) {
+                  safeRemoveItem(key);
+                }
+              });
+            } catch (e) {
+              // If iteration fails, try known auth keys
+              const knownAuthKeys = [
+                'sb-refresh-token', 
+                'sb-access-token', 
+                'supabase.auth.token',
+                'sb-auth-token'
+              ];
+              knownAuthKeys.forEach(key => safeRemoveItem(key));
+            }
             
             // Rensa cookies
             document.cookie.split(";").forEach(cookie => {
@@ -337,6 +436,113 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  // Lägg till en funktion för att manuellt återställa autentiseringen
+  const refreshAuth = async (): Promise<{ success: boolean; message: string }> => {
+    try {
+      console.log('🔄 Försöker återställa autentisering...');
+      setIsLoading(true);
+      
+      // 1. Försök hämta session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Fel vid hämtning av session:', error);
+        
+        // 2. Om det finns cookies, försök igen efter en kort paus
+        if (typeof document !== 'undefined' && document.cookie.includes('sb-auth')) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession();
+          
+          if (!retryError && retrySession) {
+            setSession(retrySession);
+            setUser(retrySession.user);
+            
+            if (retrySession.user.id && retrySession.user.email) {
+              await createUserProfileIfNeeded(retrySession.user.id, retrySession.user.email);
+            }
+            
+            return {
+              success: true,
+              message: 'Autentisering återställd från cookies'
+            };
+          }
+        }
+        
+        // 3. Rensa session om inget fungerar
+        setSession(null);
+        setUser(null);
+        
+        return {
+          success: false,
+          message: 'Kunde inte återställa session. Logga in igen.'
+        };
+      }
+      
+      if (!session) {
+        setSession(null);
+        setUser(null);
+        return {
+          success: false,
+          message: 'Ingen aktiv session hittades'
+        };
+      }
+      
+      // 4. Kontrollera om sessionen har gått ut
+      if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+        console.log('Session har gått ut, försöker förnya...');
+        
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshedSession) {
+          setSession(null);
+          setUser(null);
+          return {
+            success: false,
+            message: 'Session har gått ut och kunde inte förnyas'
+          };
+        }
+        
+        setSession(refreshedSession);
+        setUser(refreshedSession.user);
+        
+        if (refreshedSession.user.id && refreshedSession.user.email) {
+          await createUserProfileIfNeeded(refreshedSession.user.id, refreshedSession.user.email);
+        }
+        
+        return {
+          success: true,
+          message: 'Session förnyad framgångsrikt'
+        };
+      }
+      
+      // 5. Session är giltig, uppdatera state
+      setSession(session);
+      setUser(session.user);
+      
+      if (session.user.id && session.user.email) {
+        await createUserProfileIfNeeded(session.user.id, session.user.email);
+      }
+      
+      return {
+        success: true,
+        message: 'Autentisering bekräftad'
+      };
+      
+    } catch (e) {
+      console.error('Fel vid återställning av autentisering:', e);
+      setSession(null);
+      setUser(null);
+      
+      return {
+        success: false,
+        message: 'Ett oväntat fel uppstod'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     session,
@@ -346,7 +552,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
-    hasRole
+    hasRole,
+    refreshAuth
   };
 
   return (

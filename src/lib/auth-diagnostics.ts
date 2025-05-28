@@ -1,7 +1,61 @@
 import { Session } from '@supabase/supabase-js';
+import { supabase } from './supabase';
 
-// Diagnostiken har inaktiverats för att förhindra prestandaproblem och Chrome-hängningar
-const DIAGNOSTICS_ENABLED = false;
+// Diagnostiken är nu aktiverad med förbättrad säkerhet
+const DIAGNOSTICS_ENABLED = true;
+
+// Säker localStorage-åtkomst som inte genererar fel i konsolen
+const safeLocalStorageAccess = {
+  isAccessible: (() => {
+    try {
+      if (typeof window === 'undefined') return false;
+      const testKey = '__storage_test__';
+      localStorage.setItem(testKey, 'test');
+      localStorage.removeItem(testKey);
+      return true;
+    } catch {
+      return false;
+    }
+  })(),
+  
+  getItem: (key: string): string | null => {
+    if (!safeLocalStorageAccess.isAccessible) return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  
+  setItem: (key: string, value: string): boolean => {
+    if (!safeLocalStorageAccess.isAccessible) return false;
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  
+  removeItem: (key: string): boolean => {
+    if (!safeLocalStorageAccess.isAccessible) return false;
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  
+  getKeys: (): string[] => {
+    if (!safeLocalStorageAccess.isAccessible) return [];
+    try {
+      return Object.keys(localStorage);
+    } catch {
+      return [];
+    }
+  }
+};
 
 // Enkel typ för att behålla API-kompatibilitet
 type DiagnosticEvent = {
@@ -85,4 +139,227 @@ export function exportDiagnosticData() {
 
 // Backward compatibility aliases
 export const getDiagnosticLogs = getDiagnosticEvents;
-export const clearDiagnosticLogs = clearDiagnosticEvents; 
+export const clearDiagnosticLogs = clearDiagnosticEvents;
+
+export interface AuthDiagnostics {
+  timestamp: string;
+  environment: string;
+  hostname: string;
+  cookies: {
+    hasAuthCookies: boolean;
+    cookieCount: number;
+    cookieNames: string[];
+  };
+  localStorage: {
+    accessible: boolean;
+    hasAuthData: boolean;
+    keys: string[];
+  };
+  supabaseSession: {
+    hasSession: boolean;
+    hasUser: boolean;
+    userId?: string;
+    email?: string;
+    expiresAt?: string;
+    error?: string;
+  };
+  authContext: {
+    isLoading: boolean;
+    hasUser: boolean;
+    hasSession: boolean;
+  };
+}
+
+export async function runAuthDiagnostics(): Promise<AuthDiagnostics> {
+  const diagnostics: AuthDiagnostics = {
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'unknown',
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+    cookies: {
+      hasAuthCookies: false,
+      cookieCount: 0,
+      cookieNames: []
+    },
+    localStorage: {
+      accessible: false,
+      hasAuthData: false,
+      keys: []
+    },
+    supabaseSession: {
+      hasSession: false,
+      hasUser: false
+    },
+    authContext: {
+      isLoading: false,
+      hasUser: false,
+      hasSession: false
+    }
+  };
+
+  // Kontrollera cookies
+  if (typeof document !== 'undefined') {
+    const cookies = document.cookie.split(';').map(c => c.trim());
+    const authCookies = cookies.filter(c => c.startsWith('sb-'));
+    
+    diagnostics.cookies = {
+      hasAuthCookies: authCookies.length > 0,
+      cookieCount: authCookies.length,
+      cookieNames: authCookies.map(c => c.split('=')[0])
+    };
+  }
+
+  // Kontrollera localStorage
+  if (typeof window !== 'undefined') {
+    diagnostics.localStorage = {
+      accessible: safeLocalStorageAccess.isAccessible,
+      hasAuthData: false,
+      keys: []
+    };
+
+    if (safeLocalStorageAccess.isAccessible) {
+      const keys = safeLocalStorageAccess.getKeys();
+      const authKeys = keys.filter(k => 
+        k.includes('supabase') || 
+        k.includes('auth') || 
+        k.startsWith('sb-')
+      );
+
+      diagnostics.localStorage = {
+        accessible: true,
+        hasAuthData: authKeys.length > 0,
+        keys: authKeys
+      };
+    }
+  }
+
+  // Kontrollera Supabase session
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      diagnostics.supabaseSession = {
+        hasSession: false,
+        hasUser: false,
+        error: error.message
+      };
+    } else if (session) {
+      diagnostics.supabaseSession = {
+        hasSession: true,
+        hasUser: !!session.user,
+        userId: session.user?.id,
+        email: session.user?.email,
+        expiresAt: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : undefined
+      };
+    } else {
+      diagnostics.supabaseSession = {
+        hasSession: false,
+        hasUser: false
+      };
+    }
+  } catch (e) {
+    diagnostics.supabaseSession = {
+      hasSession: false,
+      hasUser: false,
+      error: e instanceof Error ? e.message : 'Unknown error'
+    };
+  }
+
+  return diagnostics;
+}
+
+export function logAuthDiagnostics(diagnostics: AuthDiagnostics) {
+  console.group('🔍 Auth Diagnostics');
+  console.log('Timestamp:', diagnostics.timestamp);
+  console.log('Environment:', diagnostics.environment);
+  console.log('Hostname:', diagnostics.hostname);
+  
+  console.group('🍪 Cookies');
+  console.log('Has auth cookies:', diagnostics.cookies.hasAuthCookies);
+  console.log('Cookie count:', diagnostics.cookies.cookieCount);
+  console.log('Cookie names:', diagnostics.cookies.cookieNames);
+  console.groupEnd();
+  
+  console.group('💾 LocalStorage');
+  console.log('Accessible:', diagnostics.localStorage.accessible);
+  console.log('Has auth data:', diagnostics.localStorage.hasAuthData);
+  console.log('Auth keys:', diagnostics.localStorage.keys);
+  console.groupEnd();
+  
+  console.group('🔐 Supabase Session');
+  console.log('Has session:', diagnostics.supabaseSession.hasSession);
+  console.log('Has user:', diagnostics.supabaseSession.hasUser);
+  if (diagnostics.supabaseSession.userId) {
+    console.log('User ID:', diagnostics.supabaseSession.userId);
+  }
+  if (diagnostics.supabaseSession.email) {
+    console.log('Email:', diagnostics.supabaseSession.email);
+  }
+  if (diagnostics.supabaseSession.expiresAt) {
+    console.log('Expires at:', diagnostics.supabaseSession.expiresAt);
+  }
+  if (diagnostics.supabaseSession.error) {
+    console.error('Session error:', diagnostics.supabaseSession.error);
+  }
+  console.groupEnd();
+  
+  console.groupEnd();
+}
+
+export async function fixAuthIssues(): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log('🔧 Försöker fixa autentiseringsproblem...');
+    
+    // 1. Försök hämta session igen
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Fel vid hämtning av session:', error);
+      
+      // 2. Försök logga ut och in igen
+      await supabase.auth.signOut();
+      return {
+        success: false,
+        message: 'Session kunde inte hämtas. Du har loggats ut. Försök logga in igen.'
+      };
+    }
+    
+    if (!session) {
+      return {
+        success: false,
+        message: 'Ingen aktiv session hittades. Logga in igen.'
+      };
+    }
+    
+    // 3. Kontrollera om sessionen har gått ut
+    if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+      console.log('Session har gått ut, försöker förnya...');
+      
+      const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !newSession) {
+        await supabase.auth.signOut();
+        return {
+          success: false,
+          message: 'Session har gått ut och kunde inte förnyas. Logga in igen.'
+        };
+      }
+      
+      return {
+        success: true,
+        message: 'Session förnyad framgångsrikt!'
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'Autentisering verkar fungera korrekt.'
+    };
+    
+  } catch (e) {
+    console.error('Fel vid försök att fixa autentisering:', e);
+    return {
+      success: false,
+      message: 'Ett oväntat fel uppstod vid försök att fixa autentiseringen.'
+    };
+  }
+} 

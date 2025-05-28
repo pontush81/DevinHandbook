@@ -14,36 +14,52 @@
 
   // SafeStorage implementering som används av Supabase auth
   if (!window.safeStorage) {
+    // Test localStorage access once at startup
+    let localStorageAvailable = false;
+    try {
+      const testKey = '__safe_storage_test__';
+      localStorage.setItem(testKey, 'test');
+      localStorage.removeItem(testKey);
+      localStorageAvailable = true;
+    } catch (e) {
+      if (!window.__storageErrorLogged) {
+        console.info('localStorage är inte tillgängligt, använder memory storage');
+        window.__storageErrorLogged = true;
+      }
+    }
+
     window.safeStorage = {
       getItem: function(key) {
+        if (!localStorageAvailable) {
+          return window.memoryStorage[key] || null;
+        }
         try {
-          // Försök först med localStorage
           return localStorage.getItem(key);
         } catch (e) {
-          console.warn('localStorage access error in getItem:', e);
-          // Fallback till memory storage
           return window.memoryStorage[key] || null;
         }
       },
       
       setItem: function(key, value) {
+        if (!localStorageAvailable) {
+          window.memoryStorage[key] = value;
+          return;
+        }
         try {
-          // Försök först med localStorage
           localStorage.setItem(key, value);
         } catch (e) {
-          console.warn('localStorage access error in setItem:', e);
-          // Fallback till memory storage
           window.memoryStorage[key] = value;
         }
       },
       
       removeItem: function(key) {
+        if (!localStorageAvailable) {
+          delete window.memoryStorage[key];
+          return;
+        }
         try {
-          // Försök först med localStorage
           localStorage.removeItem(key);
         } catch (e) {
-          console.warn('localStorage access error in removeItem:', e);
-          // Fallback till memory storage
           delete window.memoryStorage[key];
         }
       }
@@ -114,12 +130,26 @@
   // Funktion för att rensa all auth-relaterad data
   function clearAllAuthData() {
     try {
-      // Rensa localStorage
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
+      // Rensa localStorage - safe iteration
+      if (localStorageAvailable) {
+        try {
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+              localStorage.removeItem(key);
+            }
+          });
+        } catch (e) {
+          // If iteration fails, try individual known keys
+          const knownKeys = ['sb-refresh-token', 'sb-access-token', 'supabase.auth.token'];
+          knownKeys.forEach(key => {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              // Silent fail
+            }
+          });
         }
-      });
+      }
       
       // Rensa cookies
       document.cookie.split(";").forEach(cookie => {

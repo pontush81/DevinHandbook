@@ -185,6 +185,37 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   throw lastError || new Error('Okänt fel vid fetch');
 };
 
+// Anpassad storage-implementering som aldrig använder localStorage
+const customStorage = {
+  getItem: (key: string): string | null => {
+    // Använd endast cookies för session-lagring
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === key) {
+          return decodeURIComponent(value);
+        }
+      }
+    }
+    return null;
+  },
+  setItem: (key: string, value: string): void => {
+    // Spara endast i cookies
+    if (typeof document !== 'undefined') {
+      const expires = new Date();
+      expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 dagar
+      document.cookie = `${key}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+    }
+  },
+  removeItem: (key: string): void => {
+    // Ta bort från cookies
+    if (typeof document !== 'undefined') {
+      document.cookie = `${key}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    }
+  }
+};
+
 // Skapa en Supabase-klient för klientsidan med ENDAST cookies
 export const supabase = createClient<Database>(
   supabaseUrl,
@@ -209,8 +240,8 @@ export const supabase = createClient<Database>(
         secure: process.env.NODE_ENV === 'production',
         httpOnly: false // Tillåt JavaScript att läsa för att underlätta debugging
       },
-      // Använd null för att tvinga cookie-baserad lagring och undvika localStorage-fel
-      storage: null
+      // Använd anpassad storage istället för null för att undvika localStorage-fel
+      storage: customStorage
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,
@@ -461,8 +492,14 @@ export async function diagnoseAuthIssues() {
   
   // Testa localStorage access
   try {
-    localStorage.getItem('test');
-    diagnostics.localStorage = 'accessible';
+    // Use safe access to prevent errors
+    if (typeof window !== 'undefined' && window.safeStorage) {
+      window.safeStorage.getItem('test');
+      diagnostics.localStorage = 'accessible';
+    } else {
+      localStorage.getItem('test');
+      diagnostics.localStorage = 'accessible';
+    }
   } catch (e) {
     diagnostics.localStorage = `blocked: ${e.message}`;
   }
