@@ -497,7 +497,10 @@ export async function diagnoseAuthIssues() {
       window.safeStorage.getItem('test');
       diagnostics.localStorage = 'accessible';
     } else {
-      localStorage.getItem('test');
+      // Safe test without throwing errors
+      const testKey = '__diag_test__';
+      window.localStorage.setItem(testKey, 'test');
+      window.localStorage.removeItem(testKey);
       diagnostics.localStorage = 'accessible';
     }
   } catch (e) {
@@ -506,7 +509,9 @@ export async function diagnoseAuthIssues() {
   
   // Testa sessionStorage access
   try {
-    sessionStorage.getItem('test');
+    const testKey = '__diag_session_test__';
+    window.sessionStorage.setItem(testKey, 'test');
+    window.sessionStorage.removeItem(testKey);
     diagnostics.sessionStorage = 'accessible';
   } catch (e) {
     diagnostics.sessionStorage = `blocked: ${e.message}`;

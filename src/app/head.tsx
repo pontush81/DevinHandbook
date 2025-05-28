@@ -103,34 +103,57 @@ export default function Head() {
             console.warn('Kunde inte hantera sessionStorage:', e);
           }
           
-          // Fixa storage problem
-          window.handleStorageError = function(fn) {
-            try {
-              return fn();
-            } catch(e) {
-              console.warn('Storage access error:', e);
-              return null;
-            }
-          };
-          
-          // Lägg till säker storage-åtkomst
-          window.safeStorage = {
-            getItem: function(key) {
-              return handleStorageError(function() { 
-                return localStorage.getItem(key); 
-              });
-            },
-            setItem: function(key, value) {
-              return handleStorageError(function() { 
-                localStorage.setItem(key, value); 
-              });
-            },
-            removeItem: function(key) {
-              return handleStorageError(function() { 
-                localStorage.removeItem(key); 
-              });
-            }
-          };
+          // Safe localStorage implementation
+          if (typeof window !== 'undefined') {
+            // Test localStorage access once at startup with caching
+            let localStorageAvailable = false;
+            let hasBeenTested = false;
+            
+            const testLocalStorage = () => {
+              if (hasBeenTested) return localStorageAvailable;
+              hasBeenTested = true;
+              
+              try {
+                const testKey = '__head_ls_test__';
+                window.localStorage.setItem(testKey, 'test');
+                window.localStorage.removeItem(testKey);
+                localStorageAvailable = true;
+              } catch(e) {
+                localStorageAvailable = false;
+              }
+              return localStorageAvailable;
+            };
+            
+            window.safeStorage = {
+              getItem: function(key) {
+                if (!testLocalStorage()) return null;
+                try { 
+                  return window.localStorage.getItem(key); 
+                } catch(e) { 
+                  return null; 
+                }
+              },
+              setItem: function(key, value) {
+                if (!testLocalStorage()) return;
+                try { 
+                  window.localStorage.setItem(key, value); 
+                } catch(e) { 
+                  /* silently fail */ 
+                }
+              },
+              removeItem: function(key) {
+                if (!testLocalStorage()) return;
+                try { 
+                  window.localStorage.removeItem(key); 
+                } catch(e) { 
+                  /* silently fail */ 
+                }
+              }
+            };
+            
+            // Memory storage fallback
+            window.memoryStorage = {};
+          }
           
           // Fixa resursomskrivningar för att förhindra loops
           var isSubdomain = window.location.hostname.endsWith('.handbok.org') && 

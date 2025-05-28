@@ -107,137 +107,55 @@ export default function RootLayout({
         <Script id="prevent-storage-errors" strategy="beforeInteractive">
           {`
             (function() {
-              // Överskugga console.error för att filtrera bort localStorage-fel
+              // Comprehensive localStorage error suppression
               const originalError = console.error;
+              const originalWarn = console.warn;
+              
+              // Override console.error to filter localStorage errors
               console.error = function(...args) {
                 const message = args.join(' ');
                 
-                // Filtrera bort localStorage-relaterade fel
-                if (message.includes('Access to storage is not allowed') ||
-                    message.includes('localStorage is not available') ||
-                    message.includes('storage is not allowed from this context')) {
-                  return; // Visa inte dessa fel
-                }
-                
-                // Visa alla andra fel normalt
-                originalError.apply(console, args);
-              };
-              
-              // Global error handler för unhandled promise rejections
-              window.addEventListener('unhandledrejection', function(event) {
-                const reason = event.reason;
-                if (reason && reason.message && 
-                    reason.message.includes('Access to storage is not allowed')) {
-                  event.preventDefault(); // Förhindra att felet visas i konsolen
-                  console.info('localStorage är blockerat - använder cookie-baserad lagring istället');
-                }
-              });
-              
-              // Fånga vanliga fel
-              window.addEventListener('error', function(event) {
-                const message = event.message || '';
-                if (message.includes('Access to storage is not allowed')) {
-                  event.preventDefault();
-                  console.info('localStorage är blockerat - använder cookie-baserad lagring istället');
-                }
-              });
-            })();
-          `}
-        </Script>
-        
-        {/* Safe localStorage implementation */}
-        <Script id="safe-storage" strategy="beforeInteractive">
-          {`
-            if (typeof window !== 'undefined') {
-              // Test localStorage access once at startup
-              let localStorageAvailable = false;
-              try {
-                const testKey = '__ls_test__';
-                localStorage.setItem(testKey, 'test');
-                localStorage.removeItem(testKey);
-                localStorageAvailable = true;
-              } catch(e) {
-                console.info('localStorage är inte tillgängligt, använder memory storage');
-              }
-              
-              window.safeStorage = {
-                getItem: function(key) {
-                  if (!localStorageAvailable) return null;
-                  try { return localStorage.getItem(key); } 
-                  catch(e) { return null; }
-                },
-                setItem: function(key, value) {
-                  if (!localStorageAvailable) return;
-                  try { localStorage.setItem(key, value); } 
-                  catch(e) { /* silently fail */ }
-                },
-                removeItem: function(key) {
-                  if (!localStorageAvailable) return;
-                  try { localStorage.removeItem(key); } 
-                  catch(e) { /* silently fail */ }
-                }
-              };
-              
-              // Memory storage fallback
-              window.memoryStorage = {};
-            }
-          `}
-        </Script>
-        
-        {/* Preconnect to main domain for faster resource loading */}
-        <link rel="preconnect" href="https://www.handbok.org" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://www.handbok.org" />
-        <link rel="preconnect" href="https://staging.handbok.org" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://staging.handbok.org" />
-        
-        {/* Aggressiv localStorage-felhantering */}
-        <Script id="aggressive-storage-error-suppression" strategy="beforeInteractive">
-          {`
-            (function() {
-              // Överskugga alla console-metoder för att filtrera localStorage-fel
-              const originalConsole = {
-                error: console.error,
-                warn: console.warn,
-                log: console.log
-              };
-              
-              const filterStorageErrors = (method, args) => {
-                const message = args.join(' ');
+                // Filter out all localStorage-related errors
                 if (message.includes('Access to storage is not allowed') ||
                     message.includes('localStorage is not available') ||
                     message.includes('storage is not allowed from this context') ||
+                    message.includes('localStorage') && message.includes('blocked') ||
                     message.includes('QuotaExceededError') ||
-                    message.includes('localStorage') && message.includes('blocked')) {
-                  return false; // Filtrera bort
+                    message.includes('storage quota') ||
+                    message.includes('DOM Exception') && message.includes('storage')) {
+                  return; // Suppress these errors completely
                 }
-                return true; // Visa
+                
+                // Show all other errors normally
+                originalError.apply(console, args);
               };
               
-              console.error = function(...args) {
-                if (filterStorageErrors('error', args)) {
-                  originalConsole.error.apply(console, args);
-                }
-              };
-              
+              // Override console.warn for localStorage warnings
               console.warn = function(...args) {
-                if (filterStorageErrors('warn', args)) {
-                  originalConsole.warn.apply(console, args);
+                const message = args.join(' ');
+                
+                if (message.includes('localStorage') ||
+                    message.includes('storage') && message.includes('blocked') ||
+                    message.includes('Access to storage')) {
+                  return; // Suppress storage warnings
                 }
+                
+                originalWarn.apply(console, args);
               };
               
-              // Fånga alla unhandled promise rejections
+              // Global error handler for unhandled promise rejections
               window.addEventListener('unhandledrejection', function(event) {
                 const reason = event.reason;
                 if (reason && reason.message && 
                     (reason.message.includes('Access to storage is not allowed') ||
                      reason.message.includes('localStorage') ||
                      reason.message.includes('storage is not allowed'))) {
-                  event.preventDefault();
+                  event.preventDefault(); // Prevent error from showing
                   return;
                 }
               });
               
-              // Fånga alla fel
+              // Global error handler for regular errors
               window.addEventListener('error', function(event) {
                 const message = event.message || '';
                 if (message.includes('Access to storage is not allowed') ||
@@ -248,7 +166,7 @@ export default function RootLayout({
                 }
               });
               
-              // Överskugga localStorage för att aldrig kasta fel
+              // Override localStorage methods to never throw
               if (typeof Storage !== 'undefined') {
                 const originalSetItem = Storage.prototype.setItem;
                 const originalGetItem = Storage.prototype.getItem;
@@ -258,7 +176,7 @@ export default function RootLayout({
                   try {
                     return originalSetItem.call(this, key, value);
                   } catch (e) {
-                    // Silent fail
+                    // Completely silent fail
                     return;
                   }
                 };
@@ -275,7 +193,7 @@ export default function RootLayout({
                   try {
                     return originalRemoveItem.call(this, key);
                   } catch (e) {
-                    // Silent fail
+                    // Completely silent fail
                     return;
                   }
                 };
@@ -283,6 +201,51 @@ export default function RootLayout({
             })();
           `}
         </Script>
+        
+        {/* Safe localStorage implementation */}
+        <Script id="safe-storage" strategy="beforeInteractive">
+          {`
+            if (typeof window !== 'undefined') {
+              // Test localStorage access once at startup with safe methods
+              let localStorageAvailable = false;
+              try {
+                const testKey = '__ls_test__';
+                window.localStorage.setItem(testKey, 'test');
+                window.localStorage.removeItem(testKey);
+                localStorageAvailable = true;
+              } catch(e) {
+                // Silent fail - localStorage is blocked
+              }
+              
+              window.safeStorage = {
+                getItem: function(key) {
+                  if (!localStorageAvailable) return null;
+                  try { return window.localStorage.getItem(key); } 
+                  catch(e) { return null; }
+                },
+                setItem: function(key, value) {
+                  if (!localStorageAvailable) return;
+                  try { window.localStorage.setItem(key, value); } 
+                  catch(e) { /* silently fail */ }
+                },
+                removeItem: function(key) {
+                  if (!localStorageAvailable) return;
+                  try { window.localStorage.removeItem(key); } 
+                  catch(e) { /* silently fail */ }
+                }
+              };
+              
+              // Memory storage fallback
+              window.memoryStorage = {};
+            }
+          `}
+        </Script>
+        
+        {/* Preconnect to main domain for faster resource loading */}
+        <link rel="preconnect" href="https://www.handbok.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.handbok.org" />
+        <link rel="preconnect" href="https://staging.handbok.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://staging.handbok.org" />
       </head>
       <body className={`${inter.className} antialiased`}>
         <AuthProvider>

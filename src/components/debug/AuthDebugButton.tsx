@@ -48,10 +48,12 @@ export function AuthDebugButton() {
         // Test localStorage
         try {
           if (typeof window !== 'undefined') {
-            localStorage.setItem('test', 'test');
-            localStorage.removeItem('test');
+            // Safe test without throwing errors
+            const testKey = '__debug_test__';
+            window.localStorage.setItem(testKey, 'test');
+            window.localStorage.removeItem(testKey);
             info.localStorage.accessible = true;
-            info.localStorage.keys = Object.keys(localStorage).filter(k => 
+            info.localStorage.keys = Object.keys(window.localStorage).filter(k => 
               k.includes('supabase') || k.startsWith('sb-')
             );
           }

@@ -4,58 +4,71 @@ import { supabase } from './supabase';
 // Diagnostiken är nu aktiverad med förbättrad säkerhet
 const DIAGNOSTICS_ENABLED = true;
 
-// Säker localStorage-åtkomst som inte genererar fel i konsolen
-const safeLocalStorageAccess = {
-  isAccessible: (() => {
+// Säker localStorage-åtkomst som aldrig genererar fel i konsolen
+const safeLocalStorageAccess = (() => {
+  let isAccessible = false;
+  let hasBeenTested = false;
+  
+  const testAccess = () => {
+    if (hasBeenTested) return isAccessible;
+    hasBeenTested = true;
+    
     try {
       if (typeof window === 'undefined') return false;
       const testKey = '__storage_test__';
-      localStorage.setItem(testKey, 'test');
-      localStorage.removeItem(testKey);
-      return true;
+      window.localStorage.setItem(testKey, 'test');
+      window.localStorage.removeItem(testKey);
+      isAccessible = true;
     } catch {
-      return false;
+      isAccessible = false;
     }
-  })(),
+    return isAccessible;
+  };
   
-  getItem: (key: string): string | null => {
-    if (!safeLocalStorageAccess.isAccessible) return null;
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
+  return {
+    get isAccessible() {
+      return testAccess();
+    },
+    
+    getItem: (key: string): string | null => {
+      if (!testAccess()) return null;
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    
+    setItem: (key: string, value: string): boolean => {
+      if (!testAccess()) return false;
+      try {
+        window.localStorage.setItem(key, value);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    
+    removeItem: (key: string): boolean => {
+      if (!testAccess()) return false;
+      try {
+        window.localStorage.removeItem(key);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    
+    getKeys: (): string[] => {
+      if (!testAccess()) return [];
+      try {
+        return Object.keys(window.localStorage);
+      } catch {
+        return [];
+      }
     }
-  },
-  
-  setItem: (key: string, value: string): boolean => {
-    if (!safeLocalStorageAccess.isAccessible) return false;
-    try {
-      localStorage.setItem(key, value);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  
-  removeItem: (key: string): boolean => {
-    if (!safeLocalStorageAccess.isAccessible) return false;
-    try {
-      localStorage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  
-  getKeys: (): string[] => {
-    if (!safeLocalStorageAccess.isAccessible) return [];
-    try {
-      return Object.keys(localStorage);
-    } catch {
-      return [];
-    }
-  }
-};
+  };
+})();
 
 // Enkel typ för att behålla API-kompatibilitet
 type DiagnosticEvent = {

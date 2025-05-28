@@ -25,12 +25,21 @@ export default function TestAuthPage() {
       // Check localStorage
       if (typeof window !== 'undefined') {
         try {
+          // Use safe access to prevent errors
+          const testKey = '__test_auth_check__';
+          window.localStorage.setItem(testKey, 'test');
+          window.localStorage.removeItem(testKey);
+          
           const keys = Object.keys(window.localStorage).filter(k => 
             k.includes('supabase') || k.startsWith('sb-')
           );
           const storage: any = {};
           keys.forEach(key => {
-            storage[key] = window.localStorage.getItem(key);
+            try {
+              storage[key] = window.localStorage.getItem(key);
+            } catch (e) {
+              storage[key] = 'access_error';
+            }
           });
           setLocalStorage(storage);
         } catch (e) {
