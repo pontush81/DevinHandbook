@@ -75,6 +75,130 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Hantera auth-fel och visa lämpliga meddelanden
+  const handleAuthError = useCallback((event: CustomEvent) => {
+    if (authErrorShown) return; // Förhindra flera meddelanden
+    
+    const error = event.detail?.error || event.detail;
+    const errorMessage = typeof error === 'string' 
+      ? error 
+      : error?.message || (error?.error && error.error.message) || '';
+    
+    console.log('Auth error detected:', { error, errorMessage });
+    
+    // Kontrollera för sessionsrelaterade fel
+    if (
+      errorMessage.includes('refresh_token_not_found') || 
+      errorMessage.includes('invalid session') || 
+      errorMessage.includes('JWT expired') ||
+      errorMessage.includes('Invalid refresh token') ||
+      errorMessage.includes('session_expired')
+    ) {
+      console.log('Session-related error detected, cleaning up...');
+      
+      // Rensa session/user state
+      setSession(null);
+      setUser(null);
+      
+      // Rensa auth-relaterad data från localStorage och cookies
+      if (typeof window !== 'undefined') {
+        try {
+          // Rensa localStorage
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+              localStorage.removeItem(key);
+            }
+          });
+          
+          // Rensa sessionStorage
+          Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+          
+          // Rensa cookies
+          document.cookie.split(';').forEach(c => {
+            const cookieName = c.split('=')[0].trim();
+            if (cookieName.startsWith('sb-')) {
+              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+              if (process.env.NODE_ENV === 'production') {
+                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.handbok.org;`;
+              }
+            }
+          });
+          
+          // Rensa memory storage
+          if (window.memoryStorage) {
+            Object.keys(window.memoryStorage).forEach(key => {
+              if (key.startsWith('sb-') || key.includes('supabase')) {
+                delete window.memoryStorage[key];
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Error clearing auth data:', e);
+        }
+      }
+      
+      // Visa ett meddelande till användaren och omdirigera efter bekräftelse
+      setAuthErrorShown(true);
+      
+      // Använd setTimeout för att undvika att blockera UI
+      setTimeout(() => {
+        const confirmRelogin = window.confirm(
+          'Din session har gått ut. Klicka OK för att logga in igen.'
+        );
+        
+        if (confirmRelogin) {
+          // Navigera till login-sidan
+          window.location.href = '/login';
+        } else {
+          // Om användaren inte vill logga in igen, navigera till startsidan
+          window.location.href = '/';
+        }
+      }, 100);
+    } else if (
+      errorMessage.toLowerCase().includes('email not confirmed') || 
+      errorMessage.toLowerCase().includes('email is not confirmed') ||
+      errorMessage.toLowerCase().includes('not confirmed') ||
+      errorMessage.includes('email_not_confirmed') ||
+      error?.code === '401' || 
+      error?.code === '422'
+    ) {
+      // Specifik hantering för obekräftad email
+      console.log('Email confirmation error detected');
+      
+      setAuthErrorShown(true);
+      
+      setTimeout(() => {
+        const confirmResend = window.confirm(
+          'Din e-postadress har inte bekräftats än. Du måste klicka på länken i bekräftelsemailet som skickades när du registrerade dig.\n\nKlicka OK för att gå till inloggningssidan där du kan skicka ett nytt bekräftelsemail om det behövs.'
+        );
+        
+        if (confirmResend) {
+          window.location.href = '/login';
+        }
+      }, 100);
+    } else {
+      // Hantera andra typer av auth-fel
+      console.error('Other auth error:', errorMessage);
+      
+      // För andra fel, visa ett generiskt meddelande
+      setAuthErrorShown(true);
+      
+      setTimeout(() => {
+        const confirmRetry = window.confirm(
+          'Ett autentiseringsfel uppstod. Klicka OK för att försöka logga in igen.'
+        );
+        
+        if (confirmRetry) {
+          window.location.href = '/login';
+        }
+      }, 100);
+    }
+  }, [authErrorShown]);
+
   // Initiera session från Supabase
   useEffect(() => {
     const setData = async () => {
@@ -271,130 +395,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }
     });
-    
-    // Hantera auth-fel och visa lämpliga meddelanden
-    const handleAuthError = useCallback((event: CustomEvent) => {
-      if (authErrorShown) return; // Förhindra flera meddelanden
-      
-      const error = event.detail?.error || event.detail;
-      const errorMessage = typeof error === 'string' 
-        ? error 
-        : error?.message || (error?.error && error.error.message) || '';
-      
-      console.log('Auth error detected:', { error, errorMessage });
-      
-      // Kontrollera för sessionsrelaterade fel
-      if (
-        errorMessage.includes('refresh_token_not_found') || 
-        errorMessage.includes('invalid session') || 
-        errorMessage.includes('JWT expired') ||
-        errorMessage.includes('Invalid refresh token') ||
-        errorMessage.includes('session_expired')
-      ) {
-        console.log('Session-related error detected, cleaning up...');
-        
-        // Rensa session/user state
-        setSession(null);
-        setUser(null);
-        
-        // Rensa auth-relaterad data från localStorage och cookies
-        if (typeof window !== 'undefined') {
-          try {
-            // Rensa localStorage
-            Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('sb-') || key.includes('supabase')) {
-                localStorage.removeItem(key);
-              }
-            });
-            
-            // Rensa sessionStorage
-            Object.keys(sessionStorage).forEach(key => {
-              if (key.startsWith('sb-') || key.includes('supabase')) {
-                sessionStorage.removeItem(key);
-              }
-            });
-            
-            // Rensa cookies
-            document.cookie.split(';').forEach(c => {
-              const cookieName = c.split('=')[0].trim();
-              if (cookieName.startsWith('sb-')) {
-                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                if (process.env.NODE_ENV === 'production') {
-                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.handbok.org;`;
-                }
-              }
-            });
-            
-            // Rensa memory storage
-            if (window.memoryStorage) {
-              Object.keys(window.memoryStorage).forEach(key => {
-                if (key.startsWith('sb-') || key.includes('supabase')) {
-                  delete window.memoryStorage[key];
-                }
-              });
-            }
-          } catch (e) {
-            console.warn('Error clearing auth data:', e);
-          }
-        }
-        
-        // Visa ett meddelande till användaren och omdirigera efter bekräftelse
-        setAuthErrorShown(true);
-        
-        // Använd setTimeout för att undvika att blockera UI
-        setTimeout(() => {
-          const confirmRelogin = window.confirm(
-            'Din session har gått ut. Klicka OK för att logga in igen.'
-          );
-          
-          if (confirmRelogin) {
-            // Navigera till login-sidan
-            window.location.href = '/login';
-          } else {
-            // Om användaren inte vill logga in igen, navigera till startsidan
-            window.location.href = '/';
-          }
-        }, 100);
-      } else if (
-        errorMessage.toLowerCase().includes('email not confirmed') || 
-        errorMessage.toLowerCase().includes('email is not confirmed') ||
-        errorMessage.toLowerCase().includes('not confirmed') ||
-        errorMessage.includes('email_not_confirmed') ||
-        error?.code === '401' || 
-        error?.code === '422'
-      ) {
-        // Specifik hantering för obekräftad email
-        console.log('Email confirmation error detected');
-        
-        setAuthErrorShown(true);
-        
-        setTimeout(() => {
-          const confirmResend = window.confirm(
-            'Din e-postadress har inte bekräftats än. Du måste klicka på länken i bekräftelsemailet som skickades när du registrerade dig.\n\nKlicka OK för att gå till inloggningssidan där du kan skicka ett nytt bekräftelsemail om det behövs.'
-          );
-          
-          if (confirmResend) {
-            window.location.href = '/login';
-          }
-        }, 100);
-      } else {
-        // Hantera andra typer av auth-fel
-        console.error('Other auth error:', errorMessage);
-        
-        // För andra fel, visa ett generiskt meddelande
-        setAuthErrorShown(true);
-        
-        setTimeout(() => {
-          const confirmRetry = window.confirm(
-            'Ett autentiseringsfel uppstod. Klicka OK för att försöka logga in igen.'
-          );
-          
-          if (confirmRetry) {
-            window.location.href = '/login';
-          }
-        }, 100);
-      }
-    }, [authErrorShown]);
 
     // Lyssna på auth error event från Supabase
     if (typeof window !== 'undefined') {
@@ -412,7 +412,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.removeEventListener('supabase.auth.error', handleAuthError as EventListener);
       }
     };
-  }, [router, authErrorShown]);
+  }, [handleAuthError]);
 
   // Implementera de olika auth-funktionerna
   const signIn = async (email: string, password: string) => {

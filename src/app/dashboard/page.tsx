@@ -169,11 +169,10 @@ export default function DashboardPage() {
               </div>
               <h2 className="text-xl font-medium mb-2">Välkommen till Handbok!</h2>
               <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                Skapa din första digitala handbok helt gratis. Perfekt för föreningar, företag och organisationer som vill dela information på ett enkelt sätt.
+                Skapa din första digitala handbok. Perfekt för föreningar, företag och organisationer som vill dela information på ett enkelt sätt.
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-                <p className="text-blue-800 font-medium">🎉 Din första handbok är gratis!</p>
-                <p className="text-blue-700 text-sm mt-1">Inga dolda kostnader eller begränsningar</p>
+                <p className="text-blue-800 font-medium">🎉 Din första handbok ingår i ditt konto!</p>
               </div>
               <Button asChild size="lg">
                 <Link href="/create-handbook?new=true">
@@ -195,7 +194,7 @@ export default function DashboardPage() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-2">Vill du skapa fler handböcker?</h3>
                       <p className="text-gray-600 mb-4">
-                        Du har din första handbok gratis! För att skapa fler handböcker och få tillgång till avancerade funktioner, uppgradera till vårt Pro-konto.
+                        Du har din första handbok! För att skapa fler handböcker och få tillgång till avancerade funktioner, uppgradera till vårt Pro-konto.
                       </p>
                       <div className="flex flex-col sm:flex-row gap-3">
                         <Button className="bg-blue-600 hover:bg-blue-700">

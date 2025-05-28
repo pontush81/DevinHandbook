@@ -1,5 +1,3 @@
-"use client";
-
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -247,7 +245,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://staging.handbok.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://staging.handbok.org" />
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <SessionResetNotice />
           {children}

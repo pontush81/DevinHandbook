@@ -14,11 +14,19 @@ export function AuthDebugButton() {
   const [isFixing, setIsFixing] = useState(false);
   const [fixResult, setFixResult] = useState<{ success: boolean; message: string } | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [shouldShow, setShouldShow] = useState(false);
 
-  // Visa debug-knappen i development eller om det finns autentiseringsproblem
-  const shouldShow = process.env.NODE_ENV === 'development' || 
-                    (!user && typeof window !== 'undefined' && 
-                     document.cookie.includes('sb-'));
+  // Kontrollera om debug-knappen ska visas efter hydration
+  useEffect(() => {
+    const checkShouldShow = () => {
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const hasAuthProblems = !user && typeof window !== 'undefined' && 
+                             document.cookie.includes('sb-');
+      setShouldShow(isDevelopment || hasAuthProblems);
+    };
+    
+    checkShouldShow();
+  }, [user]);
 
   // Samla debug-information
   useEffect(() => {

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
       if (userHandbooks && userHandbooks.length >= 1) {
         return NextResponse.json(
-          { error: "Du kan endast skapa en handbok gratis. Uppgradera till Pro för fler handböcker." },
+          { error: "Du kan endast skapa en handbok med ditt nuvarande konto. Uppgradera till Pro för fler handböcker." },
           { status: 403 }
         );
       }

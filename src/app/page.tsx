@@ -30,7 +30,7 @@ export default function HomePage() {
     },
     {
       question: "Kan jag prova innan jag betalar?",
-      answer: "Vi har tyvärr ingen gratis provperiod, men erbjuder en 30-dagars pengarna-tillbaka-garanti om du inte är nöjd med tjänsten."
+      answer: "Vi erbjuder en 30-dagars pengarna-tillbaka-garanti om du inte är nöjd med tjänsten. Du kan testa alla funktioner under denna period."
     },
     {
       question: "Hur kommer medlemmarna åt handboken?",

@@ -179,10 +179,10 @@ export function CreateHandbookForm() {
       const errorMessage = error instanceof Error ? error.message : "Ett fel uppstod vid skapande av handbok";
       
       // Kontrollera om det är handboksbegränsningsfel
-      if (errorMessage.includes("endast skapa en handbok gratis") || errorMessage.includes("Uppgradera till Pro")) {
+      if (errorMessage.includes("endast skapa en handbok med ditt nuvarande konto") || errorMessage.includes("Uppgradera till Pro")) {
         toast({
           title: "Handboksbegränsning nådd",
-          description: "Du kan endast skapa en handbok gratis. Uppgradera till Pro för att skapa fler handböcker.",
+          description: "Du kan endast skapa en handbok med ditt nuvarande konto. Uppgradera till Pro för att skapa fler handböcker.",
           variant: "destructive",
         });
       } else {

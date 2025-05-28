@@ -93,7 +93,7 @@ function CreateHandbookContent() {
               Du har redan en handbok
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
-              Som ny användare kan du skapa en handbok gratis. För att skapa fler handböcker behöver du uppgradera ditt konto.
+              Som ny användare kan du skapa en handbok. För att skapa fler handböcker behöver du uppgradera ditt konto.
             </p>
           </div>
           
@@ -211,7 +211,7 @@ function CreateHandbookContent() {
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
             {handbooks.length === 0 
-              ? "Välkommen! Skapa din första handbok gratis. Följ stegen nedan för att komma igång."
+              ? "Välkommen! Skapa din första handbok. Följ stegen nedan för att komma igång."
               : "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
             }
           </p>
@@ -230,7 +230,7 @@ function CreateHandbookContent() {
               <p className="mt-2">Du kan använda denna knapp för att hantera innehåll och medlemmar i din handbok.</p>
               {handbooks.length === 0 && (
                 <p className="mt-2 font-medium text-blue-600">
-                  🎉 Din första handbok är helt gratis! För fler handböcker kan du uppgradera senare.
+                  �� Din första handbok ingår i ditt konto! För fler handböcker kan du uppgradera senare.
                 </p>
               )}
             </div>
