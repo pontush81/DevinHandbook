@@ -52,7 +52,8 @@ export function HandbookLayout({
     isLoading,
     canEdit,
     environment: process.env.NODE_ENV,
-    handbookId
+    handbookId,
+    editLinkWillBe: handbookId ? `/admin/content?handbook=${handbookId}` : '/dashboard'
   });
 
   const handleSignOut = async () => {
@@ -85,7 +86,17 @@ export function HandbookLayout({
             <div className="flex flex-1 items-center justify-end space-x-3">
               {/* Edit button */}
               {canEdit && (
-                <Button variant="outline" size="sm" asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  asChild
+                  onClick={() => {
+                    console.log('🔧 Edit button clicked!', {
+                      handbookId,
+                      targetUrl: handbookId ? `/admin/content?handbook=${handbookId}` : '/dashboard'
+                    });
+                  }}
+                >
                   <Link href={handbookId ? `/admin/content?handbook=${handbookId}` : '/dashboard'} className="flex items-center space-x-2">
                     <Edit className="w-4 h-4" />
                     <span>Redigera</span>
