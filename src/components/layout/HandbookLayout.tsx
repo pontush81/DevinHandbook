@@ -86,7 +86,7 @@ export function HandbookLayout({
               {/* Edit button */}
               {canEdit && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/dashboard" className="flex items-center space-x-2">
+                  <Link href={handbookId ? `/admin/content?handbook=${handbookId}` : '/dashboard'} className="flex items-center space-x-2">
                     <Edit className="w-4 h-4" />
                     <span>Redigera</span>
                   </Link>

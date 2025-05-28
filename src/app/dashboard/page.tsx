@@ -194,7 +194,16 @@ export default function DashboardPage() {
                     <span className="font-medium">URL:</span>{" "}
                     www.handbok.org/{handbook.subdomain}
                   </div>
-                  <div className="flex space-x-4">
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      asChild
+                    >
+                      <Link href={`/admin/content?handbook=${handbook.id}`}>
+                        Redigera
+                      </Link>
+                    </Button>
                     <Button 
                       variant="outline" 
                       size="sm"
