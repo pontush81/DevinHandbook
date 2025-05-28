@@ -82,11 +82,14 @@ export default function HandbookPage({ params }: Props) {
         if (handbookData) {
           setHandbook(handbookData);
         } else {
-          setError(`Handboken "${handbookNameParam}" kunde inte hittas.`);
+          // Use notFound() for proper 404 handling instead of error state
+          console.log(`[Handbook Page] 📍 Handbook "${handbookNameParam}" not found, calling notFound()`);
+          notFound();
         }
       } catch (err) {
         console.error('Error fetching handbook:', err);
         if (isMounted) {
+          // For unexpected errors, still show error page but log the issue
           setError('Det gick inte att ladda handboken just nu. Försök igen senare.');
         }
       } finally {
