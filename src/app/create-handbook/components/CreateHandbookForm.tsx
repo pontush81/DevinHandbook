@@ -53,6 +53,12 @@ export function CreateHandbookForm() {
     if (name) {
       const suggestedSubdomain = convertToSubdomain(name);
       setSubdomain(suggestedSubdomain);
+      // Kontrollera automatiskt när subdomän sätts från namnet
+      if (suggestedSubdomain.length >= 2) {
+        setTimeout(() => {
+          checkSubdomainAvailability(suggestedSubdomain);
+        }, 300);
+      }
     }
   }, [name]);
 
@@ -304,21 +310,25 @@ export function CreateHandbookForm() {
             />
           </div>
           
-          <div className="mt-1">
+          <div className="mt-2">
             {isCheckingSubdomain ? (
-              <div className="flex items-center text-sm text-gray-500">
-                <Loader2 size={14} className="mr-1 animate-spin" />
-                Kontrollerar tillgänglighet...
+              <div className="flex items-center text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                <Loader2 size={14} className="mr-2 animate-spin" />
+                🔍 Kontrollerar om adressen är tillgänglig...
               </div>
             ) : isSubdomainAvailable === true ? (
-              <div className="flex items-center text-sm text-green-600">
-                <CheckCircle2 size={14} className="mr-1" />
-                Denna adress är tillgänglig
+              <div className="flex items-center text-sm text-green-600 bg-green-50 p-2 rounded">
+                <CheckCircle2 size={14} className="mr-2" />
+                ✅ Denna adress är tillgänglig och kan användas
               </div>
             ) : isSubdomainAvailable === false ? (
-              <div className="flex items-center text-sm text-red-600">
-                <AlertCircle size={14} className="mr-1" />
-                Denna adress är upptagen. Vänligen välj en annan.
+              <div className="flex items-center text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                <AlertCircle size={14} className="mr-2" />
+                ❌ Denna adress är redan upptagen. Prova en annan.
+              </div>
+            ) : subdomain.length >= 2 ? (
+              <div className="text-sm text-gray-500 p-2">
+                💡 Skriv minst 2 tecken för att kontrollera tillgänglighet
               </div>
             ) : null}
           </div>
