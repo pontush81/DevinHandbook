@@ -6,10 +6,13 @@ export async function POST(req: NextRequest) {
   try {
     console.log(`Stripe Checkout körs i ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
     
-    const { handbookData } = await req.json();
+    const requestData = await req.json();
 
     // Logga vad som tas emot från frontend
-    console.log("[Stripe Checkout] Backend mottog handbookData:", handbookData);
+    console.log("[Stripe Checkout] Backend mottog requestData:", requestData);
+
+    // Handle both formats: {handbookData: {...}} and direct {...}
+    const handbookData = requestData.handbookData || requestData;
 
     const { name, subdomain, template, userId } = handbookData;
 
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ 
       sessionId: session.id, 
-      sessionUrl: session.url,
+      url: session.url,
       isTestMode
     });
   } catch (error) {

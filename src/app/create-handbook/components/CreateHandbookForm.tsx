@@ -137,61 +137,120 @@ export function CreateHandbookForm() {
     const clearSimulation = simulateCreationProgress();
 
     try {
-      // Använd API-rutten för att skapa handbok istället för direkt Supabase-anrop
-      const response = await fetch('/api/create-handbook', {
+      // Redirect to Stripe checkout instead of directly creating handbook
+      const handbookData = {
+        name: values.name,
+        subdomain: values.subdomain,
+        userId: user.id,  // Include userId here
+        template: {
+          metadata: {
+            subtitle: '',
+            version: '1.0',
+            organization: {
+              name: '',
+              address: '',
+              org_number: '',
+              phone: '',
+              email: ''
+            }
+          },
+          sections: [
+            {
+              title: "Välkommen",
+              description: "Introduktion och översikt",
+              pages: [
+                {
+                  title: "Översikt",
+                  content: "Välkommen till din digitala handbok! Här hittar du all viktig information om din bostadsrättsförening."
+                }
+              ]
+            },
+            {
+              title: "Kontaktuppgifter",
+              description: "Viktiga kontakter och information",
+              pages: [
+                {
+                  title: "Förvaltning",
+                  content: "Kontaktuppgifter till förvaltningsbolaget."
+                },
+                {
+                  title: "Styrelse",
+                  content: "Här hittar du kontaktuppgifter till styrelsen."
+                }
+              ]
+            },
+            {
+              title: "Regler och ordningsföreskrifter",
+              description: "Föreningens regler och bestämmelser",
+              pages: [
+                {
+                  title: "Ordningsföreskrifter",
+                  content: "Föreningens ordningsföreskrifter och regler för boende."
+                }
+              ]
+            },
+            {
+              title: "Ekonomi",
+              description: "Ekonomisk information och avgifter",
+              pages: [
+                {
+                  title: "Avgifter",
+                  content: "Information om månadsavgifter och andra kostnader."
+                }
+              ]
+            },
+            {
+              title: "Underhåll och reparationer",
+              description: "Information om underhåll och felanmälan",
+              pages: [
+                {
+                  title: "Felanmälan",
+                  content: "Så här anmäler du fel och skador."
+                }
+              ]
+            },
+            {
+              title: "Gemensamma utrymmen",
+              description: "Tvättstuga, förråd och andra faciliteter",
+              pages: [
+                {
+                  title: "Tvättstuga",
+                  content: "Regler och bokning av tvättstuga."
+                }
+              ]
+            }
+          ]
+        }
+      };
+
+      const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: values.name,
-          subdomain: values.subdomain,
-          user_id: user.id,
-        }),
+        body: JSON.stringify(handbookData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Kunde inte skapa handbok');
+        throw new Error(errorData.error || 'Kunde inte skapa checkout-session');
       }
 
-      const data = await response.json();
-
-      toast({
-        title: "Handbok skapad!",
-        description: `Din handbok har skapats och kommer att vara tillgänglig på www.handbok.org/${values.subdomain}`,
-      });
-
-      // Vänta lite innan vi redirectar för att användaren ska se meddelandet
-      setTimeout(() => {
-        // Redirecta till den nya handboken med ny URL-struktur
-        const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-        const handbookUrl = isDevelopment 
-          ? `http://localhost:3000/${values.subdomain}`
-          : `https://www.handbok.org/${values.subdomain}`;
-        
-        window.location.href = handbookUrl;
-      }, 2000);
+      const { url } = await response.json();
+      
+      // Redirect to Stripe Checkout
+      window.location.href = url;
 
     } catch (error) {
-      console.error("Fel vid skapande av handbok:", error);
+      console.error("Fel vid skapande av checkout-session:", error);
       
       const errorMessage = error instanceof Error ? error.message : "Ett fel uppstod vid skapande av handbok";
       
-      // Kontrollera om det är handboksbegränsningsfel
-      if (errorMessage.includes("endast skapa en handbok med ditt nuvarande konto") || errorMessage.includes("Uppgradera till Pro")) {
-        toast({
-          title: "Handboksbegränsning nådd",
-          description: "Du kan endast skapa en handbok med ditt nuvarande konto. Uppgradera till Pro för att skapa fler handböcker.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Något gick fel",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Något gick fel",
+        description: errorMessage,
+        variant: "destructive",
+      });
       
       setIsCreating(false);
       clearSimulation(); // Stoppa simuleringen
@@ -288,7 +347,7 @@ export function CreateHandbookForm() {
               )}
             />
             <Button type="submit" disabled={isCreating || isSubdomainChecking || !isSubdomainAvailable}>
-              Skapa handbok
+              Fortsätt till betalning (990 kr/år)
             </Button>
           </>
         )}
