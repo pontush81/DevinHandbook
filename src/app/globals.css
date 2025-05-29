@@ -57,9 +57,9 @@
   --popover-foreground: 222.2 84% 4.9%;
 
   /* Primary colors - Blue theme */
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --primary-hover: 221 83% 45%;
+  --primary: 221.2 83.2% 53.3%;  /* Blue-600 */
+  --primary-foreground: 210 40% 98%;  /* White */
+  --primary-hover: 221.2 83.2% 45%;  /* Blue-700 */
   --primary-light: 221 83% 95%;
   --primary-dark: 221 83% 35%;
 
@@ -143,8 +143,8 @@
   --card-foreground: 210 40% 98%;
   --popover: 222.2 84% 4.9%;
   --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
+  --primary: 221.2 83.2% 53.3%;  /* Blue-600 */
+  --primary-foreground: 210 40% 98%;  /* White */
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
   --muted: 217.2 32.6% 17.5%;
@@ -932,8 +932,8 @@ html, body {
 
 :root {
   /* Colors */
-  --primary: 219 78% 56%;
-  --primary-foreground: 0 0% 98%;
+  --primary: 221.2 83.2% 53.3%;  /* Blue-600 */
+  --primary-foreground: 210 40% 98%;  /* White */
   --secondary: 210 40% 96%;
   --secondary-foreground: 222.2 84% 4.9%;
   --muted: 210 40% 96%;
@@ -1746,152 +1746,6 @@ html, body {
   .editor-toolbar button:focus {
     outline: 2px solid hsl(var(--primary));
     outline-offset: 2px;
-  }
-}
-
-/* ==============================================
-   EXISTING RESPONSIVE IMPROVEMENTS
-   ============================================== */
-
-/* ==============================================
-   DROPDOWN MENU IMPROVEMENTS
-   ============================================== */
-
-/* Improved dropdown menu styling */
-[data-radix-popper-content-wrapper] {
-  z-index: 60 !important;
-}
-
-.dropdown-menu-content {
-  background: white !important;
-  border: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
-  backdrop-filter: none !important;
-  z-index: 60 !important;
-}
-
-/* Ensure dropdown items are clickable on mobile */
-.dropdown-menu-item {
-  cursor: pointer !important;
-  touch-action: manipulation !important;
-  min-height: 44px !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.dropdown-menu-item a {
-  width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  text-decoration: none !important;
-  color: inherit !important;
-}
-
-.dropdown-menu-item:hover {
-  background-color: hsl(var(--accent)) !important;
-}
-
-/* Mobile-specific dropdown improvements */
-@media (max-width: 640px) {
-  .dropdown-menu-content {
-    min-width: 200px !important;
-    margin-right: 8px !important;
-  }
-  
-  .dropdown-menu-item {
-    padding: 12px 16px !important;
-    font-size: 16px !important;
-  }
-}
-
-/* ==============================================
-   CONTENT AREA SCROLLING IMPROVEMENTS
-   ============================================== */
-
-/* Ensure proper scrolling in content areas */
-.content-area-scroll {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  /* Ensure proper scrolling on iOS */
-  position: relative;
-  /* Fix for mobile Safari scrolling issues */
-  transform: translateZ(0);
-  /* Prevent content from being cut off */
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}
-
-/* Improve prose content scrolling */
-.prose {
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  hyphens: auto;
-  /* Ensure images and media don't break layout */
-  max-width: 100%;
-}
-
-.prose img,
-.prose video,
-.prose iframe {
-  max-width: 100% !important;
-  height: auto !important;
-}
-
-/* Mobile-specific scrolling improvements */
-@media (max-width: 640px) {
-  .content-area-scroll {
-    /* Ensure content doesn't get cut off on mobile */
-    padding-bottom: max(2rem, env(safe-area-inset-bottom, 0));
-    /* Better momentum scrolling on iOS */
-    -webkit-overflow-scrolling: touch;
-    /* Prevent rubber band effect */
-    overscroll-behavior: contain;
-    /* Improve touch scrolling performance */
-    will-change: scroll-position;
-  }
-  
-  /* Better scrolling for individual pages on mobile */
-  .overflow-y-auto {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
-  
-  /* Ensure proper scrolling on mobile devices */
-  .prose {
-    font-size: 0.9rem;
-    line-height: 1.6;
-    /* Ensure proper text wrapping */
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-  
-  /* Ensure images and media don't break layout */
-  .prose img,
-  .prose video,
-  .prose iframe {
-    max-width: 100% !important;
-    height: auto !important;
-    border-radius: 0.5rem;
-  }
-  
-  /* Better spacing for mobile reading */
-  .prose h1,
-  .prose h2,
-  .prose h3 {
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .prose p {
-    margin-bottom: 1rem;
-  }
-  
-  .prose ul,
-  .prose ol {
-    margin-bottom: 1rem;
-    padding-left: 1.25rem;
   }
 }
 

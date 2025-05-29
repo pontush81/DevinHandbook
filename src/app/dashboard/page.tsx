@@ -276,7 +276,6 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex space-x-2">
                         <Button 
-                          variant="outline" 
                           size="sm"
                           asChild
                         >
@@ -314,7 +313,7 @@ export default function DashboardPage() {
 
       {/* Bekräftelsedialog för radering */}
       <Dialog open={deleteConfirmation.isOpen} onOpenChange={cancelDeleteHandbook}>
-        <DialogContent>
+        <DialogContent className="bg-white border border-gray-200 shadow-lg">
           <DialogHeader>
             <DialogTitle>Radera handbok</DialogTitle>
             <DialogDescription>

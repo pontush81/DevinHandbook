@@ -348,7 +348,7 @@ export default function ContentManagementPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="bg-white border border-gray-200 shadow-lg">
                     <DialogHeader>
                       <DialogTitle>Ny sektion</DialogTitle>
                       <DialogDescription>
@@ -422,7 +422,7 @@ export default function ContentManagementPage() {
                             Ny sida
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="bg-white border border-gray-200 shadow-lg">
                           <DialogHeader>
                             <DialogTitle>Ny sida</DialogTitle>
                             <DialogDescription>
