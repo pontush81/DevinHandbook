@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { checkIsSuperAdmin } from "@/lib/user-utils";
-import { CreateHandbookForm } from "@/components/handbook-wizard/CreateHandbookForm";
+import { CreateHandbookForm } from "./components/CreateHandbookForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -224,7 +224,7 @@ function CreateHandbookContent() {
         
         <Card className="shadow-lg border-0">
           <CardContent className="p-8">
-            {user && <CreateHandbookForm userId={user.id} />}
+            {user && <CreateHandbookForm />}
             <div className="mt-6 text-gray-600 text-sm">
               <p>När din handbok har skapats kommer du automatiskt få administratörsrättigheter och se en "Administrera"-knapp i handboken.</p>
               <p className="mt-2">Du kan använda denna knapp för att hantera innehåll och medlemmar i din handbok.</p>

@@ -6,7 +6,20 @@ export async function POST(req: NextRequest) {
   try {
     console.log(`Stripe Checkout körs i ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
     
-    const requestData = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (jsonError) {
+      console.error('[Stripe Checkout] JSON parsing failed:', jsonError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Invalid JSON data received',
+        error: jsonError.message 
+      }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Logga vad som tas emot från frontend
     console.log("[Stripe Checkout] Backend mottog requestData:", requestData);

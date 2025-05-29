@@ -1,147 +1,136 @@
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
-import { useToast } from "@/components/ui/use-toast";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { LoaderCircle } from "lucide-react";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-
-// Schema för validering av formulärdata
-const formSchema = z.object({
-  name: z
-    .string()
-    .min(2, {
-      message: "Handbokens namn måste vara minst 2 tecken.",
-    })
-    .max(50, {
-      message: "Handbokens namn får inte vara längre än 50 tecken.",
-    }),
-  subdomain: z
-    .string()
-    .min(2, {
-      message: "Subdomänen måste vara minst 2 tecken.",
-    })
-    .max(30, {
-      message: "Subdomänen får inte vara längre än 30 tecken.",
-    })
-    .regex(/^[a-z0-9]+$/, {
-      message: "Subdomänen får endast innehålla små bokstäver och siffror.",
-    }),
-});
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 export function CreateHandbookForm() {
-  const { toast } = useToast();
-  const router = useRouter();
   const { user } = useAuth();
-  const [isSubdomainAvailable, setIsSubdomainAvailable] = useState(true);
-  const [isSubdomainChecking, setIsSubdomainChecking] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [creationProgress, setCreationProgress] = useState(0);
+  const [name, setName] = useState('');
+  const [subdomain, setSubdomain] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
+  const [isSubdomainAvailable, setIsSubdomainAvailable] = useState<boolean | null>(null);
+  const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
+  const [price, setPrice] = useState<number>(995); // Default pris i kr
 
-  // Konfigurera formuläret
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      subdomain: "",
-    },
-  });
+  // Hämta aktuellt prisbelopp och testläge från API
+  useEffect(() => {
+    async function fetchPriceAndMode() {
+      try {
+        const response = await fetch('/api/stripe/check-mode');
+        const data = await response.json();
+        setIsTestMode(data.isTestMode);
+        
+        // Hämta det faktiska prisbeloppet om det är tillgängligt
+        if (data.priceAmount) {
+          // Konvertera från öre till kronor för visning
+          setPrice(data.priceAmount / 100);
+        }
+      } catch (err) {
+        console.error('Error fetching stripe mode:', err);
+      }
+    }
+    fetchPriceAndMode();
+  }, []);
 
-  // Kontrollera subdomän vid ändring
-  const checkSubdomain = async (subdomain: string) => {
-    if (!subdomain || subdomain.length < 2) return;
-    
-    setIsSubdomainChecking(true);
-    
+  // Konvertera handbokens namn till en lämplig subdomän
+  const convertToSubdomain = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[åä]/g, 'a')
+      .replace(/[ö]/g, 'o')
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/--+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  // Auto-fylla subdomän när namnet ändras
+  useEffect(() => {
+    if (name) {
+      const suggestedSubdomain = convertToSubdomain(name);
+      setSubdomain(suggestedSubdomain);
+    }
+  }, [name]);
+
+  // Kontrollera om subdomänen är tillgänglig
+  const checkSubdomainAvailability = async (value: string) => {
+    if (!value || value.length < 2) {
+      setIsSubdomainAvailable(null);
+      return;
+    }
+
+    setIsCheckingSubdomain(true);
     try {
       const { data, error } = await supabase
-        .from("handbooks")
-        .select("subdomain")
-        .eq("subdomain", subdomain)
-        .maybeSingle();
+        .from('handbooks')
+        .select('subdomain')
+        .eq('subdomain', value)
+        .single();
 
-      setIsSubdomainAvailable(!data);
-      
-      if (data) {
-        form.setError("subdomain", {
-          type: "manual",
-          message: "Denna subdomän är redan tagen.",
-        });
+      if (error && error.code === 'PGRST116') {
+        // No rows returned, subdomain is available
+        setIsSubdomainAvailable(true);
+      } else if (data) {
+        // Subdomain exists
+        setIsSubdomainAvailable(false);
       } else {
-        form.clearErrors("subdomain");
+        // Other error
+        setIsSubdomainAvailable(null);
       }
-    } catch (error) {
-      console.error("Fel vid kontroll av subdomän:", error);
+    } catch (err) {
+      console.error('Error checking subdomain:', err);
+      setIsSubdomainAvailable(null);
     } finally {
-      setIsSubdomainChecking(false);
+      setIsCheckingSubdomain(false);
     }
   };
 
-  // Visa animerad progress under skapande
-  const simulateCreationProgress = () => {
-    // Simulera framsteg på ett realistiskt sätt
-    const interval = setInterval(() => {
-      setCreationProgress(prev => {
-        // Öka snabbt till 70%, sedan långsammare
-        const increment = prev < 70 ? 15 : 5;
-        const newValue = Math.min(prev + increment, 95);
-        
-        // Stoppa vid 95% och låt redirecten ta hand om slutet
-        if (newValue >= 95) {
-          clearInterval(interval);
-        }
-        
-        return newValue;
-      });
-    }, 800);
-
-    return () => clearInterval(interval);
+  // Debounced subdomain change handler
+  const handleSubdomainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toLowerCase();
+    setSubdomain(value);
+    
+    // Debounce the availability check
+    setTimeout(() => {
+      checkSubdomainAvailability(value);
+    }, 500);
   };
 
-  // Skicka formuläret
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!user) {
-      toast({
-        title: "Du måste vara inloggad för att skapa en handbok",
-        variant: "destructive",
-      });
+      setError("Du måste vara inloggad för att skapa en handbok");
+      return;
+    }
+
+    if (!name.trim()) {
+      setError('Vänligen ange ett namn för handboken');
+      return;
+    }
+
+    if (!subdomain.trim()) {
+      setError('Vänligen ange en adress för handboken');
       return;
     }
 
     if (!isSubdomainAvailable) {
-      toast({
-        title: "Subdomänen är redan tagen",
-        description: "Välj en annan subdomän.",
-        variant: "destructive",
-      });
+      setError("Subdomänen är redan tagen. Välj en annan subdomän.");
       return;
     }
 
-    setIsCreating(true);
-    // Starta simulering av framsteg
-    const clearSimulation = simulateCreationProgress();
+    setIsLoading(true);
+    setError(null);
 
     try {
       // Redirect to Stripe checkout instead of directly creating handbook
       const handbookData = {
-        name: values.name,
-        subdomain: values.subdomain,
-        userId: user.id,  // Include userId here
+        name: name,
+        subdomain: subdomain,
+        userId: user?.id,
         template: {
           metadata: {
             subtitle: '',
@@ -228,12 +217,12 @@ export function CreateHandbookForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(handbookData),
+        body: JSON.stringify({ handbookData }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Kunde inte skapa checkout-session');
+        throw new Error(errorData.error || errorData.message || 'Kunde inte skapa checkout-session');
       }
 
       const { url } = await response.json();
@@ -245,113 +234,123 @@ export function CreateHandbookForm() {
       console.error("Fel vid skapande av checkout-session:", error);
       
       const errorMessage = error instanceof Error ? error.message : "Ett fel uppstod vid skapande av handbok";
-      
-      toast({
-        title: "Något gick fel",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      
-      setIsCreating(false);
-      clearSimulation(); // Stoppa simuleringen
-      setCreationProgress(0);
+      setError(errorMessage);
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {isCreating ? (
-          <div className="flex flex-col items-center justify-center py-10 space-y-6">
-            <motion.div 
-              className="text-center space-y-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h3 className="text-2xl font-semibold tracking-tight">Skapar din handbok...</h3>
-              <p className="text-sm text-muted-foreground">
-                Vi håller på att förbereda din handbok. Detta kan ta några ögonblick.
-              </p>
-            </motion.div>
-            
-            <div className="w-full max-w-md">
-              <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                <motion.div 
-                  className="h-full bg-primary"
-                  initial={{ width: "5%" }}
-                  animate={{ width: `${creationProgress}%` }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
-              <p className="text-center text-sm mt-2 text-muted-foreground">{creationProgress}% klart</p>
-            </div>
-            
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <LoaderCircle className="animate-spin h-4 w-4" />
-              <span>Skapar innehåll och förbereder din domän...</span>
-            </div>
+    <div className="space-y-6">
+      {/* Price display */}
+      <div className="bg-gray-50 p-6 rounded-lg border">
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="font-medium">Digital handbok</span>
+            <span className="font-semibold">{price.toFixed(2)} kr</span>
           </div>
-        ) : (
-          <>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Handbokens namn</FormLabel>
-                  <FormControl>
-                    <Input placeholder="T.ex. Brf Solen" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Detta är namnet på din handbok. Du kan ändra detta senare.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="subdomain"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subdomän</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center">
-                      <Input 
-                        placeholder="förening" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          checkSubdomain(e.target.value);
-                        }}
-                        className={cn(
-                          "rounded-r-none",
-                          !isSubdomainAvailable && "border-red-500 focus-visible:ring-red-500"
-                        )}
-                      />
-                      <div className="h-10 px-3 inline-flex items-center border border-l-0 border-input rounded-r-md bg-muted text-muted-foreground">
-                        .handbok.org
-                      </div>
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Detta blir adressen till din handbok. Kan inte ändras senare.
-                    {isSubdomainChecking && <span className="ml-2 text-muted-foreground italic">Kontrollerar tillgänglighet...</span>}
-                    {!isSubdomainChecking && isSubdomainAvailable && field.value.length >= 2 && (
-                      <span className="ml-2 text-green-600">✓ Tillgänglig</span>
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isCreating || isSubdomainChecking || !isSubdomainAvailable}>
-              Fortsätt till betalning (990 kr/år)
-            </Button>
-          </>
+          <div className="flex justify-between text-gray-500 text-sm">
+            <span>Årsabonnemang</span>
+            <span>per förening</span>
+          </div>
+          <div className="border-t my-3"></div>
+          <div className="flex justify-between font-semibold">
+            <span>Totalt</span>
+            <span>{price.toFixed(2)} kr</span>
+          </div>
+        </div>
+        
+        {isTestMode === true && (
+          <div className="mt-4 bg-yellow-100 text-yellow-800 p-2 rounded text-sm">
+            🧪 Testläge aktivt - använd kortnummer 4242 4242 4242 4242 för test
+          </div>
         )}
+        {!isTestMode && price < 10 && (
+          <div className="bg-blue-100 text-blue-800 p-2 rounded text-sm mt-4">
+            ⚠️ OBS! Detta är ett minimalt testbelopp för verifiering av betalflödet ({price.toFixed(2)} kr)
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            Handbokens namn
+          </label>
+          <Input
+            id="name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="T.ex. Brf Solgläntan"
+            className="w-full"
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="subdomain" className="block text-sm font-medium text-gray-700 mb-1">
+            Adressen till din handbok blir:
+          </label>
+          <div className="flex items-center">
+            <span className="text-gray-500 mr-1">www.handbok.org/</span>
+            <Input
+              id="subdomain"
+              type="text"
+              value={subdomain}
+              onChange={handleSubdomainChange}
+              placeholder="solgläntan"
+              className={`w-full ${isSubdomainAvailable === true ? 'border-green-500' : isSubdomainAvailable === false ? 'border-red-500' : ''}`}
+              disabled={isLoading}
+            />
+          </div>
+          
+          <div className="mt-1">
+            {isCheckingSubdomain ? (
+              <div className="flex items-center text-sm text-gray-500">
+                <Loader2 size={14} className="mr-1 animate-spin" />
+                Kontrollerar tillgänglighet...
+              </div>
+            ) : isSubdomainAvailable === true ? (
+              <div className="flex items-center text-sm text-green-600">
+                <CheckCircle2 size={14} className="mr-1" />
+                Denna adress är tillgänglig
+              </div>
+            ) : isSubdomainAvailable === false ? (
+              <div className="flex items-center text-sm text-red-600">
+                <AlertCircle size={14} className="mr-1" />
+                Denna adress är upptagen. Vänligen välj en annan.
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-md">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          disabled={isLoading || isSubdomainAvailable === false}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Förbereder betalning...
+            </>
+          ) : (
+            'Gå vidare till betalning (990 kr/år)'
+          )}
+        </Button>
+        
+        <p className="text-xs text-gray-500 text-center">
+          Efter betalning kommer din handbok att vara tillgänglig på{" "}
+          <span className="font-medium">https://www.handbok.org/{subdomain || 'din-förening'}</span>
+        </p>
       </form>
-    </Form>
+    </div>
   );
 } 
