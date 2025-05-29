@@ -14,7 +14,7 @@ export function CreateHandbookForm() {
   const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
   const [isSubdomainAvailable, setIsSubdomainAvailable] = useState<boolean | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
-  const [price, setPrice] = useState<number>(995); // Default pris i kr
+  const [price, setPrice] = useState<number>(2490); // Default pris i kr
 
   // Hämta aktuellt prisbelopp och testläge från API
   useEffect(() => {
@@ -352,7 +352,7 @@ export function CreateHandbookForm() {
               Förbereder betalning...
             </>
           ) : (
-            'Gå vidare till betalning (990 kr/år)'
+            'Gå vidare till betalning (2490 kr/år)'
           )}
         </Button>
         

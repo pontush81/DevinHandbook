@@ -17,10 +17,10 @@ STRIPE_SECRET_KEY=your-stripe-live-secret-key
 STRIPE_WEBHOOK_SECRET=your-stripe-live-webhook-secret
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your-stripe-live-publishable-key
 
-# Sätt fullt pris till 995 kr (99500 öre) för produktionsmiljön
+# Sätt fullt pris till 2490 kr (249000 öre) för produktionsmiljön
 # Om du tillfälligt vill testa betalflödet med minimal kostnad, 
 # sätt HANDBOOK_PRICE=300 vilket är 3 kr (Stripes minimigräns)
-HANDBOOK_PRICE=99500
+HANDBOOK_PRICE=249000
 
 # Application Variables
 NEXT_PUBLIC_APP_URL=https://handbok.org
@@ -39,7 +39,7 @@ För produktionsdeploy:
 3. Pusha `main`-branchen till GitHub
 4. Vercel kommer automatiskt att skapa en produktions-deployment
 5. Verifiera att miljövariablerna är korrekt konfigurerade i Vercel-projektets inställningar för produktionsmiljön
-6. Dubbelkolla att priset visas som 995 kr i betalningsflödet
+6. Dubbelkolla att priset visas som 2490 kr i betalningsflödet
 7. Övervaka att betalningar och webhooks fungerar korrekt
 
 ## Temporär testning i produktion
@@ -47,11 +47,10 @@ För produktionsdeploy:
 För att temporärt testa betalningsflödet i produktion med minimal kostnad:
 
 1. Ändra tillfälligt `HANDBOOK_PRICE` till `300` (3 kr) i Vercel's miljövariabler
-2. Gör en deploy-omstart i Vercel
-3. Verifiera att varningen för testbelopp visas i produktionsgränssnittet
-4. Genomför en testbetalning med ett riktigt kort
-5. När testningen är klar, ändra tillbaka `HANDBOOK_PRICE` till `99500` (995 kr)
-6. Gör en deploy-omstart i Vercel
+2. Testa att skapa en handbok med det lägre priset
+3. Verifiera att betalningsflödet fungerar
+4. Kontrollera att handboken skapas korrekt efter betalning
+5. När testningen är klar, ändra tillbaka `HANDBOOK_PRICE` till `249000` (2490 kr)
 
 **VIKTIGT:** När du väl har verifierat betalningsflödet, ändra omedelbart tillbaka till det fulla priset för att undvika förlorade intäkter.
 

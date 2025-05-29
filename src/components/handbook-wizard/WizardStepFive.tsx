@@ -10,7 +10,7 @@ export function WizardStepFive() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
-  const [price, setPrice] = useState<number>(995); // Default pris i kr
+  const [price, setPrice] = useState<number>(2490); // Default pris i kr
   const [handbookCreated, setHandbookCreated] = useState<string | null>(null);
   const [progressStep, setProgressStep] = useState<'idle' | 'preparing' | 'creating' | 'done'>('idle');
   

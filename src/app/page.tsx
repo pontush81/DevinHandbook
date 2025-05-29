@@ -26,7 +26,7 @@ export default function HomePage() {
     },
     {
       question: "Vad kostar tjänsten?",
-      answer: "Tjänsten kostar 990 kr per år för en förening, oavsett storlek. I priset ingår obegränsad lagring, egen subdomän, säkerhetskopiering och support."
+      answer: "Tjänsten kostar 2490 kr per år för en förening, oavsett storlek. I priset ingår obegränsad lagring, egen subdomän och säkerhetskopiering."
     },
     {
       question: "Kan jag prova innan jag betalar?",
@@ -86,7 +86,6 @@ export default function HomePage() {
                         <span className="mr-1">🔍</span>
                         <span>Sök...</span>
                       </div>
-                      <div className="bg-blue-100 text-blue-700 rounded px-2 py-1 text-xs font-medium">📞 Support</div>
                     </div>
                   </div>
                   
@@ -250,7 +249,7 @@ export default function HomePage() {
                   </span>
                 </div>
                 <div className="mt-4 flex justify-center">
-                  <span className="text-5xl font-extrabold text-white">990 kr</span>
+                  <span className="text-5xl font-extrabold text-white">2490 kr</span>
                   <span className="ml-1 text-xl font-semibold text-blue-100 self-end">/år</span>
                 </div>
                 <p className="mt-4 text-lg text-center text-blue-100">
@@ -266,7 +265,7 @@ export default function HomePage() {
                       </svg>
                     </div>
                     <p className="ml-3 text-base">
-                      <span className="font-medium">Egen URL</span> - www.handbok.org/föreningsnamn eller föreningsnamn.handbok.org
+                      <span className="font-medium">Egen URL</span> - www.handbok.org/föreningsnamn
                     </p>
                   </li>
                   <li className="flex items-start">
@@ -287,16 +286,6 @@ export default function HomePage() {
                     </div>
                     <p className="ml-3 text-base">
                       <span className="font-medium">Automatisk säkerhetskopiering</span> - dina data är alltid säkra
-                    </p>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-success" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <p className="ml-3 text-base">
-                      <span className="font-medium">Support</span> - vi finns här om ni behöver hjälp
                     </p>
                   </li>
                 </ul>
@@ -320,7 +309,7 @@ export default function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 md:mb-12">Vanliga frågor</h2>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
-              <AccordionTrigger>Vad ingår i priset på 990 kr/år?</AccordionTrigger>
+              <AccordionTrigger>Vad ingår i priset på 2490 kr/år?</AccordionTrigger>
               <AccordionContent>
                 I priset ingår en komplett digital handbok med egen URL (t.ex. www.handbok.org/din-förening).
               </AccordionContent>
