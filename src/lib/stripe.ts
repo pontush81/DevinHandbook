@@ -5,13 +5,8 @@ import Stripe from 'stripe';
  * Produktionsnycklar används endast i produktionsmiljö, annars testnycklar
  */
 const isProduction = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
-const stripeSecretKey = isProduction 
-  ? process.env.STRIPE_SECRET_KEY
-  : process.env.STRIPE_SECRET_KEY_TEST;
-
-const stripeWebhookSecret = isProduction
-  ? process.env.STRIPE_WEBHOOK_SECRET
-  : process.env.STRIPE_WEBHOOK_SECRET_TEST;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 // Exportera teststatus för användning i andra moduler
 export const isTestMode = !isProduction;
