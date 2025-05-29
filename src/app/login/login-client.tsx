@@ -22,6 +22,7 @@ export default function LoginClient() {
   const registrationSuccess = searchParams.get("registration") === "success";
   const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
   const [showRegistrationMessage, setShowRegistrationMessage] = useState(false);
+  const [showLoggedOutMessage, setShowLoggedOutMessage] = useState(false);
 
   useEffect(() => {
     // Kolla om e-posten är verifierad via URL-parametern
@@ -46,6 +47,17 @@ export default function LoginClient() {
       return () => clearTimeout(timer);
     }
   }, [registrationSuccess]);
+
+  useEffect(() => {
+    // Kontrollera om användaren precis loggat ut
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('logged_out') === 'true') {
+      setShowLoggedOutMessage(true);
+      // Rensa parametern från URL:en
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
 
   useEffect(() => {
     async function checkIfLoggedIn() {
@@ -233,6 +245,19 @@ export default function LoginClient() {
               {fromEmailConfirmation 
                 ? "Tack för att du bekräftade din e-postadress. Du kan nu logga in med dina uppgifter för att komma igång."
                 : "Ditt konto har verifierats. Du kan nu logga in med dina uppgifter."}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Logout Success Message */}
+        {showLoggedOutMessage && (
+          <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <AlertTitle className="text-green-800">
+              Du har loggats ut
+            </AlertTitle>
+            <AlertDescription className="text-green-700">
+              Du har framgångsrikt loggats ut från ditt konto. Du kan nu logga in igen eller gå till startsidan.
             </AlertDescription>
           </Alert>
         )}
