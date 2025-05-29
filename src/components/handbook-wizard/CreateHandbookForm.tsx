@@ -151,13 +151,14 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
     }
 
     try {
-      console.log(`[Create Handbook] Preparing Stripe checkout: ${name}, subdomain: ${subdomain}`);
+      console.log(`[Create Handbook] Preparing Stripe checkout: ${name}, subdomain: ${subdomain}, userId: ${userId}`);
       
       // Prepare handbook data for Stripe
       const handbookData = {
         name,
         subdomain,
-        template: completeBRFHandbook
+        template: completeBRFHandbook,
+        userId: userId
       };
 
       // Create Stripe checkout session
@@ -189,7 +190,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         
         // Redirect to the handbook
         setTimeout(() => {
-          window.location.href = `https://${subdomain}.handbok.org`;
+          window.location.href = `https://www.handbok.org/${subdomain}`;
         }, 1000);
         return;
       }
@@ -335,7 +336,7 @@ export function CreateHandbookForm({ userId }: CreateHandbookFormProps) {
         
         <p className="text-xs text-gray-500 text-center">
           Efter betalning kommer din handbok att vara tillgänglig på{" "}
-          <span className="font-medium">https://{subdomain || 'din-förening'}.handbok.org</span>
+          <span className="font-medium">https://www.handbok.org/{subdomain || 'din-förening'}</span>
         </p>
       </form>
     </div>

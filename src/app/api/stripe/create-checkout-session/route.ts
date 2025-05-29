@@ -11,12 +11,12 @@ export async function POST(req: NextRequest) {
     // Logga vad som tas emot från frontend
     console.log("[Stripe Checkout] Backend mottog handbookData:", handbookData);
 
-    const { name, subdomain, template } = handbookData;
+    const { name, subdomain, template, userId } = handbookData;
 
     // Om SKIP_STRIPE är true, skapa handbok direkt och returnera lyckat svar
     if (process.env.SKIP_STRIPE === 'true') {
       try {
-        const handbookId = await createHandbookWithSectionsAndPages(name, subdomain, template);
+        const handbookId = await createHandbookWithSectionsAndPages(name, subdomain, template, userId);
         console.log(`[SKIP_STRIPE] Handbok skapad direkt med id: ${handbookId}`);
         return new Response(JSON.stringify({ success: true, handbookId, message: 'Handbok skapad utan Stripe!' }), {
           status: 200,
@@ -32,21 +32,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Logga vad som skickas vidare till Stripe
-    console.log("[Stripe Checkout] Skickar till Stripe:", { name, subdomain });
+    console.log("[Stripe Checkout] Skickar till Stripe:", { name, subdomain, userId });
 
     const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    
-    const sessionId = Date.now().toString();
     
     const session = await createCheckoutSession(
       name,
       subdomain,
-      `${origin}/success?session_id=${sessionId}&handbook_name=${encodeURIComponent(name)}&subdomain=${encodeURIComponent(subdomain)}`,
+      userId,
+      `${origin}/success?session_id={CHECKOUT_SESSION_ID}&handbook_name=${encodeURIComponent(name)}&subdomain=${encodeURIComponent(subdomain)}`,
       `${origin}/create-handbook`
     );
 
     return NextResponse.json({ 
-      sessionId, 
+      sessionId: session.id, 
       sessionUrl: session.url,
       isTestMode
     });

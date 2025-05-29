@@ -24,6 +24,7 @@ export const stripe = stripeSecretKey
 export const createCheckoutSession = async (
   handbookName: string,
   subdomain: string,
+  userId: string,
   successUrl: string,
   cancelUrl: string
 ) => {
@@ -59,6 +60,7 @@ export const createCheckoutSession = async (
     metadata: {
       subdomain,
       handbookName,
+      userId,
     },
   });
 };

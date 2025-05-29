@@ -230,7 +230,7 @@ function CreateHandbookContent() {
               <p className="mt-2">Du kan använda denna knapp för att hantera innehåll och medlemmar i din handbok.</p>
               {handbooks.length === 0 && (
                 <p className="mt-2 font-medium text-blue-600">
-                  �� Din första handbok ingår i ditt konto! För fler handböcker kan du uppgradera senare.
+                  
                 </p>
               )}
             </div>

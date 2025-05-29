@@ -50,6 +50,28 @@ export default function SuccessClient() {
         }
         setHandbookName(data.metadata.handbookName || null);
         setSubdomain(data.metadata.subdomain || null);
+        
+        // In development mode, try to create handbook if it doesn't exist
+        // since webhooks don't work on localhost
+        if (process.env.NODE_ENV === 'development' && data.metadata.handbookName && data.metadata.subdomain && data.metadata.userId) {
+          console.log('[Success] Attempting fallback handbook creation in development mode');
+          try {
+            const fallbackResponse = await fetch('/api/create-handbook-fallback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                handbookName: data.metadata.handbookName,
+                subdomain: data.metadata.subdomain,
+                userId: data.metadata.userId
+              })
+            });
+            const fallbackData = await fallbackResponse.json();
+            console.log('[Success] Fallback creation result:', fallbackData);
+          } catch (e) {
+            console.log('Fallback handbook creation failed (this is normal if handbook already exists):', e);
+          }
+        }
+        
         setIsLoading(false);
       } catch (e: any) {
         setError('Kunde inte hämta sessionens metadata.');
@@ -59,10 +81,16 @@ export default function SuccessClient() {
     fetchSession();
   }, [sessionId]);
 
-  // Compute the final subdomain with test. prefix if in test mode
-  const getFinalSubdomain = () => {
+  // Compute the final path - no test prefix needed for path-based routing
+  const getFinalPath = () => {
     if (!subdomain) return '';
-    return isTestMode ? `test.${subdomain}` : subdomain;
+    return subdomain;
+  };
+
+  // Get the handbook URL using path-based format
+  const getHandbookUrl = () => {
+    const finalPath = getFinalPath();
+    return `https://www.handbok.org/${finalPath}`;
   };
 
   useEffect(() => {
@@ -72,7 +100,7 @@ export default function SuccessClient() {
         setRedirectCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
-            window.location.href = `https://www.handbok.org/${getFinalSubdomain()}`;
+            window.location.href = getHandbookUrl();
             return 0;
           }
           return prev - 1;
@@ -118,7 +146,8 @@ export default function SuccessClient() {
     );
   }
 
-  const finalSubdomain = getFinalSubdomain();
+  const finalPath = getFinalPath();
+  const handbookUrl = getHandbookUrl();
 
   return (
     <MainLayout variant="landing" showAuth={false}>
@@ -145,10 +174,10 @@ export default function SuccessClient() {
             <p className="text-center">
               Din handbok finns på:
               <a 
-                href={`https://${finalSubdomain}.handbok.org`} 
+                href={handbookUrl} 
                 className="block mt-2 font-medium text-blue-600 hover:underline"
               >
-                {finalSubdomain}.handbok.org
+                www.handbok.org/{finalPath}
               </a>
             </p>
             <p className="text-center mt-3 text-gray-600">
@@ -157,7 +186,7 @@ export default function SuccessClient() {
           </div>
           <div className="flex justify-center space-x-4">
             <a 
-              href={`https://www.handbok.org/handbook/${finalSubdomain}`} 
+              href={handbookUrl} 
               className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
             >
               Gå till din handbok nu

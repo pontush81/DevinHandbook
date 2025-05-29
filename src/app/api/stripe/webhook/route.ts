@@ -24,14 +24,14 @@ export async function POST(req: NextRequest) {
       // Logga all metadata från Stripe-sessionen
       console.log("[Stripe Webhook] Mottagen session.metadata:", session.metadata);
       
-      const { subdomain, handbookName } = session.metadata || {};
+      const { subdomain, handbookName, userId } = session.metadata || {};
       
       if (subdomain && handbookName) {
-        const finalSubdomain = isTestMode ? `test.${subdomain}` : subdomain;
+        // Use subdomain directly without test prefix for path-based routing
+        const finalSubdomain = subdomain;
         
-        console.log(`Creating handbook with name: ${handbookName}, subdomain: ${finalSubdomain}`);
-        const userId = null; // TODO: Hämta userId om möjligt
-        await createHandbookInSupabase(handbookName, finalSubdomain, userId);
+        console.log(`Creating handbook with name: ${handbookName}, subdomain: ${finalSubdomain}, userId: ${userId || 'null'}`);
+        await createHandbookInSupabase(handbookName, finalSubdomain, userId || null);
       }
     }
 
