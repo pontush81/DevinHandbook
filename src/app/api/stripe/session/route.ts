@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import { stripe } from '@/lib/stripe';
 
 export async function GET(req: NextRequest) {
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-  if (!stripeSecretKey) {
-    return NextResponse.json({ error: 'STRIPE_SECRET_KEY is not set in environment variables' }, { status: 500 });
+  if (!stripe) {
+    return NextResponse.json({ error: 'Stripe not initialized. Missing API key.' }, { status: 500 });
   }
-  const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2023-08-16',
-  });
 
   const { searchParams } = new URL(req.url);
   const session_id = searchParams.get('session_id');
@@ -25,10 +21,11 @@ export async function GET(req: NextRequest) {
       customer_email: session.customer_details?.email || null,
       payment_status: session.payment_status,
       subdomain: session?.metadata?.subdomain || null,
-      handbook_name: session?.metadata?.handbook_name || null,
+      handbook_name: session?.metadata?.handbookName || null,
       session,
     });
   } catch (error: any) {
+    console.error('Error fetching Stripe session:', error);
     return NextResponse.json({ error: error.message || 'Failed to fetch session' }, { status: 500 });
   }
 } 
