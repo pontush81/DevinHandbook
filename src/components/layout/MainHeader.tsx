@@ -55,11 +55,7 @@ export function MainHeader({
   };
 
   const defaultNavLinks = [
-    { href: '#features', label: 'Funktioner' },
-    { href: '#pricing', label: 'Pris' },
-    { href: '/search', label: 'Hitta förening' },
-    { href: '#faq', label: 'Vanliga frågor' },
-    { href: '/contact', label: 'Kontakt' }
+    { href: '#faq', label: 'Vanliga frågor' }
   ];
 
   const linksToRender = navLinks || defaultNavLinks;

@@ -322,16 +322,14 @@ export default function HomePage() {
             <AccordionItem value="item-1">
               <AccordionTrigger>Vad ingår i priset på 990 kr/år?</AccordionTrigger>
               <AccordionContent>
-                I priset ingår en komplett digital handbok med egen subdomän (t.ex. dinforening.handbok.org), 
-                obegränsad lagring, automatiska säkerhetskopior, SSL-certifikat, och fullständig support. 
-                Inga dolda kostnader eller begränsningar i antal användare.
+                I priset ingår en komplett digital handbok med egen URL (t.ex. www.handbok.org/din-förening).
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-2">
               <AccordionTrigger>Hur snabbt kan vi komma igång?</AccordionTrigger>
               <AccordionContent>
-                Din handbok är redo att användas inom 24 timmar efter beställning. Du får inloggningsuppgifter 
-                och kan börja lägga in information direkt. Vi hjälper gärna till med överföring av befintligt material.
+                Din handbok är redo att användas omedelbart efter beställning. Du får inloggningsuppgifter 
+                och kan börja lägga in information direkt. 
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-3">
@@ -349,38 +347,6 @@ export default function HomePage() {
                 i 90 dagar så du kan återaktivera tjänsten utan att förlora information om du ångrar dig.
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value="item-5">
-              <AccordionTrigger>Är det säkert att lagra känsliga dokument?</AccordionTrigger>
-              <AccordionContent>
-                Ja, vi använder bankstandard säkerhet med SSL-kryptering, regelbundna säkerhetskopior och 
-                serverlagring i Sverige enligt GDPR. Du kan också sätta lösenordsskydd på känsliga sektioner.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-6">
-              <AccordionTrigger>Kan vi byta subdomän senare?</AccordionTrigger>
-              <AccordionContent>
-                Ja, du kan byta subdomän en gång per år utan extra kostnad. Kontakta vår support för att 
-                genomföra ändringen. Vi hjälper till att säkerställa att övergången sker smidigt.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-7">
-              <AccordionTrigger>Får vi support och hjälp?</AccordionTrigger>
-              <AccordionContent>
-                Ja, fullständig support ingår i priset. Vi hjälper till med installation, överföring av befintligt 
-                material, utbildning av administratörer och löser tekniska problem. Kontakta oss på info@handbok.org 
-                eller via telefon.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-8">
-              <AccordionTrigger>Vilka URL-format kan vi använda för vår handbok?</AccordionTrigger>
-              <AccordionContent>
-                Vi stödjer båda URL-formaten för maximal flexibilitet: <br/>
-                • <strong>Path-baserad:</strong> www.handbok.org/dinforening <br/>
-                • <strong>Subdomän:</strong> dinforening.handbok.org <br/>
-                Båda leder till samma handbok och fungerar lika bra. Du kan använda det format som passar er bäst 
-                eller dela båda med era medlemmar.
-              </AccordionContent>
-            </AccordionItem>
           </Accordion>
         </div>
       </section>
@@ -393,7 +359,7 @@ export default function HomePage() {
               Redo att förenkla informationsdelningen?
             </h2>
             <p className="mt-3 md:mt-4 text-base sm:text-lg leading-6 px-4">
-              Skapa er digitala handbok på mindre än 10 minuter. Komma igång direkt!
+              Skapa er digitala handbok på mindre än 10 minuter.
             </p>
             <div className="mt-6 md:mt-8 flex flex-col sm:flex-row justify-center gap-3">
               <div className="inline-flex rounded-md shadow">
