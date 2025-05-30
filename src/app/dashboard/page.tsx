@@ -213,9 +213,6 @@ export default function DashboardPage() {
                 <p className="text-gray-500 mb-6 max-w-md mx-auto">
                   Skapa din första digitala handbok. Perfekt för föreningar, företag och organisationer som vill dela information på ett enkelt sätt.
                 </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-                  <p className="text-blue-800 font-medium">🎉 Din första handbok ingår i ditt konto!</p>
-                </div>
                 <Button asChild size="lg">
                   <Link href="/create-handbook?new=true">
                     Skapa din första handbok
