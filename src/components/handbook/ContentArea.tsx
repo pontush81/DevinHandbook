@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { HandbookSection as Section, HandbookPage as Page, Handbook } from '@/types/handbook';
-import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image, ChevronUp, ChevronDown, Eye, Heart, Recycle, Car } from 'lucide-react';
+import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus, ChevronUp, ChevronDown, Eye, Heart, Recycle, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { QuickActionCard } from './QuickActionCard';
@@ -9,6 +9,8 @@ import { InfoCard } from './InfoCard';
 import { ContactCard } from './ContactCard';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { InlineEdit } from '@/components/ui/InlineEdit';
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +22,8 @@ import {
   upsertWelcomeContent, 
   getDefaultWelcomeContent 
 } from '@/lib/services/welcomeContentService';
-import TextareaAutosize from 'react-textarea-autosize';
-import { useDebouncedCallback } from 'use-debounce';
 import { getIconComponent } from '@/lib/icon-utils';
 import { IconPicker } from '@/components/ui/IconPicker';
-import debounce from 'lodash/debounce';
 
 interface ContentAreaProps {
   sections: Section[];
@@ -121,90 +120,6 @@ const EditableWelcomeContent: React.FC<EditableWelcomeContentProps> = ({
   );
 };
 
-interface RobustTextareaProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  minRows?: number;
-  pageId: string;
-}
-
-const RobustTextarea: React.FC<RobustTextareaProps> = ({ 
-  value, 
-  onChange, 
-  placeholder = "Skriv ditt innehåll här...", 
-  className = "",
-  minRows = 10,
-  pageId
-}) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [localValue, setLocalValue] = useState(value);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Debounced auto-save function
-  const debouncedSave = useMemo(
-    () => debounce(async (newValue: string) => {
-      if (newValue !== value) {
-        setIsSaving(true);
-        try {
-          await onChange(newValue);
-        } catch (error) {
-          console.error('Error auto-saving:', error);
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    }, 1000),
-    [onChange, value]
-  );
-
-  // Update local value when props change
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  // Auto-resize textarea
-  const adjustHeight = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const scrollHeight = textarea.scrollHeight;
-      const minHeight = (minRows * 20) + 12; // Approximate line height + padding
-      textarea.style.height = Math.max(scrollHeight, minHeight) + 'px';
-    }
-  }, [minRows]);
-
-  // Adjust height when content changes
-  useEffect(() => {
-    adjustHeight();
-  }, [localValue, adjustHeight]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue);
-    debouncedSave(newValue);
-  };
-
-  return (
-    <div className="relative">
-      <textarea
-        ref={textareaRef}
-        value={localValue}
-        onChange={handleChange}
-        placeholder={placeholder}
-        className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-sm sm:text-base leading-relaxed resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${className}`}
-        style={{ minHeight: `${(minRows * 20) + 12}px` }}
-      />
-      {isSaving && (
-        <div className="absolute bottom-2 right-2 text-xs text-blue-600 bg-white px-2 py-1 rounded shadow">
-          💾 Sparar automatiskt...
-        </div>
-      )}
-    </div>
-  );
-};
-
 // Helper function for default welcome content
 const getWelcomeContent = () => ({
   title: "Välkommen!",
@@ -215,45 +130,6 @@ const getWelcomeContent = () => ({
 // Helper function to get section icon
 const getSectionIcon = (section: Section) => {
   return getIconComponent(section.icon);
-};
-
-// Markdown Toolbar Component
-interface MarkdownToolbarProps {
-  onInsert: (text: string, cursorOffset?: number) => void;
-}
-
-const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onInsert }) => {
-  const buttons = [
-    { icon: Bold, label: 'Fet', format: '**text**', offset: 2 },
-    { icon: Italic, label: 'Kursiv', format: '*text*', offset: 1 },
-    { icon: List, label: 'Lista', format: '- ', offset: 0 },
-    { icon: ListOrdered, label: 'Numrerad', format: '1. ', offset: 0 },
-    { icon: Quote, label: 'Citat', format: '> ', offset: 0 },
-    { icon: Code, label: 'Kod', format: '`kod`', offset: 1 },
-    { icon: Link2, label: 'Länk', format: '[länktext](url)', offset: 5 },
-    { icon: Image, label: 'Bild', format: '![alt text](url)', offset: 5 },
-  ];
-
-  return (
-    <>
-      {buttons.map((btn, index) => {
-        const IconComponent = btn.icon;
-        return (
-          <Button
-            key={btn.label}
-            variant="ghost"
-            size="sm"
-            onClick={() => onInsert(btn.format, btn.offset)}
-            className="h-9 w-full sm:w-auto sm:h-8 p-2 sm:px-3 flex items-center justify-center sm:justify-start gap-1 sm:gap-2 text-xs hover:bg-blue-100 hover:text-blue-700 transition-colors"
-            title={btn.label}
-          >
-            <IconComponent className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline text-xs font-medium">{btn.label}</span>
-          </Button>
-        );
-      })}
-    </>
-  );
 };
 
 // Inline Section Creator Component
@@ -382,6 +258,25 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
     sectionsArray[0]?.id || null
   );
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  
+  // Local state for content editing to prevent cursor jumping
+  const [localPageContent, setLocalPageContent] = useState<Record<string, string>>({});
+  const saveTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Initialize local content state when pages change
+  useEffect(() => {
+    const newLocalContent: Record<string, string> = {};
+    sectionsArray.forEach(section => {
+      section.pages?.forEach(page => {
+        if (!(page.id in localPageContent)) {
+          newLocalContent[page.id] = page.content || '';
+        }
+      });
+    });
+    if (Object.keys(newLocalContent).length > 0) {
+      setLocalPageContent(prev => ({ ...prev, ...newLocalContent }));
+    }
+  }, [sectionsArray]);
 
   // Use currentPageId from props instead of local state
   useEffect(() => {
@@ -515,9 +410,15 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
     }
   };
 
-  // Auto-save page content directly to database  
-  const handleContentChange = async (pageId: string, content: string) => {
+  // Auto-save page content directly to database with debouncing
+  const handleContentChange = useCallback(async (pageId: string, content: string) => {
     console.log('🔄 [ContentArea] Auto-saving page content:', pageId);
+    
+    // Clear existing timeout
+    if (saveTimeouts.current[pageId]) {
+      clearTimeout(saveTimeouts.current[pageId]);
+      delete saveTimeouts.current[pageId];
+    }
     
     try {
       const response = await fetch(`/api/pages/${pageId}`, {
@@ -540,9 +441,47 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
       
     } catch (error) {
       console.error('❌ [ContentArea] Error auto-saving page content:', error);
-      alert('❌ Fel vid sparning av sida. Försök igen.');
+      // Revert local content to last saved state
+      const page = sectionsArray.flatMap(s => s.pages || []).find(p => p.id === pageId);
+      if (page) {
+        setLocalPageContent(prev => ({ ...prev, [pageId]: page.content || '' }));
+      }
+      alert('❌ Fel vid sparning av sida. Innehållet har återställts.');
     }
-  };
+  }, [sectionsArray, onUpdatePage]);
+
+  // Debounced content change handler
+  const handleLocalContentChange = useCallback((pageId: string, newContent: string) => {
+    // Update local state immediately for smooth typing
+    setLocalPageContent(prev => ({ ...prev, [pageId]: newContent }));
+    
+    // Clear existing timeout
+    if (saveTimeouts.current[pageId]) {
+      clearTimeout(saveTimeouts.current[pageId]);
+    }
+    
+    // Set new timeout for auto-save
+    saveTimeouts.current[pageId] = setTimeout(() => {
+      handleContentChange(pageId, newContent);
+    }, 1500); // 1.5 second delay
+  }, [handleContentChange]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(saveTimeouts.current).forEach(timeout => clearTimeout(timeout));
+    };
+  }, []);
+
+  // Update local content when a page is selected to ensure sync
+  useEffect(() => {
+    if (selectedPageId) {
+      const page = sectionsArray.flatMap(s => s.pages || []).find(p => p.id === selectedPageId);
+      if (page && localPageContent[selectedPageId] !== page.content) {
+        setLocalPageContent(prev => ({ ...prev, [selectedPageId]: page.content || '' }));
+      }
+    }
+  }, [selectedPageId, sectionsArray]);
 
   // Auto-save page title directly to database
   const handlePageUpdate = async (pageId: string, updates: Partial<Page>) => {
@@ -573,9 +512,9 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
     }
   };
 
-  // Get page content
+  // Get page content (prefer local state for smooth editing)
   const getPageContent = (page: Page): string => {
-    return page.content || '';
+    return localPageContent[page.id] !== undefined ? localPageContent[page.id] : (page.content || '');
   };
 
   // Create new section
@@ -937,15 +876,196 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
 
                               <div className="mb-4 sm:mb-6">
                                 {isEditMode ? (
-                                  <RobustTextarea
-                                    value={getPageContent(page)}
-                                    onChange={(newContent) => handleContentChange(page.id, newContent)}
-                                    placeholder="Skriv ditt innehåll här... Du kan använda Markdown för formatering."
-                                    className="min-h-32 sm:min-h-40"
-                                    pageId={page.id}
-                                  />
+                                  <div className="border border-gray-300 rounded-lg">
+                                    {/* Simple formatting toolbar */}
+                                    <div className="border-b border-gray-200 p-2 bg-gray-50 flex flex-wrap gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const end = textarea.selectionEnd;
+                                          const selectedText = textarea.value.substring(start, end);
+                                          const newText = textarea.value.substring(0, start) + '**' + (selectedText || 'fet text') + '**' + textarea.value.substring(end);
+                                          handleLocalContentChange(page.id, newText);
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Fet text"
+                                      >
+                                        <span className="font-bold">B</span>
+                                        <span className="hidden sm:inline">Fet</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const end = textarea.selectionEnd;
+                                          const selectedText = textarea.value.substring(start, end);
+                                          const newText = textarea.value.substring(0, start) + '*' + (selectedText || 'kursiv text') + '*' + textarea.value.substring(end);
+                                          handleLocalContentChange(page.id, newText);
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Kursiv text"
+                                      >
+                                        <span className="italic">I</span>
+                                        <span className="hidden sm:inline">Kursiv</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const lines = textarea.value.split('\n');
+                                          let currentPos = 0;
+                                          let lineIndex = 0;
+                                          for (let i = 0; i < lines.length; i++) {
+                                            if (currentPos + lines[i].length >= start) {
+                                              lineIndex = i;
+                                              break;
+                                            }
+                                            currentPos += lines[i].length + 1;
+                                          }
+                                          lines[lineIndex] = '# ' + lines[lineIndex];
+                                          handleLocalContentChange(page.id, lines.join('\n'));
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Stor rubrik"
+                                      >
+                                        <span className="font-bold">H1</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const lines = textarea.value.split('\n');
+                                          let currentPos = 0;
+                                          let lineIndex = 0;
+                                          for (let i = 0; i < lines.length; i++) {
+                                            if (currentPos + lines[i].length >= start) {
+                                              lineIndex = i;
+                                              break;
+                                            }
+                                            currentPos += lines[i].length + 1;
+                                          }
+                                          lines[lineIndex] = '## ' + lines[lineIndex];
+                                          handleLocalContentChange(page.id, lines.join('\n'));
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Mindre rubrik"
+                                      >
+                                        <span className="font-bold">H2</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const lines = textarea.value.split('\n');
+                                          let currentPos = 0;
+                                          let lineIndex = 0;
+                                          for (let i = 0; i < lines.length; i++) {
+                                            if (currentPos + lines[i].length >= start) {
+                                              lineIndex = i;
+                                              break;
+                                            }
+                                            currentPos += lines[i].length + 1;
+                                          }
+                                          lines[lineIndex] = '- ' + lines[lineIndex];
+                                          handleLocalContentChange(page.id, lines.join('\n'));
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Lista"
+                                      >
+                                        <span>•</span>
+                                        <span className="hidden sm:inline">Lista</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const lines = textarea.value.split('\n');
+                                          let currentPos = 0;
+                                          let lineIndex = 0;
+                                          for (let i = 0; i < lines.length; i++) {
+                                            if (currentPos + lines[i].length >= start) {
+                                              lineIndex = i;
+                                              break;
+                                            }
+                                            currentPos += lines[i].length + 1;
+                                          }
+                                          lines[lineIndex] = '1. ' + lines[lineIndex];
+                                          handleLocalContentChange(page.id, lines.join('\n'));
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Numrerad lista"
+                                      >
+                                        <span>1.</span>
+                                        <span className="hidden sm:inline">Numrerad</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const end = textarea.selectionEnd;
+                                          const selectedText = textarea.value.substring(start, end);
+                                          const newText = textarea.value.substring(0, start) + '[' + (selectedText || 'länktext') + '](url)' + textarea.value.substring(end);
+                                          handleLocalContentChange(page.id, newText);
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Länk"
+                                      >
+                                        <span>🔗</span>
+                                        <span className="hidden sm:inline">Länk</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
+                                          if (!textarea) return;
+                                          const start = textarea.selectionStart;
+                                          const lines = textarea.value.split('\n');
+                                          let currentPos = 0;
+                                          let lineIndex = 0;
+                                          for (let i = 0; i < lines.length; i++) {
+                                            if (currentPos + lines[i].length >= start) {
+                                              lineIndex = i;
+                                              break;
+                                            }
+                                            currentPos += lines[i].length + 1;
+                                          }
+                                          lines[lineIndex] = '> ' + lines[lineIndex];
+                                          handleLocalContentChange(page.id, lines.join('\n'));
+                                        }}
+                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
+                                        title="Citat"
+                                      >
+                                        <span>❝</span>
+                                        <span className="hidden sm:inline">Citat</span>
+                                      </button>
+                                    </div>
+                                    
+                                    <Textarea
+                                      id={`content-${page.id}`}
+                                      value={localPageContent[page.id] || ''}
+                                      onChange={(e) => handleLocalContentChange(page.id, e.target.value)}
+                                      placeholder="Skriv ditt innehåll här... Du kan använda Markdown för formatering."
+                                      className="border-0 rounded-none resize-none focus:ring-0 min-h-32 sm:min-h-40"
+                                      rows={8}
+                                    />
+                                  </div>
                                 ) : (
-                                  <MarkdownRenderer content={getPageContent(page)} />
+                                  <MarkdownRenderer content={localPageContent[page.id] || ''} />
                                 )}
                               </div>
 

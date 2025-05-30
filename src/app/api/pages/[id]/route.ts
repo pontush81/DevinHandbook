@@ -3,10 +3,10 @@ import { getServiceSupabase } from '@/lib/supabase';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const pageId = params.id;
+    const { id: pageId } = await params;
     const updates = await request.json();
 
     console.log('🔄 [API] Updating page:', pageId, updates);
