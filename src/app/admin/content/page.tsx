@@ -247,6 +247,43 @@ export default function ContentManagementPage() {
     }
   };
 
+  // Delete page
+  const deletePage = async (pageId: string, pageTitle: string) => {
+    if (!selectedSection) return;
+    
+    // Don't allow deletion if it's the only page in the section
+    if (selectedSection.pages.length <= 1) {
+      setError("Kan inte radera den enda sidan i sektionen");
+      return;
+    }
+    
+    if (!window.confirm(`Är du säker på att du vill radera sidan "${pageTitle}"? Detta kan inte ångras.`)) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from("pages")
+        .delete()
+        .eq("id", pageId);
+      
+      if (error) throw error;
+      
+      // If we're deleting the currently selected page, clear the selection
+      if (selectedPage?.id === pageId) {
+        setSelectedPage(null);
+        setEditingContent("");
+        setEditingTitle("");
+      }
+      
+      await fetchSections(selectedHandbook!.id);
+      setSuccess("Sida raderad");
+    } catch (err) {
+      console.error("Error deleting page:", err);
+      setError("Kunde inte radera sidan");
+    }
+  };
+
   useEffect(() => {
     fetchHandbooks();
   }, [fetchHandbooks]);
@@ -401,19 +438,31 @@ export default function ContentManagementPage() {
                   {selectedSection?.id === section.id && (
                     <div className="ml-6 mt-2 space-y-1">
                       {section.pages.map((page) => (
-                        <Button
-                          key={page.id}
-                          variant={selectedPage?.id === page.id ? "secondary" : "ghost"}
-                          size="sm"
-                          className="w-full justify-start text-sm"
-                          onClick={() => {
-                            setSelectedPage(page);
-                            setEditingContent(page.content || "");
-                            setEditingTitle(page.title || "");
-                          }}
-                        >
-                          {page.title}
-                        </Button>
+                        <div key={page.id} className="flex items-center group">
+                          <Button
+                            variant={selectedPage?.id === page.id ? "secondary" : "ghost"}
+                            size="sm"
+                            className="flex-1 justify-start text-sm"
+                            onClick={() => {
+                              setSelectedPage(page);
+                              setEditingContent(page.content || "");
+                              setEditingTitle(page.title || "");
+                            }}
+                          >
+                            {page.title}
+                          </Button>
+                          {section.pages.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deletePage(page.id, page.title)}
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 hover:text-red-600 ml-1"
+                              title="Radera sida"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       ))}
                       <Dialog open={showNewPageModal} onOpenChange={setShowNewPageModal}>
                         <DialogTrigger asChild>

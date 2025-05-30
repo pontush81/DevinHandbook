@@ -33,6 +33,7 @@ interface ContentAreaProps {
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   onAddPage?: (sectionId: string, title: string, content?: string) => void;
+  onDeletePage?: (pageId: string, sectionId: string) => void;
   onAddSection?: (title: string, description: string, icon: string, insertIndex?: number) => void;
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   onDeleteSection?: (sectionId: string) => void;
@@ -496,6 +497,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   onUpdateSection,
   onUpdatePage,
   onAddPage,
+  onDeletePage,
   onAddSection,
   onMoveSection,
   onDeleteSection,
@@ -794,16 +796,35 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                                 </div>
 
                                 {/* Page controls - mobile optimized */}
-                                {isEditMode && onAddPage && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onAddPage(section.id, `Ny sida ${pageIndex + 2}`, '')}
-                                    className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600 flex-shrink-0"
-                                    title="Lägg till sida"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </Button>
+                                {isEditMode && (
+                                  <div className="flex gap-1 flex-shrink-0">
+                                    {onAddPage && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => onAddPage(section.id, `Ny sida ${pageIndex + 2}`, '')}
+                                        className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
+                                        title="Lägg till sida"
+                                      >
+                                        <Plus className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {onDeletePage && section.pages && section.pages.length > 1 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          if (window.confirm(`Är du säker på att du vill radera sidan "${page.title}"? Detta kan inte ångras.`)) {
+                                            onDeletePage(page.id, section.id);
+                                          }
+                                        }}
+                                        className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
+                                        title="Radera sida"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
 
