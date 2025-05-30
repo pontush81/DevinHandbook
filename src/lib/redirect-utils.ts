@@ -269,6 +269,7 @@ export async function smartRedirectWithPolling(
         
         console.log(`[Smart Redirect Polling] Redirecting to: ${handbookUrl}`);
         window.location.href = handbookUrl;
+        return;
         
       } else {
         console.log(`[Smart Redirect Polling] Multiple handbooks found (${handbookCount}), redirecting to dashboard`);
