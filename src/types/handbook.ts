@@ -4,6 +4,7 @@ export interface HandbookPage {
   content: string;
   order_index: number;
   section_id: string;
+  is_published?: boolean;
   lastUpdated?: string;
   estimatedReadTime?: number;
   quickActions?: QuickAction[];
@@ -19,6 +20,7 @@ export interface HandbookSection {
   order_index: number;
   handbook_id: string;
   is_public?: boolean;
+  is_published?: boolean;
   icon?: string;
   pages: HandbookPage[];
 }

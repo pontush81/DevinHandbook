@@ -43,6 +43,7 @@ interface Section {
   order_index: number;
   handbook_id: string;
   is_public?: boolean;
+  is_published?: boolean;
   pages: Page[];
 }
 
@@ -52,6 +53,7 @@ interface Page {
   content: string;
   order_index: number;
   section_id: string;
+  is_published?: boolean;
 }
 
 export default function ContentManagementPage() {
@@ -369,6 +371,51 @@ export default function ContentManagementPage() {
               ))}
             </SelectContent>
           </Select>
+          
+          {/* Handbook published status toggle */}
+          {selectedHandbook && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="handbook-published"
+                  checked={selectedHandbook.published}
+                  onChange={async (e) => {
+                    try {
+                      const { error } = await supabase
+                        .from('handbooks')
+                        .update({ published: e.target.checked })
+                        .eq('id', selectedHandbook.id);
+                      
+                      if (error) throw error;
+                      
+                      // Update local state
+                      setHandbooks(prev => prev.map(h => 
+                        h.id === selectedHandbook.id ? { ...h, published: e.target.checked } : h
+                      ));
+                      setSelectedHandbook(prev => prev ? { ...prev, published: e.target.checked } : null);
+                      setSuccess(`Handbok ${e.target.checked ? 'publicerad' : 'avpublicerad'}`);
+                      setTimeout(() => setSuccess(''), 3000);
+                    } catch (err) {
+                      console.error('Error updating handbook published status:', err);
+                      setError('Kunde inte uppdatera publiceringsstatus');
+                      setTimeout(() => setError(''), 5000);
+                    }
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label 
+                  htmlFor="handbook-published"
+                  className="text-sm font-medium text-gray-700 cursor-pointer"
+                >
+                  Publicerad handbok
+                </label>
+                <span className="text-xs text-gray-500">
+                  (Synlig på {selectedHandbook.subdomain}.handbok.org)
+                </span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -435,6 +482,80 @@ export default function ContentManagementPage() {
                     {section.title}
                   </Button>
                   
+                  {/* Section public status toggle */}
+                  <div className="ml-6 mt-1 mb-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`section-public-${section.id}`}
+                        checked={section.is_public !== false}
+                        onChange={async (e) => {
+                          try {
+                            const { error } = await supabase
+                              .from('sections')
+                              .update({ is_public: e.target.checked })
+                              .eq('id', section.id);
+                            
+                            if (error) throw error;
+                            
+                            // Update local state
+                            setSections(prev => prev.map(s => 
+                              s.id === section.id ? { ...s, is_public: e.target.checked } : s
+                            ));
+                            setSuccess('Sektionens synlighet uppdaterad');
+                            setTimeout(() => setSuccess(''), 3000);
+                          } catch (err) {
+                            console.error('Error updating section visibility:', err);
+                            setError('Kunde inte uppdatera sektionens synlighet');
+                            setTimeout(() => setError(''), 5000);
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label 
+                        htmlFor={`section-public-${section.id}`}
+                        className="text-sm text-gray-600 cursor-pointer"
+                      >
+                        Publik sektion
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <input
+                        type="checkbox"
+                        id={`section-published-${section.id}`}
+                        checked={section.is_published !== false}
+                        onChange={async (e) => {
+                          try {
+                            const { error } = await supabase
+                              .from('sections')
+                              .update({ is_published: e.target.checked })
+                              .eq('id', section.id);
+                            
+                            if (error) throw error;
+                            
+                            // Update local state
+                            setSections(prev => prev.map(s => 
+                              s.id === section.id ? { ...s, is_published: e.target.checked } : s
+                            ));
+                            setSuccess('Sektionens publiceringsstatus uppdaterad');
+                            setTimeout(() => setSuccess(''), 3000);
+                          } catch (err) {
+                            console.error('Error updating section published status:', err);
+                            setError('Kunde inte uppdatera sektionens publiceringsstatus');
+                            setTimeout(() => setError(''), 5000);
+                          }
+                        }}
+                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                      <label 
+                        htmlFor={`section-published-${section.id}`}
+                        className="text-sm text-gray-600 cursor-pointer"
+                      >
+                        Publicerad sektion
+                      </label>
+                    </div>
+                  </div>
+                  
                   {selectedSection?.id === section.id && (
                     <div className="ml-6 mt-2 space-y-1">
                       {section.pages.map((page) => (
@@ -451,6 +572,44 @@ export default function ContentManagementPage() {
                           >
                             {page.title}
                           </Button>
+                          
+                          {/* Page published status checkbox */}
+                          <div className="flex items-center space-x-1 mr-1">
+                            <input
+                              type="checkbox"
+                              id={`page-published-${page.id}`}
+                              checked={page.is_published !== false}
+                              onChange={async (e) => {
+                                try {
+                                  const { error } = await supabase
+                                    .from('pages')
+                                    .update({ is_published: e.target.checked })
+                                    .eq('id', page.id);
+                                  
+                                  if (error) throw error;
+                                  
+                                  // Update local state
+                                  setSections(prev => prev.map(s => 
+                                    s.id === selectedSection?.id ? {
+                                      ...s,
+                                      pages: s.pages.map(p => 
+                                        p.id === page.id ? { ...p, is_published: e.target.checked } : p
+                                      )
+                                    } : s
+                                  ));
+                                  setSuccess('Sidans publiceringsstatus uppdaterad');
+                                  setTimeout(() => setSuccess(''), 3000);
+                                } catch (err) {
+                                  console.error('Error updating page published status:', err);
+                                  setError('Kunde inte uppdatera sidans publiceringsstatus');
+                                  setTimeout(() => setError(''), 5000);
+                                }
+                              }}
+                              className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                              title="Publicerad sida"
+                            />
+                          </div>
+                          
                           {section.pages.length > 1 && (
                             <Button
                               variant="ghost"

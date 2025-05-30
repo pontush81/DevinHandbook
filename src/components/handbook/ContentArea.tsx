@@ -693,6 +693,44 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                                       size="sm"
                                     />
                                   </div>
+                                  <div className="mt-3 pt-3 border-t border-gray-200">
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`section-public-${section.id}`}
+                                        checked={section.is_public !== false}
+                                        onChange={(e) => onUpdateSection?.(section.id, { is_public: e.target.checked })}
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                      />
+                                      <label 
+                                        htmlFor={`section-public-${section.id}`}
+                                        className="text-sm text-gray-700 cursor-pointer font-medium"
+                                      >
+                                        Publik sektion
+                                      </label>
+                                      <span className="text-xs text-gray-500">
+                                        (Synlig för alla användare)
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`section-published-${section.id}`}
+                                        checked={section.is_published !== false}
+                                        onChange={(e) => onUpdateSection?.(section.id, { is_published: e.target.checked })}
+                                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                      />
+                                      <label 
+                                        htmlFor={`section-published-${section.id}`}
+                                        className="text-sm text-gray-700 cursor-pointer font-medium"
+                                      >
+                                        Publicerad sektion
+                                      </label>
+                                      <span className="text-xs text-gray-500">
+                                        (Aktivt innehåll)
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
                               ) : (
                                 <>
@@ -792,38 +830,40 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                                         {getSaveStatus(page.id) === 'saving' ? 'Sparar...' : 'Osparad'}
                                       </Badge>
                                     )}
+                                    {/* Published status checkbox - only in edit mode */}
+                                    {isEditMode && (
+                                      <div className="flex items-center space-x-1">
+                                        <input
+                                          type="checkbox"
+                                          id={`page-published-${page.id}`}
+                                          checked={page.is_published !== false}
+                                          onChange={(e) => onUpdatePage?.(page.id, { is_published: e.target.checked })}
+                                          className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                        />
+                                        <label htmlFor={`page-published-${page.id}`} className="text-xs text-gray-600 cursor-pointer">
+                                          Publicerad
+                                        </label>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 
                                 {/* Page controls - mobile optimized */}
-                                {isEditMode && (
+                                {isEditMode && onDeletePage && section.pages && section.pages.length > 1 && (
                                   <div className="flex gap-1 flex-shrink-0">
-                                    {onAddPage && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onAddPage(section.id, `Ny sida ${pageIndex + 2}`, '')}
-                                        className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
-                                        title="Lägg till sida"
-                                      >
-                                        <Plus className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                    {onDeletePage && section.pages && section.pages.length > 1 && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          if (window.confirm(`Är du säker på att du vill radera sidan "${page.title}"? Detta kan inte ångras.`)) {
-                                            onDeletePage(page.id, section.id);
-                                          }
-                                        }}
-                                        className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
-                                        title="Radera sida"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (window.confirm(`Är du säker på att du vill radera sidan "${page.title}"? Detta kan inte ångras.`)) {
+                                          onDeletePage(page.id, section.id);
+                                        }
+                                      }}
+                                      className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
+                                      title="Radera sida"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
                                   </div>
                                 )}
                               </div>
@@ -851,6 +891,21 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                               </div>
                             </div>
                           ))}
+                          
+                          {/* Add page button at the bottom of the section */}
+                          {isEditMode && onAddPage && (
+                            <div className="pt-4 border-t border-gray-100">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onAddPage(section.id, `Ny sida ${section.pages.length + 1}`, '')}
+                                className="w-full sm:w-auto space-x-2 h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50 bg-blue-50/50"
+                              >
+                                <Plus className="w-4 h-4" />
+                                <span>Lägg till ny sida</span>
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         /* Empty section state */
