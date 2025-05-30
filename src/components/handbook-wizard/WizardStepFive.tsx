@@ -2,11 +2,13 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useHandbookStore } from "@/lib/store/handbook-store";
+import { useAuth } from "@/contexts/AuthContext";
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function WizardStepFive() {
   const { name, subdomain, template } = useHandbookStore();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
@@ -17,13 +19,25 @@ export function WizardStepFive() {
   const handbookData = useMemo(() => ({
     name,
     subdomain,
+    userId: user?.id,
     template: {
       ...template,
+      metadata: template.metadata || {
+        subtitle: "",
+        version: "1.0",
+        organization: {
+          name: "",
+          address: "",
+          orgNumber: "",
+          phone: "",
+          email: ""
+        }
+      },
       sections: template.sections
         .filter(section => section.isActive)
         .sort((a, b) => a.order - b.order)
     }
-  }), [name, subdomain, template]);
+  }), [name, subdomain, template, user?.id]);
   
   useEffect(() => {
     console.log("Complete handbook data:", handbookData);
