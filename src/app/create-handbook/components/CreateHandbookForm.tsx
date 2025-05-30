@@ -71,22 +71,16 @@ export function CreateHandbookForm() {
 
     setIsCheckingSubdomain(true);
     try {
-      const { data, error } = await supabase
-        .from('handbooks')
-        .select('subdomain')
-        .eq('subdomain', value)
-        .single();
+      const response = await fetch(`/api/check-subdomain-availability?subdomain=${encodeURIComponent(value)}`);
+      const result = await response.json();
 
-      if (error && error.code === 'PGRST116') {
-        // No rows returned, subdomain is available
-        setIsSubdomainAvailable(true);
-      } else if (data) {
-        // Subdomain exists
-        setIsSubdomainAvailable(false);
-      } else {
-        // Other error
+      if (!response.ok) {
+        console.error('Error checking subdomain availability:', result.error);
         setIsSubdomainAvailable(null);
+        return;
       }
+
+      setIsSubdomainAvailable(result.available);
     } catch (err) {
       console.error('Error checking subdomain:', err);
       setIsSubdomainAvailable(null);
