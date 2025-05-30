@@ -5,9 +5,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const handbookId = searchParams.get('id');
   const userId = searchParams.get('userId');
+  const subdomain = searchParams.get('subdomain');
   
-  if (!handbookId && !userId) {
-    return NextResponse.json({ error: 'Missing id or userId parameter' }, { status: 400 });
+  if (!handbookId && !userId && !subdomain) {
+    return NextResponse.json({ error: 'Missing id, userId, or subdomain parameter' }, { status: 400 });
   }
 
   const supabase = getServiceSupabase();
@@ -21,6 +22,8 @@ export async function GET(req: NextRequest) {
       query = query.eq('id', handbookId);
     } else if (userId) {
       query = query.eq('owner_id', userId);
+    } else if (subdomain) {
+      query = query.eq('subdomain', subdomain);
     }
     
     const { data: handbooks, error } = await query.order('created_at', { ascending: false });
@@ -32,8 +35,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ 
       handbooks: handbooks || [],
       count: handbooks?.length || 0,
-      searchBy: handbookId ? 'id' : 'userId',
-      searchValue: handbookId || userId
+      searchBy: handbookId ? 'id' : (userId ? 'userId' : 'subdomain'),
+      searchValue: handbookId || userId || subdomain
     });
     
   } catch (error: any) {
