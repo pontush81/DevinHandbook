@@ -2,7 +2,7 @@ import { getHandbookBySubdomain } from '@/lib/handbook-service';
 import React from 'react';
 import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 import { ModernHandbookClient } from '@/components/ModernHandbookClient';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { HandbookSection } from '@/types/handbook';
 
 interface Section {
@@ -103,6 +103,12 @@ const adaptHandbookData = (handbook: Handbook) => {
 export default async function HandbookPage({ params }: Props) {
   const resolvedParams = await params;
   const { handbookName } = resolvedParams;
+  
+  // Emergency fix: Prevent 'undefined' from being processed as a handbook name
+  if (!handbookName || handbookName === 'undefined' || handbookName.trim() === '') {
+    console.error(`[HandbookPage] Invalid handbook name detected: "${handbookName}"`);
+    redirect('/dashboard');
+  }
   
   console.log(`[Handbook Page] 🏁 RENDERING HANDBOOK PAGE FOR PATH: /${handbookName}`);
   console.log(`[Handbook Page] 📍 This is path-based routing (handbok.org/${handbookName})`);
