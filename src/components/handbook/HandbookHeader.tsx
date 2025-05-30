@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -21,13 +21,28 @@ interface HandbookHeaderProps {
   onToggleEditMode?: () => void;
 }
 
-export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
+export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
   handbookTitle,
   canEdit = false,
   isEditMode = false,
   onToggleEditMode
 }) => {
   const { user, signOut } = useAuth();
+
+  // Cleanup any duplicate user menus on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Remove any duplicate user elements that might exist
+      const duplicateElements = document.querySelectorAll('header [class*="rounded-full"]:not([data-component="handbook-avatar"])');
+      duplicateElements.forEach((el, index) => {
+        if (index > 0) { // Keep first, remove others
+          el.remove();
+        }
+      });
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -39,14 +54,35 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
     }
   };
 
+  // Get user display name or email initial
+  const getUserDisplayName = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'Användare';
+  };
+
+  const getUserInitial = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name.charAt(0).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b transition-all duration-200 bg-white shadow-sm">
-      <div className="w-full px-6 sm:px-8 lg:px-12 flex h-12 items-center justify-between">
+      <div className="w-full px-0 flex h-12 items-center justify-between">
         
         {/* Left section - Sidebar trigger and Brand pushed to far left */}
-        <div className="flex items-center space-x-3 flex-shrink-0 min-w-0">
-          {/* Sidebar trigger längst till vänster */}
-          <SidebarTrigger className="flex-shrink-0" />
+        <div className="flex items-center space-x-3 flex-shrink-0 min-w-0 pl-0">
+          {/* Sidebar trigger längst till vänster utan padding */}
+          <SidebarTrigger className="flex-shrink-0 ml-0 mr-3" />
           
           {/* Brand section with tighter spacing */}
           <div className="flex items-center space-x-2 min-w-0">
@@ -69,36 +105,29 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right section - Edit button + User menu pushed to far right */}
-        <div className="flex items-center space-x-4 flex-shrink-0">
-          
-          {/* Edit button - only show if user can edit */}
-          {canEdit && (
-            <Button
-              variant={isEditMode ? "default" : "outline"}
-              size="sm"
-              onClick={handleToggleEdit}
-              className="hidden sm:flex items-center gap-2"
-            >
-              <Edit className="h-3 w-3" />
-              {isEditMode ? "Avsluta" : "Redigera"}
-            </Button>
-          )}
-          
-          {/* User menu */}
-          {user ? (
+        {/* Right section - User menu only */}
+        <div className="flex items-center space-x-4 flex-shrink-0 pr-4" data-debug="handbook-header-right">
+          {/* Debug: Only show one user menu */}
+          {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  className="flex items-center gap-2 h-8 px-2 hover:bg-gray-100" 
+                  data-debug="handbook-user-trigger"
+                >
+                  <Avatar className="h-6 w-6 flex-shrink-0" data-component="handbook-avatar">
                     <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email || ''} />
-                    <AvatarFallback>
-                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                    <AvatarFallback className="text-xs font-medium bg-gray-200" data-component="handbook-avatar">
+                      {getUserInitial()}
                     </AvatarFallback>
                   </Avatar>
+                  <span className="hidden sm:inline text-sm font-medium text-gray-700 max-w-[120px] truncate flex-shrink-0">
+                    {getUserDisplayName()}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 dropdown-menu-content" align="end" forceMount>
+              <DropdownMenuContent className="w-56 bg-white border border-gray-200 shadow-lg rounded-md" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
@@ -111,31 +140,33 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 
-                {/* Mobile edit button */}
+                {/* Edit mode option in dropdown */}
                 {canEdit && (
                   <>
-                    <DropdownMenuItem onClick={handleToggleEdit} className="sm:hidden dropdown-menu-item">
+                    <DropdownMenuItem onClick={handleToggleEdit}>
                       <Edit className="mr-2 h-4 w-4" />
                       {isEditMode ? "Avsluta redigering" : "Redigera"}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="sm:hidden" />
+                    <DropdownMenuSeparator />
                   </>
                 )}
                 
-                <DropdownMenuItem className="dropdown-menu-item">
+                <DropdownMenuItem>
                   <Link href="/dashboard" className="flex items-center w-full">
                     <Settings className="mr-2 h-4 w-4" />
                     Dashboard
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="dropdown-menu-item">
+                <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Logga ut
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
+          )}
+          
+          {!user && (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login" className="text-xs">
                 <User className="mr-1 h-3 w-3" />
@@ -147,4 +178,4 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = ({
       </div>
     </header>
   );
-}; 
+}); 

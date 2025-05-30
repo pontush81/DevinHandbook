@@ -471,8 +471,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           onToggleEditMode={handleToggleEditMode}
         />
 
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
+        <div className="flex flex-1">
+          {/* Sidebar - No top padding/margin to connect with header */}
           <ModernSidebar
             sections={visibleSections}
             currentPageId={currentPageId}
@@ -506,7 +506,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           />
 
           {/* Main content area */}
-          <SidebarInset className="flex-1 overflow-hidden">
+          <SidebarInset className="flex-1">
             {/* Main content - Proper height for scrolling with footer space */}
             <div className="h-full w-full flex flex-col">
               <div className="flex-1 overflow-hidden">

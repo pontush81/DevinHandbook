@@ -1752,3 +1752,73 @@ html, body {
 /* ==============================================
    EXISTING RESPONSIVE IMPROVEMENTS
    ============================================== */
+
+/* ==============================================
+   DROPDOWN MENU FIXES
+   ============================================== */
+
+/* Ensure dropdown menus are fully opaque with proper background */
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+.dropdown-menu-content,
+[role="menu"] {
+  background: white !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 6px !important;
+  z-index: 50 !important;
+  opacity: 1 !important;
+}
+
+/* ==============================================
+   SIDEBAR BORDER FIXES
+   ============================================== */
+
+/* Desktop sidebar should connect directly to header with no gap */
+@media (min-width: 768px) {
+  /* Create a visual extension of the sidebar border to the header */
+  [data-sidebar="sidebar"]::before {
+    content: '';
+    position: absolute;
+    top: -48px; /* Header height h-12 = 48px */
+    right: -1px;
+    width: 1px;
+    height: 48px;
+    background: hsl(var(--sidebar-border));
+    z-index: 51; /* Higher than header z-index (50) */
+    pointer-events: none;
+  }
+  
+  /* Ensure sidebar has the normal border */
+  [data-sidebar="sidebar"] {
+    border-right: 1px solid hsl(var(--sidebar-border));
+  }
+}
+
+/* ==============================================
+   SIDEBAR TRIGGER FIXES
+   ============================================== */
+
+/* Ensure sidebar trigger goes all the way to the edge */
+[data-sidebar="trigger"] {
+  margin-left: 0 !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+/* ==============================================
+   USER MENU FIXES
+   ============================================== */
+
+/* Ensure only the handbook header user menu is visible */
+[data-debug="handbook-user-trigger"] {
+  display: flex !important;
+}
+
+/* Hide any floating user elements that aren't part of the main button */
+header > div > span:not([data-debug="handbook-user-trigger"] span),
+header > div > div:not([data-debug="handbook-header-right"]) [class*="rounded-full"] {
+  display: none !important;
+}
