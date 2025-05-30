@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { HandbookHeader } from './handbook/HandbookHeader';
 import { ModernSidebar, SidebarTrigger } from './handbook/ModernSidebar';
 import { ContentArea } from './handbook/ContentArea';
@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { MainFooter } from '@/components/layout/MainFooter';
+import { MembersManager } from '@/components/handbook/MembersManager';
 
 interface ModernHandbookClientProps {
   initialData: {
@@ -24,17 +25,14 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   initialData,
   defaultEditMode = false
 }) => {
-  const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
-  const [mounted, setMounted] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Edit mode state - use defaultEditMode prop
-  const [isEditMode, setIsEditMode] = useState(defaultEditMode);
-  const [handbookData, setHandbookData] = useState(initialData);
-  const [canEdit, setCanEdit] = useState(false);
-
-  // Auth context
   const { user, isLoading: authLoading } = useAuth();
+  const [handbookData, setHandbookData] = useState(initialData);
+  const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
+  const [isEditMode, setIsEditMode] = useState(defaultEditMode);
+  const [editView, setEditView] = useState<'content' | 'members'>('content'); // Växla mellan innehåll och medlemmar
+  const [canEdit, setCanEdit] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   // Hydration fix - vänta tills komponenten är mounted på klienten
   useEffect(() => {
@@ -568,6 +566,10 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
   const handleToggleEditMode = () => {
     setIsEditMode(!isEditMode);
+    // Reset till innehållsvy när man avslutar redigeringsläget
+    if (isEditMode) {
+      setEditView('content');
+    }
   };
 
   if (isLoading || authLoading || !mounted) {
@@ -642,20 +644,87 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             {/* Main content - Proper height for scrolling with footer space */}
             <div className="h-full w-full flex flex-col">
               <div className="flex-1 overflow-hidden">
-                <ContentArea
-                  sections={visibleSections}
-                  currentPageId={currentPageId}
-                  isEditMode={isEditMode}
-                  handbookId={initialData.id}
-                  onUpdateSection={updateSection}
-                  onUpdatePage={updatePage}
-                  onAddPage={addPage}
-                  onDeletePage={deletePage}
-                  onAddSection={addSection}
-                  onMoveSection={moveSection}
-                  onDeleteSection={deleteSection}
-                  onExitEditMode={() => setIsEditMode(false)}
-                />
+                {/* Edit mode navigation tabs */}
+                {isEditMode && canEdit && (
+                  <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-1">
+                      <button
+                        onClick={() => setEditView('content')}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
+                          editView === 'content'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border border-transparent'
+                        }`}
+                      >
+                        <span className="flex items-center justify-center sm:justify-start gap-2">
+                          <span>📝</span>
+                          <span className="text-center sm:text-left">Redigera innehåll</span>
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => setEditView('members')}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
+                          editView === 'members'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border border-transparent'
+                        }`}
+                      >
+                        <span className="flex items-center justify-center sm:justify-start gap-2">
+                          <span>👥</span>
+                          <span className="text-center sm:text-left">Hantera medlemmar</span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Content based on current view */}
+                {editView === 'content' ? (
+                  <ContentArea
+                    sections={visibleSections}
+                    currentPageId={currentPageId}
+                    isEditMode={isEditMode}
+                    handbookId={initialData.id}
+                    onUpdateSection={updateSection}
+                    onUpdatePage={updatePage}
+                    onAddPage={addPage}
+                    onDeletePage={deletePage}
+                    onAddSection={addSection}
+                    onMoveSection={moveSection}
+                    onDeleteSection={deleteSection}
+                    onExitEditMode={() => {
+                      setIsEditMode(false);
+                      setEditView('content');
+                    }}
+                  />
+                ) : (
+                  /* Members management view */
+                  <div className="relative h-full">
+                    <div className="h-full overflow-y-auto pb-20 sm:pb-24">
+                      <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+                        <MembersManager 
+                          handbookId={initialData.id} 
+                          currentUserId={user?.id || ''} 
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Exit edit mode button för members view */}
+                    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+                      <button
+                        onClick={() => {
+                          setIsEditMode(false);
+                          setEditView('content');
+                        }}
+                        className="px-4 sm:px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 text-sm sm:text-base touch-manipulation"
+                      >
+                        <span className="text-lg sm:text-base">✕</span>
+                        <span className="hidden sm:inline">Avsluta redigering</span>
+                        <span className="sm:hidden">Avsluta</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Footer - positioned within the content area */}

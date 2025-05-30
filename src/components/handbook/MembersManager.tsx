@@ -162,11 +162,11 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-      <h2 className="text-xl font-semibold mb-4">Hantera medlemmar</h2>
+    <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+      <h2 className="text-lg sm:text-xl font-semibold mb-4">Hantera medlemmar</h2>
 
       {statusMessage && (
-        <div className={`mb-4 p-3 rounded ${
+        <div className={`mb-4 p-3 rounded text-sm sm:text-base ${
           statusMessage.isError ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
         }`}>
           {statusMessage.message}
@@ -174,31 +174,37 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       )}
 
       <form onSubmit={handleInvite} className="mb-6 space-y-4">
-        <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex flex-col gap-3">
           <Input
             type="email"
             placeholder="Ange e-postadress"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="flex-grow"
+            className="w-full text-base"
             required
           />
-          <Select value={role} onValueChange={(value) => setRole(value as MemberRole)}>
-            <SelectTrigger className="w-full md:w-40">
-              <SelectValue placeholder="Välj roll" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Administratör</SelectItem>
-              <SelectItem value="editor">Redaktör</SelectItem>
-              <SelectItem value="viewer">Läsare</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
-            <UserPlus className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Bjuder in..." : "Bjud in"}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Select value={role} onValueChange={(value) => setRole(value as MemberRole)}>
+              <SelectTrigger className="w-full sm:w-40 h-10">
+                <SelectValue placeholder="Välj roll" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Administratör</SelectItem>
+                <SelectItem value="editor">Redaktör</SelectItem>
+                <SelectItem value="viewer">Läsare</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting} 
+              className="w-full sm:w-auto h-10 touch-manipulation"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              {isSubmitting ? "Bjuder in..." : "Bjud in"}
+            </Button>
+          </div>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-xs sm:text-sm text-gray-500">
           <AlertCircle className="h-4 w-4 inline mr-1" />
           Administratörer kan hantera alla aspekter av handboken, redaktörer kan redigera 
           innehåll, och läsare kan endast läsa.
@@ -206,50 +212,53 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       </form>
 
       <div className="border-t pt-4">
-        <h3 className="font-medium text-lg mb-3">Medlemmar</h3>
+        <h3 className="font-medium text-base sm:text-lg mb-3">Medlemmar</h3>
         {isLoading ? (
-          <div className="py-8 text-center text-gray-500">Laddar medlemmar...</div>
+          <div className="py-8 text-center text-gray-500 text-sm sm:text-base">Laddar medlemmar...</div>
         ) : members.length === 0 ? (
-          <div className="py-8 text-center text-gray-500">
+          <div className="py-8 text-center text-gray-500 text-sm sm:text-base">
             Inga medlemmar har lagts till ännu.
           </div>
         ) : (
-          <ul className="divide-y">
+          <ul className="divide-y space-y-1">
             {members.map((member) => (
-              <li key={member.id} className="py-3 flex flex-col md:flex-row md:items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <UserCheck className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <div className="font-medium">{member.email}</div>
-                    <div className="text-sm text-gray-500">
-                      Tillagd {new Date(member.created_at).toLocaleDateString()}
+              <li key={member.id} className="py-3 sm:py-4">
+                <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center space-x-2 min-w-0 flex-1">
+                    <UserCheck className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm sm:text-base truncate">{member.email}</div>
+                      <div className="text-xs sm:text-sm text-gray-500">
+                        Tillagd {new Date(member.created_at).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2 mt-2 md:mt-0">
-                  <Select
-                    value={member.role}
-                    onValueChange={(value) => handleUpdateRole(member.id, member.user_id, value as MemberRole)}
-                    disabled={updatingId === member.id || member.user_id === currentUserId}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Administratör</SelectItem>
-                      <SelectItem value="editor">Redaktör</SelectItem>
-                      <SelectItem value="viewer">Läsare</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => handleRemoveMember(member.id, member.user_id)}
-                    disabled={updatingId === member.id || member.user_id === currentUserId}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 sm:gap-2 flex-shrink-0">
+                    <Select
+                      value={member.role}
+                      onValueChange={(value) => handleUpdateRole(member.id, member.user_id, value as MemberRole)}
+                      disabled={updatingId === member.id || member.user_id === currentUserId}
+                    >
+                      <SelectTrigger className="w-full sm:w-32 h-10 text-xs sm:text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administratör</SelectItem>
+                        <SelectItem value="editor">Redaktör</SelectItem>
+                        <SelectItem value="viewer">Läsare</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 border-red-200 hover:bg-red-50 h-10 w-10 p-0 touch-manipulation flex-shrink-0"
+                      onClick={() => handleRemoveMember(member.id, member.user_id)}
+                      disabled={updatingId === member.id || member.user_id === currentUserId}
+                      title="Ta bort medlem"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </li>
             ))}
