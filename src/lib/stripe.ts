@@ -3,13 +3,15 @@ import Stripe from 'stripe';
 /**
  * Väljer rätt Stripe-nyckel baserat på miljö
  * Produktionsnycklar används endast i produktionsmiljö, annars testnycklar
+ * FORCE_STRIPE_TEST_MODE kan användas för att tvinga testläge i produktion
  */
 const isProduction = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
+const forceTestMode = process.env.FORCE_STRIPE_TEST_MODE === 'true';
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 // Exportera teststatus för användning i andra moduler
-export const isTestMode = !isProduction;
+export const isTestMode = !isProduction || forceTestMode;
 
 /**
  * Stripe-instans som konfigureras baserat på miljö
