@@ -79,8 +79,8 @@ export function WizardStepFive() {
       
       const data = await response.json();
       
-      // Om vi får success: true och handbookId men ingen sessionUrl, så har vi hoppat över Stripe
-      if (data.success && data.handbookId && !data.sessionUrl) {
+      // Om vi får success: true och handbookId men ingen url, så har vi hoppat över Stripe
+      if (data.success && data.handbookId && !data.url) {
         setProgressStep('creating');
         setHandbookCreated(data.handbookId);
         setIsTestMode(true); // Visa testläge om vi hoppat över Stripe
@@ -88,7 +88,7 @@ export function WizardStepFive() {
         return;
       }
       
-      if (!data.sessionUrl) {
+      if (!data.url) {
         setProgressStep('idle');
         throw new Error('Failed to create checkout session');
       }
@@ -96,7 +96,7 @@ export function WizardStepFive() {
       // Uppdatera testlägesstatus från API-svaret
       setIsTestMode(data.isTestMode);
       
-      window.location.href = data.sessionUrl;
+      window.location.href = data.url;
     } catch (err: unknown) {
       console.error('Error creating checkout session:', err);
       setError('Det gick inte att skapa betalsessionen. Försök igen senare.');
