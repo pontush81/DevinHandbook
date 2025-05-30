@@ -3,10 +3,8 @@ import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 
 export async function POST(req: NextRequest) {
-  // Only allow this in development mode
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json({ error: 'This endpoint is only available in development mode' }, { status: 403 });
-  }
+  // Allow this in all environments since webhooks can be unreliable
+  console.log(`[Fallback] Running in ${process.env.NODE_ENV} mode`);
 
   try {
     const { handbookName, subdomain, userId } = await req.json();

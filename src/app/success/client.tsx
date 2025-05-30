@@ -51,10 +51,10 @@ export default function SuccessClient() {
         setHandbookName(data.metadata.handbookName || null);
         setSubdomain(data.metadata.subdomain || null);
         
-        // In development mode, try to create handbook if it doesn't exist
-        // since webhooks don't work on localhost
-        if (process.env.NODE_ENV === 'development' && data.metadata.handbookName && data.metadata.subdomain && data.metadata.userId) {
-          console.log('[Success] Attempting fallback handbook creation in development mode');
+        // Try to create handbook if it doesn't exist in all environments
+        // since webhooks can be unreliable in both development and production
+        if (data.metadata.handbookName && data.metadata.subdomain && data.metadata.userId) {
+          console.log('[Success] Attempting fallback handbook creation (all environments)');
           try {
             const fallbackResponse = await fetch('/api/create-handbook-fallback', {
               method: 'POST',

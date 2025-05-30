@@ -5,21 +5,16 @@ export async function createHandbookWithSectionsAndPages(
   name: string,
   subdomain: string,
   template: HandbookTemplate,
-  userId: string
+  userId: string | null
 ) {
   const supabase = getServiceSupabase();
   
-  console.log('[Handbook] Creating handbook with owner_id:', { name, subdomain, userId });
+  console.log('[Handbook] Creating handbook with owner_id:', { name, subdomain, userId: userId || 'guest' });
   
   // Kontrollera obligatoriska fält för handbooks
   if (!name || typeof name !== 'string' || !subdomain || typeof subdomain !== 'string') {
     console.error('[Handbook] Saknar obligatoriskt fält (name eller subdomain) vid skapande av handbok:', { name, subdomain });
     throw new Error('Obligatoriskt fält saknas vid skapande av handbok.');
-  }
-
-  if (!userId) {
-    console.error('[Handbook] Saknar userId vid skapande av handbok');
-    throw new Error('userId krävs för att skapa handbok');
   }
 
   const { data: handbook, error: handbookError } = await supabase
@@ -35,7 +30,7 @@ export async function createHandbookWithSectionsAndPages(
       organization_email: template.metadata.organization.email,
       subdomain,
       published: true,
-      owner_id: userId, // VIKTIGT: Sätt owner_id så smart redirect fungerar
+      owner_id: userId, // Can be null for guest handbooks
     })
     .select()
     .single();
