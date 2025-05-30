@@ -405,9 +405,37 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
   // Get the selected page
   const selectedPage = selectedSection?.pages?.find(p => p.id === selectedPageId);
 
-  // Auto-save section changes directly to database
+  // Helper function to add a new page to a section
+  const handleAddPage = async (sectionId: string, title: string = 'Ny sida') => {
+    console.log('🔄 [ContentArea] Adding new page to section:', { sectionId, title });
+    
+    try {
+      if (onAddPage) {
+        await onAddPage(sectionId, { title, content: '', order: 0 });
+        console.log('✅ [ContentArea] Page added successfully');
+      } else {
+        const errorMsg = 'onAddPage callback not provided';
+        console.error('❌ [ContentArea]', errorMsg);
+        throw new Error(errorMsg);
+      }
+    } catch (error: any) {
+      const errorMsg = error.message || String(error);
+      console.error('❌ [ContentArea] Error adding page:', {
+        error: errorMsg,
+        sectionId,
+        title,
+        stack: error.stack
+      });
+      // Show user-friendly error message
+      alert(`❌ Fel vid tillägg av sida: ${errorMsg}`);
+      throw error; // Re-throw for any calling code
+    }
+  };
+
+  // Auto-save section changes with better error handling
   const handleSectionChange = async (sectionId: string, updates: Partial<Section>) => {
-    console.log('🔄 [ContentArea] Auto-saving section change:', sectionId, updates);
+    console.log('🔄 [ContentArea] Auto-saving section change:', { sectionId, updates });
+    console.log('📋 [ContentArea] Current sections in state:', sectionsArray.map(s => ({ id: s.id, title: s.title })));
     
     try {
       const response = await fetch(`/api/sections/${sectionId}`, {
@@ -416,21 +444,74 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
         body: JSON.stringify(updates)
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update section: ${response.statusText}`);
+      let errorData: any = null;
+      let responseText = '';
+      try {
+        responseText = await response.text();
+        if (responseText) {
+          errorData = JSON.parse(responseText);
+        }
+      } catch {
+        errorData = { error: responseText };
       }
 
-      const updatedSection = await response.json();
-      console.log('✅ [ContentArea] Section auto-saved successfully:', updatedSection);
+      if (!response.ok) {
+        const errorDetails = errorData?.details || errorData?.error || responseText || 'Unknown error';
+        console.error('❌ [ContentArea] API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          sectionId,
+          updates,
+          errorData,
+          responseText
+        });
+        
+        if (response.status === 404) {
+          console.error('🔍 [ContentArea] Section not found in database:', sectionId);
+          console.error('🔍 [ContentArea] This suggests the section exists in frontend state but not in database');
+          console.error('🔍 [ContentArea] Available sections in current state:', sectionsArray.map(s => ({ id: s.id, title: s.title })));
+          alert('❌ Fel: Sektionen hittades inte i databasen. Den kanske inte sparades korrekt vid skapandet. Försök att ladda om sidan.');
+        } else {
+          alert(`❌ Fel vid sparning av sektion: ${errorDetails}`);
+        }
+        
+        throw new Error(`Failed to update section: ${response.status} ${response.statusText} - ${errorDetails}`);
+      }
 
-      // Update local state through callback
+      const updatedSection = errorData || {};
+      console.log('✅ [ContentArea] Section updated successfully:', updatedSection);
+
+      // Update parent through callback
       if (onUpdateSection) {
-        onUpdateSection(sectionId, updates);
+        console.log('🔄 [ContentArea] Calling onUpdateSection callback');
+        await onUpdateSection(sectionId, updates);
+        console.log('✅ [ContentArea] onUpdateSection callback completed');
+      } else {
+        console.warn('⚠️ [ContentArea] No onUpdateSection callback available');
+      }
+
+    } catch (error: any) {
+      const errorMsg = error.message || String(error);
+      console.error('❌ [ContentArea] Error auto-saving section:', {
+        error: errorMsg,
+        sectionId,
+        updates,
+        stack: error.stack,
+        availableSections: sectionsArray.map(s => ({ id: s.id, title: s.title }))
+      });
+      
+      // Update local state optimistically even if API call failed
+      console.log('🔄 [ContentArea] Attempting optimistic local update despite API failure...');
+      if (onUpdateSection) {
+        try {
+          await onUpdateSection(sectionId, updates);
+          console.log('✅ [ContentArea] Local state updated optimistically');
+        } catch (localError) {
+          console.error('❌ [ContentArea] Failed to update local state:', localError);
+        }
       }
       
-    } catch (error) {
-      console.error('❌ [ContentArea] Error auto-saving section:', error);
-      alert('❌ Fel vid sparning av sektion. Försök igen.');
+      throw new Error(`Error auto-saving section: ${errorMsg}`);
     }
   };
 
@@ -499,36 +580,92 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
 
   // Create new section
   const handleCreateSection = async (title: string, description: string, icon: string) => {
-    console.log('🔄 [ContentArea] Creating new section:', { title, description, icon });
+    console.log('🔄 [ContentArea] Creating new section:', { title, description, icon, handbookId });
     
     try {
+      const sectionData = {
+        title,
+        description,
+        icon,
+        handbook_id: handbookId,
+        order_index: sectionsArray.length,
+        is_public: true,
+        is_published: true
+      };
+
+      console.log('📤 [ContentArea] Sending section data:', sectionData);
+
       const response = await fetch('/api/sections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          icon,
-          handbook_id: handbookId,
-          order_index: sectionsArray.length
-        })
+        body: JSON.stringify(sectionData)
       });
 
+      const responseText = await response.text();
+      console.log('📥 [ContentArea] Raw API response:', { status: response.status, text: responseText });
+
       if (!response.ok) {
-        throw new Error(`Failed to create section: ${response.statusText}`);
+        let errorDetails = '';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorDetails = errorData.details || errorData.error || responseText;
+        } catch {
+          errorDetails = responseText;
+        }
+        throw new Error(`API Error ${response.status}: ${errorDetails}`);
       }
 
-      const newSection = await response.json();
-      console.log('✅ [ContentArea] Section created successfully:', newSection);
+      const newSection = JSON.parse(responseText);
+      console.log('✅ [ContentArea] Section created successfully in database:', newSection);
 
-      // Update local state through callback
+      // Validate that the section has an ID (proving it was saved to database)
+      if (!newSection.id) {
+        throw new Error('Created section is missing ID - database save may have failed');
+      }
+
+      // Ensure the section has proper structure with pages array
+      const completedSection = {
+        ...newSection,
+        pages: newSection.pages || [], // Ensure pages array exists
+        is_public: newSection.is_public !== undefined ? newSection.is_public : true,
+        is_published: newSection.is_published !== undefined ? newSection.is_published : true
+      };
+
+      console.log('📤 [ContentArea] Prepared section for state update:', completedSection);
+
+      // Update parent state through callback
       if (onAddSection) {
-        onAddSection(newSection);
+        console.log('🔄 [ContentArea] Calling onAddSection callback with:', completedSection);
+        await onAddSection(completedSection);
+        console.log('✅ [ContentArea] onAddSection callback completed successfully');
+        
+        // Verify the section was added by checking if we can find it after a small delay
+        setTimeout(() => {
+          const foundSection = sectionsArray.find(s => s.id === newSection.id);
+          if (foundSection) {
+            console.log('✅ [ContentArea] Section verification: Found in local state:', foundSection.id);
+          } else {
+            console.error('❌ [ContentArea] Section verification: NOT found in local state after adding. Available sections:', 
+              sectionsArray.map(s => ({ id: s.id, title: s.title })));
+          }
+        }, 500);
+      } else {
+        console.error('❌ [ContentArea] No onAddSection callback available - section cannot be added to state');
+        throw new Error('No onAddSection callback available');
       }
       
     } catch (error) {
-      console.error('❌ [ContentArea] Error creating section:', error);
-      alert('❌ Fel vid skapande av sektion. Försök igen.');
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('❌ [ContentArea] Error creating section:', {
+        error: errorMsg,
+        title,
+        description,
+        icon,
+        handbookId,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      alert(`❌ Fel vid skapande av sektion: ${errorMsg}`);
+      throw error; // Re-throw for any parent error handling
     }
   };
 
@@ -632,15 +769,6 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
         {/* All sections displayed vertically */}
         {sectionsArray && sectionsArray.length > 0 && (
           <div className="space-y-8 sm:space-y-12">
-            {/* Add section button before first section */}
-            {isEditMode && (
-              <section className="mb-8 sm:mb-16">
-                <InlineSectionCreator 
-                  onCreateSection={handleCreateSection}
-                />
-              </section>
-            )}
-
             {/* All handbook sections */}
             {sectionsArray.map((section, sectionIndex) => {
               const IconComponent = getSectionIcon(section);
@@ -690,7 +818,8 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
                                       size="sm"
                                     />
                                   </div>
-                                  <div className="mt-3 pt-3 border-t border-gray-200">
+                                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
+                                    {/* Publik sektion checkbox */}
                                     <div className="flex items-center space-x-2">
                                       <input
                                         type="checkbox"
@@ -699,15 +828,23 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
                                         onChange={(e) => handleSectionChange(section.id, { is_public: e.target.checked })}
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                       />
-                                      <label 
-                                        htmlFor={`section-public-${section.id}`}
-                                        className="text-sm text-gray-700 cursor-pointer font-medium"
-                                      >
-                                        Publik sektion
+                                      <label htmlFor={`section-public-${section.id}`} className="text-sm text-gray-700 font-medium">
+                                        📢 Publik sektion (synlig för alla användare)
                                       </label>
-                                      <span className="text-xs text-gray-500">
-                                        (Synlig för alla användare)
-                                      </span>
+                                    </div>
+
+                                    {/* Publicerad sektion checkbox */}
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`section-published-${section.id}`}
+                                        checked={section.is_published !== false}
+                                        onChange={(e) => handleSectionChange(section.id, { is_published: e.target.checked })}
+                                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                      />
+                                      <label htmlFor={`section-published-${section.id}`} className="text-sm text-gray-700 font-medium">
+                                        ✅ Publicerad sektion (redo att visas)
+                                      </label>
                                     </div>
                                   </div>
                                 </div>
@@ -848,6 +985,21 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
                               )}
                             </div>
                           ))}
+
+                          {/* Add new page button for sections with existing pages */}
+                          {isEditMode && (
+                            <div className="pt-4 border-t border-gray-100">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAddPage(section.id, 'Ny sida')}
+                                className="space-x-2 h-9 sm:h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
+                              >
+                                <Plus className="w-4 h-4" />
+                                <span>Lägg till ny sida</span>
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         /* Empty section state */
@@ -860,7 +1012,7 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleSectionChange(section.id, { pages: [{ id: '', title: 'Första sidan', content: '' }] })}
+                              onClick={() => handleAddPage(section.id, 'Första sidan')}
                               className="space-x-2 h-9 sm:h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50"
                             >
                               <Plus className="w-4 h-4" />
@@ -874,6 +1026,16 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
                 </section>
               );
             })}
+          </div>
+        )}
+
+        {/* Add section button at the bottom when sections exist */}
+        {isEditMode && sectionsArray && sectionsArray.length > 0 && (
+          <div className="mt-12 sm:mt-16 pt-8 sm:pt-12 border-t border-gray-200">
+            <InlineSectionCreator 
+              onCreateSection={handleCreateSection}
+              placeholder="Lägg till ny sektion"
+            />
           </div>
         )}
       </div>
