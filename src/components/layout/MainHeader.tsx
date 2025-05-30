@@ -106,48 +106,50 @@ export function MainHeader({
           )}
         </div>
 
-        {/* Mobile menu för landing/app variants */}
-        {variant !== 'handbook' && (
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
-              >
-                <Menu className="h-4 w-4" />
-                <span className="sr-only">Växla meny</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="pr-0">
-              <SheetHeader>
-                <SheetTitle>
-                  <Link href="/" className="flex items-center space-x-2">
-                    <div className="h-6 w-6 rounded bg-blue-600 flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">H</span>
-                    </div>
-                    <span className="font-bold text-blue-600">Handbok.org</span>
-                  </Link>
-                </SheetTitle>
-              </SheetHeader>
-              <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
-                <div className="flex flex-col space-y-3">
-                  {linksToRender.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={cn(
-                        "text-foreground/70 transition-colors hover:text-foreground",
-                        isActive(link.href) && "text-foreground font-medium"
-                      )}
-                    >
-                      {link.label}
+        {/* Mobile hamburger menu endast för app variant (inte landing) */}
+        {variant === 'app' && (
+          <div className="flex justify-center md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                >
+                  <Menu className="h-4 w-4" />
+                  <span className="sr-only">Växla meny</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="pr-0">
+                <SheetHeader>
+                  <SheetTitle>
+                    <Link href="/" className="flex items-center space-x-2">
+                      <div className="h-6 w-6 rounded bg-blue-600 flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">H</span>
+                      </div>
+                      <span className="font-bold text-blue-600">Handbok.org</span>
                     </Link>
-                  ))}
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
+                  <div className="flex flex-col space-y-3">
+                    {linksToRender.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={cn(
+                          "text-foreground/70 transition-colors hover:text-foreground",
+                          isActive(link.href) && "text-foreground font-medium"
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          </div>
         )}
 
         {/* App variant sections (fallback för gamla implementationen) */}
