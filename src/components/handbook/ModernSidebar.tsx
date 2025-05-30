@@ -15,6 +15,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { HandbookSection } from '@/types/handbook';
+import { getIconComponent } from '@/lib/icon-utils';
 import {
   Sidebar,
   SidebarContent,
@@ -99,6 +100,18 @@ const menuItems = [
 
 // Funktion för att matcha sektion med menyalternativ
 const getMenuItemForSection = (section: HandbookSection) => {
+  // Om sektionen har en specifik ikon vald, använd den
+  if (section.icon) {
+    const IconComponent = getIconComponent(section.icon);
+    return {
+      title: section.title,
+      icon: IconComponent,
+      keywords: [],
+      color: "text-blue-600" // Standard färg för custom ikoner
+    };
+  }
+  
+  // Annars, använd automatisk mappning baserat på titel
   const sectionTitle = section.title.toLowerCase();
   
   return menuItems.find(item => 

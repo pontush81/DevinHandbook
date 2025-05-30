@@ -19,6 +19,7 @@ export interface HandbookSection {
   order_index: number;
   handbook_id: string;
   is_public?: boolean;
+  icon?: string;
   pages: HandbookPage[];
 }
 

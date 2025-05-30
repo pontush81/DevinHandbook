@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
-import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image, ChevronUp, ChevronDown, Eye } from 'lucide-react';
+import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image, ChevronUp, ChevronDown, Eye, Heart, Recycle, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { QuickActionCard } from './QuickActionCard';
@@ -22,6 +22,8 @@ import {
 } from '@/lib/services/welcomeContentService';
 import TextareaAutosize from 'react-textarea-autosize';
 import { useDebouncedCallback } from 'use-debounce';
+import { getIconComponent } from '@/lib/icon-utils';
+import { IconPicker } from '@/components/ui/IconPicker';
 
 interface ContentAreaProps {
   sections: Section[];
@@ -31,7 +33,7 @@ interface ContentAreaProps {
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   onAddPage?: (sectionId: string, title: string, content?: string) => void;
-  onAddSection?: (title: string, insertIndex?: number) => void;
+  onAddSection?: (title: string, description: string, icon: string, insertIndex?: number) => void;
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   onDeleteSection?: (sectionId: string) => void;
   onExitEditMode?: () => void;
@@ -58,7 +60,7 @@ const EditableWelcomeContent: React.FC<EditableWelcomeContentProps> = ({
 
   const getIconComponent = (iconName: string, className: string) => {
     const iconMap: Record<string, any> = {
-      BookOpen, Phone, Wrench, DollarSign, Clock, Search, MessageCircle, Users, Zap, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image
+      BookOpen, Phone, Wrench, DollarSign, Clock, Search, MessageCircle, Users, Zap, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image, Heart, Recycle, Car
     };
     const IconComponent = iconMap[iconName] || BookOpen;
     return <IconComponent className={className} />;
@@ -118,8 +120,14 @@ const EditableWelcomeContent: React.FC<EditableWelcomeContentProps> = ({
 };
 
 // Helper function to get section icon
-const getSectionIcon = (title: string) => {
-  const normalizedTitle = title.toLowerCase();
+const getSectionIcon = (section: Section) => {
+  // Om sektionen har en specifik ikon vald, använd den
+  if (section.icon) {
+    return getIconComponent(section.icon);
+  }
+  
+  // Annars, fallback till automatisk mappning baserat på titel
+  const normalizedTitle = section.title.toLowerCase();
   
   if (normalizedTitle.includes('välkommen') || normalizedTitle.includes('hem')) {
     return BookOpen;
@@ -138,6 +146,15 @@ const getSectionIcon = (title: string) => {
   }
   if (normalizedTitle.includes('regler') || normalizedTitle.includes('stadgar')) {
     return BookOpen;
+  }
+  if (normalizedTitle.includes('trivsel')) {
+    return Heart;
+  }
+  if (normalizedTitle.includes('sopsortering') || normalizedTitle.includes('återvinning')) {
+    return Recycle;
+  }
+  if (normalizedTitle.includes('parkering') || normalizedTitle.includes('garage')) {
+    return Car;
   }
   if (normalizedTitle.includes('info') || normalizedTitle.includes('information')) {
     return Search;
@@ -365,6 +382,112 @@ const RobustTextarea: React.FC<RobustTextareaProps> = ({
   );
 };
 
+// Inline Section Creator Component
+interface InlineSectionCreatorProps {
+  onCreateSection: (title: string, description: string, icon: string) => void;
+  insertIndex?: number;
+  placeholder?: string;
+}
+
+const InlineSectionCreator: React.FC<InlineSectionCreatorProps> = ({ 
+  onCreateSection, 
+  insertIndex = 0,
+  placeholder = "Lägg till ny sektion"
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState('BookOpen');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (title.trim()) {
+      onCreateSection(title.trim(), description.trim(), selectedIcon);
+      setTitle('');
+      setDescription('');
+      setSelectedIcon('BookOpen');
+      setIsExpanded(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setTitle('');
+    setDescription('');
+    setSelectedIcon('BookOpen');
+    setIsExpanded(false);
+  };
+
+  if (!isExpanded) {
+    return (
+      <Button
+        variant="ghost"
+        onClick={() => setIsExpanded(true)}
+        className="border-2 border-dashed border-blue-300 hover:border-blue-400 hover:bg-blue-50 transition-colors space-x-2 h-10 sm:h-12 px-4 sm:px-6 text-sm text-blue-700 w-full"
+      >
+        <Plus className="w-4 h-4" />
+        <span>{placeholder}</span>
+      </Button>
+    );
+  }
+
+  return (
+    <Card className="border-blue-200 bg-blue-50/50">
+      <CardContent className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Input
+              placeholder="Sektionsrubrik"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-lg font-semibold"
+              autoFocus
+            />
+          </div>
+          
+          <div>
+            <Textarea
+              placeholder="Beskrivning (valfritt)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Välj ikon:
+            </label>
+            <IconPicker
+              selectedIcon={selectedIcon}
+              onIconSelect={setSelectedIcon}
+              compact={true}
+            />
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleCancel}
+              size="sm"
+            >
+              Avbryt
+            </Button>
+            <Button
+              type="submit"
+              disabled={!title.trim()}
+              size="sm"
+            >
+              Skapa sektion
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
 export const ContentArea: React.FC<ContentAreaProps> = ({
   sections,
   currentPageId,
@@ -518,25 +641,15 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
             {/* Add section button before first section */}
             {isEditMode && onAddSection && (
               <section className="mb-8 sm:mb-16">
-                <Card className="border-2 border-dashed border-blue-300 hover:border-blue-400 transition-colors bg-blue-50/30 backdrop-blur-sm">
-                  <CardContent className="flex items-center justify-center py-8 sm:py-12">
-                    <Button 
-                      variant="outline" 
-                      size="lg" 
-                      onClick={() => onAddSection('Ny sektion', 0)}
-                      className="space-x-2 h-10 sm:h-12 px-4 sm:px-6 text-sm sm:text-base border-blue-300 text-blue-700 hover:bg-blue-100"
-                    >
-                      <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span>Lägg till ny sektion</span>
-                    </Button>
-                  </CardContent>
-                </Card>
+                <InlineSectionCreator 
+                  onCreateSection={(title, description, icon) => onAddSection(title, description, icon, 0)}
+                />
               </section>
             )}
 
             {/* All handbook sections */}
             {sections.map((section, sectionIndex) => {
-              const IconComponent = getSectionIcon(section.title);
+              const IconComponent = getSectionIcon(section);
               
               return (
                 <section key={section.id} className="mb-8 sm:mb-12">
@@ -567,6 +680,17 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                                     className="text-sm sm:text-base text-gray-600"
                                     placeholder="Beskrivning av sektionen"
                                   />
+                                  <div className="mt-2">
+                                    <label className="text-xs text-gray-500 mb-1 block">
+                                      Ikon:
+                                    </label>
+                                    <IconPicker
+                                      selectedIcon={section.icon || 'BookOpen'}
+                                      onIconSelect={(icon) => onUpdateSection?.(section.id, { icon })}
+                                      compact={true}
+                                      size="sm"
+                                    />
+                                  </div>
                                 </div>
                               ) : (
                                 <>
@@ -674,7 +798,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => onAddPage(section.id, `Ny sida ${pageIndex + 2}`)}
+                                    onClick={() => onAddPage(section.id, `Ny sida ${pageIndex + 2}`, '')}
                                     className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600 flex-shrink-0"
                                     title="Lägg till sida"
                                   >
@@ -711,14 +835,14 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                         /* Empty section state */
                         <div className="text-center py-12 sm:py-16 text-gray-500">
                           <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                            <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+                            <IconComponent className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                           </div>
                           <p className="text-sm sm:text-base mb-4 sm:mb-6 font-medium">Denna sektion har inga sidor än</p>
                           {isEditMode && onAddPage && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => onAddPage(section.id, 'Första sidan')}
+                              onClick={() => onAddPage(section.id, 'Första sidan', '')}
                               className="space-x-2 h-9 sm:h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50"
                             >
                               <Plus className="w-4 h-4" />
@@ -732,16 +856,11 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
 
                   {/* Add section button after each section */}
                   {isEditMode && onAddSection && (
-                    <div className="mt-6 sm:mt-8 flex justify-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onAddSection('Ny sektion', sectionIndex + 1)}
-                        className="border-2 border-dashed border-blue-300 hover:border-blue-400 hover:bg-blue-50 transition-colors space-x-2 h-10 sm:h-12 px-4 sm:px-6 text-sm text-blue-700"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Lägg till sektion</span>
-                      </Button>
+                    <div className="mt-6 sm:mt-8">
+                      <InlineSectionCreator 
+                        onCreateSection={(title, description, icon) => onAddSection(title, description, icon, sectionIndex + 1)}
+                        placeholder="Lägg till sektion här"
+                      />
                     </div>
                   )}
                 </section>

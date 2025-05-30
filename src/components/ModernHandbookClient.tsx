@@ -201,9 +201,9 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   };
 
   // Add new section
-  const addSection = async (title: string, insertIndex?: number) => {
+  const addSection = async (title: string, description: string = '', icon: string = '', insertIndex?: number) => {
     try {
-      console.log('Adding section:', { title, insertIndex });
+      console.log('Adding section:', { title, description, icon, insertIndex });
       
       // Calculate the correct order_index based on insertIndex
       const orderIndex = insertIndex !== undefined ? insertIndex : handbookData.sections.length;
@@ -229,7 +229,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         .from('sections')
         .insert({
           title,
-          description: '',
+          description,
+          icon,
           order_index: orderIndex,
           handbook_id: initialData.id
         })
@@ -268,6 +269,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         id: sectionData.id,
         title: sectionData.title,
         description: sectionData.description,
+        icon: sectionData.icon,
         order_index: sectionData.order_index,
         handbook_id: sectionData.handbook_id,
         pages: [pageData]
