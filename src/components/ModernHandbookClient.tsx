@@ -153,161 +153,61 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     setCurrentPageId(pageId);
   };
 
-  // Update section
+  // Update section - only update local state, API calls are handled by ContentArea
   const updateSection = async (sectionId: string, updates: Partial<Section>) => {
     try {
-      const { error } = await supabase
-        .from('sections')
-        .update(updates)
-        .eq('id', sectionId);
+      console.log('[ModernHandbookClient] Updating local state for section:', { sectionId, updates });
 
-      if (error) throw error;
-
-      // Update local state
+      // Update local state only - API call is handled by ContentArea
       setHandbookData(prev => ({
         ...prev,
         sections: prev.sections.map(section =>
           section.id === sectionId ? { ...section, ...updates } : section
         )
       }));
+      
+      console.log('[ModernHandbookClient] Local state updated successfully');
     } catch (error) {
-      console.error('Error updating section:', error);
+      console.error('[ModernHandbookClient] Error updating local section state:', error);
     }
   };
 
-  // Update page
+  // Update page - only update local state, API calls are handled by ContentArea
   const updatePage = async (pageId: string, updates: Partial<Page>) => {
     try {
-      const { error } = await supabase
-        .from('pages')
-        .update(updates)
-        .eq('id', pageId);
+      console.log('[ModernHandbookClient] Updating local state for page:', { pageId, updates });
 
-      if (error) throw error;
-
-      // Update local state
+      // Update local state only - API call is handled by ContentArea
       setHandbookData(prev => ({
         ...prev,
         sections: prev.sections.map(section => ({
           ...section,
-          pages: section.pages.map(page =>
+          pages: (section.pages || []).map(page =>
             page.id === pageId ? { ...page, ...updates } : page
           )
         }))
       }));
+      
+      console.log('[ModernHandbookClient] Local page state updated successfully');
     } catch (error) {
-      console.error('Error updating page:', error);
+      console.error('[ModernHandbookClient] Error updating local page state:', error);
     }
   };
 
-  // Add new section
-  const addSection = async (title: string, description: string = '', icon: string = '', insertIndex?: number) => {
+  // Add new section - only update local state, API calls are handled by ContentArea
+  const addSection = async (newSection: Section) => {
     try {
-      console.log('Adding section:', { title, description, icon, insertIndex });
-      
-      // Calculate the correct order_index based on insertIndex
-      const orderIndex = insertIndex !== undefined ? insertIndex : handbookData.sections.length;
-      
-      console.log('Using order_index:', orderIndex);
-      
-      // If we're inserting in the middle, update order_index for existing sections
-      if (insertIndex !== undefined && insertIndex < handbookData.sections.length) {
-        console.log('Updating order_index for existing sections...');
-        
-        // Update all sections that come after the insert position
-        for (let i = insertIndex; i < handbookData.sections.length; i++) {
-          const section = handbookData.sections[i];
-          await supabase
-            .from('sections')
-            .update({ order_index: (section.order_index || i) + 1 })
-            .eq('id', section.id);
-        }
-      }
-      
-      // Create the section first
-      const { data: sectionData, error: sectionError } = await supabase
-        .from('sections')
-        .insert({
-          title,
-          description,
-          icon,
-          order_index: orderIndex,
-          handbook_id: initialData.id
-        })
-        .select()
-        .single();
+      console.log('[ModernHandbookClient] Adding section to local state:', newSection);
 
-      if (sectionError) {
-        console.error('Error creating section:', sectionError);
-        throw sectionError;
-      }
+      // Update local state only - API call is handled by ContentArea
+      setHandbookData(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
 
-      console.log('Section created:', sectionData);
-
-      // Create a default first page for the section
-      const { data: pageData, error: pageError } = await supabase
-        .from('pages')
-        .insert({
-          title: 'Ny sida',
-          content: 'Skriv innehåll här... (Markdown stöds)',
-          order_index: 0,
-          section_id: sectionData.id,
-          slug: `ny-sida-${Date.now()}` // Generate a unique slug
-        })
-        .select()
-        .single();
-
-      if (pageError) {
-        console.error('Error creating page:', pageError);
-        throw pageError;
-      }
-
-      console.log('Page created:', pageData);
-
-      // Update local state with complete section including the first page
-      const newSection: Section = {
-        id: sectionData.id,
-        title: sectionData.title,
-        description: sectionData.description,
-        icon: sectionData.icon,
-        order_index: sectionData.order_index,
-        handbook_id: sectionData.handbook_id,
-        pages: [pageData]
-      };
-
-      setHandbookData(prev => {
-        const newSections = [...prev.sections];
-        
-        // Update order_index for existing sections in local state
-        if (insertIndex !== undefined && insertIndex < newSections.length) {
-          for (let i = insertIndex; i < newSections.length; i++) {
-            newSections[i] = {
-              ...newSections[i],
-              order_index: (newSections[i].order_index || i) + 1
-            };
-          }
-        }
-        
-        // Insert the new section at the correct position
-        if (insertIndex !== undefined) {
-          console.log('Inserting at index:', insertIndex);
-          newSections.splice(insertIndex, 0, newSection);
-        } else {
-          console.log('Adding at end');
-          newSections.push(newSection);
-        }
-        
-        console.log('Updated sections count:', newSections.length);
-        
-        return {
-          ...prev,
-          sections: newSections
-        };
-      });
-
-      console.log('Section added successfully');
+      console.log('[ModernHandbookClient] Section added to local state successfully');
     } catch (error) {
-      console.error('Error adding section:', error);
+      console.error('[ModernHandbookClient] Error adding section to local state:', error);
     }
   };
 

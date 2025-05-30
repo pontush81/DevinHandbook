@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { HandbookSection as Section, HandbookPage as Page, Handbook } from '@/types/handbook';
 import { Calendar, Clock, Edit3, Plus, Wrench, Phone, BookOpen, DollarSign, Zap, Search, MessageCircle, Users, X, Trash2, Minus, Bold, Italic, List, ListOrdered, Quote, Code, Link2, Image, ChevronUp, ChevronDown, Eye, Heart, Recycle, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -24,17 +24,18 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { useDebouncedCallback } from 'use-debounce';
 import { getIconComponent } from '@/lib/icon-utils';
 import { IconPicker } from '@/components/ui/IconPicker';
+import debounce from 'lodash/debounce';
 
 interface ContentAreaProps {
   sections: Section[];
   currentPageId?: string;
   isEditMode?: boolean;
-  handbookId?: string;
+  handbookId: string;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
-  onAddPage?: (sectionId: string, title: string, content?: string) => void;
-  onDeletePage?: (pageId: string, sectionId: string) => void;
-  onAddSection?: (title: string, description: string, icon: string, insertIndex?: number) => void;
+  onAddPage?: (sectionId: string, page: Partial<Page>) => void;
+  onDeletePage?: (pageId: string) => void;
+  onAddSection?: (section: Partial<Section>) => void;
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   onDeleteSection?: (sectionId: string) => void;
   onExitEditMode?: () => void;
@@ -120,51 +121,100 @@ const EditableWelcomeContent: React.FC<EditableWelcomeContentProps> = ({
   );
 };
 
+interface RobustTextareaProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  minRows?: number;
+  pageId: string;
+}
+
+const RobustTextarea: React.FC<RobustTextareaProps> = ({ 
+  value, 
+  onChange, 
+  placeholder = "Skriv ditt innehåll här...", 
+  className = "",
+  minRows = 10,
+  pageId
+}) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [localValue, setLocalValue] = useState(value);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Debounced auto-save function
+  const debouncedSave = useMemo(
+    () => debounce(async (newValue: string) => {
+      if (newValue !== value) {
+        setIsSaving(true);
+        try {
+          await onChange(newValue);
+        } catch (error) {
+          console.error('Error auto-saving:', error);
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    }, 1000),
+    [onChange, value]
+  );
+
+  // Update local value when props change
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // Auto-resize textarea
+  const adjustHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      const minHeight = (minRows * 20) + 12; // Approximate line height + padding
+      textarea.style.height = Math.max(scrollHeight, minHeight) + 'px';
+    }
+  }, [minRows]);
+
+  // Adjust height when content changes
+  useEffect(() => {
+    adjustHeight();
+  }, [localValue, adjustHeight]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    debouncedSave(newValue);
+  };
+
+  return (
+    <div className="relative">
+      <textarea
+        ref={textareaRef}
+        value={localValue}
+        onChange={handleChange}
+        placeholder={placeholder}
+        className={`w-full border border-gray-300 rounded-lg px-4 py-3 text-sm sm:text-base leading-relaxed resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${className}`}
+        style={{ minHeight: `${(minRows * 20) + 12}px` }}
+      />
+      {isSaving && (
+        <div className="absolute bottom-2 right-2 text-xs text-blue-600 bg-white px-2 py-1 rounded shadow">
+          💾 Sparar automatiskt...
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Helper function for default welcome content
+const getWelcomeContent = () => ({
+  title: "Välkommen!",
+  subtitle: "Din digitala handbok",
+  description: "Detta är en modern, interaktiv handbok som gör det enkelt att hitta information."
+});
+
 // Helper function to get section icon
 const getSectionIcon = (section: Section) => {
-  // Om sektionen har en specifik ikon vald, använd den
-  if (section.icon) {
-    return getIconComponent(section.icon);
-  }
-  
-  // Annars, fallback till automatisk mappning baserat på titel
-  const normalizedTitle = section.title.toLowerCase();
-  
-  if (normalizedTitle.includes('välkommen') || normalizedTitle.includes('hem')) {
-    return BookOpen;
-  }
-  if (normalizedTitle.includes('kontakt') || normalizedTitle.includes('styrelse')) {
-    return Users;
-  }
-  if (normalizedTitle.includes('telefon') || normalizedTitle.includes('support')) {
-    return Phone;
-  }
-  if (normalizedTitle.includes('ekonomi') || normalizedTitle.includes('avgift')) {
-    return DollarSign;
-  }
-  if (normalizedTitle.includes('felanmälan') || normalizedTitle.includes('underhåll')) {
-    return Wrench;
-  }
-  if (normalizedTitle.includes('regler') || normalizedTitle.includes('stadgar')) {
-    return BookOpen;
-  }
-  if (normalizedTitle.includes('trivsel')) {
-    return Heart;
-  }
-  if (normalizedTitle.includes('sopsortering') || normalizedTitle.includes('återvinning')) {
-    return Recycle;
-  }
-  if (normalizedTitle.includes('parkering') || normalizedTitle.includes('garage')) {
-    return Car;
-  }
-  if (normalizedTitle.includes('info') || normalizedTitle.includes('information')) {
-    return Search;
-  }
-  if (normalizedTitle.includes('frågor') || normalizedTitle.includes('faq')) {
-    return MessageCircle;
-  }
-  
-  return BookOpen; // Default icon
+  return getIconComponent(section.icon);
 };
 
 // Markdown Toolbar Component
@@ -203,183 +253,6 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onInsert }) => {
         );
       })}
     </>
-  );
-};
-
-// Robust Textarea Component with proper cursor handling
-interface RobustTextareaProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  minRows?: number;
-  pageId: string;
-  onSaveAndExit?: () => void;
-}
-
-const RobustTextarea: React.FC<RobustTextareaProps> = ({
-  value,
-  onChange,
-  placeholder,
-  className,
-  pageId,
-  onSaveAndExit
-}) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isPreview, setIsPreview] = useState(false);
-  const [showToolbar, setShowToolbar] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Check if we're on mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Insert markdown function with scroll fix
-  const insertMarkdown = (text: string, cursorOffset: number = 0) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Store scroll position before insertion
-    const scrollTop = textarea.scrollTop;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = value.substring(start, end);
-    
-    let insertText = text;
-    
-    // Smart text replacement
-    if (selectedText && text.includes('text')) {
-      insertText = text.replace('text', selectedText);
-    } else if (selectedText && text.includes('kod')) {
-      insertText = text.replace('kod', selectedText);
-    } else if (selectedText && text.includes('länktext')) {
-      insertText = text.replace('länktext', selectedText);
-    } else if (selectedText && text.includes('alt text')) {
-      insertText = text.replace('alt text', selectedText);
-    }
-    
-    const newValue = value.substring(0, start) + insertText + value.substring(end);
-    const newCursorPos = start + insertText.length - cursorOffset;
-    
-    onChange(newValue);
-    
-    // Restore cursor and scroll position
-    requestAnimationFrame(() => {
-      if (textarea) {
-        textarea.focus();
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        textarea.scrollTop = scrollTop; // Restore scroll position
-      }
-    });
-  };
-
-  return (
-    <div className="space-y-0">
-      {/* Enhanced toolbar with mobile-optimized layout */}
-      <div className="border border-gray-200 rounded-t-lg bg-gray-50 p-2 sm:p-3">
-        {/* Top row: Preview toggle and toolbar toggle (mobile) */}
-        <div className="flex items-center justify-between mb-2 sm:mb-0">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={isPreview ? "default" : "outline"}
-              size="sm"
-              onClick={() => setIsPreview(!isPreview)}
-              className="h-9 px-3 text-xs sm:text-sm font-medium"
-            >
-              {isPreview ? (
-                <>
-                  <Edit3 className="w-4 h-4 mr-1" />
-                  Redigera
-                </>
-              ) : (
-                <>
-                  <Eye className="w-4 h-4 mr-1" />
-                  Förhandsgranska
-                </>
-              )}
-            </Button>
-            
-            {/* Toolbar toggle for mobile */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowToolbar(!showToolbar)}
-              className="h-9 px-2 sm:hidden"
-              title={showToolbar ? "Dölj verktygsfält" : "Visa verktygsfält"}
-            >
-              {showToolbar ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
-          </div>
-          
-          {/* Save buttons - always visible */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            {onSaveAndExit && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onSaveAndExit}
-                className="h-9 px-2 sm:px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <span className="hidden sm:inline">💾 Spara och avsluta</span>
-                <span className="sm:hidden">✓</span>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Markdown toolbar - collapsible on mobile */}
-        {!isPreview && (showToolbar || !isMobile) && (
-          <div className="border-t border-gray-200 pt-2 mt-2 sm:border-t-0 sm:pt-0 sm:mt-0">
-            <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-1 sm:gap-2">
-              <MarkdownToolbar onInsert={insertMarkdown} />
-            </div>
-            <div className="mt-2 text-xs text-gray-500 hidden sm:block">
-              💡 Tips: Markera text först för att formatera den, eller klicka för att lägga till ny formatering
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Content area - either textarea or preview */}
-      {isPreview ? (
-        <div className={`
-          min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm 
-          rounded-t-none border-t-0 overflow-auto max-h-[70vh] sm:max-h-none
-        `}>
-          <div className="prose prose-gray max-w-none prose-sm sm:prose-base">
-            <MarkdownRenderer content={value || '*Inget innehåll att förhandsgranska*'} />
-          </div>
-        </div>
-      ) : (
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={isMobile ? 6 : 8}
-          className={`
-            flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm 
-            ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none 
-            focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 
-            disabled:cursor-not-allowed disabled:opacity-50 resize-y
-            ${className} rounded-t-none border-t-0
-            sm:min-h-[250px] max-h-[70vh] sm:max-h-none
-          `}
-          style={{
-            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-            fontSize: isMobile ? '16px' : '14px',
-            lineHeight: '1.5'
-          }}
-        />
-      )}
-    </div>
   );
 };
 
@@ -489,123 +362,204 @@ const InlineSectionCreator: React.FC<InlineSectionCreatorProps> = ({
   );
 };
 
-export const ContentArea: React.FC<ContentAreaProps> = ({
-  sections,
-  currentPageId,
-  isEditMode = false,
-  handbookId,
-  onUpdateSection,
-  onUpdatePage,
-  onAddPage,
-  onDeletePage,
-  onAddSection,
-  onMoveSection,
-  onDeleteSection,
-  onExitEditMode
-}) => {
-  const [welcomeContent, setWelcomeContent] = useState<WelcomeContentData>(getDefaultWelcomeContent());
-  const [localPageContent, setLocalPageContent] = useState<{ [pageId: string]: string }>({});
-  const [saveStatus, setSaveStatus] = useState<{ [pageId: string]: 'saved' | 'saving' | 'unsaved' }>({});
+export function ContentArea({ sections, currentPageId, isEditMode = false, handbookId, onUpdateSection, onUpdatePage, onAddPage, onDeletePage, onAddSection, onMoveSection, onDeleteSection, onExitEditMode }: ContentAreaProps) {
+  // Guard against undefined handbook
+  if (!sections) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Laddar handbok...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Initialize local content when sections change
+  // Ensure sections is always an array
+  const sectionsArray = sections || [];
+  
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
+    sectionsArray[0]?.id || null
+  );
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+
+  // Use currentPageId from props instead of local state
   useEffect(() => {
-    const newContent: { [pageId: string]: string } = {};
-    sections.forEach(section => {
-      section.pages?.forEach(page => {
-        if (!(page.id in localPageContent)) {
-          newContent[page.id] = page.content || '';
-        }
-      });
-    });
-    if (Object.keys(newContent).length > 0) {
-      setLocalPageContent(prev => ({ ...prev, ...newContent }));
-    }
-  }, [sections]);
-
-  // Debounced update function with status tracking
-  const debouncedUpdatePage = useDebouncedCallback(async (pageId: string, content: string) => {
-    setSaveStatus(prev => ({ ...prev, [pageId]: 'saving' }));
-    try {
-      await onUpdatePage?.(pageId, { content });
-      setSaveStatus(prev => ({ ...prev, [pageId]: 'saved' }));
-    } catch (error) {
-      setSaveStatus(prev => ({ ...prev, [pageId]: 'unsaved' }));
-    }
-  }, 500);
-
-  // Handle content changes with local state
-  const handleContentChange = (pageId: string, newContent: string) => {
-    setLocalPageContent(prev => ({ ...prev, [pageId]: newContent }));
-    setSaveStatus(prev => ({ ...prev, [pageId]: 'unsaved' }));
-    debouncedUpdatePage(pageId, newContent);
-  };
-
-  // Manual save function
-  const handleManualSave = async (pageId: string) => {
-    const content = localPageContent[pageId];
-    if (content !== undefined) {
-      setSaveStatus(prev => ({ ...prev, [pageId]: 'saving' }));
-      try {
-        await onUpdatePage?.(pageId, { content });
-        setSaveStatus(prev => ({ ...prev, [pageId]: 'saved' }));
-      } catch (error) {
-        setSaveStatus(prev => ({ ...prev, [pageId]: 'unsaved' }));
+    if (currentPageId) {
+      // Find which section contains this page
+      const foundSection = sectionsArray.find(section => 
+        section.pages?.some(page => page.id === currentPageId)
+      );
+      if (foundSection) {
+        setSelectedSectionId(foundSection.id);
+        setSelectedPageId(currentPageId);
       }
+    } else {
+      setSelectedPageId(null);
+    }
+  }, [currentPageId, sectionsArray]);
+
+  // Get the selected section
+  const selectedSection = sectionsArray.find(s => s.id === selectedSectionId);
+  
+  // Get the selected page
+  const selectedPage = selectedSection?.pages?.find(p => p.id === selectedPageId);
+
+  // Auto-save section changes directly to database
+  const handleSectionChange = async (sectionId: string, updates: Partial<Section>) => {
+    console.log('🔄 [ContentArea] Auto-saving section change:', sectionId, updates);
+    
+    try {
+      const response = await fetch(`/api/sections/${sectionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update section: ${response.statusText}`);
+      }
+
+      const updatedSection = await response.json();
+      console.log('✅ [ContentArea] Section auto-saved successfully:', updatedSection);
+
+      // Update local state through callback
+      if (onUpdateSection) {
+        onUpdateSection(sectionId, updates);
+      }
+      
+    } catch (error) {
+      console.error('❌ [ContentArea] Error auto-saving section:', error);
+      alert('❌ Fel vid sparning av sektion. Försök igen.');
     }
   };
 
-  // Save and exit function
-  const handleSaveAndExit = async (pageId: string) => {
-    await handleManualSave(pageId);
-    onExitEditMode?.();
+  // Auto-save page content directly to database  
+  const handleContentChange = async (pageId: string, content: string) => {
+    console.log('🔄 [ContentArea] Auto-saving page content:', pageId);
+    
+    try {
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update page: ${response.statusText}`);
+      }
+
+      const updatedPage = await response.json();
+      console.log('✅ [ContentArea] Page content auto-saved successfully:', updatedPage);
+
+      // Update local state through callback
+      if (onUpdatePage) {
+        onUpdatePage(pageId, { content });
+      }
+      
+    } catch (error) {
+      console.error('❌ [ContentArea] Error auto-saving page content:', error);
+      alert('❌ Fel vid sparning av sida. Försök igen.');
+    }
   };
 
-  // Get content for a page (local first, then fallback to page content)
+  // Auto-save page title directly to database
+  const handlePageUpdate = async (pageId: string, updates: Partial<Page>) => {
+    console.log('🔄 [ContentArea] Auto-saving page update:', pageId, updates);
+    
+    try {
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update page: ${response.statusText}`);
+      }
+
+      const updatedPage = await response.json();
+      console.log('✅ [ContentArea] Page auto-saved successfully:', updatedPage);
+
+      // Update local state through callback
+      if (onUpdatePage) {
+        onUpdatePage(pageId, updates);
+      }
+      
+    } catch (error) {
+      console.error('❌ [ContentArea] Error auto-saving page:', error);
+      alert('❌ Fel vid sparning av sida. Försök igen.');
+    }
+  };
+
+  // Get page content
   const getPageContent = (page: Page): string => {
-    return localPageContent[page.id] ?? page.content ?? '';
+    return page.content || '';
   };
 
-  // Get save status for a page
-  const getSaveStatus = (pageId: string) => {
-    return saveStatus[pageId] || 'saved';
+  // Create new section
+  const handleCreateSection = async (title: string, description: string, icon: string) => {
+    console.log('🔄 [ContentArea] Creating new section:', { title, description, icon });
+    
+    try {
+      const response = await fetch('/api/sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          description,
+          icon,
+          handbook_id: handbookId,
+          order_index: sectionsArray.length
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create section: ${response.statusText}`);
+      }
+
+      const newSection = await response.json();
+      console.log('✅ [ContentArea] Section created successfully:', newSection);
+
+      // Update local state through callback
+      if (onAddSection) {
+        onAddSection(newSection);
+      }
+      
+    } catch (error) {
+      console.error('❌ [ContentArea] Error creating section:', error);
+      alert('❌ Fel vid skapande av sektion. Försök igen.');
+    }
   };
 
   // Debug logging
   console.log('[ContentArea] Received props:', {
-    sectionsCount: sections?.length || 0,
-    currentPageId,
+    sectionsCount: sectionsArray.length,
+    currentPageId: selectedPageId,
     isEditMode,
     handbookId,
-    sections: sections?.map(s => ({ id: s.id, title: s.title, pagesCount: s.pages?.length || 0 }))
+    sections: sectionsArray.map(s => ({ id: s.id, title: s.title, pagesCount: s.pages?.length || 0 }))
   });
 
   // Find current page if specified
   const currentPage = currentPageId ? 
-    sections.flatMap(s => s.pages || []).find(p => p.id === currentPageId) : 
+    sectionsArray.flatMap(s => s.pages || []).find(p => p.id === currentPageId) : 
     null;
 
   console.log('[ContentArea] Current page lookup:', {
     currentPageId,
-    currentPage: currentPage ? `${currentPage.title} (${currentPage.id})` : 'None',
-    allPages: sections.flatMap(s => s.pages || []).map(p => ({ id: p.id, title: p.title }))
+    found: !!currentPage,
+    currentPage: currentPage ? { id: currentPage.id, title: currentPage.title } : null
   });
 
-  // If a specific page is selected, show that page
+  // If we have a current page, show just that page
   if (currentPage) {
-    console.log('[ContentArea] Rendering individual page:', currentPage.title);
-    const section = sections.find(s => s.pages?.some(p => p.id === currentPageId));
-    
     return (
-      <div className="w-full h-full overflow-y-auto bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <Badge variant="secondary" className="text-xs">
-                  {section?.title}
-                </Badge>
-              </div>
-              <CardTitle className="text-3xl font-bold text-gray-900 leading-tight">
+      <div className="w-full h-full content-area-scroll bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
+          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
                 {currentPage.title}
               </CardTitle>
               {currentPage.lastUpdated && (
@@ -629,28 +583,66 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
   // Show all sections as a long scrollable page
   return (
     <div className="w-full h-full content-area-scroll bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Fixed/Sticky Exit Edit Mode Button - Float over content when in edit mode */}
+      {isEditMode && onExitEditMode && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+          {/* Auto-save info button */}
+          <Button
+            onClick={() => {
+              console.log('💾 Auto-save aktiverat - inga ändringar behöver sparas manuellt');
+              alert('✅ Alla ändringar sparas automatiskt! Du behöver inte göra något mer.');
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
+          >
+            💾 Allt sparas automatiskt
+          </Button>
+          
+          {/* Exit edit mode button - More prominent */}
+          <Button
+            onClick={() => {
+              console.log('🚪 Avslutar redigeringsläge');
+              onExitEditMode();
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
+          >
+            <X className="w-5 h-5" />
+            Avsluta redigering
+          </Button>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
         {/* Welcome content - only show when no sections exist at all */}
-        {(!sections || sections.length === 0) && !currentPageId && (
+        {(!sectionsArray || sectionsArray.length === 0) && !currentPageId && (
           <div className="mb-8 sm:mb-16">
-            <EditableWelcomeContent data={welcomeContent} isEditMode={isEditMode} />
+            <EditableWelcomeContent data={getWelcomeContent()} isEditMode={isEditMode} />
+            
+            {/* Add section button when no sections exist */}
+            {isEditMode && (
+              <div className="mt-8">
+                <InlineSectionCreator 
+                  onCreateSection={handleCreateSection}
+                  placeholder="Skapa första sektionen"
+                />
+              </div>
+            )}
           </div>
         )}
 
         {/* All sections displayed vertically */}
-        {sections && sections.length > 0 && (
+        {sectionsArray && sectionsArray.length > 0 && (
           <div className="space-y-8 sm:space-y-12">
             {/* Add section button before first section */}
-            {isEditMode && onAddSection && (
+            {isEditMode && (
               <section className="mb-8 sm:mb-16">
                 <InlineSectionCreator 
-                  onCreateSection={(title, description, icon) => onAddSection(title, description, icon, 0)}
+                  onCreateSection={handleCreateSection}
                 />
               </section>
             )}
 
             {/* All handbook sections */}
-            {sections.map((section, sectionIndex) => {
+            {sectionsArray.map((section, sectionIndex) => {
               const IconComponent = getSectionIcon(section);
               
               return (
@@ -669,26 +661,31 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                             </div>
                             <div className="flex-1 min-w-0">
                               {isEditMode ? (
-                                <div className="space-y-2">
-                                  <InlineEdit
-                                    value={section.title}
-                                    onSave={(newTitle) => onUpdateSection?.(section.id, { title: newTitle })}
-                                    className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900"
-                                    placeholder="Sektionsrubrik"
-                                  />
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <InlineEdit
+                                      value={section.title}
+                                      onSave={(newTitle) => handleSectionChange(section.id, { title: newTitle })}
+                                      className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900"
+                                      placeholder="Sektionsrubrik"
+                                    />
+                                  </div>
                                   <InlineEdit
                                     value={section.description || ''}
-                                    onSave={(newDescription) => onUpdateSection?.(section.id, { description: newDescription })}
+                                    onSave={(newDescription) => handleSectionChange(section.id, { description: newDescription })}
                                     className="text-sm sm:text-base text-gray-600"
                                     placeholder="Beskrivning av sektionen"
                                   />
-                                  <div className="mt-2">
-                                    <label className="text-xs text-gray-500 mb-1 block">
-                                      Ikon:
+                                  <div className="mt-3 p-3 bg-white/70 rounded-lg border border-blue-200">
+                                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                                      🎨 Välj ikon för sektionen:
                                     </label>
                                     <IconPicker
                                       selectedIcon={section.icon || 'BookOpen'}
-                                      onIconSelect={(icon) => onUpdateSection?.(section.id, { icon })}
+                                      onIconSelect={(icon) => {
+                                        console.log('🎯 Icon selected:', icon, 'for section:', section.id);
+                                        handleSectionChange(section.id, { icon });
+                                      }}
                                       compact={true}
                                       size="sm"
                                     />
@@ -699,7 +696,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                                         type="checkbox"
                                         id={`section-public-${section.id}`}
                                         checked={section.is_public !== false}
-                                        onChange={(e) => onUpdateSection?.(section.id, { is_public: e.target.checked })}
+                                        onChange={(e) => handleSectionChange(section.id, { is_public: e.target.checked })}
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                       />
                                       <label 
@@ -710,24 +707,6 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                                       </label>
                                       <span className="text-xs text-gray-500">
                                         (Synlig för alla användare)
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <input
-                                        type="checkbox"
-                                        id={`section-published-${section.id}`}
-                                        checked={section.is_published !== false}
-                                        onChange={(e) => onUpdateSection?.(section.id, { is_published: e.target.checked })}
-                                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                                      />
-                                      <label 
-                                        htmlFor={`section-published-${section.id}`}
-                                        className="text-sm text-gray-700 cursor-pointer font-medium"
-                                      >
-                                        Publicerad sektion
-                                      </label>
-                                      <span className="text-xs text-gray-500">
-                                        (Aktivt innehåll)
                                       </span>
                                     </div>
                                   </div>
@@ -750,39 +729,46 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                           {/* Section controls - mobile optimized */}
                           {isEditMode && (
                             <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
-                              {onMoveSection && sectionIndex > 0 && (
+                              {sectionIndex > 0 && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => onMoveSection(section.id, 'up')}
+                                  onClick={() => onMoveSection && onMoveSection(section.id, 'up')}
                                   className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
                                   title="Flytta upp"
                                 >
                                   <ChevronUp className="w-4 h-4" />
                                 </Button>
                               )}
-                              {onMoveSection && sectionIndex < sections.length - 1 && (
+                              {sectionIndex < sectionsArray.length - 1 && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => onMoveSection(section.id, 'down')}
+                                  onClick={() => onMoveSection && onMoveSection(section.id, 'down')}
                                   className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
                                   title="Flytta ner"
                                 >
                                   <ChevronDown className="w-4 h-4" />
                                 </Button>
                               )}
-                              {onDeleteSection && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => onDeleteSection(section.id)}
-                                  className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
-                                  title="Ta bort sektion"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSectionChange(section.id, { is_public: !section.is_public })}
+                                className="h-8 w-8 p-0 hover:bg-yellow-100 text-yellow-600"
+                                title={section.is_public ? "Göm sektion" : "Visa sektion"}
+                              >
+                                {section.is_public ? <Eye className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onDeleteSection && onDeleteSection(section.id)}
+                                className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
+                                title="Ta bort sektion"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -794,118 +780,74 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                       {section.pages && section.pages.length > 0 ? (
                         <div className="space-y-6 sm:space-y-8">
                           {section.pages.map((page, pageIndex) => (
-                            <div key={page.id} className="relative">
-                              {/* Page header */}
-                              <div className="flex items-start justify-between gap-3 mb-4 sm:mb-6">
-                                <div className="flex-1 min-w-0">
-                                  {isEditMode ? (
-                                    <InlineEdit
-                                      value={page.title}
-                                      onSave={(newTitle) => onUpdatePage?.(page.id, { title: newTitle })}
-                                      className="text-lg sm:text-xl font-semibold text-gray-800"
-                                      placeholder="Sidtitel"
-                                    />
-                                  ) : (
-                                    <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 leading-tight">
-                                      {page.title}
-                                    </h3>
-                                  )}
-                                  
-                                  {/* Page metadata - mobile optimized */}
-                                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                                    {page.lastUpdated && (
-                                      <div className="flex items-center gap-1">
-                                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                                        <span>Uppdaterad {page.lastUpdated}</span>
-                                      </div>
+                            <div key={page.id} className="border-l-2 border-blue-200 pl-4 sm:pl-6">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+                                <div className="flex-1">
+                                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex-1">
+                                    {isEditMode ? (
+                                      <InlineEdit
+                                        value={page.title}
+                                        onSave={(newTitle) => handlePageUpdate(page.id, { title: newTitle })}
+                                        className="text-lg sm:text-xl font-semibold"
+                                        placeholder="Skriv sidtitel..."
+                                      />
+                                    ) : (
+                                      page.title
                                     )}
-                                    {page.estimatedReadTime && (
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                                        <span>{page.estimatedReadTime} min läsning</span>
-                                      </div>
-                                    )}
-                                    {getSaveStatus(page.id) !== 'saved' && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        {getSaveStatus(page.id) === 'saving' ? 'Sparar...' : 'Osparad'}
-                                      </Badge>
-                                    )}
-                                    {/* Published status checkbox - only in edit mode */}
-                                    {isEditMode && (
-                                      <div className="flex items-center space-x-1">
-                                        <input
-                                          type="checkbox"
-                                          id={`page-published-${page.id}`}
-                                          checked={page.is_published !== false}
-                                          onChange={(e) => onUpdatePage?.(page.id, { is_published: e.target.checked })}
-                                          className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                        />
-                                        <label htmlFor={`page-published-${page.id}`} className="text-xs text-gray-600 cursor-pointer">
-                                          Publicerad
-                                        </label>
-                                      </div>
-                                    )}
-                                  </div>
+                                  </h3>
                                 </div>
-
-                                {/* Page controls - mobile optimized */}
-                                {isEditMode && onDeletePage && section.pages && section.pages.length > 1 && (
-                                  <div className="flex gap-1 flex-shrink-0">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        if (window.confirm(`Är du säker på att du vill radera sidan "${page.title}"? Detta kan inte ångras.`)) {
-                                          onDeletePage(page.id, section.id);
-                                        }
-                                      }}
-                                      className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
-                                      title="Radera sida"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                )}
                               </div>
 
-                              {/* Page content */}
-                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100/50 overflow-hidden shadow-sm">
+                              <div className="mb-4 sm:mb-6">
                                 {isEditMode ? (
-                                  <div className="space-y-0">
-                                    <RobustTextarea
-                                      value={getPageContent(page)}
-                                      onChange={(newValue) => handleContentChange(page.id, newValue)}
-                                      placeholder="Skriv innehåll här... (Markdown stöds)"
-                                      className="min-h-[200px] font-mono text-sm border-dashed border-gray-300 rounded-t-none border-t-0"
-                                      pageId={page.id}
-                                      onSaveAndExit={() => handleSaveAndExit(page.id)}
-                                    />
-                                  </div>
+                                  <RobustTextarea
+                                    value={getPageContent(page)}
+                                    onChange={(newContent) => handleContentChange(page.id, newContent)}
+                                    placeholder="Skriv ditt innehåll här... Du kan använda Markdown för formatering."
+                                    className="min-h-32 sm:min-h-40"
+                                    pageId={page.id}
+                                  />
                                 ) : (
-                                  <div className="p-4 sm:p-6 lg:p-8">
-                                    <div className="prose prose-gray max-w-none prose-sm sm:prose-base lg:prose-lg">
-                                      <MarkdownRenderer content={getPageContent(page)} />
-                                    </div>
-                                  </div>
+                                  <MarkdownRenderer content={getPageContent(page)} />
                                 )}
                               </div>
+
+                              {isEditMode && (
+                                <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 pt-2 border-t border-gray-100">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePageUpdate(page.id, { order: page.order - 1 })}
+                                    className="h-8 px-2 sm:px-3 text-gray-600 hover:text-gray-800 justify-start sm:justify-center"
+                                    title="Flytta upp sida"
+                                  >
+                                    <ChevronUp className="w-4 h-4 mr-1 sm:mr-0" />
+                                    <span className="sm:hidden">Flytta upp</span>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePageUpdate(page.id, { order: page.order + 1 })}
+                                    className="h-8 px-2 sm:px-3 text-gray-600 hover:text-gray-800 justify-start sm:justify-center"
+                                    title="Flytta ner sida"
+                                  >
+                                    <ChevronDown className="w-4 h-4 mr-1 sm:mr-0" />
+                                    <span className="sm:hidden">Flytta ner</span>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePageUpdate(page.id, { is_public: !page.is_public })}
+                                    className="h-8 px-2 sm:px-3 text-gray-600 hover:text-gray-800 justify-start sm:justify-center"
+                                    title={page.is_public ? "Göm sida" : "Visa sida"}
+                                  >
+                                    {page.is_public ? <X className="w-4 h-4 mr-1 sm:mr-0" /> : <Eye className="w-4 h-4 mr-1 sm:mr-0" />}
+                                    <span className="sm:hidden">{page.is_public ? "Göm" : "Visa"}</span>
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           ))}
-                          
-                          {/* Add page button at the bottom of the section */}
-                          {isEditMode && onAddPage && (
-                            <div className="pt-4 border-t border-gray-100">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onAddPage(section.id, `Ny sida ${section.pages.length + 1}`, '')}
-                                className="w-full sm:w-auto space-x-2 h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50 bg-blue-50/50"
-                              >
-                                <Plus className="w-4 h-4" />
-                                <span>Lägg till ny sida</span>
-                              </Button>
-                            </div>
-                          )}
                         </div>
                       ) : (
                         /* Empty section state */
@@ -914,11 +856,11 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                             <IconComponent className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                           </div>
                           <p className="text-sm sm:text-base mb-4 sm:mb-6 font-medium">Denna sektion har inga sidor än</p>
-                          {isEditMode && onAddPage && (
+                          {isEditMode && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => onAddPage(section.id, 'Första sidan', '')}
+                              onClick={() => handleSectionChange(section.id, { pages: [{ id: '', title: 'Första sidan', content: '' }] })}
                               className="space-x-2 h-9 sm:h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50"
                             >
                               <Plus className="w-4 h-4" />
@@ -929,16 +871,6 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
                       )}
                     </CardContent>
                   </Card>
-
-                  {/* Add section button after each section */}
-                  {isEditMode && onAddSection && (
-                    <div className="mt-6 sm:mt-8">
-                      <InlineSectionCreator 
-                        onCreateSection={(title, description, icon) => onAddSection(title, description, icon, sectionIndex + 1)}
-                        placeholder="Lägg till sektion här"
-                      />
-                    </div>
-                  )}
                 </section>
               );
             })}
@@ -947,4 +879,4 @@ export const ContentArea: React.FC<ContentAreaProps> = ({
       </div>
     </div>
   );
-}; 
+} 
