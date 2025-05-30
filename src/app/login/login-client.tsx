@@ -23,6 +23,7 @@ export default function LoginClient() {
   const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
   const [showRegistrationMessage, setShowRegistrationMessage] = useState(false);
   const [showLoggedOutMessage, setShowLoggedOutMessage] = useState(false);
+  const [showSessionRenewalMessage, setShowSessionRenewalMessage] = useState(false);
 
   useEffect(() => {
     // Kolla om e-posten är verifierad via URL-parametern
@@ -56,6 +57,23 @@ export default function LoginClient() {
       // Rensa parametern från URL:en
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Kontrollera om användaren kommer från session förnyelse
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('session_renewal') === 'true') {
+      setShowSessionRenewalMessage(true);
+      // Rensa parametern från URL:en utan att ladda om sidan
+      const newUrl = window.location.pathname + (urlParams.get('return') ? `?return=${urlParams.get('return')}` : '');
+      window.history.replaceState({}, document.title, newUrl);
+      
+      // Ta bort meddelandet efter 8 sekunder
+      const timer = setTimeout(() => {
+        setShowSessionRenewalMessage(false);
+      }, 8000);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -280,6 +298,24 @@ export default function LoginClient() {
               <p className="mt-2 text-xs">
                 Kontrollera din skräppost om du inte hittar mailet i inkorgen. Om du fortfarande inte hittar mailet, 
                 kan du försöka logga in och använda "Skicka nytt bekräftelsemail"-funktionen.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Session Renewal Message */}
+        {showSessionRenewalMessage && (
+          <Alert className="mb-6 bg-blue-50 border-blue-200 text-blue-800">
+            <CheckCircle2 className="h-5 w-5 text-blue-600" />
+            <AlertTitle className="text-blue-800">
+              Sessionen behöver förnyas
+            </AlertTitle>
+            <AlertDescription className="text-blue-700">
+              <p>
+                Du har varit inaktiv en längre stund, så vi behöver förnya din session av säkerhetsskäl.
+              </p>
+              <p className="mt-2">
+                Logga bara in igen så kommer du tillbaka till där du var.
               </p>
             </AlertDescription>
           </Alert>

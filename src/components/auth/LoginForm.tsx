@@ -81,13 +81,25 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         } else if (!data.session) {
           setError("Kunde inte skapa en aktiv session. Försök igen eller kontakta support.");
         } else {
-          // Inloggning lyckades, implementera en mer robust omdirigering med ännu längre fördröjning
+          // Inloggning lyckades, implementera en mer robust omdirigering med hantering av return URL
           console.log("Inloggning lyckades, förbereder omdirigering...");
           
-          // Use smart redirect with polling to ensure session is properly established
-          setTimeout(() => {
-            smartRedirectWithPolling(5, 800);
-          }, 1000);
+          // Kontrollera om det finns en return URL från session renewal
+          const urlParams = new URLSearchParams(window.location.search);
+          const returnUrl = urlParams.get('return');
+          
+          if (returnUrl) {
+            console.log("Omdirigerar till return URL:", returnUrl);
+            // Återgå till där användaren var innan session renewal
+            setTimeout(() => {
+              window.location.href = decodeURIComponent(returnUrl);
+            }, 1000);
+          } else {
+            // Use smart redirect with polling to ensure session is properly established
+            setTimeout(() => {
+              smartRedirectWithPolling(5, 800);
+            }, 1000);
+          }
         }
       }
     } catch (err: unknown) {

@@ -2,7 +2,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Script from 'next/script';
-import SessionResetNotice from "@/components/SessionResetNotice";
+import { SessionReconnectHandler } from "@/components/SessionReconnectHandler";
 import { AuthDebugButton } from "@/components/debug/AuthDebugButton";
 
 const inter = Inter({
@@ -247,7 +247,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         <AuthProvider>
-          <SessionResetNotice />
+          <SessionReconnectHandler />
           {children}
           <AuthDebugButton />
         </AuthProvider>

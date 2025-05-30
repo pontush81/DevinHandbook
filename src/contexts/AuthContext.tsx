@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Hantera auth-fel och visa lämpliga meddelanden
+  // Hantera auth-fel med mjuk sessionshantering
   const handleAuthError = (event: CustomEvent) => {
     if (authErrorShown) return; // Förhindra flera meddelanden
     
@@ -95,13 +95,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       errorMessage.includes('Invalid refresh token') ||
       errorMessage.includes('session_expired')
     ) {
-      console.log('Session-related error detected, cleaning up...');
+      console.log('🔄 Session-related error detected, letting SessionReconnectHandler handle it...');
       
-      // Rensa session/user state
+      // Rensa session/user state tyst
       setSession(null);
       setUser(null);
       
-      // Rensa all auth-data från storage
+      // Rensa auth-data från storage tyst
       if (typeof window !== 'undefined') {
         try {
           // Rensa localStorage
@@ -125,19 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      // Visa toast-meddelande istället för popup
+      // Sätt flagga så vi inte visar flera meddelanden
       setAuthErrorShown(true);
       
-      showToast({
-        title: "Session har gått ut",
-        description: "Du omdirigeras till inloggningssidan...",
-        variant: "destructive",
-      });
+      // Låt SessionReconnectHandler hantera resten - ingen aggressiv popup eller redirect
+      return;
       
-      // Automatisk omdirigering efter kort fördröjning
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 2000);
     } else if (
       errorMessage.toLowerCase().includes('email not confirmed') || 
       errorMessage.toLowerCase().includes('email is not confirmed') ||
@@ -146,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       error?.code === '401' || 
       error?.code === '422'
     ) {
-      // Specifik hantering för obekräftad email
+      // Specifik hantering för obekräftad email - detta är ett permanent problem som kräver action
       console.log('Email confirmation error detected');
       
       setAuthErrorShown(true);
@@ -162,22 +155,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.location.href = '/login';
       }, 3000);
     } else {
-      // Hantera andra typer av auth-fel
+      // Hantera andra typer av auth-fel med mindre aggressivt meddelande
       console.error('Other auth error:', errorMessage);
       
-      // För andra fel, visa ett generiskt meddelande
       setAuthErrorShown(true);
       
+      // Visa endast ett diskret meddelande, ingen omedelbar redirect
       showToast({
-        title: "Autentiseringsfel",
-        description: "Du omdirigeras till inloggningssidan...",
-        variant: "destructive",
+        title: "Anslutningsproblem",
+        description: "Sessionen kunde inte upprätthållas. Försöker återansluta...",
+        variant: "default", // Använd inte "destructive" för tillfälliga problem
       });
       
-      // Automatisk omdirigering efter kort fördröjning
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 2000);
+      // Ingen automatisk omdirigering - låt SessionReconnectHandler hantera det
     }
   };
 
