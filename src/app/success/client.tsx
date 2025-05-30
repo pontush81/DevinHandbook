@@ -10,7 +10,7 @@ export default function SuccessClient() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [redirectCountdown, setRedirectCountdown] = useState(5);
+  const [redirectCountdown, setRedirectCountdown] = useState(2);
   const [isTestMode, setIsTestMode] = useState(false);
   const [handbookName, setHandbookName] = useState<string | null>(null);
   const [subdomain, setSubdomain] = useState<string | null>(null);
