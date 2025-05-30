@@ -1778,22 +1778,27 @@ html, body {
 
 /* Desktop sidebar should connect directly to header with no gap */
 @media (min-width: 768px) {
-  /* Create a visual extension of the sidebar border to the header */
-  [data-sidebar="sidebar"]::before {
+  /* Create a continuous vertical border line that spans from top to bottom */
+  [data-slot="sidebar-container"]::after {
     content: '';
-    position: absolute;
-    top: -48px; /* Header height h-12 = 48px */
-    right: -1px;
+    position: fixed;
+    top: 0;
+    left: calc(var(--sidebar-width) - 1px); /* Position at the right edge of sidebar */
     width: 1px;
-    height: 48px;
+    height: 100vh;
     background: hsl(var(--sidebar-border));
     z-index: 51; /* Higher than header z-index (50) */
     pointer-events: none;
   }
   
-  /* Ensure sidebar has the normal border */
+  /* Remove the default border from sidebar to avoid double borders */
   [data-sidebar="sidebar"] {
-    border-right: 1px solid hsl(var(--sidebar-border));
+    border-right: none;
+  }
+  
+  /* Ensure sidebar container has proper width variable */
+  [data-slot="sidebar-container"] {
+    border-right: none; /* Remove any existing border */
   }
 }
 
