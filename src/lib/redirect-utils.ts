@@ -14,6 +14,14 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
   try {
     console.log(`[Redirect to New Handbook] 🚀 Starting redirect process for subdomain: ${subdomain}`);
     
+    // Validate subdomain parameter
+    if (!subdomain || typeof subdomain !== 'string' || subdomain.trim() === '') {
+      console.error(`[Redirect to New Handbook] ❌ Invalid subdomain parameter: ${subdomain}`);
+      console.log(`[Redirect to New Handbook] Falling back to dashboard`);
+      window.location.href = '/dashboard';
+      return;
+    }
+    
     // Use appropriate domain based on environment
     const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
     
@@ -131,6 +139,15 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
     } else if (handbookCount === 1) {
       // One handbook - go directly to it (most common case)
       const handbook = handbooks[0];
+      
+      // Validate subdomain before redirect
+      if (!handbook || !handbook.subdomain || typeof handbook.subdomain !== 'string') {
+        console.error('[Smart Redirect] Invalid handbook or subdomain:', handbook);
+        console.log('[Smart Redirect] Falling back to dashboard due to invalid subdomain');
+        window.location.href = '/dashboard';
+        return;
+      }
+      
       console.log(`[Smart Redirect] One handbook found, redirecting to: ${handbook.subdomain}`);
       
       // Use new URL structure (www.handbok.org/namn)
@@ -235,6 +252,14 @@ export async function smartRedirectWithPolling(
       } else if (handbookCount === 1) {
         const handbook = handbooks[0];
         console.log(`[Smart Redirect Polling] Found single handbook: ${handbook.subdomain}`);
+        
+        // Validate subdomain before redirect
+        if (!handbook || !handbook.subdomain || typeof handbook.subdomain !== 'string') {
+          console.error('[Smart Redirect Polling] Invalid handbook or subdomain:', handbook);
+          console.log('[Smart Redirect Polling] Falling back to dashboard due to invalid subdomain');
+          window.location.href = '/dashboard';
+          return;
+        }
         
         // Use new URL structure (www.handbok.org/namn)
         const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';

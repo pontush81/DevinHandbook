@@ -90,6 +90,10 @@ export default function SuccessClient() {
   // Get the handbook URL using path-based format
   const getHandbookUrl = () => {
     const finalPath = getFinalPath();
+    if (!finalPath) {
+      console.error('[Success] Cannot create handbook URL: subdomain is missing');
+      return '/dashboard'; // Safe fallback
+    }
     return `https://www.handbok.org/${finalPath}`;
   };
 
