@@ -7,11 +7,20 @@ import Stripe from 'stripe';
  */
 const isProduction = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
 const forceTestMode = process.env.FORCE_STRIPE_TEST_MODE === 'true';
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+// Bestäm vilka nycklar som ska användas
+const useTestKeys = !isProduction || forceTestMode;
+
+const stripeSecretKey = useTestKeys 
+  ? process.env.STRIPE_SECRET_KEY_TEST 
+  : process.env.STRIPE_SECRET_KEY;
+
+const stripeWebhookSecret = useTestKeys 
+  ? process.env.STRIPE_WEBHOOK_SECRET_TEST 
+  : process.env.STRIPE_WEBHOOK_SECRET;
 
 // Exportera teststatus för användning i andra moduler
-export const isTestMode = !isProduction || forceTestMode;
+export const isTestMode = useTestKeys;
 
 /**
  * Stripe-instans som konfigureras baserat på miljö
