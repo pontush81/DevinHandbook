@@ -17,6 +17,26 @@ export async function createHandbookWithSectionsAndPages(
     throw new Error('Obligatoriskt fält saknas vid skapande av handbok.');
   }
 
+  // Check if subdomain already exists
+  console.log('[Handbook] Checking if subdomain already exists:', subdomain);
+  const { data: existing, error: checkError } = await supabase
+    .from('handbooks')
+    .select('id, title, subdomain')
+    .eq('subdomain', subdomain)
+    .maybeSingle();
+  
+  if (checkError) {
+    console.error('[Handbook] Error checking existing subdomain:', checkError);
+    throw new Error(`Database error when checking subdomain: ${checkError.message}`);
+  }
+  
+  if (existing) {
+    console.error('[Handbook] Subdomain already exists:', existing);
+    throw new Error(`Subdomain "${subdomain}" already exists with handbook ID: ${existing.id}`);
+  }
+  
+  console.log('[Handbook] Subdomain is available, proceeding with handbook creation');
+
   const { data: handbook, error: handbookError } = await supabase
     .from('handbooks')
     .insert({
@@ -34,6 +54,17 @@ export async function createHandbookWithSectionsAndPages(
     })
     .select()
     .single();
+
+  if (handbookError) {
+    console.error('[Handbook] Database error creating handbook:', handbookError);
+    console.error('[Handbook] Error details:', { 
+      code: handbookError.code, 
+      message: handbookError.message, 
+      details: handbookError.details,
+      hint: handbookError.hint 
+    });
+    throw new Error(`Failed to create handbook: ${handbookError.message} (Code: ${handbookError.code})`);
+  }
 
   let handbookObj = Array.isArray(handbook) ? handbook[0] : handbook;
   if (!handbookObj || !handbookObj.id) {
