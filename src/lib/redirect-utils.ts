@@ -230,6 +230,7 @@ export async function smartRedirectWithPolling(
           console.log('[Smart Redirect Polling] No handbooks yet, retrying...');
           setTimeout(attemptRedirect, intervalMs);
         }
+        return;
         
       } else if (handbookCount === 1) {
         const handbook = handbooks[0];
