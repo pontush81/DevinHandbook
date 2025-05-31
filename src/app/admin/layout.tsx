@@ -28,8 +28,8 @@ interface AdminLayoutProps {
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/handbooks', label: 'Handböcker', icon: BookOpen },
+  { href: '/admin/customers', label: 'Kunder', icon: Users },
   { href: '/admin/content', label: 'Innehåll', icon: FileText },
-  { href: '/admin/users', label: 'Användare', icon: Users },
   { href: '/admin/analytics', label: 'Statistik', icon: BarChart3 },
   { href: '/admin/settings', label: 'Inställningar', icon: Settings },
 ];
