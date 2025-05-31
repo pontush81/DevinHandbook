@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Conditional Resend initialization to prevent build failures
+let resend: Resend | null = null;
+try {
+  if (process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+} catch (error) {
+  console.warn('[Webhook] Resend initialization failed:', error);
+}
 
 interface WebhookPayload {
   type: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -76,9 +84,15 @@ async function sendNewUserNotification({
   registeredAt: string;
 }) {
   try {
+    // Check if Resend is available
+    if (!resend) {
+      console.warn('[Webhook] Resend not available, skipping email notification');
+      return;
+    }
+
     const registeredDate = new Date(registeredAt).toLocaleString('sv-SE');
     
-    await resend.emails.send({
+    await resend?.emails.send({
       from: 'Handbok.org <noreply@handbok.org>',
       to: [process.env.ADMIN_EMAIL!], // Din e-post
       subject: '🎉 Ny kund registrerad på Handbok.org',
