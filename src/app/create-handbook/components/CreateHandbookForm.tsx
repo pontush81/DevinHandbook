@@ -292,7 +292,7 @@ export function CreateHandbookForm() {
             Adressen till din handbok blir:
           </label>
           <div className="flex items-center">
-            <span className="text-gray-500 mr-1">www.handbok.org/</span>
+            <span className="text-gray-500 mr-1">handbok.org/handbook/</span>
             <Input
               id="subdomain"
               type="text"
@@ -352,7 +352,7 @@ export function CreateHandbookForm() {
         
         <p className="text-xs text-gray-500 text-center">
           Efter betalning kommer din handbok att vara tillgänglig på{" "}
-          <span className="font-medium">https://www.handbok.org/{subdomain || 'din-förening'}</span>
+          <span className="font-medium">handbok.org/handbook/{subdomain || 'din-förening'}</span>
         </p>
       </form>
     </div>

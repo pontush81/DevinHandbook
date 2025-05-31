@@ -100,8 +100,8 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
     if (process.env.NODE_ENV === 'development') {
       window.location.href = `/test-search/${subdomain}`;
     } else {
-      // I produktion, navigera till den riktiga externa domänen
-      window.location.href = `https://${subdomain}.handbok.org`;
+      // I produktion, navigera till path-baserad URL istället för subdomän
+      window.location.href = `/handbook/${subdomain}`;
     }
   };
 
@@ -154,7 +154,7 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium text-gray-900 truncate">{handbook.title}</span>
-                        <span className="text-xs text-gray-500 truncate">{handbook.subdomain}.handbok.org</span>
+                        <span className="text-xs text-gray-500 truncate">handbok.org/handbook/{handbook.subdomain}</span>
                       </div>
                     </button>
                   ))}

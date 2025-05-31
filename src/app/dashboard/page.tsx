@@ -269,7 +269,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-sm text-gray-600 mb-6">
                         <span className="font-medium">URL:</span>{" "}
-                        www.handbok.org/{handbook.subdomain}
+                        handbok.org/handbook/{handbook.subdomain}
                       </div>
                       <div className="flex space-x-2">
                         <Button 
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                           variant="outline" 
                           size="sm"
                           onClick={() => {
-                            window.open(`https://www.handbok.org/${handbook.subdomain}`, '_blank');
+                            window.open(`/handbook/${handbook.subdomain}`, '_blank');
                           }}
                         >
                           Visa

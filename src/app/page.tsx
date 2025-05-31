@@ -34,7 +34,7 @@ export default function HomePage() {
     },
     {
       question: "Hur kommer medlemmarna åt handboken?",
-      answer: "Medlemmarna besöker enkelt handboken via adressen föreningsnamn.handbok.org eller via vår nya adress handbok.org/view?company=föreningsnamn. Ingen inloggning behövs, men känsligt innehåll kan lösenordsskyddas."
+      answer: "Medlemmarna besöker enkelt handboken via adressen handbok.org/handbook/föreningsnamn. Ingen inloggning behövs, men känsligt innehåll kan lösenordsskyddas."
     }
   ];
 
@@ -70,7 +70,7 @@ export default function HomePage() {
                         <div className="w-3 h-3 rounded-full bg-green-400"></div>
                       </div>
                       <div className="bg-gray-100 rounded px-3 py-1 text-xs text-gray-600">
-                        www.handbok.org/solgläntan
+                        handbok.org/handbook/solgläntan
                       </div>
                     </div>
                   </div>
@@ -265,7 +265,7 @@ export default function HomePage() {
                       </svg>
                     </div>
                     <p className="ml-3 text-base">
-                      <span className="font-medium">Egen URL</span> - www.handbok.org/föreningsnamn
+                      <span className="font-medium">Egen URL</span> - handbok.org/handbook/föreningsnamn
                     </p>
                   </li>
                   <li className="flex items-start">
@@ -311,7 +311,7 @@ export default function HomePage() {
             <AccordionItem value="item-1">
               <AccordionTrigger>Vad ingår i priset på 2490 kr/år?</AccordionTrigger>
               <AccordionContent>
-                I priset ingår en komplett digital handbok med egen URL (t.ex. www.handbok.org/din-förening).
+                I priset ingår en komplett digital handbok med egen URL (t.ex. handbok.org/handbook/din-förening).
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-2">

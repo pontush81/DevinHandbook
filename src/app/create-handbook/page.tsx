@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from "react";
-import { useHandbookStore } from "@/lib/store/handbook-store";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -110,7 +109,7 @@ function CreateHandbookContent() {
                     {handbooks.map(handbook => (
                       <div key={handbook.id} className="p-4 border rounded-lg">
                         <h4 className="font-medium text-lg">{handbook.title}</h4>
-                        <p className="text-gray-500 mb-3">www.handbok.org/{handbook.subdomain}</p>
+                        <p className="text-gray-500 mb-3">handbok.org/handbook/{handbook.subdomain}</p>
                         <div className="space-x-2">
                           <Button asChild size="sm">
                             <a href={`/${handbook.subdomain}`}>
@@ -171,7 +170,7 @@ function CreateHandbookContent() {
                   <li key={handbook.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center">
                     <div>
                       <h3 className="font-medium text-lg">{handbook.title}</h3>
-                      <p className="text-gray-500">www.handbok.org/{handbook.subdomain}</p>
+                      <p className="text-gray-500">handbok.org/handbook/{handbook.subdomain}</p>
                     </div>
                     <div className="mt-2 md:mt-0 space-x-2">
                       <Button asChild variant="outline" size="sm">
@@ -180,7 +179,7 @@ function CreateHandbookContent() {
                         </a>
                       </Button>
                       <Button asChild size="sm">
-                        <a href={`https://www.handbok.org/${handbook.subdomain}`}>
+                        <a href={`/handbook/${handbook.subdomain}`}>
                           Redigera
                         </a>
                       </Button>

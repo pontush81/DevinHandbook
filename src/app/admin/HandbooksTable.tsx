@@ -44,7 +44,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
       }
       
       // Show temporary success message
-      setError(`Cache för ${subdomain}.handbok.org har uppdaterats`);
+      setError(`Cache för handbok.org/handbook/${subdomain} har uppdaterats`);
       setTimeout(() => setError(null), 3000);
     } catch (err: unknown) {
       console.error("Error revalidating handbook:", err);
@@ -129,7 +129,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                     {handbook.title}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {handbook.subdomain}.handbok.org
+                    handbok.org/handbook/{handbook.subdomain}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
@@ -145,7 +145,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-3">
                       <a
-                        href={`https://${handbook.subdomain}.handbok.org`}
+                        href={`/handbook/${handbook.subdomain}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-black hover:underline"
