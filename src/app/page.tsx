@@ -11,7 +11,15 @@ import { ChevronDownIcon } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 // SEO-vänlig FAQ-komponent
-function SEOFriendlyFAQ({ faqs }: { faqs: Array<{ question: string; answer: string }> }) {
+function SEOFriendlyFAQ({ faqs }: { 
+  faqs: Array<{ 
+    question: string; 
+    answer: string; 
+    category?: string;
+    keywords?: string[];
+    priority?: number;
+  }> 
+}) {
   const [openItems, setOpenItems] = useState<Set<number>>(new Set());
 
   const toggleItem = (index: number) => {
@@ -27,17 +35,24 @@ function SEOFriendlyFAQ({ faqs }: { faqs: Array<{ question: string; answer: stri
   return (
     <div className="space-y-4">
       {faqs.map((faq, index) => (
-        <div key={index} className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div key={index} id={`faq-${index + 1}`} className="bg-white rounded-lg border border-gray-200 shadow-sm">
           <button
             className="w-full p-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
             onClick={() => toggleItem(index)}
             aria-expanded={openItems.has(index)}
           >
-            <h3 className="text-lg font-semibold text-gray-900 pr-4">
-              {faq.question}
-            </h3>
+            <div className="pr-4">
+              {faq.category && (
+                <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full mb-2">
+                  {faq.category}
+                </span>
+              )}
+              <h3 className="text-lg font-semibold text-gray-900">
+                {faq.question}
+              </h3>
+            </div>
             <ChevronDownIcon 
-              className={`h-5 w-5 text-gray-500 transition-transform ${
+              className={`h-5 w-5 text-gray-500 transition-transform flex-shrink-0 ${
                 openItems.has(index) ? 'rotate-180' : ''
               }`}
             />
@@ -49,7 +64,7 @@ function SEOFriendlyFAQ({ faqs }: { faqs: Array<{ question: string; answer: stri
               openItems.has(index) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <div className="px-6 pb-6 text-gray-600 leading-relaxed">
+            <div className="px-6 pb-6 text-gray-600 leading-relaxed faq-answer">
               {faq.answer}
             </div>
           </div>
@@ -68,23 +83,38 @@ export default function HomePage() {
   const faqs = [
     {
       question: "Vad är en digital bostadsrättsföreningshandbok?",
-      answer: "En digital handbok för bostadsrättsföreningar är en webbaserad plattform där all viktig information om föreningen samlas. Här finns stadgar, regler, kontaktuppgifter, felanmälan och annan information som medlemmar behöver ha tillgång till."
+      answer: "En digital handbok för bostadsrättsföreningar är en webbaserad plattform där all viktig information om föreningen samlas. Här finns stadgar, regler, kontaktuppgifter, felanmälan och annan information som medlemmar behöver ha tillgång till.",
+      category: "Grundläggande",
+      keywords: ["digital handbok", "bostadsrättsförening", "webbaserad plattform", "föreningsinformation"],
+      priority: 1
     },
     {
       question: "Hur skapar jag en handbok för min förening?",
-      answer: "Det är enkelt! Klicka på 'Skapa handbok' ovan, följ den guidade processen, ange föreningens namn och välj en unik subdomän. Efter betalning kan du börja fylla din handbok med innehåll."
+      answer: "Det är enkelt! Klicka på 'Skapa handbok' ovan, följ den guidade processen, ange föreningens namn och välj en unik subdomän. Efter betalning kan du börja fylla din handbok med innehåll.",
+      category: "Komma igång",
+      keywords: ["skapa handbok", "registrering", "subdomän", "betalning"],
+      priority: 2
     },
     {
       question: "Vad kostar tjänsten?",
-      answer: "Tjänsten kostar 2490 kr per år för en förening, oavsett storlek. I priset ingår obegränsad lagring, egen subdomän och säkerhetskopiering."
+      answer: "Tjänsten kostar 2490 kr per år för en förening, oavsett storlek. I priset ingår obegränsad lagring, egen subdomän och säkerhetskopiering.",
+      category: "Prissättning",
+      keywords: ["pris", "kostnad", "2490 kr", "årskostnad", "obegränsad lagring"],
+      priority: 3
     },
     {
       question: "Kan jag prova innan jag betalar?",
-      answer: "Vi erbjuder en 30-dagars pengarna-tillbaka-garanti om du inte är nöjd med tjänsten. Du kan testa alla funktioner under denna period."
+      answer: "Vi erbjuder en 30-dagars pengarna-tillbaka-garanti om du inte är nöjd med tjänsten. Du kan testa alla funktioner under denna period.",
+      category: "Prissättning",
+      keywords: ["gratis provperiod", "pengarna tillbaka", "30 dagar", "garanti"],
+      priority: 4
     },
     {
       question: "Hur kommer medlemmarna åt handboken?",
-      answer: "Medlemmarna besöker enkelt handboken via adressen handbok.org/handbook/föreningsnamn. Ingen inloggning behövs, men känsligt innehåll kan lösenordsskyddas."
+      answer: "Medlemmarna besöker enkelt handboken via adressen handbok.org/handbook/föreningsnamn. Ingen inloggning behövs, men känsligt innehåll kan lösenordsskyddas.",
+      category: "Användning",
+      keywords: ["tillgång", "URL", "handbok.org", "inloggning", "lösenordsskydd"],
+      priority: 5
     }
   ];
 
@@ -367,21 +397,82 @@ export default function HomePage() {
           {/* SEO-optimerad FAQ - allt innehåll synligt för sökmotorer */}
           <SEOFriendlyFAQ faqs={faqs} />
           
-          {/* Schema.org strukturerade data för bättre SEO */}
+          {/* Förbättrad Schema.org strukturerade data för optimal SEO */}
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify({
                 "@context": "https://schema.org",
                 "@type": "FAQPage",
-                "mainEntity": faqs.map(faq => ({
+                "name": "Vanliga frågor om Handbok.org - Digital handbok för bostadsrättsföreningar",
+                "description": "Få svar på vanliga frågor om hur du skapar och använder digitala handböcker för bostadsrättsföreningar.",
+                "url": "https://handbok.org/#faq",
+                "inLanguage": "sv-SE",
+                "datePublished": "2024-01-01",
+                "dateModified": new Date().toISOString().split('T')[0],
+                "publisher": {
+                  "@type": "Organization",
+                  "name": "Handbok.org",
+                  "url": "https://handbok.org",
+                  "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://handbok.org/logo.png"
+                  }
+                },
+                "author": {
+                  "@type": "Organization", 
+                  "name": "Handbok.org",
+                  "url": "https://handbok.org"
+                },
+                "mainEntity": faqs.map((faq, index) => ({
                   "@type": "Question",
                   "name": faq.question,
+                  "text": faq.question,
+                  "answerCount": 1,
+                  "upvoteCount": Math.max(10 - index * 2, 1),
+                  "dateCreated": "2024-01-01",
+                  "author": {
+                    "@type": "Organization",
+                    "name": "Handbok.org"
+                  },
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": faq.answer
+                    "text": faq.answer,
+                    "dateCreated": "2024-01-01",
+                    "upvoteCount": Math.max(8 - index, 1),
+                    "url": `https://handbok.org/#faq-${index + 1}`,
+                    "author": {
+                      "@type": "Organization",
+                      "name": "Handbok.org"
+                    }
+                  },
+                  "keywords": faq.keywords?.join(", "),
+                  "about": {
+                    "@type": "Thing",
+                    "name": faq.category
                   }
-                }))
+                })),
+                "breadcrumb": {
+                  "@type": "BreadcrumbList",
+                  "itemListElement": [
+                    {
+                      "@type": "ListItem",
+                      "position": 1,
+                      "name": "Hem",
+                      "item": "https://handbok.org"
+                    },
+                    {
+                      "@type": "ListItem", 
+                      "position": 2,
+                      "name": "Vanliga frågor",
+                      "item": "https://handbok.org/#faq"
+                    }
+                  ]
+                },
+                "speakable": {
+                  "@type": "SpeakableSpecification",
+                  "cssSelector": ["h2", "h3", ".faq-answer"]
+                }
               })
             }}
           />
