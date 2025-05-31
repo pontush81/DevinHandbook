@@ -55,6 +55,7 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const REQUEST_TIMEOUT = 10000; // 10 sekunder timeout
   let retryCount = 0;
   let lastError: Error | null = null;
+  let originalAuthError: any = null; // Store original auth errors
   
   // Lista på permanenta felkoder som inte bör återförsökas
   const PERMANENT_ERROR_CODES = [
@@ -65,6 +66,17 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     'invalid_refresh_token',      // Ogiltig refresh token
     'token_expired',              // Token har gått ut
     'session_not_found'           // Session hittades inte
+  ];
+  
+  // Auth error patterns that should be preserved
+  const AUTH_ERROR_PATTERNS = [
+    'invalid login credentials',
+    'invalid credentials', 
+    'email not confirmed',
+    'email is not confirmed',
+    'not confirmed',
+    'email_not_confirmed',
+    'signup requires email confirmation'
   ];
   
   while (retryCount < MAX_RETRIES) {
@@ -97,13 +109,36 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       if (!response.ok) {
         let errorCode = '';
         let errorData = '';
+        let errorResponse: any = null;
         
         try {
           // Försök läsa felmeddelandet från svaret
-          const errorResponse = await response.clone().json();
+          errorResponse = await response.clone().json();
           errorData = JSON.stringify(errorResponse);
           errorCode = errorResponse.code || errorResponse.error_code || '';
+          
+          // Check if this is an auth error that should be preserved
+          const isAuthError = AUTH_ERROR_PATTERNS.some(pattern => 
+            errorResponse.message?.toLowerCase().includes(pattern) ||
+            errorResponse.error_description?.toLowerCase().includes(pattern) ||
+            errorData.toLowerCase().includes(pattern)
+          );
+          
+          if (isAuthError) {
+            // Store the original auth error to preserve it
+            originalAuthError = errorResponse;
+            
+            // Create an error that matches the original auth error format
+            const authError = new Error(errorResponse.message || errorResponse.error_description || 'Authentication error');
+            authError.name = 'AuthError';
+            (authError as any).code = errorCode;
+            throw authError;
+          }
         } catch (e) {
+          // If it's already an auth error, re-throw it
+          if (e instanceof Error && e.name === 'AuthError') {
+            throw e;
+          }
           // Ignorera fel vid läsning av felmeddelande
         }
         
@@ -143,6 +178,11 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       // Om svaret är OK, returnera det
       return response;
     } catch (error: any) {
+      // If this is a preserved auth error, don't retry and throw it immediately
+      if (error.name === 'AuthError') {
+        throw error;
+      }
+      
       // Uppdatera det senaste felet
       lastError = error;
       
@@ -181,8 +221,26 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     }
   }
   
+  // If we have an original auth error, preserve it instead of transforming to connection error
+  if (originalAuthError) {
+    const authError = new Error(originalAuthError.message || originalAuthError.error_description || 'Authentication error');
+    (authError as any).code = originalAuthError.code || originalAuthError.error_code;
+    throw authError;
+  }
+  
   // Om vi kommer hit har alla återförsök misslyckats
-  throw lastError || new Error('Okänt fel vid fetch');
+  const detailedError = new Error(
+    lastError 
+      ? `Anslutningsfel: ${lastError.message}. Kontrollera din internetanslutning och försök igen.`
+      : 'Kunde inte ansluta till servern. Kontrollera din internetanslutning och försök igen.'
+  );
+  
+  // Bevara ursprungligt fel som cause om det finns
+  if (lastError) {
+    detailedError.cause = lastError;
+  }
+  
+  throw detailedError;
 };
 
 // Anpassad storage-implementering som aldrig använder localStorage

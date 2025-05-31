@@ -18,6 +18,7 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showResendButton, setShowResendButton] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,6 +27,7 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
     setError(null);
     setSuccessMessage(null);
     setShowResendButton(false);
+    setShowForgotPassword(false);
 
     try {
       if (resetMode) {
@@ -73,9 +75,30 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
             );
             setShowResendButton(true);
           } else if (error.message.toLowerCase().includes("invalid login credentials") ||
-                     error.message.toLowerCase().includes("invalid credentials")) {
-            setError("Felaktig e-postadress eller lösenord. Kontrollera dina uppgifter och försök igen.");
+                     error.message.toLowerCase().includes("invalid credentials") ||
+                     error.message.toLowerCase().includes("invalid email or password") ||
+                     error.message.toLowerCase().includes("wrong password") ||
+                     error.message.toLowerCase().includes("incorrect password") ||
+                     error.code === "invalid_credentials") {
+            setError(
+              "E-postadressen eller lösenordet stämmer inte. Kontrollera att du har stavat rätt och försök igen. " +
+              "Kom ihåg att lösenord är skiftlägeskänsliga."
+            );
+            setShowResendButton(false);
+            setShowForgotPassword(true);
+          } else if (error.message.toLowerCase().includes("anslutningsfel") ||
+                     error.message.toLowerCase().includes("kunde inte ansluta") ||
+                     error.message.toLowerCase().includes("network") ||
+                     error.message.toLowerCase().includes("fetch failed") ||
+                     error.message.toLowerCase().includes("connection") ||
+                     (error.message.toLowerCase().includes("fetch") && !error.message.toLowerCase().includes("credentials"))) {
+            setError(
+              "Det verkar vara problem med internetanslutningen. Kontrollera att du är ansluten till internet och försök igen. " +
+              "Om problemet kvarstår, försök ladda om sidan."
+            );
           } else {
+            // För okända fel, logga dem för debugging och visa ett generiskt meddelande
+            console.error("Okänt inloggningsfel:", error);
             setError(`Fel vid inloggning: ${error.message}${error.code ? ` (Kod: ${error.code})` : ''}`);
           }
         } else if (!data.session) {
@@ -104,7 +127,47 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
       }
     } catch (err: unknown) {
       console.error("Detaljerat inloggningsfel:", err);
-      setError(err instanceof Error ? `${err.message} (${err.name})` : "Ett fel uppstod vid inloggning");
+      
+      if (err instanceof Error) {
+        // Handle AuthErrors (preserved authentication errors) separately
+        if (err.name === 'AuthError') {
+          if (err.message.toLowerCase().includes("invalid login credentials") ||
+              err.message.toLowerCase().includes("invalid credentials") ||
+              err.message.toLowerCase().includes("invalid email or password") ||
+              err.message.toLowerCase().includes("wrong password") ||
+              err.message.toLowerCase().includes("incorrect password")) {
+            setError(
+              "E-postadressen eller lösenordet stämmer inte. Kontrollera att du har stavat rätt och försök igen. " +
+              "Kom ihåg att lösenord är skiftlägeskänsliga."
+            );
+            setShowForgotPassword(true);
+          } else if (err.message.toLowerCase().includes("email not confirmed") || 
+                     err.message.toLowerCase().includes("email is not confirmed") ||
+                     err.message.toLowerCase().includes("not confirmed")) {
+            setError(
+              "Din e-postadress har inte bekräftats än. Du måste klicka på länken i bekräftelsemailet som skickades " +
+              "när du registrerade dig för att aktivera ditt konto."
+            );
+            setShowResendButton(true);
+          } else {
+            setError(`Autentiseringsfel: ${err.message}`);
+          }
+        } else if (err.message.toLowerCase().includes("anslutningsfel") ||
+                   err.message.toLowerCase().includes("kunde inte ansluta") ||
+                   err.message.toLowerCase().includes("network") ||
+                   err.message.toLowerCase().includes("fetch failed") ||
+                   err.message.toLowerCase().includes("connection") ||
+                   (err.message.toLowerCase().includes("fetch") && !err.message.toLowerCase().includes("credentials"))) {
+          setError(
+            "Det verkar vara problem med internetanslutningen. Kontrollera att du är ansluten till internet och försök igen. " +
+            "Om problemet kvarstår, försök ladda om sidan."
+          );
+        } else {
+          setError(`Ett oväntat fel uppstod: ${err.message}`);
+        }
+      } else {
+        setError("Ett oväntat fel uppstod vid inloggning. Försök igen eller kontakta support om problemet kvarstår.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -186,6 +249,24 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
                   disabled={resendLoading}
                 >
                   {resendLoading ? "Skickar..." : "Skicka nytt bekräftelsemail"}
+                </Button>
+              </div>
+            )}
+            
+            {showForgotPassword && (
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs bg-white border-red-200 text-red-600 hover:bg-red-50 w-full"
+                  onClick={() => {
+                    setResetMode(true);
+                    setError(null);
+                    setShowForgotPassword(false);
+                  }}
+                >
+                  Glömt lösenord? Återställ här
                 </Button>
               </div>
             )}

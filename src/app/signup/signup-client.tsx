@@ -103,11 +103,18 @@ export default function SignupClient() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Registrera konto
+            Skapa ditt konto
           </h1>
-          <p className="text-gray-600">
-            Skapa ditt konto för att komma igång med Handbok.org
+          <p className="text-gray-600 mb-4">
+            Första steget för att skapa din digitala handbok
           </p>
+          <div className="flex justify-center items-center space-x-2 text-sm text-gray-500">
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">1. Skapa konto</span>
+            <span>→</span>
+            <span className="text-gray-400">2. Verifiera e-post</span>
+            <span>→</span>
+            <span className="text-gray-400">3. Skapa handbok</span>
+          </div>
         </div>
 
         {/* Form */}

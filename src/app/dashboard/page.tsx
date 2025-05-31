@@ -61,12 +61,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchSuperadmin = async () => {
-      if (!user) return;
+      if (!user?.id || !user?.email) return;
       try {
         const isSuperAdmin = await checkIsSuperAdmin(
-          supabase, 
+          supabase as any, 
           user.id, 
-          user.email || ''
+          user.email
         );
         setIsSuperadmin(isSuperAdmin);
       } catch (error) {
@@ -80,6 +80,8 @@ export default function DashboardPage() {
   }, [user]);
 
   const fetchHandbooks = useCallback(async () => {
+    if (!user?.id) return;
+    
     try {
       setIsLoadingHandbooks(true);
       let data, error;
@@ -92,11 +94,11 @@ export default function DashboardPage() {
         ({ data, error } = await supabase
           .from("handbooks")
           .select("*")
-          .eq("owner_id", user?.id)
+          .eq("owner_id", user.id as any)
           .order("created_at", { ascending: false }));
       }
       if (error) throw error;
-      setHandbooks(data || []);
+      setHandbooks((data as unknown as Handbook[]) || []);
     } catch (err: unknown) {
       console.error("Error fetching handbooks:", err);
       setError("Kunde inte hämta handböcker. Försök igen senare.");
@@ -123,6 +125,8 @@ export default function DashboardPage() {
   const confirmDeleteHandbook = async () => {
     const { handbookId, handbookTitle } = deleteConfirmation;
     
+    if (!handbookId) return;
+    
     try {
       setDeletingId(handbookId);
       setDeleteConfirmation({ isOpen: false, handbookId: '', handbookTitle: '' });
@@ -131,7 +135,7 @@ export default function DashboardPage() {
       const { error } = await supabase
         .from("handbooks")
         .delete()
-        .eq("id", handbookId);
+        .eq("id", handbookId as any);
 
       if (error) throw error;
 
@@ -207,15 +211,24 @@ export default function DashboardPage() {
             <Card className="border-0 shadow-md">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-3xl">📚</span>
+                  <span className="text-3xl">🎉</span>
                 </div>
                 <h2 className="text-xl font-medium mb-2">Välkommen till Handbok!</h2>
                 <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                  Skapa din första digitala handbok. Perfekt för föreningar, företag och organisationer som vill dela information på ett enkelt sätt.
+                  Grattis! Ditt konto är nu skapat. Nu är det dags att skapa din första digitala handbok för din bostadsrättsförening.
                 </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+                  <h3 className="font-medium text-blue-900 mb-2">Vad händer härnäst?</h3>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>✓ Du skapar en handbok med föreningens namn</li>
+                    <li>✓ Du får en egen webbadress (t.ex. handbok.org/handbook/din-forening)</li>
+                    <li>✓ Du fyller i grundläggande information</li>
+                    <li>✓ Medlemmarna kan direkt börja använda handboken</li>
+                  </ul>
+                </div>
                 <Button asChild size="lg">
                   <Link href="/create-handbook?new=true">
-                    Skapa din första handbok
+                    🚀 Skapa din första handbok
                   </Link>
                 </Button>
               </CardContent>
@@ -263,7 +276,7 @@ export default function DashboardPage() {
                         {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
                       </p>
                       <div className="flex items-center mb-4">
-                        <Badge variant={handbook.published ? "success" : "secondary"} className={`${handbook.published ? 'bg-green-100 text-green-800 hover:bg-green-100' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}`}>
+                        <Badge variant="default" className={`${handbook.published ? 'bg-green-100 text-green-800 hover:bg-green-100' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}`}>
                           {handbook.published ? "Publicerad" : "Utkast"}
                         </Badge>
                       </div>
@@ -319,7 +332,7 @@ export default function DashboardPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={cancelDeleteHandbook}>
+            <Button onClick={cancelDeleteHandbook}>
               Avbryt
             </Button>
             <Button 

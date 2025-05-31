@@ -379,3 +379,87 @@ test('should not have accessibility violations', async () => {
 - [ ] Component documentation
 - [ ] Visual regression testing
 - [ ] Performance monitoring 
+
+## Knappstilar och Dialoger
+
+### Knappvarianter och användning
+
+För att säkerställa en konsekvent användarupplevelse följer vi dessa regler för knappstilar:
+
+#### Primära knappar (Blå bakgrund, vit text)
+Används för huvudåtgärder som användaren förväntas utföra:
+
+```tsx
+// Standard primär knapp
+<Button>Spara</Button>
+
+// Eller explicit med CSS för konsistens
+<Button className="bg-blue-600 hover:bg-blue-700">Skapa handbok</Button>
+```
+
+**Använd för:**
+- "Spara", "Skapa", "Bekräfta", "Avbryt" (i dialoger)
+- Huvudåtgärder i formulär
+- Call-to-action knappar
+- Auth-formulär: "Logga in", "Skapa konto", "Gå till dashboard"
+
+#### Sekundära knappar (Vit bakgrund, border)
+Används för mindre viktiga åtgärder:
+
+```tsx
+<Button variant="outline">Visa</Button>
+<Button variant="outline">Läs mer</Button>
+```
+
+**Använd för:**
+- "Visa", "Läs mer", "Detaljer"
+- Sekundära åtgärder i formulär
+- "Logga ut"-knappar
+- Navigationsåtgärder som inte är primära
+
+#### Destructive knappar (Röd bakgrund, vit text)
+Används för åtgärder som tar bort eller förstör data:
+
+```tsx
+<Button className="bg-red-600 hover:bg-red-700">Radera handbok</Button>
+```
+
+**Använd för:**
+- "Radera", "Ta bort", "Avbryt prenumeration"
+- Alla åtgärder som kan förlora data
+
+### Dialogregler
+
+I dialoger ska vi alltid följa denna struktur:
+
+```tsx
+<DialogFooter>
+  <Button>Avbryt</Button>  {/* Primär blå knapp */}
+  <Button className="bg-red-600 hover:bg-red-700">
+    Radera
+  </Button>  {/* Destructive för farliga åtgärder */}
+</DialogFooter>
+```
+
+**Viktigt:**
+- "Avbryt"-knappar i dialoger ska vara **blå** (primära), inte outline
+- Detta ger användaren en tydlig väg ut från dialogen
+- Destructive åtgärder ska alltid vara röda för att signalera fara
+
+### Badge-komponenten
+
+Badge-komponenten stöder endast följande varianter:
+
+```tsx
+<Badge variant="default">Standard (blå)</Badge>
+<Badge variant="outline">Outline (vit med border)</Badge>
+<Badge variant="destructive">Röd för fel/varningar</Badge>
+```
+
+För anpassade färger, använd CSS-klasser:
+
+```tsx
+<Badge variant="default" className="bg-green-100 text-green-800">
+  Publicerad
+</Badge>
+``` 

@@ -77,7 +77,7 @@ describe('Dialog Component', () => {
             <DialogDescription>Are you sure you want to proceed?</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline">Cancel</Button>
+            <Button>Cancel</Button>
             <Button>Confirm</Button>
           </DialogFooter>
         </DialogContent>
@@ -121,7 +121,7 @@ describe('Dialog Component', () => {
               <DialogTitle>Controlled Dialog</DialogTitle>
             </DialogHeader>
             <DialogFooter>
-              <Button onClick={() => setOpen(false)}>Close</Button>
+              <Button onClick={() => setOpen(false)} data-testid="close-dialog-btn">Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -135,7 +135,7 @@ describe('Dialog Component', () => {
     
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     
-    const closeButton = screen.getByRole('button', { name: 'Close' });
+    const closeButton = screen.getByTestId('close-dialog-btn');
     fireEvent.click(closeButton);
     
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -153,8 +153,8 @@ describe('Dialog Component', () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline">Avbryt</Button>
-            <Button className="bg-red-600 hover:bg-red-700">
+            <Button data-testid="cancel-btn">Avbryt</Button>
+            <Button data-testid="delete-btn" className="bg-red-600 hover:bg-red-700">
               Radera handbok
             </Button>
           </DialogFooter>
@@ -168,11 +168,39 @@ describe('Dialog Component', () => {
     expect(dialogContent).toHaveClass('bg-white', 'border', 'border-gray-200', 'shadow-lg');
     
     // Verify content
-    expect(screen.getByText('Radera handbok')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Radera handbok' })).toBeInTheDocument();
     expect(screen.getByText(/Är du säker på att du vill radera/)).toBeInTheDocument();
     
-    // Verify buttons
-    expect(screen.getByRole('button', { name: 'Avbryt' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Radera handbok' })).toBeInTheDocument();
+    // Verify buttons using test ids
+    expect(screen.getByTestId('cancel-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('delete-btn')).toBeInTheDocument();
+  });
+
+  it('follows button styling guidelines for dialogs', () => {
+    render(
+      <Dialog defaultOpen>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Standard Dialog</DialogTitle>
+            <DialogDescription>This tests our button styling guidelines</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button data-testid="cancel-btn">Avbryt</Button>
+            <Button data-testid="destructive-btn" className="bg-red-600 hover:bg-red-700">
+              Ta bort
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+    
+    const cancelBtn = screen.getByTestId('cancel-btn');
+    const destructiveBtn = screen.getByTestId('destructive-btn');
+    
+    // Cancel button should be primary (default variant = blue)
+    expect(cancelBtn).toBeInTheDocument();
+    
+    // Destructive button should have red styling
+    expect(destructiveBtn).toHaveClass('bg-red-600', 'hover:bg-red-700');
   });
 }); 

@@ -51,11 +51,7 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
           setError(error.message);
         }
       } else if (!data.user && !data.session) {
-        setSuccessMessage(
-          "Registrering lyckades! Ett bekräftelsemail har skickats till din e-postadress. " +
-          "VIKTIGT: Du måste klicka på länken i mailet för att aktivera ditt konto innan du kan logga in. " +
-          "Du omdirigeras till inloggningssidan..."
-        );
+        setSuccessMessage("success");
         
         // Efter 3 sekunder, omdirigera till inloggningssidan med information om e-postverifiering
         setTimeout(() => {
@@ -78,8 +74,9 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
           <div className="flex items-start gap-2">
             <InfoIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-700">
-              <p className="font-medium">Viktig information:</p>
-              <p>När du skapar ett konto måste du bekräfta din e-postadress genom att klicka på länken i bekräftelsemailet som skickas till dig.</p>
+              <p className="font-medium">Nästa steg:</p>
+              <p>1. Du får ett bekräftelsemail - klicka på länken för att aktivera kontot</p>
+              <p>2. Logga sedan in för att skapa din första digitala handbok</p>
             </div>
           </div>
         </div>
@@ -139,29 +136,34 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
         )}
 
         {successMessage && (
-          <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-md flex flex-col gap-2">
-            <div className="flex items-start gap-2">
+          <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-md">
+            <div className="flex items-start gap-2 mb-3">
               <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <span className="text-green-700 font-medium">Registrering lyckades!</span>
+              <span className="text-green-700 font-medium">Konto skapat! 🎉</span>
             </div>
             
-            <div className="flex items-start gap-2 mt-1">
-              <MailIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium">Ett bekräftelsemail har skickats till din e-postadress.</p>
-                <p className="mt-1">
-                  <span className="font-bold text-red-600">VIKTIGT:</span> Du måste klicka på länken i mailet 
-                  för att aktivera ditt konto innan du kan logga in.
-                </p>
-                <p className="mt-1 italic">Du omdirigeras till inloggningssidan...</p>
+            <div className="space-y-2 mb-3">
+              <div className="flex items-start gap-2">
+                <MailIcon className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <span className="font-bold text-red-600">STEG 1:</span> Kolla din e-post och klicka på bekräftelselänken
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-600 text-sm mt-0.5">📚</span>
+                <div className="text-sm">
+                  <span className="font-bold text-blue-600">STEG 2:</span> Logga in och skapa din första handbok
+                </div>
               </div>
             </div>
+            
+            <p className="text-sm italic text-blue-600">Du omdirigeras nu till inloggningssidan...</p>
           </div>
         )}
 
         <Button
           type="submit"
-          className="w-full"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           disabled={isLoading}
         >
           {isLoading ? "Skapar konto..." : "Skapa konto"}

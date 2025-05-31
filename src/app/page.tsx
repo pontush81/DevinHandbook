@@ -54,9 +54,15 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto" asChild>
-                  <Link href="/create-handbook?new=true">Kom igång nu</Link>
+                  <Link href="/signup">Skapa konto & handbok</Link>
+                </Button>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
+                  <Link href="/login">Logga in</Link>
                 </Button>
               </div>
+              <p className="text-sm text-gray-500 mt-3">
+                💡 Nytt här? Börja med att skapa ett konto för att komma igång med din första handbok
+              </p>
             </div>
             <div className="rounded-lg overflow-hidden shadow-xl mt-8 md:mt-0">
               <div className="relative h-48 sm:h-64 md:h-96 bg-white border border-gray-200">

@@ -64,7 +64,7 @@ export const createCheckoutSession = async (
           currency: 'sek',
           product_data: {
             name: `Digital handbok: ${handbookName}`,
-            description: `Subdomän: ${subdomain}.handbok.org`,
+            description: `URL: handbok.org/${subdomain}`,
           },
           unit_amount: priceAmount, // Använder priset från miljövariabeln eller default (3 kr)
         },
