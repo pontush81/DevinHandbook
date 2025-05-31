@@ -5,8 +5,64 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import AutoSuggestHandbookSearch from '@/components/AutoSuggestHandbookSearch';
+import { useState } from 'react';
+import { ChevronDownIcon } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+
+// SEO-vänlig FAQ-komponent
+function SEOFriendlyFAQ({ faqs }: { faqs: Array<{ question: string; answer: string }> }) {
+  const [openItems, setOpenItems] = useState<Set<number>>(new Set());
+
+  const toggleItem = (index: number) => {
+    const newOpenItems = new Set(openItems);
+    if (newOpenItems.has(index)) {
+      newOpenItems.delete(index);
+    } else {
+      newOpenItems.add(index);
+    }
+    setOpenItems(newOpenItems);
+  };
+
+  return (
+    <div className="space-y-4">
+      {faqs.map((faq, index) => (
+        <div key={index} className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <button
+            className="w-full p-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+            onClick={() => toggleItem(index)}
+            aria-expanded={openItems.has(index)}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 pr-4">
+              {faq.question}
+            </h3>
+            <ChevronDownIcon 
+              className={`h-5 w-5 text-gray-500 transition-transform ${
+                openItems.has(index) ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          
+          {/* Innehåll alltid i DOM för SEO, men visuellt dolt */}
+          <div 
+            className={`overflow-hidden transition-all duration-200 ${
+              openItems.has(index) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="px-6 pb-6 text-gray-600 leading-relaxed">
+              {faq.answer}
+            </div>
+          </div>
+          
+          {/* Dolt innehåll för sökmotorer - alltid synligt för crawlers */}
+          <div className="sr-only">
+            {faq.answer}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const faqs = [
@@ -309,18 +365,7 @@ export default function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 md:mb-12">Vanliga frågor</h2>
           
           {/* SEO-optimerad FAQ - allt innehåll synligt för sökmotorer */}
-          <div className="space-y-6">
-            {faqs.map((faq, index) => (
-              <div key={index} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  {faq.question}
-                </h3>
-                <div className="text-gray-600 leading-relaxed">
-                  {faq.answer}
-                </div>
-              </div>
-            ))}
-          </div>
+          <SEOFriendlyFAQ faqs={faqs} />
           
           {/* Schema.org strukturerade data för bättre SEO */}
           <script
