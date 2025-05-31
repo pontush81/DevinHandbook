@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback } from 'react';
+import { EditorJSComponent } from './EditorJSComponent';
+import { OutputData } from '@editorjs/editorjs';
 import { Button } from './button';
 import { Textarea } from './textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
@@ -60,6 +62,42 @@ const MarkdownHelp = () => (
   </div>
 );
 
+// Convert Editor.js data to markdown-like string for backwards compatibility
+const convertEditorJSToMarkdown = (data: OutputData): string => {
+  if (!data || !data.blocks) return '';
+
+  return data.blocks.map(block => {
+    switch (block.type) {
+      case 'header':
+        const level = '#'.repeat(block.data.level || 1);
+        return `${level} ${block.data.text}`;
+      case 'paragraph':
+        return block.data.text;
+      case 'list':
+        if (block.data.style === 'ordered') {
+          return block.data.items.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n');
+        } else {
+          return block.data.items.map((item: string) => `- ${item}`).join('\n');
+        }
+      case 'quote':
+        return `> ${block.data.text}`;
+      case 'code':
+        return `\`\`\`\n${block.data.code}\n\`\`\``;
+      case 'checklist':
+        return block.data.items.map((item: any) => `- [${item.checked ? 'x' : ' '}] ${item.text}`).join('\n');
+      case 'warning':
+        return `⚠️ ${block.data.title}\n${block.data.message}`;
+      case 'delimiter':
+        return '---';
+      case 'table':
+        // Simple table conversion - would need more complex logic for full table support
+        return '[Tabell]';
+      default:
+        return block.data.text || '';
+    }
+  }).join('\n\n');
+};
+
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   content,
   onChange,
@@ -68,228 +106,19 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   disabled = false,
   rows = 8
 }) => {
-  const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
-  const [showHelp, setShowHelp] = useState(false);
-  const [showToolbar, setShowToolbar] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Check if we're on mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Helper function to insert text at cursor position
-  const insertAtCursor = (before: string, after: string = '', placeholder: string = '') => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.substring(start, end);
-    const textToInsert = selectedText || placeholder;
-    
-    const newText = content.substring(0, start) + before + textToInsert + after + content.substring(end);
-    onChange(newText);
-
-    // Set cursor position after the inserted text
-    setTimeout(() => {
-      const newCursorPos = start + before.length + textToInsert.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-      textarea.focus();
-    }, 0);
-  };
-
-  // Helper function to insert text at beginning of line
-  const insertAtLineStart = (prefix: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const lines = content.split('\n');
-    let currentPos = 0;
-    let lineIndex = 0;
-
-    // Find which line the cursor is on
-    for (let i = 0; i < lines.length; i++) {
-      if (currentPos + lines[i].length >= start) {
-        lineIndex = i;
-        break;
-      }
-      currentPos += lines[i].length + 1; // +1 for newline
-    }
-
-    // Insert prefix at beginning of current line
-    lines[lineIndex] = prefix + lines[lineIndex];
-    const newContent = lines.join('\n');
-    onChange(newContent);
-
-    // Set cursor position
-    setTimeout(() => {
-      const newCursorPos = start + prefix.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-      textarea.focus();
-    }, 0);
-  };
-
-  const formatButtons = [
-    {
-      icon: Bold,
-      label: 'Fet',
-      action: () => insertAtCursor('**', '**', 'fet text'),
-    },
-    {
-      icon: Italic,
-      label: 'Kursiv',
-      action: () => insertAtCursor('*', '*', 'kursiv text'),
-    },
-    {
-      icon: Heading1,
-      label: 'H1',
-      action: () => insertAtLineStart('# '),
-    },
-    {
-      icon: Heading2,
-      label: 'H2',
-      action: () => insertAtLineStart('## '),
-    },
-    {
-      icon: List,
-      label: 'Lista',
-      action: () => insertAtLineStart('- '),
-    },
-    {
-      icon: ListOrdered,
-      label: 'Numrerad',
-      action: () => insertAtLineStart('1. '),
-    },
-    {
-      icon: Quote,
-      label: 'Citat',
-      action: () => insertAtLineStart('> '),
-    },
-    {
-      icon: Link,
-      label: 'Länk',
-      action: () => insertAtCursor('[', '](url)', 'länktext'),
-    },
-  ];
+  const handleEditorChange = useCallback((data: OutputData) => {
+    const markdownContent = convertEditorJSToMarkdown(data);
+    onChange(markdownContent);
+  }, [onChange]);
 
   return (
-    <div className={`border border-gray-300 rounded-lg ${className}`}>
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'edit' | 'preview')}>
-        {/* Header with tabs and controls */}
-        <div className="border-b border-gray-200 p-2 sm:p-3 flex items-center justify-between flex-wrap gap-2">
-          <TabsList className="grid w-auto grid-cols-2">
-            <TabsTrigger value="edit" className="flex items-center gap-2 text-xs sm:text-sm">
-              <Edit3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Redigera</span>
-              <span className="sm:hidden">Edit</span>
-            </TabsTrigger>
-            <TabsTrigger value="preview" className="flex items-center gap-2 text-xs sm:text-sm">
-              <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">Förhandsgranska</span>
-              <span className="sm:hidden">Preview</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <div className="flex items-center gap-2">
-            {/* Toolbar toggle for mobile */}
-            {activeTab === 'edit' && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowToolbar(!showToolbar)}
-                className="h-8 px-2 sm:hidden"
-                title={showToolbar ? "Dölj verktygsfält" : "Visa verktygsfält"}
-              >
-                {showToolbar ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </Button>
-            )}
-            
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowHelp(!showHelp)}
-              className="flex items-center gap-1 h-8 px-2 sm:px-3"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">Hjälp</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Formatting Toolbar - only show in edit mode and when not collapsed on mobile */}
-        {activeTab === 'edit' && (showToolbar || !isMobile) && (
-          <div className="border-b border-gray-200 p-2 sm:p-3 bg-gray-50">
-            <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-1 sm:gap-2">
-              {formatButtons.map((button, index) => (
-                <Button
-                  key={index}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={button.action}
-                  disabled={disabled}
-                  className="h-9 sm:h-8 px-2 sm:px-3 hover:bg-blue-100 hover:text-blue-700 transition-colors flex items-center justify-center sm:justify-start gap-1 sm:gap-2"
-                  title={button.label}
-                >
-                  <button.icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="hidden sm:inline text-xs font-medium">{button.label}</span>
-                </Button>
-              ))}
-            </div>
-            <div className="mt-2 text-xs text-gray-500 hidden sm:block">
-              💡 Tips: Markera text först för att formatera den, eller klicka för att lägga till ny formatering
-            </div>
-          </div>
-        )}
-
-        {/* Help section */}
-        {showHelp && (
-          <div className="border-b border-gray-200 p-3 bg-gray-50">
-            <MarkdownHelp />
-          </div>
-        )}
-
-        {/* Content areas */}
-        <TabsContent value="edit" className="m-0">
-          <Textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="border-0 rounded-none resize-none focus:ring-0 font-mono editor-textarea"
-            style={{
-              fontSize: isMobile ? '16px' : '14px',
-              minHeight: isMobile ? '200px' : `${rows * 1.5}rem`,
-              maxHeight: isMobile ? '60vh' : 'none'
-            }}
-            rows={isMobile ? 6 : rows}
-            disabled={disabled}
-          />
-        </TabsContent>
-
-        <TabsContent value="preview" className="m-0">
-          <div className="p-4 min-h-[200px] bg-white editor-preview max-h-[60vh] sm:max-h-none overflow-y-auto">
-            {content ? (
-              <div className="prose prose-gray max-w-none prose-sm sm:prose-base">
-                <MarkdownRenderer content={content} />
-              </div>
-            ) : (
-              <div className="text-gray-400 italic">Inget innehåll att förhandsgranska</div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+    <EditorJSComponent
+      content={content}
+      onChange={handleEditorChange}
+      placeholder={placeholder}
+      className={className}
+      disabled={disabled}
+      readOnly={disabled}
+    />
   );
 }; 
