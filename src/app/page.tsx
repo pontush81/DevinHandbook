@@ -3,12 +3,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { MainLayout } from '@/components/layout/MainLayout';
 import AutoSuggestHandbookSearch from '@/components/AutoSuggestHandbookSearch';
 
@@ -313,36 +307,39 @@ export default function HomePage() {
       <section id="faq" className="py-12 md:py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 md:mb-12">Vanliga frågor</h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger>Vad ingår i priset på 2490 kr/år?</AccordionTrigger>
-              <AccordionContent>
-                I priset ingår en komplett digital handbok med egen URL (t.ex. handbok.org/handbook/din-förening).
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger>Hur snabbt kan vi komma igång?</AccordionTrigger>
-              <AccordionContent>
-                Din handbok är redo att användas omedelbart efter beställning. Du får inloggningsuppgifter 
-                och kan börja lägga in information direkt. 
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3">
-              <AccordionTrigger>Kan medlemmarna redigera innehållet?</AccordionTrigger>
-              <AccordionContent>
-                Endast administratörer (vanligtvis styrelsen) kan redigera innehållet. Medlemmarna har läsåtkomst till 
-                den information som gjorts tillgänglig för dem. Du bestämmer själv vilka sektioner som ska vara 
-                publika eller kräva inloggning.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-4">
-              <AccordionTrigger>Vad händer med våra dokument om vi slutar använda tjänsten?</AccordionTrigger>
-              <AccordionContent>
-                All din data exporteras och skickas till dig innan kontot stängs. Vi sparar även en säkerhetskopia 
-                i 90 dagar så du kan återaktivera tjänsten utan att förlora information om du ångrar dig.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          
+          {/* SEO-optimerad FAQ - allt innehåll synligt för sökmotorer */}
+          <div className="space-y-6">
+            {faqs.map((faq, index) => (
+              <div key={index} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  {faq.question}
+                </h3>
+                <div className="text-gray-600 leading-relaxed">
+                  {faq.answer}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Schema.org strukturerade data för bättre SEO */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": faqs.map(faq => ({
+                  "@type": "Question",
+                  "name": faq.question,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": faq.answer
+                  }
+                }))
+              })
+            }}
+          />
         </div>
       </section>
 
