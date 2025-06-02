@@ -596,7 +596,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen w-full flex flex-col">
+      {/* Full viewport container with proper mobile flex layout */}
+      <div className="h-screen w-full flex flex-col overflow-hidden">
         {/* Header - Using new HandbookHeader with edit functionality */}
         <HandbookHeader 
           handbookTitle={handbookData.title}
@@ -605,8 +606,9 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           onToggleEditMode={handleToggleEditMode}
         />
 
-        <div className="flex flex-1">
-          {/* Sidebar - No top padding/margin to connect with header */}
+        {/* Main layout container - takes remaining space, mobile optimized */}
+        <div className="flex flex-1 min-h-0 overflow-hidden touch-pan-y">
+          {/* Sidebar - Fixed width sidebar */}
           <ModernSidebar
             sections={visibleSections}
             currentPageId={currentPageId}
@@ -617,119 +619,101 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
               // Clear any selected page to show full overview
               setCurrentPageId(undefined);
               
-              // Scroll to the section
+              // Scroll to the section within the content container
               setTimeout(() => {
                 const sectionElement = document.getElementById(`section-${sectionId}`);
-                if (sectionElement) {
+                const scrollContainer = document.querySelector('.main-content-scrollable');
+                
+                if (sectionElement && scrollContainer) {
                   console.log('📍 Scrolling to section:', sectionId);
                   
-                  // Calculate offset for fixed header (64px header + 16px padding)
-                  const headerOffset = 80;
-                  const elementPosition = sectionElement.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                  // Calculate offset for header within the scroll container
+                  const containerRect = scrollContainer.getBoundingClientRect();
+                  const sectionRect = sectionElement.getBoundingClientRect();
+                  const scrollTop = scrollContainer.scrollTop;
+                  const targetPosition = scrollTop + (sectionRect.top - containerRect.top) - 20;
                   
-                  window.scrollTo({
-                    top: offsetPosition,
+                  scrollContainer.scrollTo({
+                    top: targetPosition,
                     behavior: 'smooth'
                   });
                 } else {
-                  console.warn('⚠️ Section element not found:', `section-${sectionId}`);
+                  console.warn('🚨 Could not find scroll container or section element');
                 }
-              }, 100); // Small delay to ensure DOM is updated
+              }, 100);
             }}
+            editMode={isEditMode}
+            onEditSection={(sectionId) => {
+              const section = visibleSections.find(s => s.id === sectionId);
+              if (section) {
+                setEditingSection(section);
+                setOpenSectionDialog(true);
+              }
+            }}
+            onDeleteSection={(sectionId) => {
+              const section = visibleSections.find(s => s.id === sectionId);
+              if (section) {
+                setSectionToDelete(section);
+                setOpenDeleteSectionDialog(true);
+              }
+            }}
+            onToggleSection={(sectionId) => {
+              const section = visibleSections.find(s => s.id === sectionId);
+              if (section) {
+                handleToggleSection(sectionId, !section.is_published);
+              }
+            }}
+            onMoveSection={moveSection}
           />
 
           {/* Main content area */}
-          <SidebarInset className="flex-1">
-            {/* Main content - Proper height for scrolling with footer space */}
-            <div className="h-full w-full flex flex-col">
-              <div className="flex-1 overflow-hidden">
+          <SidebarInset className="flex-1 min-h-0">
+            {/* Main content - Mobile optimized scrollable container */}
+            <div className="main-content-scrollable flex flex-col">
+              <div className="flex-1 min-h-0">
                 {/* Edit mode navigation tabs */}
                 {isEditMode && canEdit && (
-                  <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3">
+                  <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex-shrink-0">
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-1">
                       <button
                         onClick={() => setEditView('content')}
                         className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
                           editView === 'content'
                             ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border border-transparent'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
                       >
-                        <span className="flex items-center justify-center sm:justify-start gap-2">
-                          <span>📝</span>
-                          <span className="text-center sm:text-left">Redigera innehåll</span>
-                        </span>
+                        📝 Redigera innehåll
                       </button>
                       <button
-                        onClick={() => setEditView('members')}
+                        onClick={() => setEditView('structure')}
                         className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
-                          editView === 'members'
+                          editView === 'structure'
                             ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border border-transparent'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
                       >
-                        <span className="flex items-center justify-center sm:justify-start gap-2">
-                          <span>👥</span>
-                          <span className="text-center sm:text-left">Hantera medlemmar</span>
-                        </span>
+                        🏗️ Hantera struktur
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Content based on current view */}
-                {editView === 'content' ? (
-                  <ContentArea
-                    sections={visibleSections}
-                    currentPageId={currentPageId}
-                    isEditMode={isEditMode}
-                    handbookId={initialData.id}
-                    onUpdateSection={updateSection}
-                    onUpdatePage={updatePage}
-                    onAddPage={addPage}
-                    onDeletePage={deletePage}
-                    onAddSection={addSection}
-                    onMoveSection={moveSection}
-                    onDeleteSection={deleteSection}
-                    onExitEditMode={() => {
-                      setIsEditMode(false);
-                      setEditView('content');
-                    }}
-                  />
-                ) : (
-                  /* Members management view */
-                  <div className="relative h-full">
-                    <div className="h-full overflow-y-auto pb-20 sm:pb-24">
-                      <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-                        <MembersManager 
-                          handbookId={initialData.id} 
-                          currentUserId={user?.id || ''} 
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Exit edit mode button för members view */}
-                    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
-                      <button
-                        onClick={() => {
-                          setIsEditMode(false);
-                          setEditView('content');
-                        }}
-                        className="px-4 sm:px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 text-sm sm:text-base touch-manipulation"
-                      >
-                        <span className="text-lg sm:text-base">✕</span>
-                        <span className="hidden sm:inline">Avsluta redigering</span>
-                        <span className="sm:hidden">Avsluta</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Footer - positioned within the content area */}
-              <div className="flex-shrink-0">
-                <MainFooter />
+                {/* Main content with proper mobile-optimized flex properties */}
+                <ContentArea
+                  sections={visibleSections}
+                  currentPageId={currentPageId}
+                  isEditMode={isEditMode}
+                  handbookId={handbookData.id}
+                  onUpdateSection={updateSection}
+                  onUpdatePage={updatePage}
+                  onAddPage={addPage}
+                  onDeletePage={deletePage}
+                  onAddSection={addSection}
+                  onMoveSection={moveSection}
+                  onDeleteSection={deleteSection}
+                  onExitEditMode={() => setIsEditMode(false)}
+                />
               </div>
             </div>
           </SidebarInset>

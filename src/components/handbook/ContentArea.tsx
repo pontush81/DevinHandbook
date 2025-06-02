@@ -628,537 +628,92 @@ export function ContentArea({ sections, currentPageId, isEditMode = false, handb
     currentPage: currentPage ? { id: currentPage.id, title: currentPage.title } : null
   });
 
-  // If we have a current page, show just that page
-  if (currentPage) {
-    return (
-      <div className="w-full h-full content-area-scroll bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-        <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
-          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-4 sm:pb-6">
-              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
-                {currentPage.title}
-              </CardTitle>
-              {currentPage.lastUpdated && (
-                <CardDescription className="flex items-center text-gray-500 mt-2">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Uppdaterad {currentPage.lastUpdated}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="prose prose-lg max-w-none">
-                <MarkdownRenderer content={currentPage.content || ''} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Show all sections as a long scrollable page
   return (
-    <div className="w-full h-full content-area-scroll bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* Fixed/Sticky Exit Edit Mode Button - Float over content when in edit mode */}
-      {isEditMode && onExitEditMode && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-          {/* Auto-save info button */}
-          <Button
-            onClick={() => {
-              console.log('💾 Auto-save aktiverat - inga ändringar behöver sparas manuellt');
-              alert('✅ Alla ändringar sparas automatiskt! Du behöver inte göra något mer.');
-            }}
-            className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
-          >
-            💾 Allt sparas automatiskt
-          </Button>
-          
-          {/* Exit edit mode button - More prominent */}
-          <Button
-            onClick={() => {
-              console.log('🚪 Avslutar redigeringsläge');
-              onExitEditMode();
-            }}
-            className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
-          >
-            <X className="w-5 h-5" />
-            Avsluta redigering
-          </Button>
+    <div className="content-area-scroll">
+      {/* If we have a current page, show just that page */}
+      {currentPage ? (
+        <div className="w-full h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+          <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
+            <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+              <CardHeader className="pb-4 sm:pb-6">
+                <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+                  {currentPage.title}
+                </CardTitle>
+                {currentPage.lastUpdated && (
+                  <CardDescription className="flex items-center text-gray-500 mt-2">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Senast uppdaterad: {currentPage.lastUpdated}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="prose prose-blue max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: currentPage.content }} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : (
+        // Show all sections in overview mode with proper spacing
+        <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-full">
+          <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
+            {sections.map((section, sectionIndex) => (
+              <section 
+                key={section.id} 
+                id={`section-${section.id}`}
+                className={`mb-8 sm:mb-12 last:mb-0 ${sectionIndex === 0 ? 'mt-0' : ''}`}
+              >
+                <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+                  <CardHeader className="pb-4 sm:pb-6">
+                    <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+                      {section.title}
+                    </CardTitle>
+                    {section.description && (
+                      <CardDescription className="text-base sm:text-lg text-gray-600 mt-2">
+                        {section.description}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-6 sm:space-y-8">
+                    {section.pages.map((page, pageIndex) => (
+                      <article 
+                        key={page.id} 
+                        className={`${pageIndex > 0 ? 'border-t pt-6 sm:pt-8' : ''}`}
+                      >
+                        {section.pages.length > 1 && (
+                          <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6">
+                            {page.title}
+                          </h3>
+                        )}
+                        
+                        <div className="prose prose-blue max-w-none">
+                          <div dangerouslySetInnerHTML={{ __html: page.content }} />
+                        </div>
+                        
+                        {page.lastUpdated && (
+                          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <Calendar className="w-4 h-4 mr-2" />
+                              Senast uppdaterad: {page.lastUpdated}
+                            </div>
+                            {page.estimatedReadTime && (
+                              <div className="flex items-center">
+                                <Clock className="w-4 h-4 mr-2" />
+                                {page.estimatedReadTime} min läsning
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </CardContent>
+                </Card>
+              </section>
+            ))}
+          </div>
         </div>
       )}
-
-      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
-        {/* Welcome content - only show when no sections exist at all */}
-        {(!sectionsArray || sectionsArray.length === 0) && !currentPageId && (
-          <div className="mb-8 sm:mb-16">
-            <EditableWelcomeContent data={getWelcomeContent()} isEditMode={isEditMode} />
-            
-            {/* Add section button when no sections exist */}
-            {isEditMode && (
-              <div className="mt-8">
-                <InlineSectionCreator 
-                  onCreateSection={handleCreateSection}
-                  placeholder="Skapa första sektionen"
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* All sections displayed vertically */}
-        {sectionsArray && sectionsArray.length > 0 && (
-          <div className="space-y-8 sm:space-y-12">
-            {/* All handbook sections */}
-            {sectionsArray.map((section, sectionIndex) => {
-              const IconComponent = getSectionIcon(section);
-              
-              return (
-                <section key={section.id} className="mb-8 sm:mb-12">
-                  <Card 
-                    id={`section-${section.id}`}
-                    className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-white/90 backdrop-blur-sm overflow-hidden group"
-                  >
-                    {/* Beautiful gradient header */}
-                    <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-100/50">
-                      <CardHeader className="pb-4 sm:pb-6">
-                        <div className="flex items-start justify-between gap-3 sm:gap-4">
-                          <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-                            <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
-                              <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              {isEditMode ? (
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-2">
-                                    <InlineEdit
-                                      value={section.title}
-                                      onSave={(newTitle) => handleSectionChange(section.id, { title: newTitle })}
-                                      className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900"
-                                      placeholder="Sektionsrubrik"
-                                    />
-                                  </div>
-                                  <InlineEdit
-                                    value={section.description || ''}
-                                    onSave={(newDescription) => handleSectionChange(section.id, { description: newDescription })}
-                                    className="text-sm sm:text-base text-gray-600"
-                                    placeholder="Beskrivning av sektionen"
-                                  />
-                                  <div className="mt-3 p-3 bg-white/70 rounded-lg border border-blue-200">
-                                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                                      🎨 Välj ikon för sektionen:
-                                    </label>
-                                    <IconPicker
-                                      selectedIcon={section.icon || 'BookOpen'}
-                                      onIconSelect={(icon) => {
-                                        console.log('🎯 Icon selected:', icon, 'for section:', section.id);
-                                        handleSectionChange(section.id, { icon });
-                                      }}
-                                      compact={true}
-                                      size="sm"
-                                    />
-                                  </div>
-                                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-                                    {/* Publik sektion checkbox */}
-                                    <div className="flex items-center space-x-2">
-                                      <input
-                                        type="checkbox"
-                                        id={`section-public-${section.id}`}
-                                        checked={section.is_public !== false}
-                                        onChange={(e) => handleSectionChange(section.id, { is_public: e.target.checked })}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                      />
-                                      <label htmlFor={`section-public-${section.id}`} className="text-sm text-gray-700 font-medium">
-                                        📢 Publik sektion (synlig för alla användare)
-                                      </label>
-                                    </div>
-
-                                    {/* Publicerad sektion checkbox */}
-                                    <div className="flex items-center space-x-2">
-                                      <input
-                                        type="checkbox"
-                                        id={`section-published-${section.id}`}
-                                        checked={section.is_published !== false}
-                                        onChange={(e) => handleSectionChange(section.id, { is_published: e.target.checked })}
-                                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                                      />
-                                      <label htmlFor={`section-published-${section.id}`} className="text-sm text-gray-700 font-medium">
-                                        ✅ Publicerad sektion (redo att visas)
-                                      </label>
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 leading-tight">
-                                    {section.title}
-                                  </CardTitle>
-                                  {section.description && (
-                                    <CardDescription className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                                      {section.description}
-                                    </CardDescription>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Section controls - mobile optimized */}
-                          {isEditMode && (
-                            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
-                              {sectionIndex > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => onMoveSection && onMoveSection(section.id, 'up')}
-                                  className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
-                                  title="Flytta upp"
-                                >
-                                  <ChevronUp className="w-4 h-4" />
-                                </Button>
-                              )}
-                              {sectionIndex < sectionsArray.length - 1 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => onMoveSection && onMoveSection(section.id, 'down')}
-                                  className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600"
-                                  title="Flytta ner"
-                                >
-                                  <ChevronDown className="w-4 h-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleSectionChange(section.id, { is_public: !section.is_public })}
-                                className="h-8 w-8 p-0 hover:bg-yellow-100 text-yellow-600"
-                                title={section.is_public ? "Göm sektion" : "Visa sektion"}
-                              >
-                                {section.is_public ? <Eye className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onDeleteSection && onDeleteSection(section.id)}
-                                className="h-8 w-8 p-0 hover:bg-red-100 text-red-600"
-                                title="Ta bort sektion"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </CardHeader>
-                    </div>
-
-                    <CardContent className="pt-6 sm:pt-8">
-                      {/* Pages in this section */}
-                      {section.pages && section.pages.length > 0 ? (
-                        <div className="space-y-6 sm:space-y-8">
-                          {section.pages.map((page, pageIndex) => (
-                            <div key={page.id} className="border-l-2 border-blue-200 pl-4 sm:pl-6">
-                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
-                                <div className="flex-1">
-                                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex-1">
-                                    {isEditMode ? (
-                                      <InlineEdit
-                                        value={page.title}
-                                        onSave={(newTitle) => handlePageUpdate(page.id, { title: newTitle })}
-                                        className="text-lg sm:text-xl font-semibold"
-                                        placeholder="Skriv sidtitel..."
-                                      />
-                                    ) : (
-                                      page.title
-                                    )}
-                                  </h3>
-                                </div>
-                              </div>
-
-                              <div className="mb-4 sm:mb-6">
-                                {isEditMode ? (
-                                  <div className="border border-gray-300 rounded-lg">
-                                    {/* Simple formatting toolbar */}
-                                    <div className="border-b border-gray-200 p-2 bg-gray-50 flex flex-wrap gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const end = textarea.selectionEnd;
-                                          const selectedText = textarea.value.substring(start, end);
-                                          const newText = textarea.value.substring(0, start) + '**' + (selectedText || 'fet text') + '**' + textarea.value.substring(end);
-                                          handleLocalContentChange(page.id, newText);
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Fet text"
-                                      >
-                                        <span className="font-bold">B</span>
-                                        <span className="hidden sm:inline">Fet</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const end = textarea.selectionEnd;
-                                          const selectedText = textarea.value.substring(start, end);
-                                          const newText = textarea.value.substring(0, start) + '*' + (selectedText || 'kursiv text') + '*' + textarea.value.substring(end);
-                                          handleLocalContentChange(page.id, newText);
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Kursiv text"
-                                      >
-                                        <span className="italic">I</span>
-                                        <span className="hidden sm:inline">Kursiv</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const lines = textarea.value.split('\n');
-                                          let currentPos = 0;
-                                          let lineIndex = 0;
-                                          for (let i = 0; i < lines.length; i++) {
-                                            if (currentPos + lines[i].length >= start) {
-                                              lineIndex = i;
-                                              break;
-                                            }
-                                            currentPos += lines[i].length + 1;
-                                          }
-                                          lines[lineIndex] = '# ' + lines[lineIndex];
-                                          handleLocalContentChange(page.id, lines.join('\n'));
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Stor rubrik"
-                                      >
-                                        <span className="font-bold">H1</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const lines = textarea.value.split('\n');
-                                          let currentPos = 0;
-                                          let lineIndex = 0;
-                                          for (let i = 0; i < lines.length; i++) {
-                                            if (currentPos + lines[i].length >= start) {
-                                              lineIndex = i;
-                                              break;
-                                            }
-                                            currentPos += lines[i].length + 1;
-                                          }
-                                          lines[lineIndex] = '## ' + lines[lineIndex];
-                                          handleLocalContentChange(page.id, lines.join('\n'));
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Mindre rubrik"
-                                      >
-                                        <span className="font-bold">H2</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const lines = textarea.value.split('\n');
-                                          let currentPos = 0;
-                                          let lineIndex = 0;
-                                          for (let i = 0; i < lines.length; i++) {
-                                            if (currentPos + lines[i].length >= start) {
-                                              lineIndex = i;
-                                              break;
-                                            }
-                                            currentPos += lines[i].length + 1;
-                                          }
-                                          lines[lineIndex] = '- ' + lines[lineIndex];
-                                          handleLocalContentChange(page.id, lines.join('\n'));
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Lista"
-                                      >
-                                        <span>•</span>
-                                        <span className="hidden sm:inline">Lista</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const lines = textarea.value.split('\n');
-                                          let currentPos = 0;
-                                          let lineIndex = 0;
-                                          for (let i = 0; i < lines.length; i++) {
-                                            if (currentPos + lines[i].length >= start) {
-                                              lineIndex = i;
-                                              break;
-                                            }
-                                            currentPos += lines[i].length + 1;
-                                          }
-                                          lines[lineIndex] = '1. ' + lines[lineIndex];
-                                          handleLocalContentChange(page.id, lines.join('\n'));
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Numrerad lista"
-                                      >
-                                        <span>1.</span>
-                                        <span className="hidden sm:inline">Numrerad</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const end = textarea.selectionEnd;
-                                          const selectedText = textarea.value.substring(start, end);
-                                          const newText = textarea.value.substring(0, start) + '[' + (selectedText || 'länktext') + '](url)' + textarea.value.substring(end);
-                                          handleLocalContentChange(page.id, newText);
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Länk"
-                                      >
-                                        <span>🔗</span>
-                                        <span className="hidden sm:inline">Länk</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = document.getElementById(`content-${page.id}`) as HTMLTextAreaElement;
-                                          if (!textarea) return;
-                                          const start = textarea.selectionStart;
-                                          const lines = textarea.value.split('\n');
-                                          let currentPos = 0;
-                                          let lineIndex = 0;
-                                          for (let i = 0; i < lines.length; i++) {
-                                            if (currentPos + lines[i].length >= start) {
-                                              lineIndex = i;
-                                              break;
-                                            }
-                                            currentPos += lines[i].length + 1;
-                                          }
-                                          lines[lineIndex] = '> ' + lines[lineIndex];
-                                          handleLocalContentChange(page.id, lines.join('\n'));
-                                        }}
-                                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 flex items-center gap-1"
-                                        title="Citat"
-                                      >
-                                        <span>❝</span>
-                                        <span className="hidden sm:inline">Citat</span>
-                                      </button>
-                                    </div>
-                                    
-                                    <Textarea
-                                      id={`content-${page.id}`}
-                                      value={localPageContent[page.id] || ''}
-                                      onChange={(e) => handleLocalContentChange(page.id, e.target.value)}
-                                      placeholder="Skriv ditt innehåll här... Du kan använda Markdown för formatering."
-                                      className="border-0 rounded-none resize-none focus:ring-0 min-h-32 sm:min-h-40"
-                                      rows={8}
-                                    />
-                                  </div>
-                                ) : (
-                                  <MarkdownRenderer content={localPageContent[page.id] || ''} />
-                                )}
-                              </div>
-
-                              {isEditMode && (
-                                <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 pt-2 border-t border-gray-100">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handlePageUpdate(page.id, { order: page.order - 1 })}
-                                    className="h-8 px-2 sm:px-3 text-gray-600 hover:text-gray-800 justify-start sm:justify-center"
-                                    title="Flytta upp sida"
-                                  >
-                                    <ChevronUp className="w-4 h-4 mr-1 sm:mr-0" />
-                                    <span className="sm:hidden">Flytta upp</span>
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handlePageUpdate(page.id, { order: page.order + 1 })}
-                                    className="h-8 px-2 sm:px-3 text-gray-600 hover:text-gray-800 justify-start sm:justify-center"
-                                    title="Flytta ner sida"
-                                  >
-                                    <ChevronDown className="w-4 h-4 mr-1 sm:mr-0" />
-                                    <span className="sm:hidden">Flytta ner</span>
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handlePageUpdate(page.id, { is_public: !page.is_public })}
-                                    className="h-8 px-2 sm:px-3 text-gray-600 hover:text-gray-800 justify-start sm:justify-center"
-                                    title={page.is_public ? "Göm sida" : "Visa sida"}
-                                  >
-                                    {page.is_public ? <X className="w-4 h-4 mr-1 sm:mr-0" /> : <Eye className="w-4 h-4 mr-1 sm:mr-0" />}
-                                    <span className="sm:hidden">{page.is_public ? "Göm" : "Visa"}</span>
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-
-                          {/* Add new page button for sections with existing pages */}
-                          {isEditMode && (
-                            <div className="pt-4 border-t border-gray-100">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAddPage(section.id, 'Ny sida')}
-                                className="space-x-2 h-9 sm:h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50 w-full sm:w-auto"
-                              >
-                                <Plus className="w-4 h-4" />
-                                <span>Lägg till ny sida</span>
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        /* Empty section state */
-                        <div className="text-center py-12 sm:py-16 text-gray-500">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                            <IconComponent className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
-                          </div>
-                          <p className="text-sm sm:text-base mb-4 sm:mb-6 font-medium">Denna sektion har inga sidor än</p>
-                          {isEditMode && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAddPage(section.id, 'Första sidan')}
-                              className="space-x-2 h-9 sm:h-10 px-4 sm:px-6 text-sm border-blue-300 text-blue-700 hover:bg-blue-50"
-                            >
-                              <Plus className="w-4 h-4" />
-                              <span>Lägg till första sidan</span>
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </section>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Add section button at the bottom when sections exist */}
-        {isEditMode && sectionsArray && sectionsArray.length > 0 && (
-          <div className="mt-12 sm:mt-16 pt-8 sm:pt-12 border-t border-gray-200">
-            <InlineSectionCreator 
-              onCreateSection={handleCreateSection}
-              placeholder="Lägg till ny sektion"
-            />
-          </div>
-        )}
-      </div>
     </div>
   );
 } 

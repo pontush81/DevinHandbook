@@ -46,7 +46,7 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
   /* Updated color palette */
   --background: 0 0% 100%;
@@ -93,7 +93,7 @@
   --destructive-foreground: 210 40% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --ring: 221.2 83.2% 53.3%;
 
   /* Chart colors */
   --chart-1: 12 76% 61%;
@@ -134,6 +134,10 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Layout variables */
+  --header-height: 64px; /* Default header height */
+  --sidebar-width: 256px; /* Default sidebar width */
 }
 
 .dark {
@@ -944,7 +948,7 @@ html, body {
   --destructive-foreground: 210 40% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --ring: 221.2 83.2% 53.3%;
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
 
@@ -979,7 +983,7 @@ html, body {
   --space-16: 4rem;
 
   /* Border radius */
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
@@ -2191,4 +2195,88 @@ header > div > div:not([data-debug="handbook-header-right"]) [class*="rounded-fu
 /* Selection styling */
 .codex-editor .ce-block--selected .ce-block__content {
   background: rgba(59, 130, 246, 0.1);
+}
+
+/* ==============================================
+   CONTENT AREA SCROLL - MOBILE OPTIMIZED
+   ============================================== */
+
+.content-area-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* Critical for iOS smooth scrolling */
+  /* Add flex properties for better container behavior */
+  flex: 1;
+  min-height: 0; /* Allow flex child to shrink below content size */
+  /* Mobile optimizations */
+  touch-action: pan-y; /* Allow vertical scrolling but prevent zoom gestures */
+  overscroll-behavior: contain; /* Prevent overscroll from affecting parent */
+}
+
+/* Main content container - MOBILE OPTIMIZED */
+.main-content-scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Use flex instead of fixed height for responsive behavior */
+  flex: 1;
+  min-height: 0; /* Critical for flex layouts */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  /* Better height handling for both modes */
+  height: 100%;
+  max-height: 100%;
+  /* Mobile-specific optimizations */
+  touch-action: pan-y; /* Enable vertical scroll, disable zoom */
+  overscroll-behavior: contain; /* Prevent scroll chaining */
+  -webkit-transform: translateZ(0); /* Force hardware acceleration on mobile */
+  transform: translateZ(0);
+}
+
+/* Mobile-specific scroll improvements */
+@media (max-width: 1024px) {
+  .content-area-scroll,
+  .main-content-scrollable {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    /* Force hardware acceleration on mobile */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Better touch handling */
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+  
+  /* Ensure proper height on mobile devices */
+  .main-content-scrollable {
+    /* Use viewport height that accounts for mobile browsers */
+    height: calc(100vh - var(--header-height, 80px));
+    min-height: calc(100vh - var(--header-height, 80px));
+  }
+}
+
+/* iOS Safari specific fixes */
+@media (max-width: 768px) {
+  .content-area-scroll,
+  .main-content-scrollable {
+    /* Fix for iOS Safari address bar height changes */
+    height: calc(100vh - var(--header-height, 80px));
+    /* Enable momentum scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent rubber band effect */
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Very small screens - additional mobile optimizations */
+@media (max-width: 480px) {
+  .content-area-scroll,
+  .main-content-scrollable {
+    /* Even more aggressive mobile optimization */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    /* Ensure scrolling works on small screens */
+    overflow-y: scroll; /* Force scrollbar on mobile if needed */
+  }
 }
