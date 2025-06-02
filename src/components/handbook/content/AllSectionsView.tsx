@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { HandbookSection as Section } from '@/types/handbook';
-import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EditorJSComponent } from '@/components/ui/EditorJSComponent';
+import { parseEditorJSContent, stringifyEditorJSContent } from '@/lib/utils/editorjs';
 
 interface AllSectionsViewProps {
   sections: Section[];
@@ -22,6 +24,8 @@ export function AllSectionsView({
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
   const [editingPages, setEditingPages] = useState<Set<string>>(new Set());
   const [savingStates, setSavingStates] = useState<Map<string, boolean>>(new Map());
+  const [errorStates, setErrorStates] = useState<Map<string, string>>(new Map());
+  const [successStates, setSuccessStates] = useState<Map<string, boolean>>(new Map());
 
   // Auto-expand all sections by default
   React.useEffect(() => {
@@ -70,13 +74,32 @@ export function AllSectionsView({
     if (!onUpdateSection) return;
     
     setSavingStates(prev => new Map(prev).set(sectionId, true));
+    setErrorStates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(sectionId);
+      return newMap;
+    });
     
     try {
       await onUpdateSection(sectionId, {
-        content: JSON.stringify(data)
+        content: stringifyEditorJSContent(data)
       });
+      
+      // Show success feedback
+      setSuccessStates(prev => new Map(prev).set(sectionId, true));
+      setTimeout(() => {
+        setSuccessStates(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(sectionId);
+          return newMap;
+        });
+      }, 3000);
+      
     } catch (error) {
       console.error('Error updating section content:', error);
+      setErrorStates(prev => new Map(prev).set(sectionId, 
+        error instanceof Error ? error.message : 'Det gick inte att spara sektionen'
+      ));
     } finally {
       setSavingStates(prev => {
         const newMap = new Map(prev);
@@ -90,13 +113,32 @@ export function AllSectionsView({
     if (!onUpdatePage) return;
     
     setSavingStates(prev => new Map(prev).set(pageId, true));
+    setErrorStates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(pageId);
+      return newMap;
+    });
     
     try {
       await onUpdatePage(pageId, {
-        content: JSON.stringify(data)
+        content: stringifyEditorJSContent(data)
       });
+      
+      // Show success feedback
+      setSuccessStates(prev => new Map(prev).set(pageId, true));
+      setTimeout(() => {
+        setSuccessStates(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(pageId);
+          return newMap;
+        });
+      }, 3000);
+      
     } catch (error) {
       console.error('Error updating page content:', error);
+      setErrorStates(prev => new Map(prev).set(pageId, 
+        error instanceof Error ? error.message : 'Det gick inte att spara sidan'
+      ));
     } finally {
       setSavingStates(prev => {
         const newMap = new Map(prev);
@@ -171,6 +213,37 @@ export function AllSectionsView({
                           Sparar...
                         </Badge>
                       )}
+                      
+                      {successStates.get(section.id) && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Sparad
+                        </Badge>
+                      )}
+                      
+                      {errorStates.get(section.id) && (
+                        <Badge 
+                          variant="outline" 
+                          className="bg-red-50 text-red-700 border-red-200 cursor-help"
+                          title={errorStates.get(section.id)}
+                        >
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Fel
+                        </Badge>
+                      )}
+                      
+                      {/* Edit button for section content */}
+                      {isEditMode && section.content && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => toggleSectionEdit(section.id)}
+                          className="bg-white/80 hover:bg-white/90"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          {editingSections.has(section.id) ? 'Sluta redigera' : 'Redigera beskrivning'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -189,7 +262,7 @@ export function AllSectionsView({
                         </div>
                         <div className="mt-4">
                           <EditorJSComponent
-                            data={section.content ? JSON.parse(section.content) : null}
+                            content={parseEditorJSContent(section.content)}
                             onChange={(data) => handleSectionContentChange(section.id, data)}
                             readOnly={false}
                             placeholder="Skriv en beskrivning för denna sektion..."
@@ -199,7 +272,8 @@ export function AllSectionsView({
                     ) : section.content && (
                       <div className="welcome-section-card mb-6">
                         <EditorJSComponent
-                          data={JSON.parse(section.content)}
+                          content={parseEditorJSContent(section.content)}
+                          onChange={() => {}} 
                           readOnly={true}
                         />
                       </div>
@@ -230,6 +304,37 @@ export function AllSectionsView({
                                       Sparar...
                                     </Badge>
                                   )}
+                                  
+                                  {successStates.get(page.id) && (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Sparad
+                                    </Badge>
+                                  )}
+                                  
+                                  {errorStates.get(page.id) && (
+                                    <Badge 
+                                      variant="outline" 
+                                      className="bg-red-50 text-red-700 border-red-200 cursor-help"
+                                      title={errorStates.get(page.id)}
+                                    >
+                                      <AlertCircle className="h-3 w-3 mr-1" />
+                                      Fel
+                                    </Badge>
+                                  )}
+                                  
+                                  {/* Edit button for page content */}
+                                  {isEditMode && (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => togglePageEdit(page.id)}
+                                      className="bg-white/80 hover:bg-white/90"
+                                    >
+                                      <Edit className="h-4 w-4 mr-1" />
+                                      {editingPages.has(page.id) ? 'Sluta redigera' : 'Redigera sida'}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -237,14 +342,15 @@ export function AllSectionsView({
                             <div className="prose">
                               {editingPages.has(page.id) && isEditMode ? (
                                 <EditorJSComponent
-                                  data={page.content ? JSON.parse(page.content) : null}
+                                  content={parseEditorJSContent(page.content)}
                                   onChange={(data) => handlePageContentChange(page.id, data)}
                                   readOnly={false}
                                   placeholder="Skriv innehållet för denna sida..."
                                 />
                               ) : (
                                 <EditorJSComponent
-                                  data={page.content ? JSON.parse(page.content) : null}
+                                  content={parseEditorJSContent(page.content)}
+                                  onChange={() => {}}
                                   readOnly={true}
                                 />
                               )}

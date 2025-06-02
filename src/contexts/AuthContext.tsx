@@ -185,6 +185,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        console.log('🌐 AuthContext: Running on client, proceeding with auth check');
+
         // Kontrollera logout-flagga först
         try {
           const logoutFlag = localStorage.getItem('__logout_flag__');
@@ -206,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (e) {
           // Ignorera fel vid flaggkontroll
+          console.log('⚠️ AuthContext: Error checking logout flag (safe to ignore):', e);
         }
 
         // Säker kontroll av storage access
@@ -232,49 +235,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (error) {
           console.error('❌ AuthContext: Error getting session:', error);
-          
-          // Försök återställa session från cookies om det finns och vi har storage access
-          if (hasStorageAccess && typeof document !== 'undefined' && document.cookie.includes('sb-auth')) {
-            console.log('🍪 AuthContext: Found auth cookies, attempting session restore...');
-            
-            // Vänta lite och försök igen
-            setTimeout(async () => {
-              try {
-                const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession();
-                console.log('🔄 AuthContext: Retry session result:', {
-                  hasSession: !!retrySession,
-                  hasUser: !!retrySession?.user,
-                  error: retryError?.message
-                });
-                
-                if (!retryError && retrySession) {
-                  console.log('✅ AuthContext: Session restored from cookies');
-                  setSession(retrySession);
-                  setUser(retrySession.user);
-                  
-                  if (retrySession.user.id && retrySession.user.email) {
-                    createUserProfileIfNeeded(retrySession.user.id, retrySession.user.email);
-                  }
-                } else {
-                  console.log('❌ AuthContext: Failed to restore session from cookies');
-                  setSession(null);
-                  setUser(null);
-                }
-              } catch (e) {
-                console.error('❌ AuthContext: Error during session restore:', e);
-                setSession(null);
-                setUser(null);
-              } finally {
-                setIsLoading(false);
-              }
-            }, 1000);
-            return; // Avsluta här för att vänta på retry
-          } else {
-            console.log('🚫 AuthContext: No auth cookies found or no storage access');
-            setSession(null);
-            setUser(null);
-          }
-        } else if (currentSession) {
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (currentSession) {
           console.log('✅ AuthContext: Found active session', {
             userId: currentSession.user?.id,
             expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
@@ -325,6 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(null);
         setUser(null);
       } finally {
+        console.log('🏁 AuthContext: Setting isLoading to false');
         setIsLoading(false);
       }
     };

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HandbookPage as Page } from '@/types/handbook';
-import { Calendar, Clock, Edit, Save } from 'lucide-react';
+import { Calendar, Clock, Edit, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EditorJSComponent } from '@/components/ui/EditorJSComponent';
+import { parseEditorJSContent, stringifyEditorJSContent } from '@/lib/utils/editorjs';
 
 interface SinglePageViewProps {
   page: Page;
@@ -19,25 +21,31 @@ export function SinglePageView({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Auto-save functionality
   const handleContentChange = useCallback(async (data: any) => {
     if (!onUpdatePage || !page?.id) return;
     
     setHasUnsavedChanges(true);
+    setError(null);
     
     // Debounced auto-save after 2 seconds of inactivity
     const saveTimeout = setTimeout(async () => {
       try {
         setIsSaving(true);
         await onUpdatePage(page.id, { 
-          content: JSON.stringify(data),
+          content: stringifyEditorJSContent(data),
           updated_at: new Date().toISOString()
         });
         setHasUnsavedChanges(false);
         setLastSaved(new Date());
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       } catch (error) {
         console.error('Auto-save failed:', error);
+        setError(error instanceof Error ? error.message : 'Det gick inte att spara sidan');
       } finally {
         setIsSaving(false);
       }
@@ -81,18 +89,38 @@ export function SinglePageView({
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
             {isEditMode && (
-              <Badge variant={hasUnsavedChanges ? "destructive" : "default"}>
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></div>
-                    Sparar...
-                  </>
-                ) : hasUnsavedChanges ? (
-                  "Ej sparad"
-                ) : (
-                  "Sparad"
+              <div className="flex items-center space-x-2">
+                <Badge variant={hasUnsavedChanges ? "destructive" : "default"}>
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></div>
+                      Sparar...
+                    </>
+                  ) : hasUnsavedChanges ? (
+                    "Ej sparad"
+                  ) : (
+                    "Sparad"
+                  )}
+                </Badge>
+                
+                {showSuccess && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Sparad framgångsrikt
+                  </Badge>
                 )}
-              </Badge>
+                
+                {error && (
+                  <Badge 
+                    variant="outline" 
+                    className="bg-red-50 text-red-700 border-red-200 cursor-help"
+                    title={error}
+                  >
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Fel vid sparning
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
           
@@ -121,6 +149,16 @@ export function SinglePageView({
         {page.subtitle && (
           <p className="text-gray-600 mt-2">{page.subtitle}</p>
         )}
+        
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       {/* Content area with beautiful page styling */}
@@ -142,7 +180,7 @@ export function SinglePageView({
                   </div>
                   <div className="mt-4">
                     <EditorJSComponent
-                      data={page.content ? JSON.parse(page.content) : null}
+                      content={parseEditorJSContent(page.content)}
                       onChange={handleContentChange}
                       readOnly={false}
                       placeholder="Börja skriva innehållet för denna sida..."
@@ -151,7 +189,8 @@ export function SinglePageView({
                 </div>
               ) : (
                 <EditorJSComponent
-                  data={page.content ? JSON.parse(page.content) : null}
+                  content={parseEditorJSContent(page.content)}
+                  onChange={() => {}}
                   readOnly={true}
                 />
               )}

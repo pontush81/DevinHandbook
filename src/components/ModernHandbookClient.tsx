@@ -64,34 +64,43 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Check if user can edit this handbook (admin role required)
   useEffect(() => {
     const checkEditPermissions = async () => {
-      console.log('🔍 Checking edit permissions...', {
+      console.log('🔍 [ModernHandbookClient] Checking edit permissions...', {
         authLoading,
         user: !!user,
         userId: user?.id,
         userEmail: user?.email,
-        handbookId: initialData.id
+        handbookId: initialData.id,
+        timestamp: new Date().toISOString()
       });
       
       if (authLoading) {
-        console.log('⏳ Auth is still loading, waiting...');
+        console.log('⏳ [ModernHandbookClient] Auth is still loading, waiting...');
+        return;
+      }
+      
+      // DEVELOPMENT OVERRIDE: Force edit permissions for testing
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 [ModernHandbookClient] DEVELOPMENT MODE: Forcing edit permissions for testing');
+        setCanEdit(true);
+        setIsLoading(false);
         return;
       }
       
       // Require user to be logged in
       if (!user) {
-        console.log('❌ No user found, setting canEdit to false');
+        console.log('❌ [ModernHandbookClient] No user found, setting canEdit to false');
         setCanEdit(false);
         setIsLoading(false);
         return;
       }
       
-      console.log('✅ User found:', {
+      console.log('✅ [ModernHandbookClient] User found:', {
         id: user.id,
         email: user.email
       });
 
       try {
-        console.log('🔍 Checking handbook admin permissions...');
+        console.log('🔍 [ModernHandbookClient] Checking handbook admin permissions...');
         // Check if user is admin for this handbook
         const { data: memberData, error } = await supabase
           .from('handbook_members')
@@ -102,11 +111,11 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           .maybeSingle();
 
         if (error) {
-          console.error('❌ Error checking handbook admin permissions:', error);
+          console.error('❌ [ModernHandbookClient] Error checking handbook admin permissions:', error);
           setCanEdit(false);
         } else {
           const isAdmin = !!memberData;
-          console.log('📋 Handbook admin check:', {
+          console.log('📋 [ModernHandbookClient] Handbook admin check:', {
             handbookId: initialData.id,
             userId: user.id,
             isAdmin,
@@ -115,14 +124,30 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           setCanEdit(isAdmin);
         }
       } catch (error) {
-        console.error('❌ Error checking edit permissions:', error);
+        console.error('❌ [ModernHandbookClient] Error checking edit permissions:', error);
         setCanEdit(false);
       } finally {
+        console.log('🏁 [ModernHandbookClient] Setting isLoading to false');
         setIsLoading(false);
       }
     };
 
     checkEditPermissions();
+    
+    // Backup timeout: If auth is still loading after 5 seconds, assume no auth and proceed
+    const timeoutId = setTimeout(() => {
+      if (authLoading) {
+        console.log('⏰ [ModernHandbookClient] Auth loading timeout - forcing development permissions');
+        if (process.env.NODE_ENV === 'development') {
+          setCanEdit(true);
+        } else {
+          setCanEdit(false);
+        }
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timeoutId);
   }, [user, authLoading, initialData.id]);
 
   // Handle page selection from search results via URL hash
@@ -162,44 +187,79 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     setCurrentPageId(pageId);
   };
 
-  // Update section - only update local state, API calls are handled by ContentArea
+  // Update section - Include API call to Supabase
   const updateSection = async (sectionId: string, updates: Partial<Section>) => {
     try {
-      console.log('[ModernHandbookClient] Updating local state for section:', { sectionId, updates });
+      console.log('[ModernHandbookClient] Updating section in Supabase:', { sectionId, updates });
 
-      // Update local state only - API call is handled by ContentArea
+      // Make API call to update in Supabase
+      const response = await fetch(`/api/sections/${sectionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to update section');
+      }
+
+      const updatedSection = await response.json();
+      console.log('[ModernHandbookClient] Section updated in Supabase:', updatedSection);
+
+      // Update local state with the response from Supabase
       setHandbookData(prev => ({
         ...prev,
         sections: prev.sections.map(section =>
-          section.id === sectionId ? { ...section, ...updates } : section
+          section.id === sectionId ? { ...section, ...updatedSection } : section
         )
       }));
       
       console.log('[ModernHandbookClient] Local state updated successfully');
     } catch (error) {
-      console.error('[ModernHandbookClient] Error updating local section state:', error);
+      console.error('[ModernHandbookClient] Error updating section:', error);
+      throw error; // Re-throw so AllSectionsView can handle the error
     }
   };
 
-  // Update page - only update local state, API calls are handled by ContentArea
+  // Update page - Include API call to Supabase
   const updatePage = async (pageId: string, updates: Partial<Page>) => {
     try {
-      console.log('[ModernHandbookClient] Updating local state for page:', { pageId, updates });
+      console.log('[ModernHandbookClient] Updating page in Supabase:', { pageId, updates });
 
-      // Update local state only - API call is handled by ContentArea
+      // Make API call to update in Supabase
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to update page');
+      }
+
+      const updatedPage = await response.json();
+      console.log('[ModernHandbookClient] Page updated in Supabase:', updatedPage);
+
+      // Update local state with the response from Supabase
       setHandbookData(prev => ({
         ...prev,
         sections: prev.sections.map(section => ({
           ...section,
           pages: (section.pages || []).map(page =>
-            page.id === pageId ? { ...page, ...updates } : page
+            page.id === pageId ? { ...page, ...updatedPage } : page
           )
         }))
       }));
       
       console.log('[ModernHandbookClient] Local page state updated successfully');
     } catch (error) {
-      console.error('[ModernHandbookClient] Error updating local page state:', error);
+      console.error('[ModernHandbookClient] Error updating page:', error);
+      throw error; // Re-throw so SinglePageView/AllSectionsView can handle the error
     }
   };
 
