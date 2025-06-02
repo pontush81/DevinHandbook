@@ -17,6 +17,11 @@ interface ModernHandbookClientProps {
     title: string;
     subtitle?: string;
     sections: Section[];
+    theme?: {
+      primary_color?: string;
+      secondary_color?: string;
+      logo_url?: string | null;
+    };
   };
   defaultEditMode?: boolean;
 }
@@ -29,10 +34,16 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const [handbookData, setHandbookData] = useState(initialData);
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
   const [isEditMode, setIsEditMode] = useState(defaultEditMode);
-  const [editView, setEditView] = useState<'content' | 'members'>('content'); // Växla mellan innehåll och medlemmar
+  const [editView, setEditView] = useState<'content' | 'members' | 'structure'>('content'); // Växla mellan innehåll och medlemmar
   const [canEdit, setCanEdit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  // Add missing state variables for dialog management
+  const [editingSection, setEditingSection] = useState<Section | null>(null);
+  const [openSectionDialog, setOpenSectionDialog] = useState(false);
+  const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
+  const [openDeleteSectionDialog, setOpenDeleteSectionDialog] = useState(false);
 
   // Hydration fix - vänta tills komponenten är mounted på klienten
   useEffect(() => {
@@ -572,11 +583,50 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
+  // Add missing handleToggleSection function
+  const handleToggleSection = async (sectionId: string, isPublished: boolean) => {
+    try {
+      console.log('🔄 Toggling section visibility:', { sectionId, isPublished });
+      
+      // Update in database
+      const { error } = await supabase
+        .from('sections')
+        .update({ is_published: isPublished })
+        .eq('id', sectionId);
+
+      if (error) {
+        console.error('❌ Error updating section visibility:', error);
+        return;
+      }
+
+      // Update local state
+      setHandbookData(prev => ({
+        ...prev,
+        sections: prev.sections.map(section =>
+          section.id === sectionId 
+            ? { ...section, is_published: isPublished }
+            : section
+        )
+      }));
+
+      console.log('✅ Section visibility updated successfully');
+    } catch (error) {
+      console.error('❌ Error in handleToggleSection:', error);
+    }
+  };
+
+  // Get theme colors with fallbacks
+  const primaryColor = handbookData.theme?.primary_color || '#3498db';
+  const secondaryColor = handbookData.theme?.secondary_color || '#2c3e50';
+
   if (isLoading || authLoading || !mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div 
+            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+            style={{ borderBottomColor: primaryColor }}
+          ></div>
           <p className="text-gray-600">Laddar handbok...</p>
         </div>
       </div>
@@ -587,7 +637,10 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div 
+            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+            style={{ borderBottomColor: primaryColor }}
+          ></div>
           <p className="text-gray-600">Laddar handbok...</p>
         </div>
       </div>
@@ -604,6 +657,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           canEdit={canEdit}
           isEditMode={isEditMode}
           onToggleEditMode={handleToggleEditMode}
+          theme={handbookData.theme}
         />
 
         {/* Main layout container - takes remaining space, mobile optimized */}
@@ -679,9 +733,13 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                         onClick={() => setEditView('content')}
                         className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
                           editView === 'content'
-                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            ? 'text-white border'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
+                        style={editView === 'content' ? {
+                          backgroundColor: primaryColor,
+                          borderColor: primaryColor
+                        } : {}}
                       >
                         📝 Redigera innehåll
                       </button>
@@ -689,9 +747,13 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                         onClick={() => setEditView('structure')}
                         className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
                           editView === 'structure'
-                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            ? 'text-white border'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
+                        style={editView === 'structure' ? {
+                          backgroundColor: primaryColor,
+                          borderColor: primaryColor
+                        } : {}}
                       >
                         🏗️ Hantera struktur
                       </button>

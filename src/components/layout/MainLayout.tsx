@@ -10,7 +10,7 @@ interface Section {
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  variant?: 'landing' | 'app';
+  variant?: 'landing' | 'app' | 'handbook';
   showAuth?: boolean;
   showHeader?: boolean;
   noWhiteTop?: boolean;
@@ -35,7 +35,7 @@ export function MainLayout({
       <main className="flex-1">
         {children}
       </main>
-      <MainFooter variant={variant} />
+      {variant !== 'handbook' && <MainFooter variant={variant} />}
     </div>
   );
 } 

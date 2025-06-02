@@ -1143,10 +1143,18 @@ html, body {
 .page-meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1.5rem;
   font-size: 0.875rem;
-  color: hsl(var(--gray-500));
-  margin-top: 0.5rem;
+  color: #6b7280;
+  padding: 1rem 0;
+  border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.page-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 @media (max-width: 768px) {
@@ -2213,6 +2221,8 @@ header > div > div:not([data-debug="handbook-header-right"]) [class*="rounded-fu
   /* Mobile optimizations */
   touch-action: pan-y; /* Allow vertical scrolling but prevent zoom gestures */
   overscroll-behavior: contain; /* Prevent overscroll from affecting parent */
+  /* Beautiful gradient background matching the design */
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 /* Main content container - MOBILE OPTIMIZED */
@@ -2232,6 +2242,8 @@ header > div > div:not([data-debug="handbook-header-right"]) [class*="rounded-fu
   overscroll-behavior: contain; /* Prevent scroll chaining */
   -webkit-transform: translateZ(0); /* Force hardware acceleration on mobile */
   transform: translateZ(0);
+  /* Beautiful gradient background */
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 /* Mobile-specific scroll improvements */

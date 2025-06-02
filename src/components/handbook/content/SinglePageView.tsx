@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { HandbookPage as Page } from '@/types/handbook';
-import { Calendar, Clock } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar, Clock, Edit, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { EditorJSComponent } from '@/components/ui/EditorJSComponent';
 
 interface SinglePageViewProps {
   page: Page;
@@ -14,6 +16,52 @@ export function SinglePageView({
   isEditMode = false, 
   onUpdatePage 
 }: SinglePageViewProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Auto-save functionality
+  const handleContentChange = useCallback(async (data: any) => {
+    if (!onUpdatePage || !page?.id) return;
+    
+    setHasUnsavedChanges(true);
+    
+    // Debounced auto-save after 2 seconds of inactivity
+    const saveTimeout = setTimeout(async () => {
+      try {
+        setIsSaving(true);
+        await onUpdatePage(page.id, { 
+          content: JSON.stringify(data),
+          updated_at: new Date().toISOString()
+        });
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(saveTimeout);
+  }, [page?.id, onUpdatePage]);
+
+  // Manual save function
+  const handleManualSave = async () => {
+    if (!onUpdatePage || !page?.id) return;
+    
+    try {
+      setIsSaving(true);
+      // The content will be saved through the EditorJS component's save method
+      setHasUnsavedChanges(false);
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Manual save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (!page) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
@@ -26,43 +74,111 @@ export function SinglePageView({
   }
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
-        <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-          <CardHeader className="pb-4 sm:pb-6">
-            <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
-              {page.title}
-            </CardTitle>
-            {page.lastUpdated && (
-              <CardDescription className="flex items-center text-gray-500 mt-2">
-                <Calendar className="w-4 h-4 mr-2" />
-                Senast uppdaterad: {page.lastUpdated}
-              </CardDescription>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-white">
+      {/* Header with save status */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
+            {isEditMode && (
+              <Badge variant={hasUnsavedChanges ? "destructive" : "default"}>
+                {isSaving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b border-white mr-1"></div>
+                    Sparar...
+                  </>
+                ) : hasUnsavedChanges ? (
+                  "Ej sparad"
+                ) : (
+                  "Sparad"
+                )}
+              </Badge>
             )}
-            {page.estimatedReadTime && (
-              <CardDescription className="flex items-center text-gray-500 mt-1">
-                <Clock className="w-4 h-4 mr-2" />
-                {page.estimatedReadTime} min läsning
-              </CardDescription>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {lastSaved && (
+              <span className="text-sm text-gray-500 flex items-center">
+                <Clock className="h-4 w-4 mr-1" />
+                Senast sparad: {lastSaved.toLocaleTimeString()}
+              </span>
             )}
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="prose prose-blue max-w-none">
+            
+            {isEditMode && hasUnsavedChanges && (
+              <Button 
+                onClick={handleManualSave}
+                disabled={isSaving}
+                size="sm"
+                variant="outline"
+              >
+                <Save className="h-4 w-4 mr-1" />
+                Spara nu
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {page.subtitle && (
+          <p className="text-gray-600 mt-2">{page.subtitle}</p>
+        )}
+      </div>
+
+      {/* Content area with beautiful page styling */}
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-4xl mx-auto p-6">
+          <article className="page-article">
+            <div className="page-header">
+              <h2 className="page-title">{page.title}</h2>
+            </div>
+            
+            <div className="prose">
               {isEditMode ? (
-                <div className="space-y-4">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-700">
-                      🚧 EditorJS-integration kommer snart! Just nu visas innehållet som HTML.
+                <div className="edit-mode-banner mb-6">
+                  <div className="edit-mode-banner-content">
+                    <h4 className="edit-mode-banner-title">Redigera sidinnehåll</h4>
+                    <p className="edit-mode-banner-subtitle">
+                      Skriv och formatera innehållet för denna sida
                     </p>
                   </div>
-                  <div dangerouslySetInnerHTML={{ __html: page.content }} />
+                  <div className="mt-4">
+                    <EditorJSComponent
+                      data={page.content ? JSON.parse(page.content) : null}
+                      onChange={handleContentChange}
+                      readOnly={false}
+                      placeholder="Börja skriva innehållet för denna sida..."
+                    />
+                  </div>
                 </div>
               ) : (
-                <div dangerouslySetInnerHTML={{ __html: page.content }} />
+                <EditorJSComponent
+                  data={page.content ? JSON.parse(page.content) : null}
+                  readOnly={true}
+                />
               )}
             </div>
-          </CardContent>
-        </Card>
+          </article>
+          
+          {/* Page metadata with beautiful styling */}
+          <div className="page-meta mt-6">
+            {page.created_at && (
+              <div className="page-meta-item">
+                <Calendar className="h-4 w-4" />
+                <span>Skapad {new Date(page.created_at).toLocaleDateString('sv-SE')}</span>
+              </div>
+            )}
+            {page.updated_at && (
+              <div className="page-meta-item">
+                <Clock className="h-4 w-4" />
+                <span>Uppdaterad {new Date(page.updated_at).toLocaleDateString('sv-SE')}</span>
+              </div>
+            )}
+            {page.word_count && (
+              <div className="page-meta-item">
+                <span>{page.word_count} ord</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

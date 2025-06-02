@@ -4,6 +4,7 @@ import { SessionTransferHandler } from '@/components/SessionTransferHandler';
 import { ModernHandbookClient } from '@/components/ModernHandbookClient';
 import { notFound, redirect } from 'next/navigation';
 import { HandbookSection } from '@/types/handbook';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Section {
   id: string;
@@ -72,11 +73,11 @@ const adaptHandbookData = (handbook: Handbook) => {
     pagesCount: s.pages?.length || 0
   })));
 
-  // Convert to format expected by ModernHandbookClient
+  // Adapt the handbook data to expected format
   const adaptedHandbook = {
     id: handbook.id,
     title: handbook.title,
-    subtitle: handbook.subtitle,
+    subtitle: handbook.subtitle || '',
     sections: handbook.sections.map(section => ({
       id: section.id,
       title: section.title,
@@ -90,10 +91,12 @@ const adaptHandbookData = (handbook: Handbook) => {
         content: page.content,
         order_index: page.order_index,
         section_id: page.section_id,
-        lastUpdated: page.updated_at ? new Date(page.updated_at).toLocaleDateString('sv-SE') : undefined,
-        estimatedReadTime: Math.max(1, Math.ceil((page.content?.length || 0) / 1000))
+        is_public: page.is_public,
+        created_at: page.created_at,
+        updated_at: page.updated_at
       }))
-    }))
+    })),
+    theme: handbook.theme
   };
 
   console.log('[HandbookPage] Adapted handbook for ModernHandbookClient:', adaptedHandbook);
@@ -133,13 +136,13 @@ export default async function HandbookPage({ params }: Props) {
     }
 
     return (
-      <>
+      <MainLayout variant="handbook" showAuth={true} showHeader={false} noWhiteTop={true}>
         <SessionTransferHandler />
         <ModernHandbookClient 
           initialData={adaptedHandbook}
           defaultEditMode={false}
         />
-      </>
+      </MainLayout>
     );
   } catch (err) {
     console.error('Error fetching handbook:', err);

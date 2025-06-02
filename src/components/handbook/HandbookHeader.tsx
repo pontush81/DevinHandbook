@@ -19,13 +19,19 @@ interface HandbookHeaderProps {
   canEdit?: boolean;
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
+  theme?: {
+    primary_color?: string;
+    secondary_color?: string;
+    logo_url?: string | null;
+  };
 }
 
 export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
   handbookTitle,
   canEdit = false,
   isEditMode = false,
-  onToggleEditMode
+  onToggleEditMode,
+  theme
 }) => {
   const { user, signOut } = useAuth();
 
@@ -75,6 +81,10 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
     return 'U';
   };
 
+  // Get theme colors with fallbacks
+  const primaryColor = theme?.primary_color || '#3498db';
+  const secondaryColor = theme?.secondary_color || '#2c3e50';
+
   return (
     <header className="sticky top-0 z-50 w-full border-b transition-all duration-200 bg-white shadow-sm">
       <div className="w-full px-0 flex h-12 items-center justify-between">
@@ -87,10 +97,16 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
           {/* Brand section with tighter spacing */}
           <div className="flex items-center space-x-2 min-w-0">
             <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
-              <div className="h-5 w-5 rounded bg-blue-600 flex items-center justify-center">
+              <div 
+                className="h-5 w-5 rounded flex items-center justify-center"
+                style={{ backgroundColor: primaryColor }}
+              >
                 <span className="text-white text-xs font-bold">H</span>
               </div>
-              <span className="hidden font-bold sm:inline-block text-blue-600 text-sm">
+              <span 
+                className="hidden font-bold sm:inline-block text-sm"
+                style={{ color: primaryColor }}
+              >
                 Handbok.org
               </span>
             </Link>
@@ -105,9 +121,25 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
           </div>
         </div>
 
-        {/* Right section - User menu only */}
-        <div className="flex items-center space-x-4 flex-shrink-0 pr-4" data-debug="handbook-header-right">
-          {/* Debug: Only show one user menu */}
+        {/* Right section - Edit button and User menu */}
+        <div className="flex items-center space-x-3 flex-shrink-0 pr-4" data-debug="handbook-header-right">
+          {/* Edit button for admins - prominent placement */}
+          {canEdit && (
+            <Button 
+              onClick={handleToggleEdit}
+              variant={isEditMode ? "default" : "outline"}
+              size="sm"
+              className="flex items-center gap-2"
+              style={isEditMode ? { backgroundColor: primaryColor, borderColor: primaryColor } : {}}
+            >
+              <Edit className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {isEditMode ? "Spara" : "Redigera"}
+              </span>
+            </Button>
+          )}
+          
+          {/* User menu */}
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -139,17 +171,6 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                
-                {/* Edit mode option in dropdown */}
-                {canEdit && (
-                  <>
-                    <DropdownMenuItem onClick={handleToggleEdit}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      {isEditMode ? "Avsluta redigering" : "Redigera"}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
                 
                 <DropdownMenuItem>
                   <Link href="/dashboard" className="flex items-center w-full">
