@@ -78,9 +78,9 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         return;
       }
       
-      // DEVELOPMENT OVERRIDE: Force edit permissions for testing
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 [ModernHandbookClient] DEVELOPMENT MODE: Forcing edit permissions for testing');
+      // DEVELOPMENT OVERRIDE: Allow edit permissions for logged-in users in development
+      if (process.env.NODE_ENV === 'development' && user) {
+        console.log('🔧 [ModernHandbookClient] DEVELOPMENT MODE: Allowing edit permissions for logged-in user');
         setCanEdit(true);
         setIsLoading(false);
         return;
@@ -137,12 +137,9 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     // Backup timeout: If auth is still loading after 5 seconds, assume no auth and proceed
     const timeoutId = setTimeout(() => {
       if (authLoading) {
-        console.log('⏰ [ModernHandbookClient] Auth loading timeout - forcing development permissions');
-        if (process.env.NODE_ENV === 'development') {
-          setCanEdit(true);
-        } else {
-          setCanEdit(false);
-        }
+        console.log('⏰ [ModernHandbookClient] Auth loading timeout');
+        // Only allow edit mode in development if user exists
+        setCanEdit(false);
         setIsLoading(false);
       }
     }, 5000);
