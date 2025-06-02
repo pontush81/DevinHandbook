@@ -736,16 +736,25 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
               // Scroll to the section within the content container
               setTimeout(() => {
                 const sectionElement = document.getElementById(`section-${sectionId}`);
-                const scrollContainer = document.querySelector('.main-content-scrollable');
+                
+                // Try multiple possible scroll containers
+                let scrollContainer = document.querySelector('.content-area-scroll .overflow-auto');
+                if (!scrollContainer) {
+                  scrollContainer = document.querySelector('.content-area-scroll');
+                }
+                if (!scrollContainer) {
+                  scrollContainer = document.querySelector('.main-content-scrollable');
+                }
                 
                 if (sectionElement && scrollContainer) {
                   console.log('📍 Scrolling to section:', sectionId);
+                  console.log('🎯 Found scroll container:', scrollContainer.className);
                   
                   // Calculate offset for header within the scroll container
                   const containerRect = scrollContainer.getBoundingClientRect();
                   const sectionRect = sectionElement.getBoundingClientRect();
                   const scrollTop = scrollContainer.scrollTop;
-                  const targetPosition = scrollTop + (sectionRect.top - containerRect.top) - 20;
+                  const targetPosition = scrollTop + (sectionRect.top - containerRect.top) - 80;
                   
                   scrollContainer.scrollTo({
                     top: targetPosition,
@@ -753,6 +762,12 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                   });
                 } else {
                   console.warn('🚨 Could not find scroll container or section element');
+                  console.log('Available containers:', {
+                    contentAreaScroll: !!document.querySelector('.content-area-scroll'),
+                    overflowAuto: !!document.querySelector('.overflow-auto'),
+                    mainContentScrollable: !!document.querySelector('.main-content-scrollable'),
+                    sectionElement: !!sectionElement
+                  });
                 }
               }, 100);
             }}

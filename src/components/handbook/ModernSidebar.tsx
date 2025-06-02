@@ -163,29 +163,6 @@ export function ModernSidebar({
                       />
                       <span className="font-medium flex-1">{section.title}</span>
                     </SidebarMenuButton>
-                    
-                    {/* Show pages for this section if it has pages */}
-                    {section.pages && section.pages.length > 0 && (
-                      <div className="ml-6 mt-1 space-y-1">
-                        {section.pages.map((page) => (
-                          <SidebarMenuButton
-                            key={page.id}
-                            onClick={() => {
-                              console.log('🎯 Page selected:', page.id, page.title);
-                              onPageSelect(page.id);
-                              setOpenMobile(false);
-                            }}
-                            tooltip={page.title}
-                            className={`group hover:bg-accent hover:text-accent-foreground transition-colors duration-200 text-xs py-1.5 px-3 rounded-md cursor-pointer touch-manipulation min-h-[36px] flex items-center gap-2 w-full ${
-                              currentPageId === page.id ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
-                            }`}
-                          >
-                            <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
-                            <span className="flex-1 text-left truncate">{page.title}</span>
-                          </SidebarMenuButton>
-                        ))}
-                      </div>
-                    )}
                   </SidebarMenuItem>
                 );
               })}
