@@ -224,18 +224,30 @@ const CACHE_TTL = 30000; // 30 seconds cache
 export async function getHandbookBySubdomain(subdomain: string) {
   console.log('[getHandbookBySubdomain] subdomain:', subdomain);
   
-  // Check cache first
+  // Clear cache for debugging
   const cacheKey = `handbook_${subdomain}`;
-  const cached = handbookCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log('[getHandbookBySubdomain] Returning cached data for:', subdomain);
-    return cached.data;
-  }
+  handbookCache.delete(cacheKey);
   
   const supabase = getServiceSupabase();
   
   try {
-    // Use a single query with joins to reduce the number of API calls
+    // First, try a simple query to see if the handbook exists
+    console.log('[getHandbookBySubdomain] Testing simple query first...');
+    const { data: simpleCheck, error: simpleError } = await supabase
+      .from('handbooks')
+      .select('id, title, subdomain, published')
+      .eq('subdomain', subdomain)
+      .single();
+
+    if (simpleError) {
+      console.error('[getHandbookBySubdomain] Simple query failed:', simpleError);
+      return null;
+    }
+
+    console.log('[getHandbookBySubdomain] Simple query successful, handbook exists:', simpleCheck);
+
+    // Now try the complex query with sections and pages
+    console.log('[getHandbookBySubdomain] Attempting complex query with sections and pages...');
     const { data: handbook, error: handbookError } = await supabase
       .from('handbooks')
       .select(`
@@ -265,8 +277,19 @@ export async function getHandbookBySubdomain(subdomain: string) {
       .eq('subdomain', subdomain)
       .single();
 
-    if (handbookError || !handbook) {
-      console.error('[getHandbookBySubdomain] Error fetching handbook:', handbookError);
+    if (handbookError) {
+      console.error('[getHandbookBySubdomain] Complex query failed:', handbookError);
+      console.log('[getHandbookBySubdomain] Falling back to simple handbook structure...');
+      
+      // Fallback: return handbook without sections if the join fails
+      return {
+        ...simpleCheck,
+        sections: []
+      };
+    }
+
+    if (!handbook) {
+      console.error('[getHandbookBySubdomain] No handbook data returned from complex query');
       return null;
     }
 
@@ -282,6 +305,7 @@ export async function getHandbookBySubdomain(subdomain: string) {
     };
 
     console.log('[getHandbookBySubdomain] Successfully fetched handbook with sections and pages:', handbookObj.id);
+    console.log('[getHandbookBySubdomain] Sections count:', handbookObj.sections?.length || 0);
     
     // Cache the result
     handbookCache.set(cacheKey, { data: handbookObj, timestamp: Date.now() });
