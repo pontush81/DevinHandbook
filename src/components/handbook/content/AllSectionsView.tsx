@@ -201,12 +201,6 @@ export function AllSectionsView({
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      {section.pages && (
-                        <Badge variant="secondary" className="bg-white/70">
-                          {section.pages.length} sidor
-                        </Badge>
-                      )}
-                      
                       {savingStates.get(section.id) && (
                         <Badge variant="outline" className="bg-white/70">
                           <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600 mr-1"></div>
