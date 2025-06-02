@@ -96,13 +96,8 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
   }, []);
 
   const handleSelect = (subdomain: string) => {
-    // Under utveckling, navigera till en testsida som visar vilken förening som valdes
-    if (process.env.NODE_ENV === 'development') {
-      window.location.href = `/test-search/${subdomain}`;
-    } else {
-      // I produktion, navigera till path-baserad URL istället för subdomän
-      window.location.href = `/handbook/${subdomain}`;
-    }
+    // Navigera direkt till subdomän-baserad URL struktur
+    window.location.href = `/${subdomain}`;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,7 +149,12 @@ export default function AutoSuggestHandbookSearch({ hideHeader = false }: AutoSu
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium text-gray-900 truncate">{handbook.title}</span>
-                        <span className="text-xs text-gray-500 truncate">handbok.org/handbook/{handbook.subdomain}</span>
+                        <span className="text-xs text-gray-500 truncate">
+                          {process.env.NODE_ENV === 'development' 
+                            ? `localhost:3000/${handbook.subdomain}`
+                            : `handbok.org/${handbook.subdomain}`
+                          }
+                        </span>
                       </div>
                     </button>
                   ))}
