@@ -42,11 +42,12 @@ function SEOFriendlyFAQ({ faqs }: {
             aria-expanded={openItems.has(index)}
           >
             <div className="pr-4">
-              {faq.category && (
+              {/* Removed blue category boxes as requested */}
+              {/* {faq.category && (
                 <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full mb-2">
                   {faq.category}
                 </span>
-              )}
+              )} */}
               <h3 className="text-lg font-semibold text-gray-900">
                 {faq.question}
               </h3>
@@ -83,35 +84,35 @@ export default function HomePage() {
   const faqs = [
     {
       question: "Vad är en digital bostadsrättsföreningshandbok?",
-      answer: "En digital handbok för bostadsrättsföreningar är en webbaserad plattform där all viktig information om föreningen samlas. Här finns stadgar, regler, kontaktuppgifter, felanmälan och annan information som medlemmar behöver ha tillgång till.",
+      answer: "En digital handbok för bostadsrättsföreningar är en webbaserad plattform där viktig information om föreningen samlas. T.ex stadgar, regler, kontaktuppgifter och annan information som medlemmar behöver ha tillgång till.",
       category: "Grundläggande",
       keywords: ["digital handbok", "bostadsrättsförening", "webbaserad plattform", "föreningsinformation"],
       priority: 1
     },
     {
       question: "Hur skapar jag en handbok för min förening?",
-      answer: "Det är enkelt! Klicka på 'Skapa handbok' ovan, följ den guidade processen, ange föreningens namn och välj en unik subdomän. Efter betalning kan du börja fylla din handbok med innehåll.",
+      answer: "Det är enkelt! Klicka på 'Skapa handbok' ovan, följ den guidade processen, ange föreningens namn och välj ett unikt namn som kommer att bli den av din handboks adress. Efter betalning kan du börja fylla din handbok med innehåll.",
       category: "Komma igång",
       keywords: ["skapa handbok", "registrering", "subdomän", "betalning"],
       priority: 2
     },
     {
       question: "Vad kostar tjänsten?",
-      answer: "Tjänsten kostar 2490 kr per år för en förening, oavsett storlek. I priset ingår obegränsad lagring, egen subdomän och säkerhetskopiering.",
+      answer: "Tjänsten kostar 2490 kr per år för per handbok.",
       category: "Prissättning",
       keywords: ["pris", "kostnad", "2490 kr", "årskostnad", "obegränsad lagring"],
       priority: 3
     },
     {
       question: "Kan jag prova innan jag betalar?",
-      answer: "Vi erbjuder en 30-dagars pengarna-tillbaka-garanti om du inte är nöjd med tjänsten. Du kan testa alla funktioner under denna period.",
+      answer: "Ja! Vi har en 30-dagars prova-på period",
       category: "Prissättning",
       keywords: ["gratis provperiod", "pengarna tillbaka", "30 dagar", "garanti"],
       priority: 4
     },
     {
       question: "Hur kommer medlemmarna åt handboken?",
-      answer: "Medlemmarna besöker enkelt handboken via adressen handbok.org/handbook/föreningsnamn. Ingen inloggning behövs, men känsligt innehåll kan lösenordsskyddas.",
+      answer: "Medlemmarna besöker enkelt handboken via adressen handbok.org/föreningsnamn. Ingen inloggning behövs, men känsligt innehåll kan lösenordsskyddas.",
       category: "Användning",
       keywords: ["tillgång", "URL", "handbok.org", "inloggning", "lösenordsskydd"],
       priority: 5
