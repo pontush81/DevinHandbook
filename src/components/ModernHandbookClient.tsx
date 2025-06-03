@@ -677,6 +677,23 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const primaryColor = handbookData.theme?.primary_color || '#3498db';
   const secondaryColor = handbookData.theme?.secondary_color || '#2c3e50';
 
+  // Create trial status bar component
+  const trialStatusBar = user ? (
+    <div className="w-full bg-gradient-to-br from-gray-50 to-white">
+      <div className="max-w-6xl mx-auto p-3">
+        <TrialStatusBar 
+          userId={user.id} 
+          handbookId={handbookData.id}
+          className=""
+          onUpgrade={() => {
+            // Redirect to upgrade page
+            window.open('/dashboard', '_blank');
+          }}
+        />
+      </div>
+    </div>
+  ) : null;
+
   if (isLoading || authLoading || !mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
@@ -717,19 +734,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           onToggleEditMode={handleToggleEditMode}
           theme={handbookData.theme}
         />
-
-        {/* Trial Status Bar - Show only for logged-in users */}
-        {user && (
-          <TrialStatusBar 
-            userId={user.id} 
-            handbookId={handbookData.id}
-            className="border-b"
-            onUpgrade={() => {
-              // Redirect to upgrade page
-              window.open('/dashboard', '_blank');
-            }}
-          />
-        )}
 
         {/* Main layout container - takes remaining space, mobile optimized */}
         <div className="flex flex-1 min-h-0 overflow-hidden touch-pan-y">
@@ -861,6 +865,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                   onMoveSection={moveSection}
                   onDeleteSection={deleteSection}
                   onExitEditMode={() => setIsEditMode(false)}
+                  trialStatusBar={trialStatusBar}
                 />
               </div>
             </div>

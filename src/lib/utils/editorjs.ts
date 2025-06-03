@@ -50,6 +50,37 @@ export function sanitizeEditorJSData(data: any): OutputData {
 }
 
 /**
+ * Converts plain text to EditorJS paragraph blocks
+ */
+function convertPlainTextToEditorJS(text: string): OutputData {
+  // Split text into paragraphs (by double newlines or single newlines)
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  
+  // If no double newlines, split by single newlines
+  const finalParagraphs = paragraphs.length === 1 
+    ? text.split('\n').filter(p => p.trim().length > 0)
+    : paragraphs;
+
+  const blocks = finalParagraphs.map((paragraph, index) => ({
+    id: `block_${index}`,
+    type: 'paragraph',
+    data: {
+      text: paragraph.trim()
+    }
+  }));
+
+  return {
+    time: Date.now(),
+    blocks: blocks.length > 0 ? blocks : [{
+      id: 'block_0',
+      type: 'paragraph',
+      data: { text: text.trim() }
+    }],
+    version: '2.28.2'
+  };
+}
+
+/**
  * Safely parses content string to EditorJS format
  */
 export function parseEditorJSContent(content: string | null | undefined): OutputData {
@@ -57,13 +88,20 @@ export function parseEditorJSContent(content: string | null | undefined): Output
     return { blocks: [] };
   }
 
+  // First try to parse as JSON
   try {
     const parsed = JSON.parse(content);
-    return sanitizeEditorJSData(parsed);
+    if (isValidEditorJSData(parsed)) {
+      return parsed;
+    }
   } catch (error) {
-    console.warn('Failed to parse content as JSON:', error);
-    return { blocks: [] };
+    // If JSON parsing fails, treat as plain text
+    console.info('Content is not JSON, converting plain text to EditorJS format');
+    return convertPlainTextToEditorJS(content);
   }
+
+  // Fallback: if JSON parsing succeeded but data is invalid, try as plain text
+  return convertPlainTextToEditorJS(content);
 }
 
 /**

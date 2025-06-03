@@ -12,13 +12,15 @@ interface AllSectionsViewProps {
   isEditMode?: boolean;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<any>) => void;
+  trialStatusBar?: React.ReactNode;
 }
 
 export function AllSectionsView({ 
   sections, 
   isEditMode = false, 
   onUpdateSection,
-  onUpdatePage 
+  onUpdatePage,
+  trialStatusBar
 }: AllSectionsViewProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
@@ -170,6 +172,13 @@ export function AllSectionsView({
 
   return (
     <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-white">
+      {/* Trial Status Bar - appears above content */}
+      {trialStatusBar && (
+        <div className="flex-shrink-0">
+          {trialStatusBar}
+        </div>
+      )}
+      
       {/* Content with sections-container styling */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto p-6">

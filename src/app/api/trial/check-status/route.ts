@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
     // Använd check_trial_status funktion med admin privileges
     const { data, error } = await supabaseAdmin
-      .rpc('check_trial_status', { user_id: userId });
+      .rpc('check_trial_status', { user_uuid: userId });
 
     if (error) {
       console.error('Error checking trial status:', error);

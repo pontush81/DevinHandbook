@@ -298,23 +298,23 @@ export function CreateHandbookForm() {
         window.location.href = result.redirectUrl;
       } else {
         // Annars använd Stripe checkout
-        const response = await fetch('/api/stripe/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ handbookData }),
-        });
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ handbookData }),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || errorData.message || 'Kunde inte skapa checkout-session');
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Kunde inte skapa checkout-session');
+      }
 
-        const { url } = await response.json();
-        
-        // Redirect to Stripe Checkout
-        window.location.href = url;
+      const { url } = await response.json();
+      
+      // Redirect to Stripe Checkout
+      window.location.href = url;
       }
 
     } catch (error) {
@@ -356,34 +356,34 @@ export function CreateHandbookForm() {
           </div>
         </div>
       ) : (
-        <div className="bg-gray-50 p-6 rounded-lg border">
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="font-medium">Digital handbok</span>
-              <span className="font-semibold">{price.toFixed(2)} kr</span>
-            </div>
-            <div className="flex justify-between text-gray-500 text-sm">
-              <span>Årsabonnemang</span>
-              <span>per förening</span>
-            </div>
-            <div className="border-t my-3"></div>
-            <div className="flex justify-between font-semibold">
-              <span>Totalt</span>
-              <span>{price.toFixed(2)} kr</span>
-            </div>
+      <div className="bg-gray-50 p-6 rounded-lg border">
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="font-medium">Digital handbok</span>
+            <span className="font-semibold">{price.toFixed(2)} kr</span>
           </div>
-          
-          {isTestMode === true && (
-            <div className="mt-4 bg-yellow-100 text-yellow-800 p-2 rounded text-sm">
-              🧪 Testläge aktivt - använd kortnummer 4242 4242 4242 4242 för test
-            </div>
-          )}
-          {!isTestMode && price < 10 && (
-            <div className="bg-blue-100 text-blue-800 p-2 rounded text-sm mt-4">
-              ⚠️ OBS! Detta är ett minimalt testbelopp för verifiering av betalflödet ({price.toFixed(2)} kr)
-            </div>
-          )}
+          <div className="flex justify-between text-gray-500 text-sm">
+            <span>Årsabonnemang</span>
+            <span>per förening</span>
+          </div>
+          <div className="border-t my-3"></div>
+          <div className="flex justify-between font-semibold">
+            <span>Totalt</span>
+            <span>{price.toFixed(2)} kr</span>
+          </div>
         </div>
+        
+        {isTestMode === true && (
+          <div className="mt-4 bg-yellow-100 text-yellow-800 p-2 rounded text-sm">
+            🧪 Testläge aktivt - använd kortnummer 4242 4242 4242 4242 för test
+          </div>
+        )}
+        {!isTestMode && price < 10 && (
+          <div className="bg-blue-100 text-blue-800 p-2 rounded text-sm mt-4">
+            ⚠️ OBS! Detta är ett minimalt testbelopp för verifiering av betalflödet ({price.toFixed(2)} kr)
+          </div>
+        )}
+      </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">

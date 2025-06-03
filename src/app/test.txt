@@ -1,0 +1,2458 @@
+ Supabase URL: ✓ Set (https://kjsq...)
+ Supabase Anon Key: ✓ Set (längd: 208)
+ Supabase Service Role Key: ✗ Missing 
+ Node Environment: development
+ Is Edge Runtime: false
+ Vercel Deployment: inte i Vercel
+ Current hostname: localhost
+ NEXT_PUBLIC_HANDBOOK_DOMAIN: handbok.org
+ Cookie domain will be: undefined
+demo:1 Uncaught (in promise) 
+demo:1 Uncaught (in promise) 
+demo:1 Uncaught (in promise) 
+initial.CiTUZlrd.js:988 Uncaught (in promise) 
+ Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+  Server  [Handbook Page] 🏁 RENDERING HANDBOOK PAGE FOR PATH: /demo
+  Server  [Handbook Page] 📍 This is path-based routing (handbok.org/demo)
+  Server  [getHandbookBySubdomain] subdomain: demo
+  Server  [getHandbookBySubdomain] Testing simple query first...
+  Server  [getHandbookBySubdomain] Simple query successful, handbook exists: Object
+  Server  [getHandbookBySubdomain] Attempting complex query with sections and pages...
+  Server  [getHandbookBySubdomain] Successfully fetched handbook with sections and pages: 2209baad-bdc9-439f-a94c-4aef47babb5a
+  Server  [getHandbookBySubdomain] Sections count: 6
+  Server  [Handbook Page] ✅ HANDBOOK FOUND: ID: 2209baad-bdc9-439f-a94c-4aef47babb5a, Title: demo
+  Server  [HandbookPage] Input handbook for adaptation: Object
+  Server  [HandbookPage] Raw sections from database: Array(6)
+  Server  [HandbookPage] Adapted handbook for ModernHandbookClient: Object
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ 🔍 [ModernHandbookClient] Checking edit permissions... Object
+ ⏳ [ModernHandbookClient] Auth is still loading, waiting...
+ 🔄 AuthContext: Initializing auth state...
+ 🌐 AuthContext: Running on client, proceeding with auth check
+ 📡 AuthContext: Getting current session from Supabase...
+ 🔄 AuthContext: Initializing auth state...
+ 🌐 AuthContext: Running on client, proceeding with auth check
+ 📡 AuthContext: Getting current session from Supabase...
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ 📊 AuthContext: Session result: Object
+ ✅ AuthContext: Found active session Object
+ ✅ AuthContext: Session is valid, setting user state
+ 🏁 AuthContext: Setting isLoading to false
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ [ContentArea] Navigation state: Object
+ [ContentArea] Navigation state: Object
+ 🔍 [ModernHandbookClient] Checking edit permissions... Object
+ 🔧 [ModernHandbookClient] DEVELOPMENT MODE: Allowing edit permissions for logged-in user
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ 🎯 ModernHandbookClient render state: Object
+ [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ [getVisibleSections] Normal mode: showing 6/6 sections
+ [ContentArea] Navigation state: Object
+ [ContentArea] Navigation state: Object
+ Failed to parse content as JSON: 
+console.warn @ unknown
+parseEditorJSContent @ webpack-internal:///…tils/editorjs.ts:47
+eval @ webpack-internal:///…ectionsView.tsx:624
+eval @ webpack-internal:///…ectionsView.tsx:485
+AllSectionsView @ webpack-internal:///…ectionsView.tsx:247
+react-stack-bottom-frame @ webpack-internal:///…evelopment.js:22974
+renderWithHooks @ webpack-internal:///…development.js:6667
+updateFunctionComponent @ webpack-internal:///…development.js:8931
+beginWork @ webpack-internal:///…evelopment.js:10556
+runWithFiberInDEV @ webpack-internal:///….development.js:845
+performUnitOfWork @ webpack-internal:///…evelopment.js:15258
+workLoopSync @ webpack-internal:///…evelopment.js:15078
+renderRootSync @ webpack-internal:///…evelopment.js:15058
+performWorkOnRoot @ webpack-internal:///…evelopment.js:14526
+performSyncWorkOnRoot @ webpack-internal:///…evelopment.js:16365
+flushSyncWorkAcrossRoots_impl @ webpack-internal:///…evelopment.js:16211
+flushSpawnedWork @ webpack-internal:///…evelopment.js:15805
+commitRoot @ webpack-internal:///…evelopment.js:15529
+commitRootWhenReady @ webpack-internal:///…evelopment.js:14759
+performWorkOnRoot @ webpack-internal:///…evelopment.js:14682
+performWorkOnRootViaSchedulerTask @ webpack-internal:///…evelopment.js:16350
+performWorkUntilDeadline @ webpack-internal:///…r.development.js:45
+ Failed to parse content as JSON: 
+console.warn @ unknown
+parseEditorJSContent @ webpack-internal:///…tils/editorjs.ts:47
+eval @ webpack-internal:///…ectionsView.tsx:624
+eval @ webpack-internal:///…ectionsView.tsx:485
+AllSectionsView @ webpack-internal:///…ectionsView.tsx:247
+react-stack-bottom-frame @ webpack-internal:///…evelopment.js:22974
+renderWithHooks @ webpack-internal:///…development.js:6667
+updateFunctionComponent @ webpack-internal:///…development.js:8931
+beginWork @ webpack-internal:///…evelopment.js:10556
+runWithFiberInDEV @ webpack-internal:///….development.js:845
+performUnitOfWork @ webpack-internal:///…evelopment.js:15258
+workLoopSync @ webpack-internal:///…evelopment.js:15078
+renderRootSync @ webpack-internal:///…evelopment.js:15058
+performWorkOnRoot @ webpack-internal:///…evelopment.js:14526
+performSyncWorkOnRoot @ webpack-internal:///…evelopment.js:16365
+flushSyncWorkAcrossRoots_impl @ webpack-internal:///…evelopment.js:16211
+flushSpawnedWork @ webpack-internal:///…evelopment.js:15805
+commitRoot @ webpack-internal:///…evelopment.js:15529
+commitRootWhenReady @ webpack-internal:///…evelopment.js:14759
+performWorkOnRoot @ webpack-internal:///…evelopment.js:14682
+performWorkOnRootViaSchedulerTask @ webpack-internal:///…evelopment.js:16350
+performWorkUntilDeadline @ webpack-internal:///…r.development.js:45
+ Failed to parse content as JSON: 
+console.warn @ unknown
+parseEditorJSContent @ webpack-internal:///…tils/editorjs.ts:47
+eval @ webpack-internal:///…ectionsView.tsx:624
+eval @ webpack-internal:///…ectionsView.tsx:485
+AllSectionsView @ webpack-internal:///…ectionsView.tsx:247
+react-stack-bottom-frame @ webpack-internal:///…evelopment.js:22974
+renderWithHooks @ webpack-internal:///…development.js:6667
+updateFunctionComponent @ webpack-internal:///…development.js:8931
+beginWork @ webpack-internal:///…evelopment.js:10556
+runWithFiberInDEV @ webpack-internal:///….development.js:845
+performUnitOfWork @ webpack-internal:///…evelopment.js:15258
+workLoopSync @ webpack-internal:///…evelopment.js:15078
+renderRootSync @ webpack-internal:///…evelopment.js:15058
+performWorkOnRoot @ webpack-internal:///…evelopment.js:14526
+performSyncWorkOnRoot @ webpack-internal:///…evelopment.js:16365
+flushSyncWorkAcrossRoots_impl @ webpack-internal:///…evelopment.js:16211
+flushSpawnedWork @ webpack-internal:///…evelopment.js:15805
+commitRoot @ webpack-internal:///…evelopment.js:15529
+commitRootWhenReady @ webpack-internal:///…evelopment.js:14759
+performWorkOnRoot @ webpack-internal:///…evelopment.js:14682
+performWorkOnRootViaSchedulerTask @ webpack-internal:///…evelopment.js:16350
+performWorkUntilDeadline @ webpack-internal:///…r.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooks @ react-dom-client.development.js:6667
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at flushSpawnedWork (react-dom-client.development.js:15805:9)
+    at commitRoot (react-dom-client.development.js:15529:9)
+    at commitRootWhenReady (react-dom-client.development.js:14759:7)
+    at performWorkOnRoot (react-dom-client.development.js:14682:15)
+    at performWorkOnRootViaSchedulerTask (react-dom-client.development.js:16350:7)
+    at MessagePort.performWorkUntilDeadline (scheduler.development.js:45:48)
+console.warn @ VM3098:36
+parseEditorJSContent @ editorjs.ts:64
+eval @ AllSectionsView.tsx:346
+eval @ AllSectionsView.tsx:283
+AllSectionsView @ AllSectionsView.tsx:177
+react-stack-bottom-frame @ react-dom-client.development.js:22974
+renderWithHooksAgain @ react-dom-client.development.js:6767
+renderWithHooks @ react-dom-client.development.js:6679
+updateFunctionComponent @ react-dom-client.development.js:8931
+beginWork @ react-dom-client.development.js:10556
+runWithFiberInDEV @ react-dom-client.development.js:845
+performUnitOfWork @ react-dom-client.development.js:15258
+workLoopSync @ react-dom-client.development.js:15078
+renderRootSync @ react-dom-client.development.js:15058
+performWorkOnRoot @ react-dom-client.development.js:14526
+performSyncWorkOnRoot @ react-dom-client.development.js:16365
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16211
+flushSpawnedWork @ react-dom-client.development.js:15805
+commitRoot @ react-dom-client.development.js:15529
+commitRootWhenReady @ react-dom-client.development.js:14759
+performWorkOnRoot @ react-dom-client.development.js:14682
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16350
+performWorkUntilDeadline @ scheduler.development.js:45
+AuthContext.tsx:307 Auth state change: INITIAL_SESSION Object
+AuthContext.tsx:228 📊 AuthContext: Session result: Object
+AuthContext.tsx:245 ✅ AuthContext: Found active session Object
+AuthContext.tsx:276 ✅ AuthContext: Session is valid, setting user state
+AuthContext.tsx:295 🏁 AuthContext: Setting isLoading to false
+ModernHandbookClient.tsx:55 🎯 ModernHandbookClient render state: Object
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:591 [getVisibleSections] Normal mode: showing 6/6 sections
+ModernHandbookClient.tsx:55 🎯 ModernHandbookClient render state: Object
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Välkommen": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Kontaktuppgifter": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Regler och ordningsföreskrifter": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Ekonomi": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Underhåll och reparationer": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:587 [getVisibleSections] Section "Gemensamma utrymmen": is_public=true, is_published=undefined, visible=true
+ModernHandbookClient.tsx:591 [getVisibleSections] Normal mode: showing 6/6 sections
+AuthContext.tsx:307 Auth state change: INITIAL_SESSION Object
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+off @ editorjs.mjs:858
+destroy @ editorjs.mjs:4736
+toggleReadOnly @ editorjs.mjs:5290
+toggle @ editorjs.mjs:9009
+prepare @ editorjs.mjs:8995
+eval @ editorjs.mjs:11054
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+off @ editorjs.mjs:858
+destroy @ editorjs.mjs:4736
+toggleReadOnly @ editorjs.mjs:5290
+toggle @ editorjs.mjs:9009
+prepare @ editorjs.mjs:8995
+eval @ editorjs.mjs:11054
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+off @ editorjs.mjs:858
+destroy @ editorjs.mjs:4736
+toggleReadOnly @ editorjs.mjs:5290
+toggle @ editorjs.mjs:9009
+prepare @ editorjs.mjs:8995
+eval @ editorjs.mjs:11054
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+off @ editorjs.mjs:858
+destroy @ editorjs.mjs:4736
+toggleReadOnly @ editorjs.mjs:5290
+toggle @ editorjs.mjs:9009
+prepare @ editorjs.mjs:8995
+eval @ editorjs.mjs:11054
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+off @ editorjs.mjs:858
+destroy @ editorjs.mjs:4736
+toggleReadOnly @ editorjs.mjs:5290
+toggle @ editorjs.mjs:9009
+prepare @ editorjs.mjs:8995
+eval @ editorjs.mjs:11054
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+off @ editorjs.mjs:858
+destroy @ editorjs.mjs:4736
+toggleReadOnly @ editorjs.mjs:5290
+toggle @ editorjs.mjs:9009
+prepare @ editorjs.mjs:8995
+eval @ editorjs.mjs:11054
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+off @ editorjs.mjs:858
+destroy @ editorjs.mjs:4736
+toggleReadOnly @ editorjs.mjs:5290
+toggle @ editorjs.mjs:9009
+prepare @ editorjs.mjs:8995
+eval @ editorjs.mjs:11054
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object
+ModernSidebar.tsx:137 🎯 Section clicked for scrolling: 7648d1bb-2ce0-4712-b5e5-28561364664a
+ModernHandbookClient.tsx:742 🎯 Section selected for scrolling: 7648d1bb-2ce0-4712-b5e5-28561364664a
+ModernHandbookClient.tsx:761 📍 Scrolling to section: 7648d1bb-2ce0-4712-b5e5-28561364664a
+ModernHandbookClient.tsx:762 🎯 Found scroll container: flex-1 overflow-auto
+ModernHandbookClient.tsx:55 🎯 ModernHandbookClient render state: Object
+ModernHandbookClient.tsx:580 [getVisibleSections] Edit mode: showing all sections
+ModernHandbookClient.tsx:55 🎯 ModernHandbookClient render state: Object
+ModernHandbookClient.tsx:580 [getVisibleSections] Edit mode: showing all sections
+ContentArea.tsx:56 [ContentArea] Navigation state: Object
+ContentArea.tsx:56 [ContentArea] Navigation state: Object
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+editorjs.mjs:7606 Uncaught (in promise) Error: Can't find a Block to remove
+    at eval (editorjs.mjs:7606:15)
+    at new Promise (<anonymous>)
+    at ra.removeBlock (editorjs.mjs:7603:12)
+    at eval (editorjs.mjs:7784:20)
+editorjs.mjs:7606 Uncaught (in promise) Error: Can't find a Block to remove
+    at eval (editorjs.mjs:7606:15)
+    at new Promise (<anonymous>)
+    at ra.removeBlock (editorjs.mjs:7603:12)
+    at eval (editorjs.mjs:7784:20)
+editorjs.mjs:7606 Uncaught (in promise) Error: Can't find a Block to remove
+    at eval (editorjs.mjs:7606:15)
+    at new Promise (<anonymous>)
+    at ra.removeBlock (editorjs.mjs:7603:12)
+    at eval (editorjs.mjs:7784:20)
+editorjs.mjs:7606 Uncaught (in promise) Error: Can't find a Block to remove
+    at eval (editorjs.mjs:7606:15)
+    at new Promise (<anonymous>)
+    at ra.removeBlock (editorjs.mjs:7603:12)
+    at eval (editorjs.mjs:7784:20)
+editorjs.mjs:7606 Uncaught (in promise) Error: Can't find a Block to remove
+    at eval (editorjs.mjs:7606:15)
+    at new Promise (<anonymous>)
+    at ra.removeBlock (editorjs.mjs:7603:12)
+    at eval (editorjs.mjs:7784:20)
+editorjs.mjs:7606 Uncaught (in promise) Error: Can't find a Block to remove
+    at eval (editorjs.mjs:7606:15)
+    at new Promise (<anonymous>)
+    at ra.removeBlock (editorjs.mjs:7603:12)
+    at eval (editorjs.mjs:7784:20)
+editorjs.mjs:7606 Uncaught (in promise) Error: Can't find a Block to remove
+    at eval (editorjs.mjs:7606:15)
+    at new Promise (<anonymous>)
+    at ra.removeBlock (editorjs.mjs:7603:12)
+    at eval (editorjs.mjs:7784:20)
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:339:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooks (react-dom-client.development.js:6667:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'V', "Välkommen "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:339:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'K', "Kontaktupp"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'H', "Här hittar"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'F', "Föreningen"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'I', "Informatio"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'S', "Så här anm"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 Failed to parse content as JSON: SyntaxError: Unexpected token 'R', "Regler och"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseEditorJSContent (editorjs.ts:61:25)
+    at eval (AllSectionsView.tsx:346:64)
+    at Array.map (<anonymous>)
+    at eval (AllSectionsView.tsx:283:40)
+    at Array.map (<anonymous>)
+    at AllSectionsView (AllSectionsView.tsx:177:23)
+    at react-stack-bottom-frame (react-dom-client.development.js:22974:20)
+    at renderWithHooksAgain (react-dom-client.development.js:6767:20)
+    at renderWithHooks (react-dom-client.development.js:6679:22)
+    at updateFunctionComponent (react-dom-client.development.js:8931:19)
+    at beginWork (react-dom-client.development.js:10556:18)
+    at runWithFiberInDEV (react-dom-client.development.js:845:30)
+    at performUnitOfWork (react-dom-client.development.js:15258:22)
+    at workLoopSync (react-dom-client.development.js:15078:41)
+    at renderRootSync (react-dom-client.development.js:15058:11)
+    at performWorkOnRoot (react-dom-client.development.js:14526:13)
+    at performSyncWorkOnRoot (react-dom-client.development.js:16365:7)
+    at flushSyncWorkAcrossRoots_impl (react-dom-client.development.js:16211:21)
+    at processRootScheduleInMicrotask (react-dom-client.development.js:16250:9)
+    at eval (react-dom-client.development.js:16384:13)
+console.warn @ VM3098:36
+VM3098:36 EventDispatcher .off(): there is no subscribers for event "editor mobile layout toggled". Probably, .off() called before .on()
+console.warn @ VM3098:36
+EditorJSComponent.tsx:218 EditorJS WYSIWYG is ready! Object

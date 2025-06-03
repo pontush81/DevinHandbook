@@ -44,7 +44,7 @@ export interface UserProfile {
 export async function getTrialStatus(userId: string): Promise<TrialStatus> {
   try {
     const { data, error } = await supabase
-      .rpc('check_trial_status', { user_id: userId });
+      .rpc('check_trial_status', { user_uuid: userId });
 
     if (error) {
       console.error('Error checking trial status:', error);
@@ -94,8 +94,7 @@ export async function startUserTrial(userId: string, userEmail?: string): Promis
   try {
     const { data, error } = await supabaseAdmin
       .rpc('start_user_trial', { 
-        user_id: userId,
-        user_email: userEmail || null 
+        user_uuid: userId
       });
 
     if (error) {

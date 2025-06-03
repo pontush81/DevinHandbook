@@ -16,6 +16,7 @@ interface ContentAreaProps {
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   onDeleteSection?: (sectionId: string) => void;
   onExitEditMode?: () => void;
+  trialStatusBar?: React.ReactNode;
 }
 
 export function ContentArea({ 
@@ -30,7 +31,8 @@ export function ContentArea({
   onAddSection, 
   onMoveSection, 
   onDeleteSection, 
-  onExitEditMode 
+  onExitEditMode, 
+  trialStatusBar
 }: ContentAreaProps) {
   
   // Guard against undefined sections
@@ -81,6 +83,7 @@ export function ContentArea({
           isEditMode={isEditMode}
           onUpdateSection={onUpdateSection}
           onUpdatePage={onUpdatePage}
+          trialStatusBar={trialStatusBar}
         />
       </div>
     );
