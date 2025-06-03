@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import { 
   Download, 
   Upload, 
@@ -19,9 +20,12 @@ import {
   AlertTriangle, 
   CheckCircle, 
   Info,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Trash2
 } from 'lucide-react';
-import { formatBackupSize, formatBackupDate, BackupData } from '@/lib/backup';
+import { formatBackupSize, formatBackupDate, generateBackupFilename, BackupData } from '@/lib/backup';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface BackupStats {
   totalRecords: number;
@@ -35,6 +39,17 @@ interface BackupOptions {
   includeTrialData: boolean;
   excludeTables: string[];
   compression: boolean;
+}
+
+// Add new types for backup schedules
+interface BackupSchedule {
+  id: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  time: string;
+  email: string;
+  last_run?: string;
+  next_run?: string;
+  enabled: boolean;
 }
 
 export default function BackupManager() {
@@ -62,9 +77,19 @@ export default function BackupManager() {
   const [restoreData, setRestoreData] = useState<string>('');
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
 
+  // Add state for schedules
+  const [schedules, setSchedules] = useState<BackupSchedule[]>([]);
+  const [newSchedule, setNewSchedule] = useState<Omit<BackupSchedule, 'id' | 'last_run' | 'next_run'>>({
+    frequency: 'daily',
+    time: '12:00',
+    email: '',
+    enabled: true,
+  });
+
   // Hämta backup-statistik vid laddning
   useEffect(() => {
     loadBackupStats();
+    loadSchedules();
   }, []);
 
   const loadBackupStats = async () => {
@@ -96,8 +121,7 @@ export default function BackupManager() {
       const response = await fetch('/api/admin/backup/create', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer dummy' // Du kan implementera riktig auth senare
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(backupOptions)
       });
@@ -105,30 +129,49 @@ export default function BackupManager() {
       clearInterval(progressInterval);
       setProgress(100);
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fel vid skapande av backup');
+      }
+
       const result = await response.json();
       
-      if (result.success) {
+      if (result.success && result.backup) {
         setMessage({ type: 'success', text: 'Backup skapad framgångsrikt!' });
         
-        // Ladda ner backup-filen
-        const backupJson = JSON.stringify(result.backup, null, 2);
-        const blob = new Blob([backupJson], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `backup_${new Date().toISOString().split('T')[0]}_manual.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        try {
+          // Ladda ner backup-filen
+          const backupJson = JSON.stringify(result.backup, null, 2);
+          const blob = new Blob([backupJson], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = generateBackupFilename(result.backup.metadata);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
 
-        // Uppdatera statistik
-        await loadBackupStats();
+          // Uppdatera statistik efter en kort fördröjning för att säkerställa att databasen har uppdaterats
+          setTimeout(async () => {
+            await loadBackupStats();
+          }, 1000);
+        } catch (downloadError) {
+          console.error('Fel vid nedladdning av backup:', downloadError);
+          setMessage({ 
+            type: 'error', 
+            text: 'Backup skapades men kunde inte laddas ner. Kontrollera konsolen för mer information.' 
+          });
+        }
       } else {
-        setMessage({ type: 'error', text: result.error || 'Fel vid skapande av backup' });
+        throw new Error(result.error || 'Ogiltig respons från servern');
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Fel vid skapande av backup' });
+      console.error('Fel vid backup:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Fel vid skapande av backup' 
+      });
     } finally {
       setLoading(false);
       setProgress(0);
@@ -207,6 +250,105 @@ export default function BackupManager() {
       setMessage({ type: 'error', text: 'Ogiltig backup-data eller fel vid återställning' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Add function to load schedules
+  const loadSchedules = async () => {
+    try {
+      const response = await fetch('/api/admin/backup/schedules');
+      const result = await response.json();
+      
+      if (result.success) {
+        setSchedules(result.schedules);
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Fel vid hämtning av scheman' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Fel vid hämtning av backup-scheman' });
+    }
+  };
+
+  // Add function to create schedule
+  const createSchedule = async () => {
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/admin/backup/schedules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newSchedule)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Backup-schema skapat!' });
+        await loadSchedules();
+        // Reset form
+        setNewSchedule({
+          frequency: 'daily',
+          time: '12:00',
+          email: '',
+          enabled: true,
+        });
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Fel vid skapande av schema' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Fel vid skapande av backup-schema' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add function to toggle schedule
+  const toggleSchedule = async (id: string, enabled: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/backup/schedules/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ enabled })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        await loadSchedules();
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Fel vid uppdatering av schema' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Fel vid uppdatering av backup-schema' });
+    }
+  };
+
+  // Add function to delete schedule
+  const deleteSchedule = async (id: string) => {
+    if (!confirm('Är du säker på att du vill ta bort detta backup-schema?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/backup/schedules/${id}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Backup-schema borttaget!' });
+        await loadSchedules();
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Fel vid borttagning av schema' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Fel vid borttagning av backup-schema' });
     }
   };
 
@@ -505,6 +647,140 @@ export default function BackupManager() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Add new Scheduled Backups card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Schemalagda backups
+          </CardTitle>
+          <CardDescription>
+            Hantera automatiska backups
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* New schedule form */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="font-medium">Skapa nytt backup-schema</h3>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="frequency">Frekvens</Label>
+                <Select 
+                  value={newSchedule.frequency}
+                  onValueChange={(value: 'daily' | 'weekly' | 'monthly') => 
+                    setNewSchedule(prev => ({ ...prev, frequency: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Välj frekvens" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Dagligen</SelectItem>
+                    <SelectItem value="weekly">Veckovis</SelectItem>
+                    <SelectItem value="monthly">Månadsvis</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="time">Tid</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={newSchedule.time}
+                  onChange={(e) => setNewSchedule(prev => ({ ...prev, time: e.target.value }))}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <Label htmlFor="scheduleEmail">Email</Label>
+                <Input
+                  id="scheduleEmail"
+                  type="email"
+                  placeholder="admin@handbok.org"
+                  value={newSchedule.email}
+                  onChange={(e) => setNewSchedule(prev => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <Button 
+              onClick={createSchedule}
+              disabled={loading || !newSchedule.email || !newSchedule.time}
+              className="w-full mt-4"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Skapar schema...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Skapa backup-schema
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Existing schedules */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Aktiva scheman</h3>
+            
+            {schedules.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Inga schemalagda backups konfigurerade.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {schedules.map((schedule) => (
+                  <div
+                    key={schedule.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div className="space-y-1">
+                      <div className="font-medium">
+                        {schedule.frequency === 'daily' ? 'Dagligen' :
+                         schedule.frequency === 'weekly' ? 'Veckovis' : 'Månadsvis'} 
+                        kl. {schedule.time}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {schedule.email}
+                      </div>
+                      {schedule.last_run && (
+                        <div className="text-xs text-muted-foreground">
+                          Senaste: {new Date(schedule.last_run).toLocaleString('sv-SE')}
+                        </div>
+                      )}
+                      {schedule.next_run && (
+                        <div className="text-xs text-muted-foreground">
+                          Nästa: {new Date(schedule.next_run).toLocaleString('sv-SE')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={schedule.enabled}
+                        onCheckedChange={(checked) => toggleSchedule(schedule.id, checked)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteSchedule(schedule.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

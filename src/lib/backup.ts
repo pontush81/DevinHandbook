@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
-import { getServiceSupabase } from './supabase';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface BackupMetadata {
   id: string;
@@ -24,7 +24,6 @@ export interface BackupData {
     handbooks: any[];
     sections: any[];
     pages: any[];
-    documents: any[];
     attachments: any[];
     user_profiles?: any[];
     trial_activities?: any[];
@@ -47,16 +46,75 @@ export interface BackupOptions {
  * Huvudklass för backup-hantering
  */
 export class DatabaseBackupManager {
-  private supabase;
-  
-  constructor() {
-    this.supabase = getServiceSupabase();
+  constructor(private supabase: SupabaseClient) {}
+
+  /**
+   * Sparar backup-historik i databasen
+   */
+  private async saveBackupHistory(metadata: BackupMetadata, userId?: string): Promise<void> {
+    try {
+      console.log('💾 Sparar backup-historik...');
+      console.log('📅 Backup-datum:', metadata.created_at);
+      
+      const { error } = await this.supabase
+        .from('backup_history')
+        .insert({
+          id: metadata.id,
+          created_by: userId,
+          backup_type: metadata.backup_type,
+          size_bytes: metadata.size_bytes,
+          table_counts: metadata.table_counts,
+          schema_version: metadata.schema_version,
+          checksum: metadata.checksum
+        });
+
+      if (error) {
+        console.error('❌ Fel vid sparande av backup-historik:', error);
+        throw error;
+      }
+
+      console.log('✅ Backup-historik sparad');
+    } catch (error) {
+      console.error('❌ Fel vid sparande av backup-historik:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Hämtar senaste backup-datum
+   */
+  private async getLastBackupDate(): Promise<string | undefined> {
+    try {
+      const { data, error } = await this.supabase
+        .from('backup_history')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Fel vid hämtning av senaste backup-datum:', error);
+        return undefined;
+      }
+
+      return data?.created_at;
+    } catch (error) {
+      console.error('Fel vid hämtning av senaste backup-datum:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Genererar ett UUID för backup
+   */
+  private generateBackupId(): string {
+    return crypto.randomUUID();
   }
 
   /**
    * Skapar en fullständig backup av databasen
    */
-  async createBackup(options: BackupOptions = {}): Promise<BackupData> {
+  async createBackup(options: BackupOptions = {}, userId?: string): Promise<BackupData> {
     try {
       console.log('🔄 Startar databas-backup...');
       
@@ -74,7 +132,6 @@ export class DatabaseBackupManager {
         handbooks: [],
         sections: [],
         pages: [],
-        documents: [],
         attachments: []
       };
 
@@ -113,18 +170,6 @@ export class DatabaseBackupManager {
         throw new Error(`Fel vid backup av pages: ${pagesError.message}`);
       }
       backupData.pages = pages || [];
-
-      // Backup av documents
-      console.log('📁 Säkerhetskopierar documents...');
-      const { data: documents, error: documentsError } = await this.supabase
-        .from('documents')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (documentsError) {
-        throw new Error(`Fel vid backup av documents: ${documentsError.message}`);
-      }
-      backupData.documents = documents || [];
 
       // Backup av attachments
       console.log('📎 Säkerhetskopierar attachments...');
@@ -170,15 +215,15 @@ export class DatabaseBackupManager {
 
       // Skapa metadata
       const metadata: BackupMetadata = {
-        id: `backup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: this.generateBackupId(),
         created_at: new Date().toISOString(),
+        created_by: userId,
         backup_type: 'manual',
         size_bytes: 0,
         table_counts: {
           handbooks: backupData.handbooks.length,
           sections: backupData.sections.length,
           pages: backupData.pages.length,
-          documents: backupData.documents.length,
           attachments: backupData.attachments.length,
           user_profiles: backupData.user_profiles?.length ?? 0,
           trial_activities: backupData.trial_activities?.length ?? 0
@@ -203,6 +248,9 @@ export class DatabaseBackupManager {
       console.log('✅ Backup skapad framgångsrikt!');
       console.log(`📊 Totalt antal poster: ${Object.values(metadata.table_counts).reduce((a, b) => a + b, 0)}`);
       console.log(`💾 Storlek: ${(metadata.size_bytes / 1024 / 1024).toFixed(2)} MB`);
+
+      // Spara backup-historik
+      await this.saveBackupHistory(metadata, userId);
 
       return fullBackup;
 
@@ -257,25 +305,19 @@ export class DatabaseBackupManager {
         await this.clearAndRestoreTable('pages', backupData.data.pages);
       }
 
-      // 4. Documents (refererar till handbooks och sections)
-      if (backupData.data.documents.length > 0) {
-        console.log('📁 Återställer documents...');
-        await this.clearAndRestoreTable('documents', backupData.data.documents);
-      }
-
-      // 5. Attachments (refererar till handbooks och pages)
+      // 4. Attachments (refererar till handbooks och pages)
       if (backupData.data.attachments.length > 0) {
         console.log('📎 Återställer attachments...');
         await this.clearAndRestoreTable('attachments', backupData.data.attachments);
       }
 
-      // 6. Användardata (om inkluderat)
+      // 5. Användardata (om inkluderat)
       if (backupData.data.user_profiles && backupData.data.user_profiles.length > 0) {
         console.log('👤 Återställer user_profiles...');
         await this.clearAndRestoreTable('user_profiles', backupData.data.user_profiles);
       }
 
-      // 7. Trial-data (om inkluderat)
+      // 6. Trial-data (om inkluderat)
       if (backupData.data.trial_activities && backupData.data.trial_activities.length > 0) {
         console.log('🧪 Återställer trial_activities...');
         await this.clearAndRestoreTable('trial_activities', backupData.data.trial_activities);
@@ -345,7 +387,7 @@ export class DatabaseBackupManager {
       }
 
       // Kontrollera data-struktur
-      const requiredDataFields = ['handbooks', 'sections', 'pages', 'documents', 'attachments'];
+      const requiredDataFields = ['handbooks', 'sections', 'pages', 'attachments'];
       for (const field of requiredDataFields) {
         if (!(field in backupData.data) || !Array.isArray(backupData.data[field])) {
           return false;
@@ -392,6 +434,8 @@ export class DatabaseBackupManager {
     lastBackupDate?: string;
   }> {
     try {
+      console.log('📊 Hämtar backup-statistik...');
+      
       const stats = {
         totalRecords: 0,
         tableStats: {} as Record<string, number>,
@@ -400,7 +444,7 @@ export class DatabaseBackupManager {
       };
 
       // Räkna poster i varje tabell
-      const tables = ['handbooks', 'sections', 'pages', 'documents', 'attachments'];
+      const tables = ['handbooks', 'sections', 'pages', 'attachments'];
       
       for (const table of tables) {
         const { count, error } = await this.supabase
@@ -416,9 +460,26 @@ export class DatabaseBackupManager {
       // Uppskatta storlek (ungefär 1KB per post som approximation)
       stats.estimatedSize = stats.totalRecords * 1024;
 
+      // Hämta senaste backup-datum från backup_history
+      console.log('📅 Hämtar senaste backup-datum...');
+      
+      const { data: lastBackup, error: backupError } = await this.supabase
+        .from('backup_history')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!backupError && lastBackup) {
+        stats.lastBackupDate = lastBackup.created_at;
+        console.log('✅ Senaste backup:', stats.lastBackupDate);
+      } else {
+        console.log('❌ Kunde inte hämta senaste backup-datum:', backupError);
+      }
+
       return stats;
     } catch (error) {
-      console.error('Fel vid hämtning av backup-statistik:', error);
+      console.error('❌ Fel vid hämtning av backup-statistik:', error);
       throw error;
     }
   }

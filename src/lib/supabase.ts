@@ -18,7 +18,10 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'true') {
   console.log('Supabase URL:', supabaseUrl ? '✓ Set' : '✗ Missing', supabaseUrl ? `(${supabaseUrl.substring(0, 12)}...)` : '');
   console.log('Supabase Anon Key:', supabaseAnonKey ? '✓ Set' : '✗ Missing', supabaseAnonKey ? '(längd: ' + supabaseAnonKey.length + ')' : '');
-  console.log('Supabase Service Role Key:', supabaseServiceRoleKey ? '✓ Set' : '✗ Missing', supabaseServiceRoleKey ? '(längd: ' + supabaseServiceRoleKey.length + ')' : '');
+  // Only log Service Role Key on the server side
+  if (typeof window === 'undefined') {
+    console.log('Supabase Service Role Key:', supabaseServiceRoleKey ? '✓ Set' : '✗ Missing', supabaseServiceRoleKey ? '(längd: ' + supabaseServiceRoleKey.length + ')' : '');
+  }
   console.log('Node Environment:', process.env.NODE_ENV);
   console.log('Is Edge Runtime:', typeof EdgeRuntime !== 'undefined');
   console.log('Vercel Deployment:', process.env.VERCEL_URL || 'inte i Vercel');

@@ -1,11 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseBackupManager, BackupOptions, generateBackupFilename } from '@/lib/backup';
 import { Resend } from 'resend';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient({ cookies });
+
+    // Verify auth
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user profile to check if superadmin
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_superadmin')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileError || !profile?.is_superadmin) {
+      return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
+    }
+
     console.log('⏰ API: Startar schemalagd backup...');
 
     // Hämta konfiguration från request body eller använd defaults
@@ -128,6 +151,25 @@ export async function POST(request: NextRequest) {
 // GET-endpoint för att hämta schemalagd backup-status
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient({ cookies });
+
+    // Verify auth
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user profile to check if superadmin
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_superadmin')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileError || !profile?.is_superadmin) {
+      return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
+    }
+
     // Hämta information om senaste schemalagda backup
     const backupManager = new DatabaseBackupManager();
     const stats = await backupManager.getBackupStatistics();

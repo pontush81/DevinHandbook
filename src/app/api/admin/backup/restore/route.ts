@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseBackupManager, BackupData } from '@/lib/backup';
-import { getServiceSupabase } from '@/lib/supabase';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 API: Startar återställning från backup...');
+    const supabase = createRouteHandlerClient({ cookies });
 
-    // EXTRA SÄKERHETSKONTROLL - detta är en farlig operation!
-    const supabase = getServiceSupabase();
-    
-    // Hämta användarens session från headers
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Ingen auktorisering angiven' },
-        { status: 401 }
-      );
+    // Verify auth
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Get user profile to check if superadmin
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_superadmin')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileError || !profile?.is_superadmin) {
+      return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
+    }
+
+    console.log('🔄 API: Startar återställning från backup...');
 
     // Hämta backup-data och alternativ från request body
     const body = await request.json();
