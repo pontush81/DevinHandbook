@@ -1,17 +1,29 @@
 import { supabase } from './supabase';
 import { createClient } from '@supabase/supabase-js';
 
-// Service role client för server-side operationer
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+// Service role client för server-side operationer - skapas endast när behövs
+let supabaseAdmin: any = null;
+
+function getSupabaseAdmin() {
+  if (!supabaseAdmin && typeof window === 'undefined') {
+    // Endast på server-sidan
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing Supabase environment variables for admin client');
+      throw new Error('Missing Supabase configuration');
     }
+    
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
   }
-);
+  return supabaseAdmin;
+}
 
 export interface TrialStatus {
   isInTrial: boolean;
@@ -92,7 +104,7 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus> {
  */
 export async function startUserTrial(userId: string, userEmail?: string): Promise<UserProfile | null> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .rpc('start_user_trial', { 
         user_uuid: userId
       });
@@ -137,7 +149,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
  */
 export async function getUserProfileAdmin(userId: string): Promise<UserProfile | null> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
@@ -160,7 +172,7 @@ export async function getUserProfileAdmin(userId: string): Promise<UserProfile |
  */
 export async function markFirstHandbookCreated(userId: string): Promise<void> {
   try {
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from('user_profiles')
       .update({
         first_handbook_created_at: new Date().toISOString(),
@@ -217,7 +229,7 @@ export async function logTrialActivity(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from('trial_activities')
       .insert({
         user_id: userId,

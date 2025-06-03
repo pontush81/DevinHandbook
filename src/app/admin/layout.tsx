@@ -18,7 +18,8 @@ import {
   Home,
   LogOut,
   Menu,
-  X
+  X,
+  Database
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -31,6 +32,7 @@ const adminNavItems = [
   { href: '/admin/customers', label: 'Kunder', icon: Users },
   { href: '/admin/content', label: 'Innehåll', icon: FileText },
   { href: '/admin/analytics', label: 'Statistik', icon: BarChart3 },
+  { href: '/admin/backup', label: 'Backup', icon: Database },
   { href: '/admin/settings', label: 'Inställningar', icon: Settings },
 ];
 

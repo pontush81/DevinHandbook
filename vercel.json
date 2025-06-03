@@ -4,6 +4,12 @@
       "maxDuration": 10
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 2 * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/:path((?!api/).*)",

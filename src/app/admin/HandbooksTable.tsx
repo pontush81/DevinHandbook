@@ -5,6 +5,17 @@ import Link from "next/link";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/components/ui/alert';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from 'lucide-react';
 
 interface Handbook {
   id: string;
@@ -23,6 +34,10 @@ interface HandbooksTableProps {
 export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps) {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; handbook: Handbook | null }>({
+    isOpen: false,
+    handbook: null
+  });
 
   const revalidateHandbook = async (subdomain: string) => {
     try {
@@ -83,10 +98,54 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
     }
   };
 
+  const deleteHandbook = async (handbook: Handbook) => {
+    try {
+      setIsProcessing(handbook.id);
+      setError(null);
+      
+      const response = await fetch('/api/admin/delete-handbook', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ handbookId: handbook.id }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Kunde inte radera handbok');
+      }
+      
+      // Show success message
+      setError(`Handbok "${handbook.title}" har raderats permanent`);
+      setTimeout(() => setError(null), 5000);
+      
+      // Refresh data after deletion
+      onDataChange();
+    } catch (err: unknown) {
+      console.error("Error deleting handbook:", err);
+      setError(err instanceof Error ? err.message : "Kunde inte radera handbok");
+    } finally {
+      setIsProcessing(null);
+      setDeleteDialog({ isOpen: false, handbook: null });
+    }
+  };
+
+  const handleDeleteClick = (handbook: Handbook) => {
+    setDeleteDialog({ isOpen: true, handbook });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteDialog.handbook) {
+      deleteHandbook(deleteDialog.handbook);
+    }
+  };
+
   return (
     <>
       {error && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert variant={error.includes('har raderats') || error.includes('har uppdaterats') ? 'default' : 'destructive'} className="mb-4">
           {error}
         </Alert>
       )}
@@ -174,6 +233,16 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                           ? (handbook.published ? 'Avpublicerar...' : 'Publicerar...') 
                           : (handbook.published ? 'Avpublicera' : 'Publicera')}
                       </Button>
+                      <Button
+                        onClick={() => handleDeleteClick(handbook)}
+                        disabled={isProcessing === handbook.id}
+                        className="text-red-600 hover:text-red-800 hover:underline disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>{isProcessing === handbook.id ? 'Raderar...' : 'Radera'}</span>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -182,6 +251,45 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
           </tbody>
         </table>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => 
+        setDeleteDialog({ isOpen: open, handbook: open ? deleteDialog.handbook : null })
+      }>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Radera handbok permanent</AlertDialogTitle>
+            <AlertDialogDescription>
+              Är du säker på att du vill radera handboken <strong>"{deleteDialog.handbook?.title}"</strong>?
+              <br />
+              <br />
+              <span className="text-red-600 font-medium">
+                Detta kommer att permanent radera:
+              </span>
+              <ul className="list-disc list-inside mt-2 text-sm">
+                <li>Handboken och all metadata</li>
+                <li>Alla sektioner i handboken</li>
+                <li>Alla sidor och innehåll</li>
+                <li>Alla medlemskap och behörigheter</li>
+                <li>All trial-data kopplad till handboken</li>
+              </ul>
+              <br />
+              <span className="text-red-600 font-medium">
+                Denna åtgärd kan INTE ångras!
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Ja, radera permanent
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 } 
