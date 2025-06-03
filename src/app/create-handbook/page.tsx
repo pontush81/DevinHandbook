@@ -109,7 +109,7 @@ function CreateHandbookContent() {
                     {handbooks.map(handbook => (
                       <div key={handbook.id} className="p-4 border rounded-lg">
                         <h4 className="font-medium text-lg">{handbook.title}</h4>
-                        <p className="text-gray-500 mb-3">handbok.org/handbook/{handbook.subdomain}</p>
+                        <p className="text-gray-500 mb-3">handbok.org/{handbook.subdomain}</p>
                         <div className="space-x-2">
                           <Button asChild size="sm">
                             <a href={`/${handbook.subdomain}`}>

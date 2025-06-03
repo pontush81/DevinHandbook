@@ -59,7 +59,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
       }
       
       // Show temporary success message
-      setError(`Cache för handbok.org/handbook/${subdomain} har uppdaterats`);
+      setError(`Cache för handbok.org/${subdomain} har uppdaterats`);
       setTimeout(() => setError(null), 3000);
     } catch (err: unknown) {
       console.error("Error revalidating handbook:", err);
@@ -188,7 +188,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                     {handbook.title}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    handbok.org/handbook/{handbook.subdomain}
+                    handbok.org/{handbook.subdomain}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(handbook.created_at).toLocaleDateString("sv-SE")}

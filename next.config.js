@@ -24,7 +24,7 @@ const nextConfig = {
   // Skapar omskrivningar för subdomäner
   async rewrites() {
     return [
-      // Enkel och pålitlig regel för subdomäner
+      // Direkt routing för subdomäner utan /handbook/ prefix
       {
         source: '/((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api).*)',
         has: [
@@ -33,7 +33,7 @@ const nextConfig = {
             value: '(?<subdomain>(?!www|staging|api)[a-zA-Z0-9-]+)\\.handbok\\.org',
           },
         ],
-        destination: 'https://www.handbok.org/handbook/:subdomain/$1',
+        destination: 'https://www.handbok.org/:subdomain/$1',
       },
     ];
   },

@@ -227,7 +227,7 @@ export default function DashboardPage() {
                   <h3 className="font-medium text-blue-900 mb-2">Vad händer härnäst?</h3>
                   <ul className="text-sm text-blue-800 space-y-1">
                     <li>✓ Du skapar en handbok med föreningens namn</li>
-                    <li>✓ Du får en egen webbadress (t.ex. handbok.org/handbook/din-forening)</li>
+                    <li>✓ Du får en egen webbadress (t.ex. handbok.org/din-forening)</li>
                     <li>✓ Du fyller i grundläggande information</li>
                     <li>✓ Medlemmarna kan direkt börja använda handboken</li>
                   </ul>
@@ -288,7 +288,9 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-sm text-gray-600 mb-6">
                         <span className="font-medium">URL:</span>{" "}
-                        handbok.org/handbook/{handbook.subdomain}
+                        <p className="text-gray-500 mb-2">
+                          handbok.org/{handbook.subdomain}
+                        </p>
                       </div>
                       <div className="flex space-x-2">
                         <Button 
@@ -303,7 +305,7 @@ export default function DashboardPage() {
                           variant="outline" 
                           size="sm"
                           onClick={() => {
-                            window.open(`/handbook/${handbook.subdomain}`, '_blank');
+                            window.open(`/${handbook.subdomain}`, '_blank');
                           }}
                         >
                           Visa

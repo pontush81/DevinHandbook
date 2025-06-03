@@ -85,9 +85,11 @@ export async function POST(req: NextRequest) {
 
     // Returnera handbok-ID och subdomän
     return NextResponse.json({
-      id: handbookId,
+      success: true, 
+      message: 'Handbook created successfully',
+      handbook_id: handbookId,
       subdomain,
-      url: `https://www.handbok.org/handbook/${subdomain}`,
+      url: `https://www.handbok.org/${subdomain}`,
     });
   } catch (error) {
     console.error("Oväntat fel vid skapande av handbok:", error);

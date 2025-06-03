@@ -407,7 +407,7 @@ export function CreateHandbookForm() {
             Adressen till din handbok blir:
           </label>
           <div className="flex items-center">
-            <span className="text-gray-500 mr-1">handbok.org/handbook/</span>
+            <span className="text-gray-500 mr-1">handbok.org/</span>
             <Input
               id="subdomain"
               type="text"
@@ -472,7 +472,7 @@ export function CreateHandbookForm() {
         
         <p className="text-xs text-gray-500 text-center">
           Efter {isEligibleForTrialState ? 'trial-start' : 'betalning'} kommer din handbok att vara tillgänglig på{" "}
-          <span className="font-medium">handbok.org/handbook/{subdomain || 'din-förening'}</span>
+          <span className="font-medium">handbok.org/{subdomain || 'din-förening'}</span>
         </p>
       </form>
     </div>
