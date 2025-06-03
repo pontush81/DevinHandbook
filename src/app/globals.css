@@ -2207,7 +2207,6 @@ header > div > div:not([data-debug="handbook-header-right"]) [class*="rounded-fu
     font-size: 0.875rem;
   }
 }
-
 /* Focus states */
 .ce-block--focused .ce-block__content {
   background: rgba(59, 130, 246, 0.05);
@@ -2313,3 +2312,13 @@ header > div > div:not([data-debug="handbook-header-right"]) [class*="rounded-fu
     overflow-y: scroll; /* Force scrollbar on mobile if needed */
   }
 }
+
+/* Editor.js plus button positioning */
+.ce-toolbar__plus {
+  left: -25px !important;
+}
+
+.ce-toolbar__plus:hover {
+  left: -25px !important;
+}
+

@@ -300,7 +300,6 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
       {!readOnly && (
         <div className="border-b border-gray-200 p-2 sm:p-3 flex items-center justify-between flex-wrap gap-2 bg-gray-50">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">WYSIWYG Editor</span>
             {hasUnsavedChanges && (
               <span className="text-xs text-amber-600 flex items-center">
                 <div className="w-2 h-2 bg-amber-400 rounded-full mr-1"></div>
