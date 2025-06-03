@@ -82,7 +82,7 @@ async function sendContactEmail(formData: ContactFormData) {
     const submittedDate = new Date().toLocaleString('sv-SE');
     
     await resend.emails.send({
-      from: 'Handbok.org <noreply@handbok.org>',
+      from: 'Handbok.org <onboarding@resend.dev>',
       to: [process.env.ADMIN_EMAIL],
       subject: `📧 Ny kontaktförfrågan: ${formData.subject}`,
       replyTo: formData.email,
@@ -131,7 +131,7 @@ async function sendConfirmationEmail(formData: ContactFormData) {
     }
 
     await resend.emails.send({
-      from: 'Handbok.org <noreply@handbok.org>',
+      from: 'Handbok.org <onboarding@resend.dev>',
       to: [formData.email],
       subject: 'Tack för din kontakt - Handbok.org',
       html: `
