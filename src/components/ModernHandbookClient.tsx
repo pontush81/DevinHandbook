@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { MainFooter } from '@/components/layout/MainFooter';
 import { MembersManager } from '@/components/handbook/MembersManager';
+import { TrialStatusBar } from '@/components/trial/TrialStatusBar';
 
 interface ModernHandbookClientProps {
   initialData: {
@@ -716,6 +717,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           onToggleEditMode={handleToggleEditMode}
           theme={handbookData.theme}
         />
+
+        {/* Trial Status Bar - Show only for logged-in users */}
+        {user && (
+          <TrialStatusBar 
+            userId={user.id} 
+            handbookId={handbookData.id}
+            className="border-b"
+            onUpgrade={() => {
+              // Redirect to upgrade page
+              window.open('/dashboard', '_blank');
+            }}
+          />
+        )}
 
         {/* Main layout container - takes remaining space, mobile optimized */}
         <div className="flex flex-1 min-h-0 overflow-hidden touch-pan-y">

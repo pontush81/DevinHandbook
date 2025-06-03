@@ -5,11 +5,12 @@ export async function createHandbookWithSectionsAndPages(
   name: string,
   subdomain: string,
   template: HandbookTemplate,
-  userId: string | null
+  userId: string | null,
+  isTrialHandbook: boolean = false
 ) {
   const supabase = getServiceSupabase();
   
-  console.log('[Handbook] Creating handbook with owner_id:', { name, subdomain, userId: userId || 'guest' });
+  console.log('[Handbook] Creating handbook with owner_id:', { name, subdomain, userId: userId || 'guest', isTrialHandbook });
   
   // Kontrollera obligatoriska fält för handbooks
   if (!name || typeof name !== 'string' || !subdomain || typeof subdomain !== 'string') {
@@ -51,6 +52,8 @@ export async function createHandbookWithSectionsAndPages(
       subdomain,
       published: true,
       owner_id: userId, // Can be null for guest handbooks
+      is_trial_handbook: isTrialHandbook,
+      created_during_trial: isTrialHandbook,
     })
     .select()
     .single();

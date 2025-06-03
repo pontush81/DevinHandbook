@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { checkIsSuperAdmin } from "@/lib/user-utils";
 import { useToast } from '@/components/ui/use-toast';
+import { TrialStatusCard } from '@/components/trial/TrialStatusCard';
 import {
   Dialog,
   DialogContent,
@@ -201,6 +202,11 @@ export default function DashboardPage() {
                 {error}
               </CardContent>
             </Card>
+          )}
+          
+          {/* Trial Status Card - visa för alla användare som inte är superadmin */}
+          {user && !isSuperadmin && (
+            <TrialStatusCard userId={user.id} className="mb-8" />
           )}
           
           {isLoadingHandbooks ? (

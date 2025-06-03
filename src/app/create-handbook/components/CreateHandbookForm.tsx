@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Gift } from "lucide-react";
 
 export function CreateHandbookForm() {
   const { user } = useAuth();
@@ -15,6 +15,46 @@ export function CreateHandbookForm() {
   const [isSubdomainAvailable, setIsSubdomainAvailable] = useState<boolean | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean | null>(null);
   const [price, setPrice] = useState<number>(2490); // Default pris i kr
+  const [isEligibleForTrialState, setIsEligibleForTrialState] = useState<boolean>(false);
+  const [trialStatus, setTrialStatus] = useState<any>(null);
+  const [isCheckingTrial, setIsCheckingTrial] = useState(true);
+
+  // Kontrollera trial-status när komponenten laddas
+  useEffect(() => {
+    async function checkTrialEligibility() {
+      if (!user) return;
+      
+      setIsCheckingTrial(true);
+      try {
+        // Använd API-endpoint istället för direkt databasanrop
+        const response = await fetch(`/api/trial/check-status?userId=${user.id}`);
+        
+        if (response.ok) {
+          const status = await response.json();
+          setTrialStatus(status);
+          
+          // Användaren är berättigad till trial om de inte har använt det än
+          // eller om de är i en aktiv trial
+          const eligible = !status.hasUsedTrial || status.isInTrial;
+          setIsEligibleForTrialState(eligible);
+        } else {
+          console.error('Failed to fetch trial status');
+          // Default till att inte vara berättigad vid fel
+          setIsEligibleForTrialState(false);
+          setTrialStatus(null);
+        }
+      } catch (error) {
+        console.error('Error checking trial eligibility:', error);
+        // Default till att inte vara berättigad vid fel
+        setIsEligibleForTrialState(false);
+        setTrialStatus(null);
+      } finally {
+        setIsCheckingTrial(false);
+      }
+    }
+    
+    checkTrialEligibility();
+  }, [user]);
 
   // Hämta aktuellt prisbelopp och testläge från API
   useEffect(() => {
@@ -126,7 +166,6 @@ export function CreateHandbookForm() {
     setError(null);
 
     try {
-      // Redirect to Stripe checkout instead of directly creating handbook
       const handbookData = {
         name: name,
         subdomain: subdomain,
@@ -147,64 +186,90 @@ export function CreateHandbookForm() {
             {
               title: "Välkommen",
               description: "Introduktion och översikt",
+              order: 1,
+              isActive: true,
               pages: [
                 {
                   title: "Översikt",
-                  content: "Välkommen till din digitala handbok! Här hittar du all viktig information om din bostadsrättsförening."
+                  content: "Välkommen till din digitala handbok! Här hittar du all viktig information om din bostadsrättsförening.",
+                  order: 1,
+                  slug: "oversikt"
                 }
               ]
             },
             {
               title: "Kontaktuppgifter",
               description: "Viktiga kontakter och information",
+              order: 2,
+              isActive: true,
               pages: [
                 {
                   title: "Förvaltning",
-                  content: "Kontaktuppgifter till förvaltningsbolaget."
+                  content: "Kontaktuppgifter till förvaltningsbolaget.",
+                  order: 1,
+                  slug: "forvaltning"
                 },
                 {
                   title: "Styrelse",
-                  content: "Här hittar du kontaktuppgifter till styrelsen."
+                  content: "Här hittar du kontaktuppgifter till styrelsen.",
+                  order: 2,
+                  slug: "styrelse"
                 }
               ]
             },
             {
               title: "Regler och ordningsföreskrifter",
               description: "Föreningens regler och bestämmelser",
+              order: 3,
+              isActive: true,
               pages: [
                 {
                   title: "Ordningsföreskrifter",
-                  content: "Föreningens ordningsföreskrifter och regler för boende."
+                  content: "Föreningens ordningsföreskrifter och regler för boende.",
+                  order: 1,
+                  slug: "ordningsforeskrifter"
                 }
               ]
             },
             {
               title: "Ekonomi",
               description: "Ekonomisk information och avgifter",
+              order: 4,
+              isActive: true,
               pages: [
                 {
                   title: "Avgifter",
-                  content: "Information om månadsavgifter och andra kostnader."
+                  content: "Information om månadsavgifter och andra kostnader.",
+                  order: 1,
+                  slug: "avgifter"
                 }
               ]
             },
             {
               title: "Underhåll och reparationer",
               description: "Information om underhåll och felanmälan",
+              order: 5,
+              isActive: true,
               pages: [
                 {
                   title: "Felanmälan",
-                  content: "Så här anmäler du fel och skador."
+                  content: "Så här anmäler du fel och skador.",
+                  order: 1,
+                  slug: "felanmalan"
                 }
               ]
             },
             {
               title: "Gemensamma utrymmen",
               description: "Tvättstuga, förråd och andra faciliteter",
+              order: 6,
+              isActive: true,
               pages: [
                 {
                   title: "Tvättstuga",
-                  content: "Regler och bokning av tvättstuga."
+                  content: "Regler och bokning av tvättstuga.",
+                  order: 1,
+                  slug: "tvattstuga"
                 }
               ]
             }
@@ -212,26 +277,48 @@ export function CreateHandbookForm() {
         }
       };
 
-      const response = await fetch('/api/stripe/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ handbookData }),
-      });
+      // Om användaren är berättigad till trial, använd trial-endpoint
+      if (isEligibleForTrialState) {
+        const response = await fetch('/api/trial/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ handbookData }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || 'Kunde inte skapa checkout-session');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || errorData.message || 'Kunde inte starta trial');
+        }
+
+        const result = await response.json();
+        
+        // Redirect till den nya handboken
+        window.location.href = result.redirectUrl;
+      } else {
+        // Annars använd Stripe checkout
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ handbookData }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || errorData.message || 'Kunde inte skapa checkout-session');
+        }
+
+        const { url } = await response.json();
+        
+        // Redirect to Stripe Checkout
+        window.location.href = url;
       }
 
-      const { url } = await response.json();
-      
-      // Redirect to Stripe Checkout
-      window.location.href = url;
-
     } catch (error) {
-      console.error("Fel vid skapande av checkout-session:", error);
+      console.error("Fel vid skapande av handbok:", error);
       
       const errorMessage = error instanceof Error ? error.message : "Ett fel uppstod vid skapande av handbok";
       setError(errorMessage);
@@ -239,37 +326,65 @@ export function CreateHandbookForm() {
     }
   };
 
+  if (isCheckingTrial) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+          <span>Kontrollerar trial-status...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Price display */}
-      <div className="bg-gray-50 p-6 rounded-lg border">
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span className="font-medium">Digital handbok</span>
-            <span className="font-semibold">{price.toFixed(2)} kr</span>
-          </div>
-          <div className="flex justify-between text-gray-500 text-sm">
-            <span>Årsabonnemang</span>
-            <span>per förening</span>
-          </div>
-          <div className="border-t my-3"></div>
-          <div className="flex justify-between font-semibold">
-            <span>Totalt</span>
-            <span>{price.toFixed(2)} kr</span>
+      {/* Trial eller Price display */}
+      {isEligibleForTrialState ? (
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <Gift className="mr-2 h-5 w-5 text-green-600" />
+              <span className="font-semibold text-green-800">30 dagars gratis trial!</span>
+            </div>
+            <div className="text-sm text-green-700">
+              Som ny användare får du prova vår tjänst gratis i 30 dagar. Ingen betalning krävs nu.
+            </div>
+            <div className="text-xs text-green-600">
+              Efter trial-perioden kan du välja att fortsätta för {price.toFixed(2)} kr/år
+            </div>
           </div>
         </div>
-        
-        {isTestMode === true && (
-          <div className="mt-4 bg-yellow-100 text-yellow-800 p-2 rounded text-sm">
-            🧪 Testläge aktivt - använd kortnummer 4242 4242 4242 4242 för test
+      ) : (
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="font-medium">Digital handbok</span>
+              <span className="font-semibold">{price.toFixed(2)} kr</span>
+            </div>
+            <div className="flex justify-between text-gray-500 text-sm">
+              <span>Årsabonnemang</span>
+              <span>per förening</span>
+            </div>
+            <div className="border-t my-3"></div>
+            <div className="flex justify-between font-semibold">
+              <span>Totalt</span>
+              <span>{price.toFixed(2)} kr</span>
+            </div>
           </div>
-        )}
-        {!isTestMode && price < 10 && (
-          <div className="bg-blue-100 text-blue-800 p-2 rounded text-sm mt-4">
-            ⚠️ OBS! Detta är ett minimalt testbelopp för verifiering av betalflödet ({price.toFixed(2)} kr)
-          </div>
-        )}
-      </div>
+          
+          {isTestMode === true && (
+            <div className="mt-4 bg-yellow-100 text-yellow-800 p-2 rounded text-sm">
+              🧪 Testläge aktivt - använd kortnummer 4242 4242 4242 4242 för test
+            </div>
+          )}
+          {!isTestMode && price < 10 && (
+            <div className="bg-blue-100 text-blue-800 p-2 rounded text-sm mt-4">
+              ⚠️ OBS! Detta är ett minimalt testbelopp för verifiering av betalflödet ({price.toFixed(2)} kr)
+            </div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -337,13 +452,18 @@ export function CreateHandbookForm() {
 
         <Button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          className={`w-full text-white ${isEligibleForTrialState ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
           disabled={isLoading || isSubdomainAvailable === false}
         >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Förbereder betalning...
+              {isEligibleForTrialState ? 'Startar gratis trial...' : 'Förbereder betalning...'}
+            </>
+          ) : isEligibleForTrialState ? (
+            <>
+              <Gift className="mr-2 h-4 w-4" />
+              Starta 30 dagars gratis trial
             </>
           ) : (
             'Gå vidare till betalning (2490 kr/år)'
@@ -351,7 +471,7 @@ export function CreateHandbookForm() {
         </Button>
         
         <p className="text-xs text-gray-500 text-center">
-          Efter betalning kommer din handbok att vara tillgänglig på{" "}
+          Efter {isEligibleForTrialState ? 'trial-start' : 'betalning'} kommer din handbok att vara tillgänglig på{" "}
           <span className="font-medium">handbok.org/handbook/{subdomain || 'din-förening'}</span>
         </p>
       </form>
