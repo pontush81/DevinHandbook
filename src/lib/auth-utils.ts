@@ -7,7 +7,7 @@ import { Database } from '@/types/supabase';
  * Hämtar en session för servern baserad på cookies
  */
 export async function getServerSession() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   
   // Skapa en Supabase-klient för servern
   const supabase = createServerClient(

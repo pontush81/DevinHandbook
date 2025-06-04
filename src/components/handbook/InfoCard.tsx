@@ -10,7 +10,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ card }) => {
   
   return (
     <div className={`
-      ${styles.bg} ${styles.border} border rounded-xl p-4 
+      ${styles.bg} rounded-xl p-4 
       hover:shadow-sm transition-shadow duration-200
     `}>
       <div className="flex items-start gap-3">

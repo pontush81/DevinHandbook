@@ -17,6 +17,7 @@ Vi har ersatt den tidigare markdown-editorn med Editor.js, en kraftfull block-ba
 - **Avdelare**: Visuella sektionsavdelare
 - **Tabeller**: Interaktiva tabeller
 - **Länkar**: Automatisk förhandsvisning av länkar
+- **🆕 Bilder**: Bilduppladdning med automatisk storlekanpassning och bildtexter
 
 ### 🎨 Inline-formattering
 - **Fet text**: Markera och formatera text som fet
@@ -93,6 +94,48 @@ function MyMarkdownEditor() {
       placeholder="Skriv markdown..."
     />
   );
+}
+```
+
+### 📸 Bilduppladdning
+EditorJS stöder nu fullständig bilduppladdning via Supabase Storage:
+
+#### Funktioner:
+- **Drag & Drop**: Dra bilder direkt till editorn
+- **Filväljare**: Klicka för att välja bilder från datorn
+- **Bildtexter**: Lägg till valfria bildtexter
+- **Auto-optimering**: Bilder lagras säkert i Supabase Storage
+- **Responsive**: Bilder anpassas automatiskt för olika skärmstorlekar
+
+#### Stödda format:
+- JPEG (.jpg, .jpeg)
+- PNG (.png)
+- GIF (.gif)
+- WebP (.webp)
+- Max filstorlek: 5MB
+
+#### Användning:
+1. Tryck `/` i editorn för att öppna block-menyn
+2. Välj "Image" eller skriv "image"
+3. Klicka "Välj bild..." eller dra en bild till området
+4. Lägg till en bildtext (valfritt)
+
+```typescript
+// Bildblock sparas i detta format:
+{
+  type: "image",
+  data: {
+    file: {
+      url: "https://your-supabase-url.com/storage/v1/object/public/handbook_files/images/filename.jpg",
+      name: "original-filename.jpg",
+      size: 1234567,
+      type: "image/jpeg"
+    },
+    caption: "Din bildtext här",
+    withBorder: false,
+    withBackground: false,
+    stretched: false
+  }
 }
 ```
 
@@ -234,106 +277,4 @@ Viktiga klasser:
 ### Från markdown-editor
 Din befintliga kod behöver inga ändringar om du använder `MarkdownEditor`-komponenten:
 
-```tsx
-// Detta fortsätter att fungera som förut
-<MarkdownEditor
-  content={markdownString}
-  onChange={setMarkdownString}
-/>
 ```
-
-### Till EditorJS direkt
-För nya implementationer, använd direkt `EditorJSComponent`:
-
-```tsx
-// Ny, förbättrad editor
-<EditorJSComponent
-  content={editorData}
-  onChange={setEditorData}
-/>
-```
-
-## Testing
-
-Komponenten är fullständigt testad med Jest och React Testing Library:
-
-```bash
-npm test EditorJSComponent
-```
-
-Tester inkluderar:
-- Rendering av komponenten
-- Tab-switching mellan edit och preview
-- Hjälpfunktionalitet
-- Mobilresponsivitet
-- Content-konvertering
-- Error handling
-
-## Performance
-
-### Optimeringar
-- Lazy loading av Editor.js-verktyg
-- Memoized konverteringsfunktioner
-- Optimerad re-rendering
-- Mobile-först approach för responsivitet
-
-### Minnesanvändning
-Editor.js instanser rensas upp automatiskt när komponenten unmountas för att förhindra minnesläckor.
-
-## Troubleshooting
-
-### Vanliga problem
-
-#### Editor laddas inte
-```typescript
-// Kontrollera att alla dependencies är installerade
-npm install @editorjs/editorjs @editorjs/header @editorjs/list
-```
-
-#### Styling ser fel ut
-Kontrollera att CSS-filerna är importerade korrekt i `globals.css`.
-
-#### TypeScript-fel
-Använd de definierade typerna i `src/types/editorjs.ts`.
-
-### Debug-tips
-```typescript
-// Aktivera debug-läge
-const editor = new EditorJS({
-  // ... andra inställningar
-  logLevel: 'VERBOSE'
-});
-```
-
-## Framtida utveckling
-
-### Planerade funktioner
-- [ ] Bilduppladdning via Supabase Storage
-- [ ] Länkförhandsvisning API
-- [ ] Custom block-typer för handboken
-- [ ] Real-time collaboration
-- [ ] Version history
-- [ ] Export till PDF/Word
-
-### Utbyggnadsmöjligheter
-- Custom plugins för specifika behov
-- Integration med AI för textförbättringar
-- Avancerad formattering (tabeller, matematiska formler)
-- Kommentarssystem
-
-## Support
-
-För frågor och support:
-1. Kontrollera denna dokumentation
-2. Se Editor.js officiella dokumentation: https://editorjs.io/
-3. Öppna en issue i projektets repository
-
-## Changelog
-
-### Version 1.0.0
-- Initial implementation av Editor.js
-- Ersatt markdown-editor
-- Full bakåtkompatibilitet
-- Responsiv design
-- Komplett testsvit
-- Dokumentation 

@@ -28,45 +28,35 @@ jest.mock('@editorjs/editorjs', () => {
 // Mock all the Editor.js tools
 jest.mock('@editorjs/header', () => ({}));
 jest.mock('@editorjs/list', () => ({}));
-jest.mock('@editorjs/paragraph', () => ({}));
 jest.mock('@editorjs/quote', () => ({}));
+jest.mock('@editorjs/code', () => ({}));
+jest.mock('@editorjs/delimiter', () => ({}));
+jest.mock('@editorjs/table', () => ({}));
 jest.mock('@editorjs/link', () => ({}));
 jest.mock('@editorjs/image', () => ({}));
-jest.mock('@editorjs/checklist', () => ({}));
-jest.mock('@editorjs/code', () => ({}));
-jest.mock('@editorjs/table', () => ({}));
-jest.mock('@editorjs/delimiter', () => ({}));
-jest.mock('@editorjs/warning', () => ({}));
 jest.mock('@editorjs/inline-code', () => ({}));
 jest.mock('@editorjs/marker', () => ({}));
 jest.mock('@editorjs/underline', () => ({}));
+jest.mock('@editorjs/warning', () => ({}));
+jest.mock('@editorjs/attaches', () => ({}));
 
 describe('EditorJSComponent', () => {
   const mockOnChange = jest.fn();
-  
+
   const defaultProps = {
-    content: 'Test content',
+    content: { blocks: [] } as OutputData,
     onChange: mockOnChange,
-    placeholder: 'Start writing...',
-    className: 'test-class',
-    disabled: false,
-    readOnly: false
+    className: 'test-class'
   };
 
   beforeEach(() => {
-    mockOnChange.mockClear();
+    jest.clearAllMocks();
   });
 
   it('renders without crashing', () => {
     render(<EditorJSComponent {...defaultProps} />);
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
-  });
-
-  it('shows edit and preview tabs', () => {
-    render(<EditorJSComponent {...defaultProps} />);
-    
-    expect(screen.getByRole('tab', { name: /redigera edit/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /förhandsgranska preview/i })).toBeInTheDocument();
+    // Check for the editor container instead of tablist
+    expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
   });
 
   it('shows help button', () => {
@@ -87,42 +77,43 @@ describe('EditorJSComponent', () => {
     expect(screen.queryByRole('button', { name: /spara/i })).not.toBeInTheDocument();
   });
 
+  it('shows help content with document upload information', async () => {
+    render(<EditorJSComponent {...defaultProps} />);
+    
+    const helpButton = screen.getByRole('button', { name: /hjälp/i });
+    fireEvent.click(helpButton);
+    
+    // Check for help content including document upload
+    expect(screen.getByText(/kortkommandon & funktioner/i)).toBeInTheDocument();
+    expect(screen.getByText(/bilder: stöder jpeg, png, gif, webp/i)).toBeInTheDocument();
+    expect(screen.getByText(/dokument: stöder pdf, word, excel, powerpoint, text, csv/i)).toBeInTheDocument();
+  });
+
   it('toggles help content when help button is clicked', async () => {
     render(<EditorJSComponent {...defaultProps} />);
     
     const helpButton = screen.getByRole('button', { name: /hjälp/i });
     
     // Help should not be visible initially
-    expect(screen.queryByText(/editor\.js tips/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/kortkommandon & funktioner/i)).not.toBeInTheDocument();
     
     // Click help button
     fireEvent.click(helpButton);
     
     // Help should now be visible
-    expect(screen.getByText(/editor\.js tips/i)).toBeInTheDocument();
+    expect(screen.getByText(/kortkommandon & funktioner/i)).toBeInTheDocument();
     
     // Click again to hide
     fireEvent.click(helpButton);
     
     // Help should be hidden again
-    expect(screen.queryByText(/editor\.js tips/i)).not.toBeInTheDocument();
-  });
-
-  it('starts with edit tab active', () => {
-    render(<EditorJSComponent {...defaultProps} />);
-    
-    const editTab = screen.getByRole('tab', { name: /redigera edit/i });
-    const previewTab = screen.getByRole('tab', { name: /förhandsgranska preview/i });
-    
-    // Edit tab should be active initially
-    expect(editTab).toHaveAttribute('data-state', 'active');
-    expect(previewTab).toHaveAttribute('data-state', 'inactive');
+    expect(screen.queryByText(/kortkommandon & funktioner/i)).not.toBeInTheDocument();
   });
 
   it('shows loading state initially', () => {
     render(<EditorJSComponent {...defaultProps} />);
     
-    expect(screen.getByText(/laddar editor/i)).toBeInTheDocument();
+    expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
   });
 
   it('applies custom className', () => {
@@ -148,21 +139,21 @@ describe('EditorJSComponent', () => {
     render(<EditorJSComponent {...defaultProps} content={editorData} />);
     
     // Component should render without errors
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
   });
 
   it('handles string content input', () => {
     render(<EditorJSComponent {...defaultProps} content="# Test Header\nTest content" />);
     
     // Component should render without errors
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
   });
 
   it('handles empty content', () => {
     render(<EditorJSComponent {...defaultProps} content="" />);
     
     // Component should render without errors
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
   });
 
   it('handles disabled state', () => {
@@ -172,13 +163,12 @@ describe('EditorJSComponent', () => {
     expect(saveButton).toBeDisabled();
   });
 
-  it('shows edit panel when on edit tab', () => {
+  it('shows editor container', () => {
     render(<EditorJSComponent {...defaultProps} />);
     
-    // Should show edit content by default
-    const editPanel = screen.getByRole('tabpanel', { name: /redigera edit/i });
-    expect(editPanel).toBeInTheDocument();
-    expect(editPanel).toHaveAttribute('data-state', 'active');
+    // Should show the editor container
+    const editorContainer = document.querySelector('.editor-js-container');
+    expect(editorContainer).toBeInTheDocument();
   });
 
   describe('Content conversion', () => {
@@ -186,21 +176,21 @@ describe('EditorJSComponent', () => {
       render(<EditorJSComponent {...defaultProps} content="# Header 1\n## Header 2" />);
       
       // Should render without throwing errors
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
     });
 
     it('converts markdown lists to EditorJS format', () => {
       render(<EditorJSComponent {...defaultProps} content="- Item 1\n- Item 2\n1. Numbered item" />);
       
       // Should render without throwing errors
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
     });
 
     it('converts markdown quotes to EditorJS format', () => {
       render(<EditorJSComponent {...defaultProps} content="> This is a quote" />);
       
       // Should render without throwing errors
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
     });
   });
 
@@ -227,7 +217,7 @@ describe('EditorJSComponent', () => {
       render(<EditorJSComponent {...defaultProps} />);
       
       // Should still render the basic structure
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
     });
   });
 
@@ -251,9 +241,19 @@ describe('EditorJSComponent', () => {
       render(<EditorJSComponent {...defaultProps} />);
       
       // The component should not crash even if there are save errors
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
       
       consoleSpy.mockRestore();
+    });
+
+    it('shows image support in help text', () => {
+      render(<EditorJSComponent {...defaultProps} />);
+      
+      const helpButton = screen.getByRole('button', { name: /hjälp/i });
+      fireEvent.click(helpButton);
+      
+      // Should show information about image support
+      expect(screen.getByText(/bilder: stöder jpeg, png, gif, webp \(max 5mb\)/i)).toBeInTheDocument();
     });
   });
 }); 

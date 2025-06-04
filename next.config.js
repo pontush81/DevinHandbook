@@ -6,12 +6,65 @@ const nextConfig = {
     unoptimized: true,
   },
   
-  // Absolut minimal config för att undvika konflikter
+  // Webpack configuration for better stability and development experience
+  webpack: (config, { dev, isServer }) => {
+    // Improve module resolution stability
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+      crypto: false,
+    };
+    
+    // Fix for EditorJS and other client-side libraries
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Ensure consistent module resolution
+        '@editorjs/editorjs': require.resolve('@editorjs/editorjs'),
+      };
+    }
+    
+    // Optimize for development
+    if (dev) {
+      // Reduce webpack noise and improve error reporting
+      config.stats = 'errors-warnings';
+      config.infrastructureLogging = {
+        level: 'error',
+      };
+    }
+    
+    return config;
+  },
+  
+  // Experimental features with careful selection
+  experimental: {
+    // Clean experimental config
+  },
+  
+  // Turbopack configuration (stable) - only in development
+  ...(process.env.NODE_ENV === 'development' && {
+    turbopack: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    }
+  }),
+  
+  // Dev optimization
+  onDemandEntries: {
+    // Period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // Number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
+  },
+  
+  // Basic config för att undvika konflikter
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
-  
-  // Avaktivera webpack-optimeringar i produktion för att undvika problem
-  productionBrowserSourceMaps: false,
   
   // Kompilering och byggkonfiguration
   typescript: {

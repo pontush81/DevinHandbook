@@ -11,12 +11,14 @@ interface SinglePageViewProps {
   page: Page;
   isEditMode?: boolean;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
+  handbookId?: string;
 }
 
 export function SinglePageView({ 
   page, 
   isEditMode = false, 
-  onUpdatePage 
+  onUpdatePage,
+  handbookId
 }: SinglePageViewProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -184,6 +186,7 @@ export function SinglePageView({
                       onChange={handleContentChange}
                       readOnly={false}
                       placeholder="Börja skriva innehållet för denna sida..."
+                      handbookId={handbookId}
                     />
                   </div>
                 </div>
@@ -192,6 +195,7 @@ export function SinglePageView({
                   content={parseEditorJSContent(page.content)}
                   onChange={() => {}}
                   readOnly={true}
+                  handbookId={handbookId}
                 />
               )}
             </div>

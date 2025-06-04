@@ -71,6 +71,7 @@ export function ContentArea({
           page={currentPage}
           isEditMode={isEditMode}
           onUpdatePage={onUpdatePage}
+          handbookId={handbookId}
         />
       </div>
     );
@@ -84,6 +85,7 @@ export function ContentArea({
           onUpdateSection={onUpdateSection}
           onUpdatePage={onUpdatePage}
           trialStatusBar={trialStatusBar}
+          handbookId={handbookId}
         />
       </div>
     );

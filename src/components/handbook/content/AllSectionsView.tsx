@@ -13,6 +13,7 @@ interface AllSectionsViewProps {
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<any>) => void;
   trialStatusBar?: React.ReactNode;
+  handbookId?: string;
 }
 
 export function AllSectionsView({ 
@@ -20,7 +21,8 @@ export function AllSectionsView({
   isEditMode = false, 
   onUpdateSection,
   onUpdatePage,
-  trialStatusBar
+  trialStatusBar,
+  handbookId
 }: AllSectionsViewProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
@@ -269,6 +271,7 @@ export function AllSectionsView({
                             onChange={(data) => handleSectionContentChange(section.id, data)}
                             readOnly={false}
                             placeholder="Skriv en beskrivning för denna sektion..."
+                            handbookId={handbookId}
                           />
                         </div>
                       </div>
@@ -278,6 +281,7 @@ export function AllSectionsView({
                           content={parseEditorJSContent(section.content)}
                           onChange={() => {}} 
                           readOnly={true}
+                          handbookId={handbookId}
                         />
                       </div>
                     )}
@@ -349,12 +353,14 @@ export function AllSectionsView({
                                   onChange={(data) => handlePageContentChange(page.id, data)}
                                   readOnly={false}
                                   placeholder="Skriv innehållet för denna sida..."
+                                  handbookId={handbookId}
                                 />
                               ) : (
                                 <EditorJSComponent
                                   content={parseEditorJSContent(page.content)}
                                   onChange={() => {}}
                                   readOnly={true}
+                                  handbookId={handbookId}
                                 />
                               )}
                               
