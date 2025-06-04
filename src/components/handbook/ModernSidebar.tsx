@@ -12,7 +12,9 @@ import {
   Recycle, 
   Car,
   Heart,
-  BookOpen
+  BookOpen,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { HandbookSection } from '@/types/handbook';
 import { getIconComponent } from '@/lib/icon-utils';
@@ -21,6 +23,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -34,80 +37,102 @@ interface ModernSidebarProps {
   onSectionSelect?: (sectionId: string) => void;
 }
 
-// Svenska menyalternativ med ikoner
-const menuItems = [
-  {
-    title: "Välkommen",
+// Enhanced menu items with categories
+const menuCategories = {
+  welcome: {
+    title: "Komma igång",
     icon: Home,
-    keywords: ["välkommen", "hem", "start", "översikt"],
-    color: "text-blue-600"
+    color: "text-green-600",
+    bgColor: "bg-green-50",
+    borderColor: "border-green-200",
+    keywords: ['välkommen', 'översikt', 'intro', 'start', 'komma igång']
   },
-  {
-    title: "Kontaktuppgifter och styrelse", 
-    icon: Users,
-    keywords: ["kontakt", "styrelse", "telefon", "email"],
-    color: "text-green-600"
+  information: {
+    title: "Information & Kontakt",
+    icon: Info,
+    color: "text-blue-600", 
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-200",
+    keywords: ['kontakt', 'styrelse', 'information', 'telefon', 'mail']
   },
-  {
-    title: "Felanmälan",
-    icon: Wrench, 
-    keywords: ["felanmälan", "fel", "reparation", "underhåll"],
-    color: "text-orange-600"
-  },
-  {
-    title: "Ekonomi och avgifter",
-    icon: DollarSign,
-    keywords: ["ekonomi", "avgift", "kostnad", "budget"],
-    color: "text-purple-600"
-  },
-  {
-    title: "Trivselregler", 
-    icon: Heart,
-    keywords: ["trivsel", "regler", "ordning", "gemenskap"],
-    color: "text-pink-600"
-  },
-  {
-    title: "Stadgar och årsredovisning",
-    icon: FileText,
-    keywords: ["stadgar", "årsredovisning", "dokument", "juridik"],
-    color: "text-indigo-600"
-  },
-  {
-    title: "Renoveringar och underhåll",
-    icon: Building,
-    keywords: ["renovering", "underhåll", "byggnation", "projekt"],
-    color: "text-amber-600"
-  },
-  {
-    title: "Bopärmar och regler",
-    icon: BookOpen,
-    keywords: ["bopärm", "regler", "information", "guide"],
-    color: "text-teal-600"
-  },
-  {
-    title: "Sopsortering och återvinning", 
-    icon: Recycle,
-    keywords: ["sopsortering", "återvinning", "miljö", "avfall"],
-    color: "text-emerald-600"
-  },
-  {
-    title: "Parkering och garage",
-    icon: Car,
-    keywords: ["parkering", "garage", "bil", "plats"],
-    color: "text-slate-600"
+  practical: {
+    title: "Praktisk information",
+    icon: Wrench,
+    color: "text-purple-600",
+    bgColor: "bg-purple-50", 
+    borderColor: "border-purple-200",
+    keywords: ['regler', 'rutiner', 'praktisk', 'vardagsliga']
   }
+};
+
+const menuItems = [
+  // Welcome/Overview
+  { title: "Välkommen", icon: Home, keywords: ["välkommen", "översikt", "hem", "start"], color: "text-green-600", category: "welcome" },
+  { title: "Översikt", icon: BookOpen, keywords: ["översikt", "snabbfakta", "sammanfattning"], color: "text-green-600", category: "welcome" },
+  
+  // Contact & Information  
+  { title: "Kontakt", icon: Phone, keywords: ["kontakt", "telefon", "telefonnummer"], color: "text-blue-600", category: "information" },
+  { title: "Styrelse", icon: Users, keywords: ["styrelse", "personer", "ledning", "ansvariga"], color: "text-blue-600", category: "information" },
+  { title: "Information", icon: Info, keywords: ["information", "info", "detaljer"], color: "text-blue-600", category: "information" },
+  
+  // Practical
+  { title: "Ekonomi", icon: DollarSign, keywords: ["ekonomi", "avgift", "kostnad", "betalning"], color: "text-purple-600", category: "practical" },
+  { title: "Förvaltning", icon: Building, keywords: ["förvaltning", "administration", "hantering"], color: "text-purple-600", category: "practical" },
+  { title: "Felanmälan", icon: Wrench, keywords: ["fel", "reparation", "problem", "vaktmästare"], color: "text-orange-600", category: "practical" },
+  { title: "Regler", icon: FileText, keywords: ["regler", "trivsel", "ordning", "stadgar"], color: "text-purple-600", category: "practical" },
+  { title: "Renovering", icon: Building, keywords: ["renovering", "underhåll", "byggnation"], color: "text-gray-600", category: "practical" },
+  { title: "Sopsortering", icon: Recycle, keywords: ["sopsortering", "återvinning", "avfall"], color: "text-green-600", category: "practical" },
+  { title: "Parkering", icon: Car, keywords: ["parkering", "garage", "bil", "fordon"], color: "text-gray-600", category: "practical" },
+  { title: "Trivsel", icon: Heart, keywords: ["trivsel", "gemenskap", "grannar"], color: "text-pink-600", category: "practical" },
 ];
+
+// Funktion för att gruppera sektioner per kategori
+const groupSectionsByCategory = (sections: HandbookSection[]) => {
+  const categorized = {
+    welcome: [] as HandbookSection[],
+    information: [] as HandbookSection[],
+    practical: [] as HandbookSection[]
+  };
+
+  sections.forEach(section => {
+    const sectionTitle = section.title.toLowerCase();
+    let assigned = false;
+
+    // Check welcome category
+    if (menuCategories.welcome.keywords.some(keyword => sectionTitle.includes(keyword)) || section.order_index <= 2) {
+      categorized.welcome.push(section);
+      assigned = true;
+    }
+    // Check information category  
+    else if (menuCategories.information.keywords.some(keyword => sectionTitle.includes(keyword))) {
+      categorized.information.push(section);
+      assigned = true;
+    }
+
+    // If not assigned to welcome or information, put in practical
+    if (!assigned) {
+      categorized.practical.push(section);
+    }
+  });
+
+  return categorized;
+};
 
 // Funktion för att matcha sektion med menyalternativ
 const getMenuItemForSection = (section: HandbookSection) => {
   // Om sektionen har en specifik ikon vald, använd den
   if (section.icon) {
     const IconComponent = getIconComponent(section.icon);
+    const matchedCategory = Object.values(menuCategories).find(cat => 
+      cat.keywords.some(keyword => section.title.toLowerCase().includes(keyword))
+    );
+    
     return {
       title: section.title,
       icon: IconComponent,
       keywords: [],
-      color: "text-blue-600" // Standard färg för custom ikoner
+      color: matchedCategory?.color || "text-gray-600",
+      category: matchedCategory ? Object.keys(menuCategories).find(key => menuCategories[key] === matchedCategory) : "practical"
     };
   }
   
@@ -120,7 +145,8 @@ const getMenuItemForSection = (section: HandbookSection) => {
     title: section.title,
     icon: BookOpen,
     keywords: [],
-    color: "text-gray-600"
+    color: "text-gray-600",
+    category: "practical"
   };
 };
 
@@ -141,54 +167,94 @@ export function ModernSidebar({
     setOpenMobile(false); // Stäng mobil-meny vid navigation
   };
 
+  const categorizedSections = groupSectionsByCategory(sections);
+
+  const renderSectionGroup = (categoryKey: keyof typeof menuCategories, sections: HandbookSection[]) => {
+    if (sections.length === 0) return null;
+    
+    const category = menuCategories[categoryKey];
+    const CategoryIcon = category.icon;
+
+    return (
+      <SidebarGroup key={categoryKey}>
+        <SidebarGroupLabel className={`text-xs font-semibold uppercase tracking-wider ${category.color} flex items-center gap-2 mb-2`}>
+          <CategoryIcon className="h-3 w-3" />
+          {category.title}
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {sections.map((section) => {
+              const menuItem = getMenuItemForSection(section);
+              const IconComponent = menuItem.icon;
+              const pageCount = section.pages?.length || 0;
+
+              return (
+                <SidebarMenuItem key={section.id}>
+                  <SidebarMenuButton
+                    onClick={() => handleSectionClick(section.id)}
+                    tooltip={section.description || section.title}
+                    className={`group hover:${category.bgColor} hover:${category.borderColor} transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50`}
+                  >
+                    <IconComponent 
+                      className={`h-4 w-4 ${menuItem.color} group-hover:scale-110 transition-transform duration-200`} 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-900 truncate block">
+                        {section.title}
+                      </span>
+                      {pageCount > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {pageCount} sidor
+                        </span>
+                      )}
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
+
   return (
-    <Sidebar variant="sidebar" collapsible="offcanvas" className="mt-16">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {sections.map((section) => {
-                const menuItem = getMenuItemForSection(section);
-                const IconComponent = menuItem.icon;
+    <Sidebar variant="sidebar" collapsible="offcanvas" className="mt-16 border-r border-gray-200">
+      <SidebarContent className="bg-gray-50/50">
+        <div className="p-4 border-b border-gray-200 bg-white">
+          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-blue-600" />
+            Handbok Navigation
+          </h2>
+          <p className="text-xs text-gray-600 mt-1">
+            {sections.length} sektioner tillgängliga
+          </p>
+        </div>
 
-                return (
-                  <SidebarMenuItem key={section.id}>
-                    <SidebarMenuButton
-                      onClick={() => handleSectionClick(section.id)}
-                      tooltip={section.description || section.title}
-                      className="group hover:bg-accent hover:text-accent-foreground transition-colors duration-200 text-sm py-2 px-3 rounded-md cursor-pointer touch-manipulation min-h-[44px] flex items-center gap-3 w-full"
-                    >
-                      <IconComponent 
-                        className={`h-4 w-4 ${menuItem.color} group-hover:scale-110 transition-transform duration-200`} 
-                      />
-                      <span className="font-medium flex-1">{section.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <div className="flex-1 overflow-auto py-4 space-y-6">
+          {renderSectionGroup('welcome', categorizedSections.welcome)}
+          {renderSectionGroup('information', categorizedSections.information)}  
+          {renderSectionGroup('practical', categorizedSections.practical)}
+        </div>
 
-        {sections.length === 0 && (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <BookOpen className="h-12 w-12 text-sidebar-muted-foreground mb-3" />
-                <p className="text-sm text-sidebar-muted-foreground mb-2">
-                  Inga sektioner än
-                </p>
-                <p className="text-xs text-sidebar-muted-foreground">
-                  Innehåll kommer att visas här
-                </p>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {/* Footer with summary */}
+        <div className="p-4 border-t border-gray-200 bg-white">
+          <div className="text-xs text-gray-500 space-y-1">
+            <div className="flex justify-between">
+              <span>Totalt sektioner:</span>
+              <span className="font-medium">{sections.length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Totalt sidor:</span>
+              <span className="font-medium">{sections.reduce((acc, s) => acc + (s.pages?.length || 0), 0)}</span>
+            </div>
+          </div>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
 }
 
-// Export trigger för att använda i header
+// Export the trigger for convenience
 export { SidebarTrigger } from "@/components/ui/sidebar";
