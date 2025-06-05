@@ -24,7 +24,10 @@ export function AllSectionsView({
   trialStatusBar,
   handbookId
 }: AllSectionsViewProps) {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  // Initialize with all sections expanded for better UX
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(sections.map(section => section.id))
+  );
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
   const [editingPages, setEditingPages] = useState<Set<string>>(new Set());
   const [sectionContents, setSectionContents] = useState<Map<string, any>>(new Map());
@@ -109,7 +112,7 @@ export function AllSectionsView({
 
     return (
       <div className="category-section">
-        <div className="space-y-6">
+        <div className="space-y-3">
           {sections.map((section, index) => (
             <div key={section.id} id={`section-${section.id}`} className="section-card">
               {/* Section status indicator */}
@@ -292,23 +295,8 @@ export function AllSectionsView({
       {/* Content with enhanced styling */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto p-6">
-          {/* Breadcrumb Navigation */}
-          <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-            <ol className="breadcrumb-list">
-              <li>
-                <Home className="h-4 w-4" />
-              </li>
-              <li className="breadcrumb-separator">></li>
-              <li>
-                <BookOpen className="h-4 w-4" />
-              </li>
-              <li className="breadcrumb-separator">></li>
-              <li className="breadcrumb-current">Handbok översikt</li>
-            </ol>
-          </nav>
-
           {/* Section separators between categories */}
-          <div className="sections-container space-y-8">
+          <div className="sections-container space-y-4">
             {/* Welcome & Overview Category */}
             {renderSectionCategory(
               "Komma igång",
@@ -317,20 +305,12 @@ export function AllSectionsView({
               welcomeSections
             )}
 
-            {welcomeSections.length > 0 && informationSections.length > 0 && (
-              <div className="section-divider" />
-            )}
-
             {/* Information Category */}
             {renderSectionCategory(
               "Kontakt & Information", 
               "Viktiga kontaktuppgifter och organisationsinformation",
               <BookOpen className="h-5 w-5" />,
               informationSections
-            )}
-
-            {informationSections.length > 0 && practicalSections.length > 0 && (
-              <div className="section-divider" />
             )}
 
             {/* Practical Category */}

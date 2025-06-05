@@ -748,43 +748,56 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
               // Clear any selected page to show full overview
               setCurrentPageId(undefined);
               
-              // Scroll to the section within the content container
+              // Wait a moment for any content changes to settle, then scroll
               setTimeout(() => {
                 const sectionElement = document.getElementById(`section-${sectionId}`);
+                console.log('🔍 Looking for section:', `section-${sectionId}`);
                 
-                // Try multiple possible scroll containers
-                let scrollContainer = document.querySelector('.content-area-scroll .overflow-auto');
-                if (!scrollContainer) {
-                  scrollContainer = document.querySelector('.content-area-scroll');
-                }
-                if (!scrollContainer) {
-                  scrollContainer = document.querySelector('.main-content-scrollable');
-                }
-                
-                if (sectionElement && scrollContainer) {
-                  console.log('📍 Scrolling to section:', sectionId);
-                  console.log('🎯 Found scroll container:', scrollContainer.className);
+                if (sectionElement) {
+                  console.log('✅ Found section element:', sectionElement);
                   
-                  // Calculate offset for header within the scroll container
-                  const containerRect = scrollContainer.getBoundingClientRect();
-                  const sectionRect = sectionElement.getBoundingClientRect();
-                  const scrollTop = scrollContainer.scrollTop;
-                  const targetPosition = scrollTop + (sectionRect.top - containerRect.top) - 80;
+                  // Try to find the main scrollable content area
+                  const scrollableContainers = [
+                    document.querySelector('.content-area-scroll'),
+                    document.querySelector('.main-content-scrollable'),
+                    document.querySelector('[data-sidebar="inset"]'),
+                    document.querySelector('.overflow-auto')
+                  ].filter(Boolean);
                   
-                  scrollContainer.scrollTo({
-                    top: targetPosition,
-                    behavior: 'smooth'
-                  });
+                  console.log('🔍 Available scroll containers:', scrollableContainers.length);
+                  
+                  if (scrollableContainers.length > 0) {
+                    const scrollContainer = scrollableContainers[0];
+                    console.log('🎯 Using scroll container:', scrollContainer.className || scrollContainer.tagName);
+                    
+                    // Get the element's position relative to the scroll container
+                    const containerTop = scrollContainer.getBoundingClientRect().top;
+                    const elementTop = sectionElement.getBoundingClientRect().top;
+                    const relativeTop = elementTop - containerTop + scrollContainer.scrollTop;
+                    
+                    // Scroll with some offset for better visibility
+                    const scrollTarget = Math.max(0, relativeTop - 80);
+                    
+                    console.log('📍 Scrolling to position:', scrollTarget);
+                    scrollContainer.scrollTo({
+                      top: scrollTarget,
+                      behavior: 'smooth'
+                    });
+                  } else {
+                    // Simple fallback - just scroll element into view
+                    console.log('📍 Using simple scrollIntoView');
+                    sectionElement.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start'
+                    });
+                  }
                 } else {
-                  console.warn('🚨 Could not find scroll container or section element');
-                  console.log('Available containers:', {
-                    contentAreaScroll: !!document.querySelector('.content-area-scroll'),
-                    overflowAuto: !!document.querySelector('.overflow-auto'),
-                    mainContentScrollable: !!document.querySelector('.main-content-scrollable'),
-                    sectionElement: !!sectionElement
-                  });
+                  console.error('❌ Could not find section element:', `section-${sectionId}`);
+                  // Let's see what sections are actually available
+                  const allSections = document.querySelectorAll('[id^="section-"]');
+                  console.log('Available sections:', Array.from(allSections).map(el => el.id));
                 }
-              }, 100);
+              }, 300);
             }}
             editMode={isEditMode}
             onEditSection={(sectionId) => {

@@ -169,72 +169,42 @@ export function ModernSidebar({
 
   const categorizedSections = groupSectionsByCategory(sections);
 
-  const renderSectionGroup = (categoryKey: keyof typeof menuCategories, sections: HandbookSection[]) => {
-    if (sections.length === 0) return null;
-    
-    const category = menuCategories[categoryKey];
-
-    return (
-      <SidebarGroup key={categoryKey}>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {sections.map((section) => {
-              const menuItem = getMenuItemForSection(section);
-              const IconComponent = menuItem.icon;
-              const pageCount = section.pages?.length || 0;
-
-              return (
-                <SidebarMenuItem key={section.id}>
-                  <SidebarMenuButton
-                    onClick={() => handleSectionClick(section.id)}
-                    tooltip={section.description || section.title}
-                    className={`group hover:${category.bgColor} hover:${category.borderColor} transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50`}
-                  >
-                    <IconComponent 
-                      className={`h-4 w-4 ${menuItem.color} group-hover:scale-110 transition-transform duration-200`} 
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-900 truncate block">
-                        {section.title}
-                      </span>
-                      {pageCount > 0 && (
-                        <span className="text-xs text-gray-500">
-                          {pageCount} sidor
-                        </span>
-                      )}
-                    </div>
-                    <ChevronRight className="h-3 w-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    );
-  };
-
   return (
     <Sidebar variant="sidebar" collapsible="offcanvas" className="mt-16 border-r border-gray-200">
       <SidebarContent className="bg-gray-50/50">
-        <div className="flex-1 overflow-auto py-4 space-y-6">
-          {renderSectionGroup('welcome', categorizedSections.welcome)}
-          {renderSectionGroup('information', categorizedSections.information)}  
-          {renderSectionGroup('practical', categorizedSections.practical)}
-        </div>
+        <div className="flex-1 overflow-auto py-4">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {[...categorizedSections.welcome, ...categorizedSections.information, ...categorizedSections.practical].map((section) => {
+                  const menuItem = getMenuItemForSection(section);
+                  const IconComponent = menuItem.icon;
+                  const categoryKey = menuItem.category as keyof typeof menuCategories;
+                  const category = menuCategories[categoryKey];
 
-        {/* Footer with summary */}
-        <div className="p-4 border-t border-gray-200 bg-white">
-          <div className="text-xs text-gray-500 space-y-1">
-            <div className="flex justify-between">
-              <span>Totalt sektioner:</span>
-              <span className="font-medium">{sections.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Totalt sidor:</span>
-              <span className="font-medium">{sections.reduce((acc, s) => acc + (s.pages?.length || 0), 0)}</span>
-            </div>
-          </div>
+                  return (
+                    <SidebarMenuItem key={section.id}>
+                      <SidebarMenuButton
+                        onClick={() => handleSectionClick(section.id)}
+                        tooltip={section.description || section.title}
+                        className={`group hover:${category.bgColor} hover:${category.borderColor} transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50`}
+                      >
+                        <IconComponent 
+                          className={`h-4 w-4 ${menuItem.color} group-hover:scale-110 transition-transform duration-200`} 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-gray-900 truncate block">
+                            {section.title}
+                          </span>
+                        </div>
+                        <ChevronRight className="h-3 w-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </div>
       </SidebarContent>
     </Sidebar>
