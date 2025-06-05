@@ -109,16 +109,6 @@ export function AllSectionsView({
 
     return (
       <div className="category-section">
-        <div className="category-header">
-          <div className="category-icon">
-            {icon}
-          </div>
-          <div>
-            <h2 className="category-title">{title}</h2>
-            <p className="category-subtitle">{description}</p>
-          </div>
-        </div>
-
         <div className="space-y-6">
           {sections.map((section, index) => (
             <div key={section.id} id={`section-${section.id}`} className="section-card">
@@ -316,32 +306,6 @@ export function AllSectionsView({
               <li className="breadcrumb-current">Handbok översikt</li>
             </ol>
           </nav>
-
-          {/* Welcome/Hero Section */}
-          {welcomeSections.length > 0 && (
-            <div className="welcome-section-hero">
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">
-                Välkommen till handboken
-              </h1>
-              <p className="text-xl text-gray-600 mb-6">
-                Här hittar du all viktig information organiserad i tematiska sektioner
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="bg-white/70 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-semibold text-gray-900 mb-2">📋 {sections.length} Sektioner</h3>
-                  <p className="text-sm text-gray-600">Organiserat innehåll för enkel navigation</p>
-                </div>
-                <div className="bg-white/70 rounded-lg p-4 border border-green-200">
-                  <h3 className="font-semibold text-gray-900 mb-2">📄 {sections.flatMap(s => s.pages || []).length} Sidor</h3>
-                  <p className="text-sm text-gray-600">Detaljerad information och guider</p>
-                </div>
-                <div className="bg-white/70 rounded-lg p-4 border border-purple-200">
-                  <h3 className="font-semibold text-gray-900 mb-2">🔄 Aktuellt innehåll</h3>
-                  <p className="text-sm text-gray-600">Regelbundet uppdaterat</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Section separators between categories */}
           <div className="sections-container space-y-8">

@@ -173,14 +173,9 @@ export function ModernSidebar({
     if (sections.length === 0) return null;
     
     const category = menuCategories[categoryKey];
-    const CategoryIcon = category.icon;
 
     return (
       <SidebarGroup key={categoryKey}>
-        <SidebarGroupLabel className={`text-xs font-semibold uppercase tracking-wider ${category.color} flex items-center gap-2 mb-2`}>
-          <CategoryIcon className="h-3 w-3" />
-          {category.title}
-        </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {sections.map((section) => {
@@ -222,16 +217,6 @@ export function ModernSidebar({
   return (
     <Sidebar variant="sidebar" collapsible="offcanvas" className="mt-16 border-r border-gray-200">
       <SidebarContent className="bg-gray-50/50">
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-blue-600" />
-            Handbok Navigation
-          </h2>
-          <p className="text-xs text-gray-600 mt-1">
-            {sections.length} sektioner tillgängliga
-          </p>
-        </div>
-
         <div className="flex-1 overflow-auto py-4 space-y-6">
           {renderSectionGroup('welcome', categorizedSections.welcome)}
           {renderSectionGroup('information', categorizedSections.information)}  
