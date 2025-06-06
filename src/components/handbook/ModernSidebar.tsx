@@ -13,7 +13,6 @@ import {
   Car,
   Heart,
   BookOpen,
-  ChevronRight,
   Info
 } from 'lucide-react';
 import { HandbookSection } from '@/types/handbook';
@@ -197,7 +196,6 @@ export function ModernSidebar({
                             {section.title}
                           </span>
                         </div>
-                        <ChevronRight className="h-3 w-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
