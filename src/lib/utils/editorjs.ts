@@ -84,7 +84,7 @@ function convertPlainTextToEditorJS(text: string): OutputData {
  * Safely parses content string to EditorJS format
  */
 export function parseEditorJSContent(content: string | null | undefined): OutputData {
-  if (!content) {
+  if (!content || content.trim() === '') {
     return { blocks: [] };
   }
 
@@ -93,15 +93,18 @@ export function parseEditorJSContent(content: string | null | undefined): Output
     const parsed = JSON.parse(content);
     if (isValidEditorJSData(parsed)) {
       return parsed;
+    } else {
+      // If parsed but not valid EditorJS format, treat as plain text
+      return convertPlainTextToEditorJS(content);
     }
   } catch (error) {
-    // If JSON parsing fails, treat as plain text
-    console.info('Content is not JSON, converting plain text to EditorJS format');
+    // If JSON parsing fails, treat as plain text (no need to log this as it's expected)
+    // Only log if content looks like it should be JSON (starts with { or [)
+    if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+      console.warn('Content appears to be malformed JSON, treating as plain text');
+    }
     return convertPlainTextToEditorJS(content);
   }
-
-  // Fallback: if JSON parsing succeeded but data is invalid, try as plain text
-  return convertPlainTextToEditorJS(content);
 }
 
 /**

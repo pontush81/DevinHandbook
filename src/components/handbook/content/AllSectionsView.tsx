@@ -163,36 +163,63 @@ export function AllSectionsView({
                 {section.pages && section.pages.length > 0 && (
                   <div className="px-4 pb-4">
                     {section.pages.map((page) => (
-                      <div key={page.id} className="flex items-center justify-between py-2 pl-4 hover:bg-gray-50 rounded-md transition-colors">
-                        <div className="flex items-center gap-2 flex-1">
+                      <div key={page.id} className="py-3 pl-4 border-l-2 border-gray-100 ml-2">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h4 className="text-sm text-gray-700">
+                            <h4 className="text-sm font-medium text-gray-900 mb-1">
                               {page.title}
                             </h4>
                             {page.subtitle && (
-                              <p className="text-xs text-gray-400 mt-0.5">{page.subtitle}</p>
+                              <p className="text-xs text-gray-500 mb-2">{page.subtitle}</p>
+                            )}
+                            
+                            {/* Show page content preview */}
+                            {page.content && (
+                              <div className="mt-2">
+                                {editingPages.has(page.id) && isEditMode ? (
+                                  <div className="bg-gray-50 p-3 rounded-md">
+                                    <EditorJSComponent
+                                      content={parseEditorJSContent(page.content)}
+                                      onChange={(data) => handlePageContentChange(page.id, data)}
+                                      readOnly={false}
+                                      placeholder="Skriv innehållet för denna sida..."
+                                      handbookId={handbookId}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="prose prose-sm max-w-none text-gray-600">
+                                    <EditorJSComponent
+                                      content={parseEditorJSContent(page.content)}
+                                      onChange={() => {}}
+                                      readOnly={true}
+                                      handbookId={handbookId}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-2">
-                          {page.lastUpdated && (
-                            <div className="flex items-center text-xs text-gray-400">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>{page.lastUpdated}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 ml-4">
+                            {page.lastUpdated && (
+                              <div className="flex items-center text-xs text-gray-400">
+                                <Clock className="h-3 w-3 mr-1" />
+                                <span>{page.lastUpdated}</span>
+                              </div>
+                            )}
 
-                          {isEditMode && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => togglePageEdit(page.id)}
-                              className="text-xs h-6 px-1 text-gray-400 hover:text-gray-600"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          )}
+                            {isEditMode && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => togglePageEdit(page.id)}
+                                className="text-xs h-6 px-1 text-gray-400 hover:text-gray-600"
+                              >
+                                <Edit className="h-3 w-3" />
+                                {editingPages.has(page.id) ? 'Sluta' : 'Redigera'}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
