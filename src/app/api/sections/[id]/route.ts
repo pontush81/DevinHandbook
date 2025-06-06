@@ -3,13 +3,20 @@ import { getServiceSupabase } from '@/lib/supabase';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const sectionId = params.id;
+    const { id: sectionId } = await params;
     const updates = await request.json();
 
     console.log('🔄 [API] Updating section:', sectionId, 'with updates:', updates);
+
+    // Map 'content' to 'description' since sections table doesn't have content column
+    if (updates.content !== undefined) {
+      updates.description = updates.content;
+      delete updates.content;
+      console.log('📝 [API] Mapped content to description for sections table');
+    }
 
     const supabase = getServiceSupabase();
     
@@ -61,8 +68,9 @@ export async function PATCH(
     return NextResponse.json(data);
 
   } catch (error: any) {
+    const sectionId = 'unknown';
     console.error('❌ [API] Unexpected error updating section:', {
-      sectionId: params.id,
+      sectionId,
       error: error.message,
       stack: error.stack
     });

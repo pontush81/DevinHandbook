@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, createElement } from 'react';
 import { HandbookSection as Section } from '@/types/handbook';
 import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,125 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EditorJSComponent } from '@/components/ui/EditorJSComponent';
 import { parseEditorJSContent, stringifyEditorJSContent } from '@/lib/utils/editorjs';
+
+// Simple read-only content renderer for EditorJS data
+const ReadOnlyEditorContent = ({ content }: { content: any }) => {
+  if (!content || !content.blocks) {
+    return null;
+  }
+
+  return (
+    <div className="prose prose-sm max-w-none text-gray-700">
+      {content.blocks.map((block: any, index: number) => {
+        switch (block.type) {
+          case 'paragraph':
+            return (
+              <p key={block.id || index} className="mb-3 leading-relaxed break-words">
+                {block.data?.text || ''}
+              </p>
+            );
+          case 'header':
+            const level = block.data?.level || 1;
+            const headerLevel = Math.min(Math.max(level, 1), 6);
+            const headerTag = `h${headerLevel}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+            return createElement(
+              headerTag,
+              {
+                key: block.id || index,
+                className: "font-semibold text-gray-900 mb-3 mt-4"
+              },
+              block.data?.text || ''
+            );
+          case 'list':
+            const items = block.data?.items || [];
+            if (block.data?.style === 'ordered') {
+              return (
+                <ol key={block.id || index} className="list-decimal list-inside mb-3 space-y-2 ml-4">
+                  {items.map((item: any, itemIndex: number) => (
+                    <li key={itemIndex} className="text-gray-700 leading-relaxed">{item.content || item}</li>
+                  ))}
+                </ol>
+              );
+            } else {
+              return (
+                <ul key={block.id || index} className="list-disc list-inside mb-3 space-y-2 ml-4">
+                  {items.map((item: any, itemIndex: number) => (
+                    <li key={itemIndex} className="text-gray-700 leading-relaxed">{item.content || item}</li>
+                  ))}
+                </ul>
+              );
+            }
+          case 'quote':
+            return (
+              <blockquote key={block.id || index} className="border-l-4 border-gray-300 pl-4 mb-3 italic text-gray-600 bg-gray-50 py-2 rounded-r">
+                {block.data?.text || ''}
+              </blockquote>
+            );
+          case 'image':
+            return (
+              <div key={block.id || index} className="mb-4">
+                {block.data?.file?.url && (
+                  <img 
+                    src={block.data.file.url} 
+                    alt={block.data?.caption || ''} 
+                    className="max-w-full h-auto rounded shadow-sm"
+                  />
+                )}
+                {block.data?.caption && (
+                  <p className="text-sm text-gray-500 mt-2 italic text-center">{block.data.caption}</p>
+                )}
+              </div>
+            );
+          case 'attaches':
+            return (
+              <div key={block.id || index} className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">📎</span>
+                  {block.data?.file?.url ? (
+                    <a 
+                      href={block.data.file.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline text-sm font-medium"
+                    >
+                      {block.data.file.name || 'Bifogad fil'}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-gray-500">Bifogad fil</span>
+                  )}
+                </div>
+              </div>
+            );
+          default:
+            // Fallback for unknown block types - don't show JSON!
+            if (block.data?.text) {
+              return (
+                <p key={block.id || index} className="mb-3 text-gray-600 leading-relaxed">
+                  {block.data.text}
+                </p>
+              );
+            }
+            return null;
+        }
+      })}
+    </div>
+  );
+};
+
+// Helper function to get clean text summary from EditorJS content
+const getTextSummary = (content: any, maxLength: number = 100): string => {
+  if (!content || !content.blocks) return '';
+  
+  let text = '';
+  for (const block of content.blocks) {
+    if (block.data?.text) {
+      text += block.data.text + ' ';
+      if (text.length > maxLength) break;
+    }
+  }
+  
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text.trim();
+};
 
 interface AllSectionsViewProps {
   sections: Section[];
@@ -75,7 +194,8 @@ export function AllSectionsView({
     // Auto-save after 2 seconds of inactivity
     setTimeout(() => {
       const content = stringifyEditorJSContent(data);
-      onUpdateSection?.(sectionId, { content });
+      // Save as description since sections table doesn't have content column
+      onUpdateSection?.(sectionId, { description: content });
     }, 2000);
   }, [onUpdateSection]);
 
@@ -112,15 +232,20 @@ export function AllSectionsView({
                       <h3 className="text-sm font-medium text-gray-900">
                         {section.title}
                       </h3>
-                      {section.description && (
+                      {section.description && !section.description.startsWith('{') && (
                         <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
                           {section.description}
+                        </p>
+                      )}
+                      {section.description && section.description.startsWith('{') && (
+                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                          {getTextSummary(parseEditorJSContent(section.description), 150)}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {isEditMode && (
+                  {isEditMode && !editingSections.has(section.id) && (
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -128,7 +253,7 @@ export function AllSectionsView({
                       className="text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 h-7 px-2"
                     >
                       <Edit className="h-3 w-3 mr-1" />
-                      {editingSections.has(section.id) ? 'Sluta' : 'Redigera'}
+                      Redigera
                     </Button>
                   )}
                 </div>
@@ -138,7 +263,7 @@ export function AllSectionsView({
                   <div className="px-4 pb-4 border-t border-gray-100">
                     <div className="mt-3">
                       <EditorJSComponent
-                        content={parseEditorJSContent(section.content)}
+                        content={parseEditorJSContent(section.description)}
                         onChange={(data) => handleSectionContentChange(section.id, data)}
                         readOnly={false}
                         placeholder="Skriv en beskrivning för denna sektion..."
@@ -146,15 +271,10 @@ export function AllSectionsView({
                       />
                     </div>
                   </div>
-                ) : section.content && (
+                ) : section.description && (
                   <div className="px-4 pb-4 border-t border-gray-100">
                     <div className="mt-3 prose prose-sm max-w-none text-gray-600">
-                      <EditorJSComponent
-                        content={parseEditorJSContent(section.content)}
-                        onChange={() => {}} 
-                        readOnly={true}
-                        handbookId={handbookId}
-                      />
+                      <ReadOnlyEditorContent content={parseEditorJSContent(section.description)} />
                     </div>
                   </div>
                 )}
@@ -188,12 +308,7 @@ export function AllSectionsView({
                                   </div>
                                 ) : (
                                   <div className="prose prose-sm max-w-none text-gray-600">
-                                    <EditorJSComponent
-                                      content={parseEditorJSContent(page.content)}
-                                      onChange={() => {}}
-                                      readOnly={true}
-                                      handbookId={handbookId}
-                                    />
+                                    <ReadOnlyEditorContent content={parseEditorJSContent(page.content)} />
                                   </div>
                                 )}
                               </div>
@@ -208,7 +323,7 @@ export function AllSectionsView({
                               </div>
                             )}
 
-                            {isEditMode && (
+                            {isEditMode && !editingPages.has(page.id) && (
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -216,7 +331,9 @@ export function AllSectionsView({
                                 className="text-xs h-6 px-1 text-gray-400 hover:text-gray-600"
                               >
                                 <Edit className="h-3 w-3" />
-                                {editingPages.has(page.id) ? 'Sluta' : 'Redigera'}
+                                <span className="sr-only">
+                                  Redigera {page.title}
+                                </span>
                               </Button>
                             )}
                           </div>

@@ -18,7 +18,6 @@ export interface HandbookSection {
   id: string;
   title: string;
   description?: string;
-  content?: string;
   order_index: number;
   handbook_id: string;
   is_public?: boolean;

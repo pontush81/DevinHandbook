@@ -64,6 +64,7 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
   const editorRef = useRef<any>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper functions - moved before useEffect to avoid hoisting issues
   const isValidBlock = (block: any) => {
@@ -221,6 +222,12 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
+      }
+      
+      // Clear any pending auto-save timer
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
       }
       
       // Destroy editor if it exists
@@ -381,6 +388,14 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
                         try {
                           onChange(cleanedData);
                           setHasUnsavedChanges(true);
+                          
+                          // Auto-hide the "saving" message after 3 seconds
+                          if (autoSaveTimerRef.current) {
+                            clearTimeout(autoSaveTimerRef.current);
+                          }
+                          autoSaveTimerRef.current = setTimeout(() => {
+                            setHasUnsavedChanges(false);
+                          }, 3000);
                         } catch (callbackError) {
                           console.error('Error in onChange callback:', callbackError);
                         } finally {
@@ -404,6 +419,14 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
                         try {
                           onChange(basicCleanedData);
                           setHasUnsavedChanges(true);
+                          
+                          // Auto-hide the "saving" message after 3 seconds
+                          if (autoSaveTimerRef.current) {
+                            clearTimeout(autoSaveTimerRef.current);
+                          }
+                          autoSaveTimerRef.current = setTimeout(() => {
+                            setHasUnsavedChanges(false);
+                          }, 3000);
                         } catch (callbackError) {
                           console.error('Error in fallback onChange callback:', callbackError);
                         } finally {
@@ -629,6 +652,12 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
         debounceTimerRef.current = null;
       }
       
+      // Clear any pending auto-save timer
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      
       if (editorRef.current) {
         try {
           // Check if editor is still mounted before destroying
@@ -700,7 +729,7 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
             {hasUnsavedChanges && (
               <span className="text-xs text-amber-600 flex items-center">
                 <div className="w-2 h-2 bg-amber-400 rounded-full mr-1"></div>
-                Osparade ändringar
+                Sparas automatiskt...
               </span>
             )}
           </div>
@@ -715,18 +744,6 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
             >
               <HelpCircle className="w-4 h-4" />
               <span className="hidden sm:inline text-xs">Hjälp</span>
-            </Button>
-            
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleSave}
-              disabled={disabled || !hasUnsavedChanges}
-              className="flex items-center gap-1 h-8 px-2 sm:px-3"
-            >
-              <Save className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">Spara</span>
             </Button>
           </div>
         </div>
