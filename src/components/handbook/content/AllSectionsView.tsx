@@ -1,11 +1,13 @@
 import React, { useState, useCallback, createElement } from 'react';
 import { HandbookSection as Section } from '@/types/handbook';
-import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen } from 'lucide-react';
+import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen, Trash2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EditorJSComponent } from '@/components/ui/EditorJSComponent';
+import { IconPicker } from '@/components/ui/IconPicker';
 import { parseEditorJSContent, stringifyEditorJSContent } from '@/lib/utils/editorjs';
+import { getIconComponent } from '@/lib/icon-utils';
 
 // Simple read-only content renderer for EditorJS data
 const ReadOnlyEditorContent = ({ content }: { content: any }) => {
@@ -131,6 +133,10 @@ interface AllSectionsViewProps {
   isEditMode?: boolean;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<any>) => void;
+  onDeleteSection?: (sectionId: string) => void;
+  onDeletePage?: (pageId: string, sectionId: string) => void;
+  onAddSection?: (section: Partial<Section>) => void;
+  onAddPage?: (sectionId: string, page: Partial<any>) => void;
   trialStatusBar?: React.ReactNode;
   handbookId?: string;
 }
@@ -140,6 +146,10 @@ export function AllSectionsView({
   isEditMode = false, 
   onUpdateSection,
   onUpdatePage,
+  onDeleteSection,
+  onDeletePage,
+  onAddSection,
+  onAddPage,
   trialStatusBar,
   handbookId
 }: AllSectionsViewProps) {
@@ -149,8 +159,13 @@ export function AllSectionsView({
   );
   const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
   const [editingPages, setEditingPages] = useState<Set<string>>(new Set());
+  const [editingSectionIcons, setEditingSectionIcons] = useState<Set<string>>(new Set());
+  const [editingSectionTitles, setEditingSectionTitles] = useState<Set<string>>(new Set());
+  const [editingPageTitles, setEditingPageTitles] = useState<Set<string>>(new Set());
   const [sectionContents, setSectionContents] = useState<Map<string, any>>(new Map());
   const [pageContents, setPageContents] = useState<Map<string, any>>(new Map());
+  const [tempSectionTitles, setTempSectionTitles] = useState<Map<string, string>>(new Map());
+  const [tempPageTitles, setTempPageTitles] = useState<Map<string, string>>(new Map());
 
   const toggleSection = useCallback((sectionId: string) => {
     setExpandedSections(prev => {
@@ -164,8 +179,16 @@ export function AllSectionsView({
     });
   }, []);
 
-  const toggleSectionEdit = useCallback((sectionId: string) => {
-    setEditingSections(prev => {
+  const startEditingSection = useCallback((sectionId: string) => {
+    setEditingSections(prev => new Set(prev.add(sectionId)));
+  }, []);
+
+  const startEditingPage = useCallback((pageId: string) => {
+    setEditingPages(prev => new Set(prev.add(pageId)));
+  }, []);
+
+  const toggleIconEdit = useCallback((sectionId: string) => {
+    setEditingSectionIcons(prev => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
         newSet.delete(sectionId);
@@ -176,17 +199,49 @@ export function AllSectionsView({
     });
   }, []);
 
-  const togglePageEdit = useCallback((pageId: string) => {
-    setEditingPages(prev => {
+  const startEditingSectionTitle = useCallback((sectionId: string, currentTitle: string) => {
+    setEditingSectionTitles(prev => new Set(prev.add(sectionId)));
+    setTempSectionTitles(prev => new Map(prev.set(sectionId, currentTitle)));
+  }, []);
+
+  const startEditingPageTitle = useCallback((pageId: string, currentTitle: string) => {
+    setEditingPageTitles(prev => new Set(prev.add(pageId)));
+    setTempPageTitles(prev => new Map(prev.set(pageId, currentTitle)));
+  }, []);
+
+  const saveSectionTitle = useCallback((sectionId: string) => {
+    const newTitle = tempSectionTitles.get(sectionId);
+    if (newTitle && newTitle.trim()) {
+      onUpdateSection?.(sectionId, { title: newTitle.trim() });
+    }
+    setEditingSectionTitles(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(pageId)) {
-        newSet.delete(pageId);
-      } else {
-        newSet.add(pageId);
-      }
+      newSet.delete(sectionId);
       return newSet;
     });
-  }, []);
+    setTempSectionTitles(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(sectionId);
+      return newMap;
+    });
+  }, [tempSectionTitles, onUpdateSection]);
+
+  const savePageTitle = useCallback((pageId: string) => {
+    const newTitle = tempPageTitles.get(pageId);
+    if (newTitle && newTitle.trim()) {
+      onUpdatePage?.(pageId, { title: newTitle.trim() });
+    }
+    setEditingPageTitles(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(pageId);
+      return newSet;
+    });
+    setTempPageTitles(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(pageId);
+      return newMap;
+    });
+  }, [tempPageTitles, onUpdatePage]);
 
   const handleSectionContentChange = useCallback((sectionId: string, data: any) => {
     setSectionContents(prev => new Map(prev.set(sectionId, data)));
@@ -209,6 +264,49 @@ export function AllSectionsView({
     }, 2000);
   }, [onUpdatePage]);
 
+  const handleDeleteSection = useCallback((sectionId: string, sectionTitle: string) => {
+    if (window.confirm(`Är du säker på att du vill radera sektionen "${sectionTitle}"? Detta kommer radera alla sidor i sektionen. Denna åtgärd kan inte ångras.`)) {
+      onDeleteSection?.(sectionId);
+    }
+  }, [onDeleteSection]);
+
+  const handleDeletePage = useCallback((pageId: string, sectionId: string, pageTitle: string) => {
+    if (window.confirm(`Är du säker på att du vill radera sidan "${pageTitle}"? Denna åtgärd kan inte ångras.`)) {
+      onDeletePage?.(pageId, sectionId);
+    }
+  }, [onDeletePage]);
+
+  const handleIconSelect = useCallback((sectionId: string, icon: string) => {
+    onUpdateSection?.(sectionId, { icon });
+    setEditingSectionIcons(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionId);
+      return newSet;
+    });
+  }, [onUpdateSection]);
+
+  const handleAddSection = useCallback(() => {
+    if (onAddSection) {
+      onAddSection({
+        title: 'Ny sektion',
+        description: '',
+        icon: 'BookOpen',
+        is_published: true,
+        is_public: true
+      });
+    }
+  }, [onAddSection]);
+
+  const handleAddPage = useCallback((sectionId: string) => {
+    if (onAddPage) {
+      onAddPage(sectionId, {
+        title: 'Ny sida',
+        content: '',
+        is_published: true
+      });
+    }
+  }, [onAddPage]);
+
   return (
     <div className="content-area-container">
       {/* Trial Status Bar */}
@@ -221,141 +319,295 @@ export function AllSectionsView({
       {/* Content with clean styling */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto p-8">
+          {/* Header explaining structure - only in edit mode */}
+          {isEditMode && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-medium text-blue-900 mb-2">📚 Handboksstruktur</h3>
+              <p className="text-sm text-blue-700 mb-3">
+                <strong>Sektioner</strong> (📁) innehåller <strong>sidor</strong> (📄). I redigeringsläget kan du klicka direkt på titlar och innehåll för att redigera det, eller använda radera-knapparna för att ta bort sektioner och sidor.
+              </p>
+              <Button
+                onClick={handleAddSection}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Lägg till ny sektion
+              </Button>
+            </div>
+          )}
+
           {/* Simple list of all sections */}
-          <div className="space-y-2">
-            {sections.map((section, index) => (
-              <div key={section.id} id={`section-${section.id}`} className="notion-section-card">
-                {/* Section Header */}
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-900">
-                        {section.title}
-                      </h3>
-                      {section.description && !section.description.startsWith('{') && (
-                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                          {section.description}
-                        </p>
-                      )}
-                      {section.description && section.description.startsWith('{') && (
-                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                          {getTextSummary(parseEditorJSContent(section.description), 150)}
-                        </p>
-                      )}
+          <div className="space-y-4">
+            {sections.map((section, index) => {
+              const IconComponent = getIconComponent(section.icon);
+              
+              return (
+                <div key={section.id} id={`section-${section.id}`} className="notion-section-card border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Section Header */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center gap-2">
+                        {/* Section Icon */}
+                        <div className="flex items-center gap-2">
+                          <IconComponent className="h-5 w-5 text-blue-600" />
+                          {isEditMode && (
+                            <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">SEKTION</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        {/* Editable Section Title */}
+                        {editingSectionTitles.has(section.id) && isEditMode ? (
+                          <input
+                            type="text"
+                            value={tempSectionTitles.get(section.id) || section.title}
+                            onChange={(e) => setTempSectionTitles(prev => new Map(prev.set(section.id, e.target.value)))}
+                            onBlur={() => saveSectionTitle(section.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                saveSectionTitle(section.id);
+                              } else if (e.key === 'Escape') {
+                                setEditingSectionTitles(prev => {
+                                  const newSet = new Set(prev);
+                                  newSet.delete(section.id);
+                                  return newSet;
+                                });
+                              }
+                            }}
+                            className="text-base font-semibold text-gray-900 bg-white border border-blue-300 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            autoFocus
+                          />
+                        ) : (
+                          <h3 
+                            className={`text-base font-semibold text-gray-900 ${isEditMode ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                            onClick={isEditMode ? () => startEditingSectionTitle(section.id, section.title) : undefined}
+                            title={isEditMode ? "Klicka för att redigera titeln" : undefined}
+                          >
+                            {section.title}
+                          </h3>
+                        )}
+                        {section.description && !section.description.startsWith('{') && (
+                          <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                            {section.description}
+                          </p>
+                        )}
+                        {section.description && section.description.startsWith('{') && (
+                          <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                            {getTextSummary(parseEditorJSContent(section.description), 150)}
+                          </p>
+                        )}
+                      </div>
                     </div>
+
+                    {isEditMode && (
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => toggleIconEdit(section.id)}
+                          className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 px-2"
+                          title="Ändra ikon"
+                        >
+                          🎨
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDeleteSection(section.id, section.title)}
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700 h-8 px-2"
+                          title="Radera sektion"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
-                  {isEditMode && !editingSections.has(section.id) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => toggleSectionEdit(section.id)}
-                      className="text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 h-7 px-2"
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Redigera
-                    </Button>
-                  )}
-                </div>
-                
-                {/* Section Content - Always Visible */}
-                {editingSections.has(section.id) && isEditMode ? (
-                  <div className="px-4 pb-4 border-t border-gray-100">
-                    <div className="mt-3">
-                      <EditorJSComponent
-                        content={parseEditorJSContent(section.description)}
-                        onChange={(data) => handleSectionContentChange(section.id, data)}
-                        readOnly={false}
-                        placeholder="Skriv en beskrivning för denna sektion..."
-                        handbookId={handbookId}
+                  {/* Icon Picker */}
+                  {editingSectionIcons.has(section.id) && isEditMode && (
+                    <div className="p-4 bg-blue-50 border-b border-blue-200">
+                      <h4 className="text-sm font-medium text-blue-900 mb-3">Välj ikon för sektionen:</h4>
+                      <IconPicker
+                        selectedIcon={section.icon || 'BookOpen'}
+                        onIconSelect={(icon) => handleIconSelect(section.id, icon)}
+                        compact={true}
+                        size="sm"
                       />
                     </div>
+                  )}
+                  
+                  {/* Section Content - Clickable for editing when in edit mode */}
+                  <div className={`px-4 pb-4 ${isEditMode ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+                       onClick={isEditMode && !editingSections.has(section.id) ? () => startEditingSection(section.id) : undefined}>
+                    {editingSections.has(section.id) && isEditMode ? (
+                      <div className="mt-3">
+                        <EditorJSComponent
+                          content={parseEditorJSContent(section.description)}
+                          onChange={(data) => handleSectionContentChange(section.id, data)}
+                          readOnly={false}
+                          placeholder="Skriv en beskrivning för denna sektion..."
+                          handbookId={handbookId}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-3">
+                        {section.description ? (
+                          <div className="prose prose-sm max-w-none text-gray-600">
+                            <ReadOnlyEditorContent content={parseEditorJSContent(section.description)} />
+                          </div>
+                        ) : isEditMode ? (
+                          <p className="text-gray-400 italic py-4 text-center">
+                            Klicka här för att lägga till en beskrivning för denna sektion
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
-                ) : section.description && (
-                  <div className="px-4 pb-4 border-t border-gray-100">
-                    <div className="mt-3 prose prose-sm max-w-none text-gray-600">
-                      <ReadOnlyEditorContent content={parseEditorJSContent(section.description)} />
-                    </div>
-                  </div>
-                )}
-                
-                {/* Pages in section */}
-                {section.pages && section.pages.length > 0 && (
-                  <div className="px-4 pb-4">
-                    {section.pages.map((page) => (
-                      <div key={page.id} className="py-3 pl-4 border-l-2 border-gray-100 ml-2">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="text-sm font-medium text-gray-900 mb-1">
-                              {page.title}
-                            </h4>
-                            {page.subtitle && (
-                              <p className="text-xs text-gray-500 mb-2">{page.subtitle}</p>
-                            )}
-                            
-                            {/* Show page content preview */}
-                            {page.content && (
-                              <div className="mt-2">
-                                {editingPages.has(page.id) && isEditMode ? (
-                                  <div className="bg-gray-50 p-3 rounded-md">
-                                    <EditorJSComponent
-                                      content={parseEditorJSContent(page.content)}
-                                      onChange={(data) => handlePageContentChange(page.id, data)}
-                                      readOnly={false}
-                                      placeholder="Skriv innehållet för denna sida..."
-                                      handbookId={handbookId}
-                                    />
-                                  </div>
+                  
+                  {/* Pages in section */}
+                  {section.pages && section.pages.length > 0 && (
+                    <div className="bg-white">
+                      {section.pages.map((page) => (
+                        <div key={page.id} className="border-t border-gray-100 p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="flex items-center gap-2 mt-1">
+                                <FileText className="h-4 w-4 text-green-600" />
+                                {isEditMode && (
+                                  <span className="text-xs font-medium text-green-600 uppercase tracking-wide">SIDA</span>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                {/* Editable Page Title */}
+                                {editingPageTitles.has(page.id) && isEditMode ? (
+                                  <input
+                                    type="text"
+                                    value={tempPageTitles.get(page.id) || page.title}
+                                    onChange={(e) => setTempPageTitles(prev => new Map(prev.set(page.id, e.target.value)))}
+                                    onBlur={() => savePageTitle(page.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        savePageTitle(page.id);
+                                      } else if (e.key === 'Escape') {
+                                        setEditingPageTitles(prev => {
+                                          const newSet = new Set(prev);
+                                          newSet.delete(page.id);
+                                          return newSet;
+                                        });
+                                      }
+                                    }}
+                                    className="text-sm font-semibold text-gray-900 bg-white border border-green-300 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-500 mb-1"
+                                    autoFocus
+                                  />
                                 ) : (
-                                  <div className="prose prose-sm max-w-none text-gray-600">
-                                    <ReadOnlyEditorContent content={parseEditorJSContent(page.content)} />
+                                  <h4 
+                                    className={`text-sm font-semibold text-gray-900 mb-1 ${isEditMode ? 'cursor-pointer hover:text-green-600' : ''}`}
+                                    onClick={isEditMode ? () => startEditingPageTitle(page.id, page.title) : undefined}
+                                    title={isEditMode ? "Klicka för att redigera titeln" : undefined}
+                                  >
+                                    {page.title}
+                                  </h4>
+                                )}
+                                {page.subtitle && (
+                                  <p className="text-xs text-gray-500 mb-2">{page.subtitle}</p>
+                                )}
+                                
+                                {/* Show page content preview - Clickable for editing */}
+                                {page.content && (
+                                  <div className={`mt-2 ${isEditMode && !editingPages.has(page.id) ? 'cursor-pointer hover:bg-gray-50 rounded p-2' : ''}`}
+                                       onClick={isEditMode && !editingPages.has(page.id) ? () => startEditingPage(page.id) : undefined}>
+                                    {editingPages.has(page.id) && isEditMode ? (
+                                      <div className="bg-gray-50 p-3 rounded-md">
+                                        <EditorJSComponent
+                                          content={parseEditorJSContent(page.content)}
+                                          onChange={(data) => handlePageContentChange(page.id, data)}
+                                          readOnly={false}
+                                          placeholder="Skriv innehållet för denna sida..."
+                                          handbookId={handbookId}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="prose prose-sm max-w-none text-gray-600">
+                                        <ReadOnlyEditorContent content={parseEditorJSContent(page.content)} />
+                                        {isEditMode && !editingPages.has(page.id) && (
+                                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-center">
+                                            <p className="text-xs text-blue-600">Klicka för att redigera denna sida</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
-                            )}
-                          </div>
+                            </div>
 
-                          <div className="flex items-center gap-2 ml-4">
-                            {page.lastUpdated && (
-                              <div className="flex items-center text-xs text-gray-400">
-                                <Clock className="h-3 w-3 mr-1" />
-                                <span>{page.lastUpdated}</span>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2 ml-4">
+                              {page.lastUpdated && (
+                                <div className="flex items-center text-xs text-gray-400">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  <span>{page.lastUpdated}</span>
+                                </div>
+                              )}
 
-                            {isEditMode && !editingPages.has(page.id) && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => togglePageEdit(page.id)}
-                                className="text-xs h-6 px-1 text-gray-400 hover:text-gray-600"
-                              >
-                                <Edit className="h-3 w-3" />
-                                <span className="sr-only">
-                                  Redigera {page.title}
-                                </span>
-                              </Button>
-                            )}
+                              {isEditMode && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleDeletePage(page.id, section.id, page.title)}
+                                  className="text-red-600 hover:bg-red-50 hover:text-red-700 h-6 px-1"
+                                  title="Radera sida"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* No pages message */}
-                {(!section.pages || section.pages.length === 0) && (
-                  <div className="px-4 pb-4 border-t border-gray-100">
-                    <div className="mt-3 text-center py-6">
-                      <p className="text-xs text-gray-400">
-                        Denna sektion har inget innehåll än.
-                        {isEditMode && <span className="block mt-1 text-blue-500">Använd redigeringsläget för att lägga till innehåll.</span>}
-                      </p>
+                      ))}
+                      
+                      {/* Add page button */}
+                      {isEditMode && (
+                        <div className="border-t border-gray-100 p-4">
+                          <Button
+                            onClick={() => handleAddPage(section.id)}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-dashed border-gray-300 text-gray-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Lägg till sida
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+
+                  {/* No pages message */}
+                  {(!section.pages || section.pages.length === 0) && (
+                    <div className="bg-white border-t border-gray-100 p-4">
+                      <div className="text-center py-6">
+                        <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-xs text-gray-400 mb-3">
+                          Denna sektion har inga sidor än.
+                        </p>
+                        {isEditMode && (
+                          <Button
+                            onClick={() => handleAddPage(section.id)}
+                            variant="outline"
+                            size="sm"
+                            className="border-dashed border-gray-300 text-gray-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Lägg till första sidan
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Empty state */}
@@ -365,9 +617,18 @@ export function AllSectionsView({
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Inga sektioner än
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-4">
                 {isEditMode ? 'Börja genom att lägga till din första sektion.' : 'Handboken håller på att byggas upp.'}
               </p>
+              {isEditMode && (
+                <Button
+                  onClick={handleAddSection}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Lägg till första sektionen
+                </Button>
+              )}
             </div>
           )}
         </div>

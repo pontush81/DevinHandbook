@@ -38,4 +38,65 @@ export async function PATCH(
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: pageId } = await params;
+
+    console.log('🗑️ [API] Deleting page:', pageId);
+
+    const supabase = getServiceSupabase();
+    
+    // First check if the page exists
+    const { data: existingPage, error: checkError } = await supabase
+      .from('pages')
+      .select('id, title, section_id')
+      .eq('id', pageId)
+      .single();
+
+    if (checkError || !existingPage) {
+      console.error('❌ [API] Page not found:', pageId, checkError?.message);
+      return NextResponse.json(
+        { 
+          error: 'Page not found', 
+          pageId,
+          details: checkError?.message || 'Page does not exist in database'
+        },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ [API] Found existing page:', existingPage);
+    
+    const { error } = await supabase
+      .from('pages')
+      .delete()
+      .eq('id', pageId);
+
+    if (error) {
+      console.error('❌ [API] Error deleting page:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete page', details: error.message },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ [API] Page deleted successfully:', pageId);
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Page deleted successfully',
+      deletedPage: existingPage
+    });
+
+  } catch (error: any) {
+    console.error('❌ [API] Unexpected error deleting page:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', details: error.message },
+      { status: 500 }
+    );
+  }
 } 

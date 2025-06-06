@@ -205,7 +205,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
 
   // Aktiv trial med tid kvar
   return (
-    <Card className={`border-0 shadow-none bg-gradient-to-r from-green-50 to-blue-50 relative z-50 ${className}`}>
+    <Card className={`border-0 shadow-none bg-white border border-gray-200 relative z-50 ${className}`}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 space-y-3 sm:space-y-0">
         <div className="flex items-start sm:items-center space-x-3 min-w-0 flex-1">
           <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex-shrink-0">
@@ -213,12 +213,12 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-              <h3 className="font-semibold text-green-900 text-sm sm:text-base">Gratisperiod aktiv</h3>
+              <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Gratisperiod aktiv</h3>
               <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100 text-xs w-fit">
                 {trialStatus.trialDaysRemaining} dagar kvar
               </Badge>
             </div>
-            <div className="flex items-center text-xs sm:text-sm text-green-700 mt-1">
+            <div className="flex items-center text-xs sm:text-sm text-gray-600 mt-1">
               <Clock className="mr-1 h-3 w-3" />
               Trial slutar {formatTrialEndDate(trialStatus.trialEndsAt)}
             </div>
@@ -239,7 +239,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
             onClick={handleDismiss}
             variant="ghost"
             size="sm"
-            className="text-green-600 hover:bg-green-100 flex-shrink-0"
+            className="text-gray-500 hover:bg-gray-100 flex-shrink-0"
           >
             <X className="h-4 w-4" />
           </Button>

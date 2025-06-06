@@ -32,12 +32,20 @@ const EditorJSHelp = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
       <div><kbd className="bg-gray-100 px-1 rounded">Tab</kbd> - Redigera block</div>
       <div><kbd className="bg-gray-100 px-1 rounded">Enter</kbd> - Nytt block</div>
+      <div><kbd className="bg-gray-100 px-1 rounded">Backspace</kbd> - Ta bort block</div>
       <div><kbd className="bg-gray-100 px-1 rounded">Cmd+B</kbd> - Fet text</div>
       <div><kbd className="bg-gray-100 px-1 rounded">Cmd+I</kbd> - Kursiv text</div>
       <div><kbd className="bg-gray-100 px-1 rounded">/</kbd> - Öppna block-meny</div>
       <div><kbd className="bg-gray-100 px-1 rounded">@</kbd> - Länka användare</div>
     </div>
     <div className="pt-2 border-t">
+      <p className="font-medium">Hur du tar bort innehåll:</p>
+      <p className="text-xs text-gray-500 mb-2">
+        • <strong>Bilder/Filer:</strong> Klicka på blocket → tryck <kbd className="bg-gray-100 px-1 rounded">Backspace</kbd> eller använd 3-punkt menyn
+      </p>
+      <p className="text-xs text-gray-500 mb-2">
+        • <strong>Text:</strong> Placera cursor i början av blocket → tryck <kbd className="bg-gray-100 px-1 rounded">Backspace</kbd>
+      </p>
       <p className="font-medium">Tillgängliga block:</p>
       <p className="text-xs text-gray-500">Rubriker, Paragraf, Lista, Citat, Kod, Tabell, Länk, <span className="font-medium text-blue-600">Bild</span>, <span className="font-medium text-green-600">Dokument</span>, Varning</p>
       <p className="text-xs text-blue-600 mt-1">💡 Bilder: Stöder JPEG, PNG, GIF, WebP (max 5MB) - <span className="font-semibold text-orange-600">endast admin</span></p>

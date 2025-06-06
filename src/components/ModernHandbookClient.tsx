@@ -35,7 +35,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const [handbookData, setHandbookData] = useState(initialData);
   const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
   const [isEditMode, setIsEditMode] = useState(defaultEditMode);
-  const [editView, setEditView] = useState<'content' | 'members' | 'structure'>('content'); // Växla mellan innehåll och medlemmar
   const [canEdit, setCanEdit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -262,50 +261,53 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   };
 
   // Add new section - Make API call to create the section properly
-  const addSection = async (newSection: Section) => {
+  const addSection = async (sectionData: Partial<Section>) => {
     try {
-      console.log('[ModernHandbookClient] Adding section to state:', newSection);
-      console.log('[ModernHandbookClient] Current sections before adding:', handbookData.sections.map(s => ({ id: s.id, title: s.title })));
+      console.log('[ModernHandbookClient] Creating new section:', sectionData);
 
-      // Validate the section has required fields
-      if (!newSection.id) {
-        const errorMsg = 'Section missing ID - cannot add to state without database ID';
-        console.error('[ModernHandbookClient]', errorMsg, newSection);
-        throw new Error(errorMsg);
+      // Prepare section data for API
+      const newSectionData = {
+        title: sectionData.title || 'Ny sektion',
+        description: sectionData.description || '',
+        icon: sectionData.icon || 'BookOpen',
+        order_index: handbookData.sections.length,
+        handbook_id: handbookData.id,
+        is_published: sectionData.is_published !== undefined ? sectionData.is_published : true,
+        is_public: sectionData.is_public !== undefined ? sectionData.is_public : true
+      };
+
+      console.log('[ModernHandbookClient] Sending section data to API:', newSectionData);
+
+      const response = await fetch('/api/sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSectionData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to create section');
       }
 
-      // Check if section already exists to avoid duplicates
-      const existingSection = handbookData.sections.find(s => s.id === newSection.id);
-      if (existingSection) {
-        console.warn('[ModernHandbookClient] Section already exists in state:', newSection.id);
-        return; // Don't add duplicate
-      }
+      const newSection = await response.json();
+      console.log('[ModernHandbookClient] Section created successfully:', newSection);
 
       // Ensure the section has the proper structure with pages array
       const fullSection = {
         ...newSection,
-        pages: newSection.pages || [], // Ensure pages array exists
-        is_public: newSection.is_public !== undefined ? newSection.is_public : true,
-        is_published: newSection.is_published !== undefined ? newSection.is_published : true,
-        icon: newSection.icon || 'BookOpen' // Default icon if missing
+        pages: [] // New sections start with no pages
       };
 
-      console.log('[ModernHandbookClient] Prepared section for state:', fullSection);
-
-      // Update local state with the complete section
-      setHandbookData(prev => {
-        const newState = {
-          ...prev,
-          sections: [...prev.sections, fullSection]
-        };
-        console.log('[ModernHandbookClient] New state will have sections:', newState.sections.map(s => ({ id: s.id, title: s.title })));
-        return newState;
-      });
+      // Update local state with the new section
+      setHandbookData(prev => ({
+        ...prev,
+        sections: [...prev.sections, fullSection]
+      }));
 
       console.log('[ModernHandbookClient] Section added to local state successfully:', fullSection.id);
     } catch (error) {
-      console.error('[ModernHandbookClient] Error adding section to local state:', error);
-      throw error; // Re-throw so ContentArea can handle the error
+      console.error('[ModernHandbookClient] Error creating section:', error);
+      alert('Det gick inte att skapa sektionen. Försök igen.');
     }
   };
 
@@ -379,13 +381,20 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
               // Continue with the page creation using the fresh section
               console.log('[ModernHandbookClient] Proceeding with fresh section data:', updatedSection);
               
-              // Generate slug from title
-              const slug = pageData.title
+              // Generate slug from title with collision avoidance
+              let slug = pageData.title
                 ?.toLowerCase()
                 .replace(/[^a-z0-9\s-åäöÅÄÖ]/g, '') // Allow Swedish characters
                 .replace(/\s+/g, '-')
                 .replace(/-+/g, '-')
                 .trim() || 'ny-sida';
+
+              // Add unique suffix if it's a generic "ny-sida" title
+              if (slug.startsWith('ny-sida')) {
+                const timestamp = Date.now();
+                const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+                slug = `ny-sida-${timestamp}-${uniqueSuffix}`;
+              }
 
               const newPageData = {
                 title: pageData.title || 'Ny sida',
@@ -444,13 +453,20 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         throw new Error(errorMsg);
       }
 
-      // Generate slug from title
-      const slug = pageData.title
+      // Generate slug from title with collision avoidance
+      let slug = pageData.title
         ?.toLowerCase()
         .replace(/[^a-z0-9\s-åäöÅÄÖ]/g, '') // Allow Swedish characters
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .trim() || 'ny-sida';
+
+      // Add unique suffix if it's a generic "ny-sida" title
+      if (slug.startsWith('ny-sida')) {
+        const timestamp = Date.now();
+        const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+        slug = `ny-sida-${timestamp}-${uniqueSuffix}`;
+      }
 
       const newPageData = {
         title: pageData.title || 'Ny sida',
@@ -518,12 +534,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Delete page
   const deletePage = async (pageId: string, sectionId: string) => {
     try {
-      const { error } = await supabase
-        .from('pages')
-        .delete()
-        .eq('id', pageId);
+      console.log('[ModernHandbookClient] Deleting page:', { pageId, sectionId });
 
-      if (error) throw error;
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to delete page');
+      }
+
+      console.log('[ModernHandbookClient] Page deleted successfully from database');
 
       // Update local state by removing the page from its section
       setHandbookData(prev => ({
@@ -539,37 +562,41 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       if (currentPageId === pageId) {
         setCurrentPageId(undefined);
       }
+
+      console.log('[ModernHandbookClient] Local state updated after page deletion');
     } catch (error) {
-      console.error('Error deleting page:', error);
+      console.error('[ModernHandbookClient] Error deleting page:', error);
+      alert('Det gick inte att radera sidan. Försök igen.');
     }
   };
 
   // Delete section
   const deleteSection = async (sectionId: string) => {
     try {
-      // First delete all pages in the section
-      const { error: pagesError } = await supabase
-        .from('pages')
-        .delete()
-        .eq('section_id', sectionId);
+      console.log('[ModernHandbookClient] Deleting section:', { sectionId });
 
-      if (pagesError) throw pagesError;
+      const response = await fetch(`/api/sections/${sectionId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-      // Then delete the section
-      const { error: sectionError } = await supabase
-        .from('sections')
-        .delete()
-        .eq('id', sectionId);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to delete section');
+      }
 
-      if (sectionError) throw sectionError;
+      console.log('[ModernHandbookClient] Section deleted successfully from database');
 
       // Update local state
       setHandbookData(prev => ({
         ...prev,
         sections: prev.sections.filter(section => section.id !== sectionId)
       }));
+
+      console.log('[ModernHandbookClient] Local state updated after section deletion');
     } catch (error) {
-      console.error('Error deleting section:', error);
+      console.error('[ModernHandbookClient] Error deleting section:', error);
+      alert('Det gick inte att radera sektionen. Försök igen.');
     }
   };
 
@@ -633,14 +660,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
-  const handleToggleEditMode = () => {
-    setIsEditMode(!isEditMode);
-    // Reset till innehållsvy när man avslutar redigeringsläget
-    if (isEditMode) {
-      setEditView('content');
-    }
-  };
-
   // Add missing handleToggleSection function
   const handleToggleSection = async (sectionId: string, isPublished: boolean) => {
     try {
@@ -679,7 +698,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
   // Create trial status bar component
   const trialStatusBar = user ? (
-    <div className="w-full bg-gradient-to-br from-gray-50 to-white">
+    <div className="w-full">
       <div className="max-w-6xl mx-auto p-3">
         <TrialStatusBar 
           userId={user.id} 
@@ -731,7 +750,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           handbookTitle={handbookData.title}
           canEdit={canEdit}
           isEditMode={isEditMode}
-          onToggleEditMode={handleToggleEditMode}
+          onToggleEditMode={() => setIsEditMode(!isEditMode)}
           theme={handbookData.theme}
         />
 
@@ -828,42 +847,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             {/* Main content - Mobile optimized scrollable container */}
             <div className="main-content-scrollable flex flex-col">
               <div className="flex-1 min-h-0">
-                {/* Edit mode navigation tabs */}
-                {isEditMode && canEdit && (
-                  <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex-shrink-0">
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-1">
-                      <button
-                        onClick={() => setEditView('content')}
-                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
-                          editView === 'content'
-                            ? 'text-white border'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                        }`}
-                        style={editView === 'content' ? {
-                          backgroundColor: primaryColor,
-                          borderColor: primaryColor
-                        } : {}}
-                      >
-                        📝 Redigera innehåll
-                      </button>
-                      <button
-                        onClick={() => setEditView('structure')}
-                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${
-                          editView === 'structure'
-                            ? 'text-white border'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                        }`}
-                        style={editView === 'structure' ? {
-                          backgroundColor: primaryColor,
-                          borderColor: primaryColor
-                        } : {}}
-                      >
-                        🏗️ Hantera struktur
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Main content with proper mobile-optimized flex properties */}
                 <ContentArea
                   sections={visibleSections}

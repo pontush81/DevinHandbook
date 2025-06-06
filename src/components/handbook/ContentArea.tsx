@@ -11,7 +11,7 @@ interface ContentAreaProps {
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   onAddPage?: (sectionId: string, page: Partial<Page>) => void;
-  onDeletePage?: (pageId: string) => void;
+  onDeletePage?: (pageId: string, sectionId: string) => void;
   onAddSection?: (section: Partial<Section>) => void;
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   onDeleteSection?: (sectionId: string) => void;
@@ -84,6 +84,10 @@ export function ContentArea({
           isEditMode={isEditMode}
           onUpdateSection={onUpdateSection}
           onUpdatePage={onUpdatePage}
+          onDeleteSection={onDeleteSection}
+          onDeletePage={onDeletePage}
+          onAddSection={onAddSection}
+          onAddPage={onAddPage}
           trialStatusBar={trialStatusBar}
           handbookId={handbookId}
         />
