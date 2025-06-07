@@ -1,0 +1,133 @@
+/* Consolidated Responsive Layout Utilities */
+
+/* Base responsive container */
+.responsive-container {
+  width: 100%;
+  max-width: var(--max-content-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+/* Responsive padding utilities */
+.responsive-padding {
+  padding: var(--spacing-mobile);
+}
+
+.responsive-padding-y {
+  padding-top: var(--spacing-mobile);
+  padding-bottom: var(--spacing-mobile);
+}
+
+.responsive-padding-x {
+  padding-left: var(--spacing-mobile);
+  padding-right: var(--spacing-mobile);
+}
+
+/* Mobile-first responsive breakpoints */
+@media (min-width: 640px) {
+  .responsive-container {
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+  
+  .responsive-padding {
+    padding: var(--spacing-desktop);
+  }
+  
+  .responsive-padding-y {
+    padding-top: var(--spacing-desktop);
+    padding-bottom: var(--spacing-desktop);
+  }
+  
+  .responsive-padding-x {
+    padding-left: var(--spacing-desktop);
+    padding-right: var(--spacing-desktop);
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-container {
+    padding-left: var(--spacing-xl);
+    padding-right: var(--spacing-xl);
+  }
+}
+
+/* Content height utilities - WITH support for Tailwind classes */
+.natural-height {
+  /* Let content determine height naturally */
+  height: auto;
+  min-height: auto;
+}
+
+.full-height {
+  /* Only use when specifically needed */
+  height: 100vh;
+}
+
+.screen-minus-header {
+  /* For pages that need full height minus header */
+  height: calc(100vh - var(--header-height));
+}
+
+/* Critical: Re-enable Tailwind's min-h-screen for non-messages pages */
+/* This restores normal Tailwind functionality everywhere except where overridden */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+/* Messages page specific override to prevent the blue area bug */
+.messages-page .responsive-container,
+.messages-page .max-w-4xl,
+.messages-content {
+  min-height: auto !important;
+}
+
+/* Mobile-specific natural height for messages only */
+@media (max-width: 768px) {
+  .messages-page {
+    min-height: auto !important;
+  }
+  
+  .messages-page * {
+    min-height: auto !important;
+  }
+  
+  .mobile-natural-height {
+    min-height: auto !important;
+    height: auto !important;
+  }
+  
+  .mobile-padding-fix {
+    padding-bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom, 0));
+  }
+}
+
+/* Safe area utilities for mobile */
+@supports (height: 100dvh) {
+  .full-height {
+    height: 100dvh; /* Dynamic viewport height */
+  }
+  
+  .screen-minus-header {
+    height: calc(100dvh - var(--header-height));
+  }
+  
+  /* Also update min-h-screen to use dynamic viewport height */
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
+/* Touch-friendly sizing on mobile */
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .touch-padding {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+} 

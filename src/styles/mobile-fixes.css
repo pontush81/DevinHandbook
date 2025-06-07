@@ -1,0 +1,35 @@
+/* Temporary mobile fixes - to be integrated into proper refactoring */
+/* Remove problematic min-height rules for specific pages */
+
+/* Messages page specific fixes */
+.messages-page {
+  min-height: auto !important;
+}
+
+.messages-page .max-w-4xl {
+  min-height: auto !important;
+  padding-bottom: 2rem !important;
+}
+
+/* Override global min-height rules on mobile for content containers */
+@media (max-width: 768px) {
+  /* Only apply to pages that opt-in with .no-forced-height */
+  .no-forced-height .max-w-4xl {
+    min-height: auto !important;
+  }
+  
+  .no-forced-height .content-area-scroll,
+  .no-forced-height .main-content-scrollable {
+    min-height: auto !important;
+  }
+}
+
+/* Specific fixes for messages layout */
+.messages-container {
+  min-height: auto !important;
+}
+
+.messages-container .max-w-4xl {
+  min-height: auto !important;
+  padding-bottom: 1rem;
+} 

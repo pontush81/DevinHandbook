@@ -489,7 +489,7 @@ export default function MessagesPage() {
 
   if (loading || authLoading || accessLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="bg-white flex items-center justify-center py-16">
         <div className="text-center">
           <MessageCircle className="h-8 w-8 text-blue-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Laddar meddelanden...</p>
@@ -500,7 +500,7 @@ export default function MessagesPage() {
 
   if (!handbook) {
     return (
-      <div className="min-h-screen bg-white p-8">
+      <div className="bg-white p-8">
         <div className="max-w-4xl mx-auto text-center py-12">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Handbok hittades inte</h1>
           <Link href="/">
@@ -513,7 +513,7 @@ export default function MessagesPage() {
 
   if (!handbook.forum_enabled) {
     return (
-      <div className="min-h-screen bg-white p-8">
+      <div className="bg-white p-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">
             <MessageCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -531,7 +531,7 @@ export default function MessagesPage() {
   // Authentication required - not logged in
   if (!user) {
     return (
-      <div className="min-h-screen bg-white p-8">
+      <div className="bg-white p-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">
             <Lock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -556,7 +556,7 @@ export default function MessagesPage() {
   // User is logged in but doesn't have access to this handbook
   if (!hasAccess) {
     return (
-      <div className="min-h-screen bg-white p-8">
+      <div className="bg-white p-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">
             <Lock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -580,10 +580,10 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="messages-page mobile-natural-flow mobile-scrollable">
       {/* Success notification toast */}
       {successMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
+        <div className="success-toast">
           <div className="flex items-center space-x-2">
             <div className="h-4 w-4 bg-white rounded-full flex items-center justify-center">
               <div className="h-2 w-2 bg-green-600 rounded-full"></div>
@@ -594,32 +594,32 @@ export default function MessagesPage() {
       )}
       
       {/* Header med vit text på blå bakgrund */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-12">
-        <div className="max-w-4xl mx-auto px-8">
-          <nav className="mb-4">
+      <div className="messages-header">
+        <div className="responsive-container">
+          <nav className="messages-header nav">
             <Link 
               href={`/${subdomain}`}
-              className="text-blue-100 hover:text-white text-sm"
+              className="back-link"
             >
               ← Tillbaka till {handbook.title}
             </Link>
           </nav>
-          <div className="flex items-center gap-3 mb-2">
-            <MessageCircle className="h-8 w-8 text-white" />
-            <h1 className="text-3xl font-bold text-white">Meddelanden</h1>
+          <div className="messages-title-container">
+            <MessageCircle className="messages-icon" />
+            <h1 className="messages-title">Meddelanden</h1>
           </div>
-          <p className="text-blue-100">
+          <p className="messages-subtitle">
             Ställ frågor, dela tips och håll dig uppdaterad med dina grannar
           </p>
         </div>
       </div>
       
-      <div className="max-w-4xl mx-auto px-8 py-8">
+      <div className="responsive-container messages-content mobile-natural-height mobile-scroll-container">
         {/* Förenklad meddelandeöversikt */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Meddelanden</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">Meddelanden</h1>
               <p className="text-gray-600 text-sm sm:text-base">Ställ frågor, dela tips och håll dig uppdaterad</p>
             </div>
             <Button 
@@ -638,8 +638,8 @@ export default function MessagesPage() {
           <h3 className="text-xl font-semibold text-gray-900">Senaste meddelanden</h3>
           
           {messages.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
+            <Card className="card">
+              <CardContent className="p-8 text-center card-content">
                 <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Inga meddelanden än</h3>
                 <p className="text-gray-600 mb-4">
@@ -653,8 +653,8 @@ export default function MessagesPage() {
             </Card>
           ) : (
             messages.map((message) => (
-              <Card key={message.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
+              <Card key={message.id} className="hover:shadow-md transition-shadow card" data-ui="card">
+                <CardContent className="p-4 card-content" data-ui="card-content">
                   {/* Header with title and actions */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">

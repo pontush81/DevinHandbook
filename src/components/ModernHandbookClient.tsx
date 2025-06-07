@@ -774,8 +774,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Full viewport container with proper mobile flex layout */}
-      <div className="h-screen w-full flex flex-col overflow-hidden">
+      {/* Full viewport container with mobile-friendly layout */}
+      <div className="h-screen w-full flex flex-col overflow-hidden md:h-screen mobile-natural-flow">
         {/* Header - Using new HandbookHeader with edit functionality */}
         <HandbookHeader 
           handbookTitle={handbookData.title}
@@ -785,69 +785,31 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           theme={handbookData.theme}
         />
 
-        {/* Main layout container - takes remaining space, mobile optimized */}
-        <div className="flex flex-1 min-h-0 overflow-hidden touch-pan-y">
+        {/* Main layout container - mobile optimized */}
+        <div className="flex flex-1 min-h-0 overflow-hidden touch-pan-y mobile-scrollable">
           {/* Sidebar - Fixed width sidebar */}
           <ModernSidebar
             sections={visibleSections}
             currentPageId={currentPageId}
             onPageSelect={setCurrentPageId}
             onSectionSelect={(sectionId) => {
-              console.log('🎯 Section selected for scrolling:', sectionId);
+              // Clear current page to show all sections
+              setCurrentPageId('');
               
-              // Clear any selected page to show full overview
-              setCurrentPageId(undefined);
-              
-              // Wait a moment for any content changes to settle, then scroll
+              // Then scroll to section after a brief delay
               setTimeout(() => {
-                const sectionElement = document.getElementById(`section-${sectionId}`);
-                console.log('🔍 Looking for section:', `section-${sectionId}`);
-                
-                if (sectionElement) {
-                  console.log('✅ Found section element:', sectionElement);
+                const element = document.getElementById(`section-${sectionId}`);
+                if (element) {
+                  const headerOffset = 80;
+                  const elementPosition = element.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
                   
-                  // Try to find the main scrollable content area
-                  const scrollableContainers = [
-                    document.querySelector('.content-area-scroll'),
-                    document.querySelector('.main-content-scrollable'),
-                    document.querySelector('[data-sidebar="inset"]'),
-                    document.querySelector('.overflow-auto')
-                  ].filter(Boolean);
-                  
-                  console.log('🔍 Available scroll containers:', scrollableContainers.length);
-                  
-                  if (scrollableContainers.length > 0) {
-                    const scrollContainer = scrollableContainers[0];
-                    console.log('🎯 Using scroll container:', scrollContainer.className || scrollContainer.tagName);
-                    
-                    // Get the element's position relative to the scroll container
-                    const containerTop = scrollContainer.getBoundingClientRect().top;
-                    const elementTop = sectionElement.getBoundingClientRect().top;
-                    const relativeTop = elementTop - containerTop + scrollContainer.scrollTop;
-                    
-                    // Scroll with some offset for better visibility
-                    const scrollTarget = Math.max(0, relativeTop - 80);
-                    
-                    console.log('📍 Scrolling to position:', scrollTarget);
-                    scrollContainer.scrollTo({
-                      top: scrollTarget,
-                      behavior: 'smooth'
-                    });
-                  } else {
-                    // Simple fallback - just scroll element into view
-                    console.log('📍 Using simple scrollIntoView');
-                    sectionElement.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'start'
-                    });
-                  }
-                } else {
-                  console.error('❌ Could not find section element:', `section-${sectionId}`);
-                  // Let's see what sections are actually available
-                  const allSections = document.querySelectorAll('[id^="section-"]');
-                  console.log('Available sections:', Array.from(allSections).map(el => el.id));
+                  window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                  });
                 }
-              }, 300);
+              }, 100);
             }}
             subdomain={handbookData.subdomain}
             forumEnabled={handbookData.forum_enabled}
@@ -875,11 +837,10 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             onMoveSection={moveSection}
           />
 
-          {/* Main content area */}
-          <SidebarInset className="flex-1 min-h-0">
+          <SidebarInset className="flex-1 min-h-0 mobile-natural-flow">
             {/* Main content - Mobile optimized scrollable container */}
-            <div className="main-content-scrollable flex flex-col">
-              <div className="flex-1 min-h-0">
+            <div className="main-content-scrollable flex flex-col mobile-scroll-container">
+              <div className="flex-1 min-h-0 mobile-natural-flow">
                 {/* Main content with proper mobile-optimized flex properties */}
                 <ContentArea
                   sections={visibleSections}
