@@ -6,6 +6,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const subdomain = searchParams.get('subdomain');
     
+    console.log('API route called with subdomain:', subdomain);
+    
     if (!subdomain) {
       return NextResponse.json(
         { available: false, error: 'Subdomain parameter is required' },
@@ -36,25 +38,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use service role to bypass RLS and check if subdomain exists
+    // Use service role to bypass RLS and check if slug exists (renamed from subdomain)
+    console.log('Getting service Supabase client...');
     const supabase = getServiceSupabase();
+    console.log('Service client obtained, making query...');
     
     const { data, error } = await supabase
       .from('handbooks')
       .select('id')
-      .eq('subdomain', subdomain)
+      .eq('slug', subdomain)  // Changed from 'subdomain' to 'slug'
       .maybeSingle();
+
+    console.log('Query result:', { data, error });
 
     if (error) {
       console.error('Error checking subdomain availability:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return NextResponse.json(
-        { available: false, error: 'Database error' },
+        { available: false, error: 'Database error', details: error.message },
         { status: 500 }
       );
     }
 
     // If data exists, subdomain is taken
     const available = !data;
+
+    console.log('Subdomain availability result:', { subdomain, available });
 
     return NextResponse.json(
       { 
@@ -72,8 +86,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Unexpected error in subdomain availability check:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
     return NextResponse.json(
-      { available: false, error: 'Internal server error' },
+      { available: false, error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

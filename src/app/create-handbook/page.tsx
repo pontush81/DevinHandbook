@@ -8,13 +8,17 @@ import { checkIsSuperAdmin } from "@/lib/user-utils";
 import { CreateHandbookForm } from "./components/CreateHandbookForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Database } from '@/types/supabase';
+
+// Type från den riktiga databasen
+type HandbookRow = Database['public']['Tables']['handbooks']['Row'];
 
 interface Handbook {
   id: string;
   title: string;
-  subdomain: string;
+  subdomain: string | null;
   created_at: string;
-  published: boolean;
+  published: boolean | null;
 }
 
 // Wrapper-komponent som använder useSearchParams säkert inom en Suspense-boundary
@@ -43,7 +47,7 @@ function CreateHandbookContent() {
       try {
         // Använd den nya hjälpfunktionen som säkerställer att profilen finns
         const isSuperAdmin = await checkIsSuperAdmin(
-          supabase, 
+          supabase as any, 
           user.id, 
           user.email || ''
         );
@@ -60,12 +64,23 @@ function CreateHandbookContent() {
     const fetchHandbooks = async () => {
       if (!user) return;
       setIsLoadingHandbooks(true);
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("handbooks")
-        .select("*")
+        .select("id, title, slug, created_at, published")
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
-      setHandbooks(data || []);
+      
+      if (data && !error) {
+        // Map the database fields to our interface
+        const mappedHandbooks: Handbook[] = data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          subdomain: item.slug, // Map 'slug' from database to 'subdomain' in interface
+          created_at: item.created_at,
+          published: item.published
+        }));
+        setHandbooks(mappedHandbooks);
+      }
       setIsLoadingHandbooks(false);
     };
     if (user) fetchHandbooks();

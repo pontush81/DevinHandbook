@@ -5,12 +5,12 @@ export const runtime = 'edge';
 export const preferredRegion = ['arn1']; // Stockholm region
 
 /**
- * API endpoint for checking if a handbook with a specific subdomain exists
- * Usage: /api/check-handbook?subdomain=abc
+ * API endpoint for checking if a handbook with a specific slug exists
+ * Usage: /api/check-handbook?subdomain=abc (parameter name kept for backward compatibility)
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get subdomain from query parameters
+    // Get subdomain from query parameters (parameter name kept for backward compatibility)
     const { searchParams } = new URL(request.url);
     const subdomain = searchParams.get('subdomain');
     
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    console.log(`Checking handbook with subdomain: ${subdomain}`);
+    console.log(`Checking handbook with slug: ${subdomain}`);
     
     // Get Supabase client
     const supabase = getServiceSupabase();
@@ -40,11 +40,11 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Query the database
+    // Query the database using 'slug' instead of 'subdomain'
     const { data, error } = await supabase
       .from('handbooks')
-      .select('id, title, subdomain, published, created_at')
-      .eq('subdomain', subdomain)
+      .select('id, title, slug, published, created_at')  // Changed from 'subdomain' to 'slug'
+      .eq('slug', subdomain)  // Changed from 'subdomain' to 'slug'
       .single();
     
     if (error) {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
           { 
             success: false, 
             exists: false,
-            message: `No handbook found with subdomain "${subdomain}"` 
+            message: `No handbook found with slug "${subdomain}"` 
           }, 
           { status: 404 }
         );
@@ -72,14 +72,17 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Return the handbook data
+    // Return the handbook data with new URL structure
     return NextResponse.json(
       { 
         success: true, 
         exists: true,
-        message: `Handbook found with subdomain "${subdomain}"`,
-        handbook: data,
-        url: `https://${subdomain}.handbok.org`
+        message: `Handbook found with slug "${subdomain}"`,
+        handbook: {
+          ...data,
+          subdomain: data.slug  // Map slug back to subdomain for backward compatibility
+        },
+        url: `https://www.handbok.org/${data.slug}`  // Use new URL structure
       }, 
       { 
         status: 200,

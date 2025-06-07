@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Get handbook details
     const { data: handbook, error: handbookError } = await supabase
       .from('handbooks')
-      .select('name, subdomain')
+      .select('name, slug')
       .eq('id', handbook_id)
       .single();
 
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
       ? `Nytt meddelande: ${title || topic.title}`
       : `Nytt svar på: ${topic.title}`;
 
-    const messageUrl = `https://${handbook.subdomain}.${process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/meddelanden`;
+    const messageUrl = `https://${handbook.slug}.${process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/meddelanden`;
     const fromEmail = `${handbook.name} <noreply@${process.env.RESEND_DOMAIN || 'yourdomain.com'}>`;
     
     // Common reply-to address for better email management

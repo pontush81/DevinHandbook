@@ -421,117 +421,6 @@ export async function testDatabaseConnection() {
   }
 }
 
-export type Database = {
-  public: {
-    Tables: {
-      handbooks: {
-        Row: {
-          id: string;
-          created_at: string;
-          name: string;
-          subdomain: string;
-          user_id: string | null;
-          published: boolean;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          name: string;
-          subdomain: string;
-          user_id?: string | null;
-          published?: boolean;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          name?: string;
-          subdomain?: string;
-          user_id?: string | null;
-          published?: boolean;
-        };
-      };
-      sections: {
-        Row: {
-          id: string;
-          created_at: string;
-          title: string;
-          description: string;
-          order: number;
-          handbook_id: string;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          title: string;
-          description: string;
-          order: number;
-          handbook_id: string;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          title?: string;
-          description?: string;
-          order?: number;
-          handbook_id?: string;
-        };
-      };
-      pages: {
-        Row: {
-          id: string;
-          created_at: string;
-          title: string;
-          content: string;
-          order: number;
-          section_id: string;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          title: string;
-          content: string;
-          order: number;
-          section_id: string;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          title?: string;
-          content?: string;
-          order?: number;
-          section_id?: string;
-        };
-      };
-      documents: {
-        Row: {
-          id: string;
-          created_at: string;
-          name: string;
-          file_path: string;
-          handbook_id: string;
-          section_id: string | null;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          name: string;
-          file_path: string;
-          handbook_id: string;
-          section_id?: string | null;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          name?: string;
-          file_path?: string;
-          handbook_id?: string;
-          section_id?: string | null;
-        };
-      };
-    };
-  };
-};
-
 // Hjälpfunktion för att diagnostisera auth-problem i produktion
 export async function diagnoseAuthIssues() {
   if (typeof window === 'undefined') return null;
@@ -590,4 +479,21 @@ export async function diagnoseAuthIssues() {
   }
   
   return diagnostics;
+}
+
+// Add function to upgrade service to latest client as needed
+export function upgradeServiceClient() {
+  if (typeof window === 'undefined' && supabaseServiceRoleKey) {
+    return createClient<Database>(
+      supabaseUrl,
+      supabaseServiceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+  }
+  return getServiceSupabase();
 }

@@ -16,17 +16,17 @@ export async function GET(req: NextRequest) {
   try {
     let query = supabase
       .from('handbooks')
-      .select('id, title, subdomain, owner_id, created_at, published');
+      .select('id, title, slug, owner_id, created_at, published');
     
     if (handbookId) {
       query = query.eq('id', handbookId);
     } else if (userId) {
       query = query.eq('owner_id', userId);
     } else if (subdomain) {
-      query = query.eq('subdomain', subdomain);
+      query = query.eq('slug', subdomain);
     }
     
-    const { data: handbooks, error } = await query.order('created_at', { ascending: false });
+    const { data: handbooks, error } = await query.order('created_at', { ascending: false }).limit(10);
     
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

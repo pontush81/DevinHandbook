@@ -108,67 +108,33 @@ export async function createHandbook(
   return handbook;
 }
 
-export async function getHandbookBySlug(slug: string) {
-  console.log('[getHandbookBySlug] slug:', slug);
-
-  // Cache key for this handbook
-  const cacheKey = `handbook_${slug}`;
-
-  // Try to get from cache first
-  // Note: Caching disabled for development to ensure fresh data
-  // if (handbookCache[cacheKey] && (Date.now() - handbookCache[cacheKey].timestamp) < CACHE_DURATION) {
-  //   console.log('[getHandbookBySlug] Returning cached data for:', slug);
-  //   return handbookCache[cacheKey].data;
-  // }
-
-  console.log('[getHandbookBySlug] Testing simple query first...');
-  const { data: simpleCheck, error: simpleError } = await supabase
-    .from('handbooks')
-    .select('id, title, slug, published')
-    .eq('slug', slug)
-    .eq('published', true)
-    .single();
-
-  if (simpleError) {
-    console.error('[getHandbookBySlug] Simple query failed:', simpleError);
-    return null;
-  }
-
-  console.log('[getHandbookBySlug] Simple query successful, handbook exists:', simpleCheck);
-
-  // If simple query works, try the complex query
-  console.log('[getHandbookBySlug] Attempting complex query with sections and pages...');
+export async function getHandbookBySlug(slug: string): Promise<Handbook | null> {
   try {
-    const { data: handbookData, error: handbookError } = await supabase
+    console.log(`[Handbook Service] Getting handbook by slug: ${slug}`);
+
+    const { data: handbook, error } = await (supabase as any)
       .from('handbooks')
       .select(`
         id,
         title,
-        description,
-        subtitle,
         slug,
+        description,
+        owner_id,
         published,
-        theme,
-        forum_enabled,
-        sections (
+        created_at,
+        updated_at,
+        handbook_sections (
           id,
           title,
           description,
           order_index,
-          handbook_id,
-          is_public,
-          is_published,
-          icon,
-          pages (
+          is_active,
+          handbook_pages (
             id,
             title,
             content,
             slug,
-            order_index,
-            section_id,
-            is_published,
-            created_at,
-            updated_at
+            order_index
           )
         )
       `)
@@ -176,44 +142,44 @@ export async function getHandbookBySlug(slug: string) {
       .eq('published', true)
       .single();
 
-    if (handbookError) {
-      console.error('[getHandbookBySlug] Complex query failed:', handbookError);
-      console.log('[getHandbookBySlug] Falling back to simple handbook structure...');
-      
-      // Return simple structure without sections
-      return {
-        ...simpleCheck,
-        sections: []
-      };
-    }
-
-    if (!handbookData) {
-      console.error('[getHandbookBySlug] No handbook data returned from complex query');
+    if (error) {
+      console.error('[Handbook Service] Error getting handbook:', error);
       return null;
     }
 
-    // Create the handbook object with proper structure
-    const handbookObj = {
-      id: handbookData.id,
-      title: handbookData.title,
-      description: handbookData.description,
-      subtitle: handbookData.subtitle,
-      slug: handbookData.slug,
-      published: handbookData.published,
-      theme: handbookData.theme,
-      forum_enabled: handbookData.forum_enabled,
-      sections: handbookData.sections || []
+    if (!handbook) {
+      console.log('[Handbook Service] No handbook found');
+      return null;
+    }
+
+    console.log(`[Handbook Service] Found handbook: ${handbook.title}`);
+    
+    return {
+      id: handbook.id,
+      title: handbook.title,
+      slug: handbook.slug,
+      description: handbook.description,
+      owner_id: handbook.owner_id,
+      published: handbook.published,
+      created_at: handbook.created_at,
+      updated_at: handbook.updated_at,
+      sections: handbook.handbook_sections?.map((section: any) => ({
+        id: section.id,
+        title: section.title,
+        description: section.description,
+        order: section.order_index,
+        isActive: section.is_active,
+        pages: section.handbook_pages?.map((page: any) => ({
+          id: page.id,
+          title: page.title,
+          content: page.content,
+          slug: page.slug,
+          order: page.order_index
+        })) || []
+      })) || []
     };
-
-    console.log('[getHandbookBySlug] Successfully fetched handbook with sections and pages:', handbookObj.id);
-    console.log('[getHandbookBySlug] Sections count:', handbookObj.sections?.length || 0);
-
-    // Cache the result
-    // handbookCache[cacheKey] = { data: handbookObj, timestamp: Date.now() };
-
-    return handbookObj;
   } catch (error) {
-    console.error('[getHandbookBySlug] Unexpected error:', error);
+    console.error('[Handbook Service] Unexpected error:', error);
     return null;
   }
 }

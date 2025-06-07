@@ -5,10 +5,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
-  const supabase = getServiceSupabase();
   const { searchParams } = new URL(request.url);
-  const q = (searchParams.get('q') || '').trim();
-  
+  const q = searchParams.get('q');
+
   if (!q || q.length < 2) {
     return NextResponse.json({ results: [] }, {
       headers: {
@@ -21,11 +20,13 @@ export async function GET(request: NextRequest) {
   
   console.log('Söker efter handböcker med:', q);
   
+  const supabase = getServiceSupabase();
+  
   try {
-    const { data, error } = await supabase
+    const { data: handbooks, error } = await supabase
       .from('handbooks')
-      .select('id, title, subdomain')
-      .or(`title.ilike.%${q}%,subdomain.ilike.%${q}%`)
+      .select('id, title, slug')
+      .or(`title.ilike.%${q}%,slug.ilike.%${q}%`)
       .eq('published', true)
       .order('title')
       .limit(10);
@@ -46,7 +47,11 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const results = Array.isArray(data) ? data : [];
+    const results = handbooks?.map(handbook => ({
+      id: handbook.id,
+      title: handbook.title,
+      subdomain: handbook.slug
+    })) || [];
     console.log('Hittade resultat:', results.length);
     
     return NextResponse.json(

@@ -120,17 +120,19 @@ export async function testProxyConnection() {
 }
 
 // Skapa handbok via proxy-anslutning
-export async function createHandbookViaProxy(name: string, subdomain: string, userId?: string) {
+export async function createHandbookViaProxy(name: string, slug: string, userId?: string) {
   try {
     const client = createProxyClient();
     
     const { data, error } = await client
       .from('handbooks')
       .insert([{
-        name,
-        subdomain,
+        title: name,
+        slug: slug,
         owner_id: userId || null,
-        published: true
+        published: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select('id')
       .single();

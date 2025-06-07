@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 
 interface Handbook {
   id: string;
-  subdomain: string;
+  subdomain: string; // This maps to 'slug' in database but keeping interface consistent
   title: string;
 }
 
@@ -60,6 +60,17 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
 }
 
 /**
+ * Get URL for a handbook based on environment
+ */
+export function getHandbookUrl(subdomain: string): string {
+  if (process.env.NODE_ENV === 'development') {
+    return `http://localhost:3000/${subdomain}`;
+  } else {
+    return `https://www.handbok.org/${subdomain}`;
+  }
+}
+
+/**
  * Transfer session to subdomain in production to avoid session loss
  * NOTE: This function is kept for backward compatibility but subdomains are no longer used
  */
@@ -113,55 +124,46 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
 
     console.log(`[Smart Redirect] Fetching handbooks for user: ${userId}`);
 
-    // Fetch user's handbooks ONLY
-    const { data: handbooks, error } = await supabase
+    // Get user's handbooks
+    const { data: handbooks, error, count: handbookCount } = await (supabase as any)
       .from('handbooks')
-      .select('id, subdomain, title')
+      .select('id, slug, title')  // Changed from 'subdomain' to 'slug'
       .eq('owner_id', userId)
-      .order('created_at', { ascending: false });
+      .limit(5);
 
     if (error) {
       console.error('[Smart Redirect] Error fetching handbooks:', error);
-      // Fallback to create-handbook for better onboarding experience
-      window.location.href = '/create-handbook?new=true';
+      console.log('[Smart Redirect] Falling back to dashboard due to error');
+      window.location.href = '/dashboard';
       return;
     }
 
-    const handbookCount = handbooks?.length || 0;
-    
-    console.log(`[Smart Redirect] Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map(h => h.subdomain));
+    console.log(`[Smart Redirect] Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map((h: any) => h.slug));
 
-    if (handbookCount === 0) {
-      // No handbooks - go to create-handbook for better onboarding
-      console.log('[Smart Redirect] No handbooks found, redirecting to create-handbook for onboarding');
-      window.location.href = '/create-handbook?new=true';
-      
-    } else if (handbookCount === 1) {
-      // One handbook - go directly to it (most common case)
-      const handbook = handbooks[0];
-      
-      // Validate subdomain before redirect
-      if (!handbook || !handbook.subdomain || typeof handbook.subdomain !== 'string') {
-        console.error('[Smart Redirect] Invalid handbook or subdomain:', handbook);
-        console.log('[Smart Redirect] Falling back to dashboard due to invalid subdomain');
+    if (!handbooks || handbooks.length === 0) {
+      console.log('[Smart Redirect] No handbooks found, redirecting to create handbook');
+      window.location.href = '/create-handbook';
+      return;
+    }
+
+    if (handbooks.length === 1) {
+      const handbook = handbooks[0] as any;
+      // Validate slug before redirect
+      if (!handbook || !handbook.slug || typeof handbook.slug !== 'string') {
+        console.error('[Smart Redirect] Invalid handbook or slug:', handbook);
+        console.log('[Smart Redirect] Falling back to dashboard due to invalid slug');
         window.location.href = '/dashboard';
         return;
       }
+
+      console.log(`[Smart Redirect] One handbook found, redirecting to: ${handbook.slug}`);
       
-      console.log(`[Smart Redirect] One handbook found, redirecting to: ${handbook.subdomain}`);
-      
-      // Use new URL structure (www.handbok.org/namn)
-      const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-      const handbookUrl = isDevelopment 
-        ? `http://localhost:3000/${handbook.subdomain}`
-        : `https://www.handbok.org/${handbook.subdomain}`;
+      const handbookUrl = process.env.NODE_ENV === 'development'
+        ? `http://localhost:3000/${handbook.slug}`  // Map slug to subdomain for URL
+        : `https://www.handbok.org/${handbook.slug}`;
       
       window.location.href = handbookUrl;
-      
-    } else {
-      // Multiple handbooks - go to dashboard to choose
-      console.log(`[Smart Redirect] Multiple handbooks (${handbookCount}) found, redirecting to dashboard`);
-      window.location.href = '/dashboard';
+      return;
     }
     
   } catch (error) {
@@ -218,9 +220,9 @@ export async function smartRedirectWithPolling(
       console.log(`[Smart Redirect Polling] Attempt ${attempts}: Fetching handbooks for user: ${userId}`);
       
       // Fetch user's handbooks ONLY
-      const { data: handbooks, error } = await supabase
+      const { data: handbooks, error } = await (supabase as any)
         .from('handbooks')
-        .select('id, subdomain, title')
+        .select('id, slug, title')
         .eq('owner_id', userId)
         .order('created_at', { ascending: false });
 
@@ -237,7 +239,7 @@ export async function smartRedirectWithPolling(
       }
 
       const handbookCount = handbooks?.length || 0;
-      console.log(`[Smart Redirect Polling] Attempt ${attempts}: Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map(h => h.subdomain));
+      console.log(`[Smart Redirect Polling] Attempt ${attempts}: Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map((h: any) => h.slug));
 
       if (handbookCount === 0) {
         if (attempts >= maxAttempts) {
@@ -251,12 +253,12 @@ export async function smartRedirectWithPolling(
         
       } else if (handbookCount === 1) {
         const handbook = handbooks[0];
-        console.log(`[Smart Redirect Polling] Found single handbook: ${handbook.subdomain}`);
+        console.log(`[Smart Redirect Polling] Found single handbook: ${handbook.slug}`);
         
-        // Validate subdomain before redirect
-        if (!handbook || !handbook.subdomain || typeof handbook.subdomain !== 'string') {
-          console.error('[Smart Redirect Polling] Invalid handbook or subdomain:', handbook);
-          console.log('[Smart Redirect Polling] Falling back to dashboard due to invalid subdomain');
+        // Validate slug before redirect
+        if (!handbook || !handbook.slug || typeof handbook.slug !== 'string') {
+          console.error('[Smart Redirect Polling] Invalid handbook or slug:', handbook);
+          console.log('[Smart Redirect Polling] Falling back to dashboard due to invalid slug');
           window.location.href = '/dashboard';
           return;
         }
@@ -264,8 +266,8 @@ export async function smartRedirectWithPolling(
         // Use new URL structure (www.handbok.org/namn)
         const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
         const handbookUrl = isDevelopment 
-          ? `http://localhost:3000/${handbook.subdomain}`
-          : `https://www.handbok.org/${handbook.subdomain}`;
+          ? `http://localhost:3000/${handbook.slug}`
+          : `https://www.handbok.org/${handbook.slug}`;
         
         console.log(`[Smart Redirect Polling] Redirecting to: ${handbookUrl}`);
         window.location.href = handbookUrl;
