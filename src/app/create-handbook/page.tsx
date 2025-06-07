@@ -210,7 +210,7 @@ function CreateHandbookContent() {
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
             {handbooks.length === 0 
-              ? "Välkommen! Skapa din första handbok. Följ stegen nedan för att komma igång."
+              ? ""
               : "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
             }
           </p>
