@@ -307,6 +307,21 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }));
 
       console.log('[ModernHandbookClient] Section added to local state successfully:', fullSection.id);
+
+      // Scroll to the newly created section after a short delay to ensure DOM is updated
+      setTimeout(() => {
+        const sectionElement = document.getElementById(`section-${fullSection.id}`);
+        if (sectionElement) {
+          sectionElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+          console.log('[ModernHandbookClient] Scrolled to new section:', fullSection.id);
+        } else {
+          console.warn('[ModernHandbookClient] Could not find section element to scroll to:', `section-${fullSection.id}`);
+        }
+      }, 100);
+
     } catch (error) {
       console.error('[ModernHandbookClient] Error creating section:', error);
       alert('Det gick inte att skapa sektionen. Försök igen.');

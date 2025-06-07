@@ -10,7 +10,7 @@ interface ContentAreaProps {
   handbookId: string;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
-  onAddPage?: (sectionId: string, page: Partial<Page>) => void;
+  onAddPage?: (sectionId: string, page: Partial<Page>) => Promise<{ id: string } | undefined>;
   onDeletePage?: (pageId: string, sectionId: string) => void;
   onAddSection?: (section: Partial<Section>) => void;
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;

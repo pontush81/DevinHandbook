@@ -9,7 +9,7 @@ import { IconPicker } from '@/components/ui/IconPicker';
 import { parseEditorJSContent, stringifyEditorJSContent } from '@/lib/utils/editorjs';
 import { getIconComponent } from '@/lib/icon-utils';
 
-// Simple read-only content renderer for EditorJS data
+// Simple read-only content renderer for EditorJS data (used for pages only)
 const ReadOnlyEditorContent = ({ content }: { content: any }) => {
   if (!content || !content.blocks) {
     return null;
@@ -113,21 +113,6 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
   );
 };
 
-// Helper function to get clean text summary from EditorJS content
-const getTextSummary = (content: any, maxLength: number = 100): string => {
-  if (!content || !content.blocks) return '';
-  
-  let text = '';
-  for (const block of content.blocks) {
-    if (block.data?.text) {
-      text += block.data.text + ' ';
-      if (text.length > maxLength) break;
-    }
-  }
-  
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text.trim();
-};
-
 interface AllSectionsViewProps {
   sections: Section[];
   isEditMode?: boolean;
@@ -136,7 +121,7 @@ interface AllSectionsViewProps {
   onDeleteSection?: (sectionId: string) => void;
   onDeletePage?: (pageId: string, sectionId: string) => void;
   onAddSection?: (section: Partial<Section>) => void;
-  onAddPage?: (sectionId: string, page: Partial<any>) => void;
+  onAddPage?: (sectionId: string, page: Partial<any>) => Promise<{ id: string } | undefined>;
   trialStatusBar?: React.ReactNode;
   handbookId?: string;
   handbookData?: {
@@ -165,12 +150,10 @@ export function AllSectionsView({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(sections.map(section => section.id))
   );
-  const [editingSections, setEditingSections] = useState<Set<string>>(new Set());
   const [editingPages, setEditingPages] = useState<Set<string>>(new Set());
   const [editingSectionIcons, setEditingSectionIcons] = useState<Set<string>>(new Set());
   const [editingSectionTitles, setEditingSectionTitles] = useState<Set<string>>(new Set());
   const [editingPageTitles, setEditingPageTitles] = useState<Set<string>>(new Set());
-  const [sectionContents, setSectionContents] = useState<Map<string, any>>(new Map());
   const [pageContents, setPageContents] = useState<Map<string, any>>(new Map());
   const [tempSectionTitles, setTempSectionTitles] = useState<Map<string, string>>(new Map());
   const [tempPageTitles, setTempPageTitles] = useState<Map<string, string>>(new Map());
@@ -185,10 +168,6 @@ export function AllSectionsView({
       }
       return newSet;
     });
-  }, []);
-
-  const startEditingSection = useCallback((sectionId: string) => {
-    setEditingSections(prev => new Set(prev.add(sectionId)));
   }, []);
 
   const startEditingPage = useCallback((pageId: string) => {
@@ -251,17 +230,6 @@ export function AllSectionsView({
     });
   }, [tempPageTitles, onUpdatePage]);
 
-  const handleSectionContentChange = useCallback((sectionId: string, data: any) => {
-    setSectionContents(prev => new Map(prev.set(sectionId, data)));
-    
-    // Auto-save after 2 seconds of inactivity
-    setTimeout(() => {
-      const content = stringifyEditorJSContent(data);
-      // Save as description since sections table doesn't have content column
-      onUpdateSection?.(sectionId, { description: content });
-    }, 2000);
-  }, [onUpdateSection]);
-
   const handlePageContentChange = useCallback((pageId: string, data: any) => {
     setPageContents(prev => new Map(prev.set(pageId, data)));
     
@@ -305,13 +273,26 @@ export function AllSectionsView({
     }
   }, [onAddSection]);
 
-  const handleAddPage = useCallback((sectionId: string) => {
+  const handleAddPage = useCallback(async (sectionId: string) => {
     if (onAddPage) {
-      onAddPage(sectionId, {
-        title: 'Ny sida',
-        content: '',
-        is_published: true
-      });
+      try {
+        const newPage = await onAddPage(sectionId, {
+          title: 'Ny sida',
+          content: '',
+          is_published: true
+        });
+        
+        // If the page was created successfully, automatically start editing it
+        if (newPage?.id) {
+          console.log('[AllSectionsView] Auto-starting edit mode for new page:', newPage.id);
+          setTimeout(() => {
+            setEditingPages(prev => new Set(prev.add(newPage.id)));
+          }, 100); // Small delay to ensure DOM is updated
+        }
+      } catch (error) {
+        console.error('[AllSectionsView] Error creating page:', error);
+        // Error handling is already done in the parent component
+      }
     }
   }, [onAddPage]);
 
@@ -459,34 +440,6 @@ export function AllSectionsView({
                     </div>
                   )}
                   
-                  {/* Section Content - Clickable for editing when in edit mode */}
-                  <div className={`px-3 sm:px-4 pb-3 sm:pb-4 ${isEditMode ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-                       onClick={isEditMode && !editingSections.has(section.id) ? () => startEditingSection(section.id) : undefined}>
-                    {editingSections.has(section.id) && isEditMode ? (
-                      <div className="mt-2 sm:mt-3">
-                        <EditorJSComponent
-                          content={parseEditorJSContent(section.description)}
-                          onChange={(data) => handleSectionContentChange(section.id, data)}
-                          readOnly={false}
-                          placeholder="Skriv en beskrivning för denna sektion..."
-                          handbookId={handbookId}
-                        />
-                      </div>
-                    ) : (
-                      <div className="mt-2 sm:mt-3">
-                        {section.description ? (
-                          <div className="prose prose-xs sm:prose-sm max-w-none text-gray-600">
-                            <ReadOnlyEditorContent content={parseEditorJSContent(section.description)} />
-                          </div>
-                        ) : isEditMode ? (
-                          <p className="text-gray-400 italic py-2 sm:py-4 text-center text-xs sm:text-sm">
-                            Klicka här för att lägga till en beskrivning för denna sektion
-                          </p>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                  
                   {/* Pages in section */}
                   {section.pages && section.pages.length > 0 && (
                     <div className="bg-white">
@@ -536,7 +489,7 @@ export function AllSectionsView({
                                 )}
                                 
                                 {/* Show page content preview - Clickable for editing */}
-                                {page.content && (
+                                {(page.content || isEditMode) && (
                                   <div className={`mt-2 ${isEditMode && !editingPages.has(page.id) ? 'cursor-pointer hover:bg-gray-50 rounded p-2' : ''}`}
                                        onClick={isEditMode && !editingPages.has(page.id) ? () => startEditingPage(page.id) : undefined}>
                                     {editingPages.has(page.id) && isEditMode ? (
@@ -549,7 +502,7 @@ export function AllSectionsView({
                                           handbookId={handbookId}
                                         />
                                       </div>
-                                    ) : (
+                                    ) : page.content ? (
                                       <div className="prose prose-sm max-w-none text-gray-600">
                                         <ReadOnlyEditorContent content={parseEditorJSContent(page.content)} />
                                         {isEditMode && !editingPages.has(page.id) && (
@@ -558,7 +511,11 @@ export function AllSectionsView({
                                           </div>
                                         )}
                                       </div>
-                                    )}
+                                    ) : isEditMode ? (
+                                      <div className="p-2 bg-blue-50 border border-blue-200 rounded text-center">
+                                        <p className="text-xs text-blue-600">Klicka för att lägga till innehåll till denna sida</p>
+                                      </div>
+                                    ) : null}
                                   </div>
                                 )}
                               </div>
