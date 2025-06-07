@@ -137,10 +137,10 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
             >
               <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">
-                {isEditMode ? 'Redigering på' : 'Redigera'}
+                {isEditMode ? 'Spara' : 'Redigera'}
               </span>
               <span className="sm:hidden">
-                {isEditMode ? 'På' : 'Ändra'}
+                {isEditMode ? 'Spara' : 'Redigera'}
               </span>
             </Button>
           )}
