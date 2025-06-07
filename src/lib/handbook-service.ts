@@ -1,10 +1,12 @@
-import { getServiceSupabase, supabaseAdmin } from '@/lib/supabase';
-import { supabase } from '@/lib/supabase-client';
+import { getServiceSupabase, getAdminClient, supabase } from '@/lib/supabase';
 import { HandbookTemplate } from '@/lib/templates/complete-brf-handbook';
 
 // Cache for handbooks (could be enhanced with Redis in production)
 const handbookCache: { [key: string]: { data: any; timestamp: number } } = {};
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Get admin client for database operations
+const supabaseAdmin = getAdminClient();
 
 export async function createHandbook(
   name: string,
@@ -395,4 +397,7 @@ async function addHandbookMember(handbookId: string, userId: string, role: 'admi
     throw error;
   }
 }
+
+// Backward compatibility alias for API routes
+export const createHandbookWithSectionsAndPages = createHandbook;
 
