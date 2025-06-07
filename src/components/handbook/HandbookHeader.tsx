@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Edit, Settings } from 'lucide-react';
+import { User, LogOut, Edit, Settings, ChevronDown } from 'lucide-react';
 
 interface HandbookHeaderProps {
   handbookTitle: string;
@@ -71,7 +71,7 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
     return 'Användare';
   };
 
-  const getUserInitial = () => {
+  const getUserInitials = (user: any) => {
     if (user?.user_metadata?.full_name) {
       return user.user_metadata.full_name.charAt(0).toUpperCase();
     }
@@ -87,24 +87,24 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b transition-all duration-200 bg-white shadow-sm">
-      <div className="w-full px-0 flex h-12 items-center justify-between">
+      <div className="w-full px-2 sm:px-4 flex h-12 items-center justify-between">
         
         {/* Left section - Sidebar trigger and Brand pushed to far left */}
-        <div className="flex items-center space-x-3 flex-shrink-0 min-w-0 pl-0">
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0 min-w-0 pl-0">
           {/* Sidebar trigger längst till vänster utan padding */}
-          <SidebarTrigger className="flex-shrink-0 ml-0 mr-3" />
+          <SidebarTrigger className="flex-shrink-0 ml-0 mr-2 sm:mr-3" />
           
           {/* Brand section with tighter spacing */}
-          <div className="flex items-center space-x-2 min-w-0">
-            <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
+          <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
+            <Link href="/" className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               <div 
-                className="h-5 w-5 rounded flex items-center justify-center"
+                className="h-4 w-4 sm:h-5 sm:w-5 rounded flex items-center justify-center"
                 style={{ backgroundColor: primaryColor }}
               >
                 <span className="text-white text-xs font-bold">H</span>
               </div>
               <span 
-                className="hidden font-bold sm:inline-block text-sm"
+                className="hidden font-bold sm:inline-block text-xs sm:text-sm"
                 style={{ color: primaryColor }}
               >
                 Handbok.org
@@ -114,7 +114,7 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
             {/* Handbook title with separator */}
             <div className="hidden sm:flex items-center min-w-0">
               <span className="text-gray-300 text-sm mx-2">|</span>
-              <span className="text-sm font-medium text-gray-900 truncate max-w-[200px] md:max-w-[300px]">
+              <span className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px]">
                 {handbookTitle}
               </span>
             </div>
@@ -122,70 +122,78 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
         </div>
 
         {/* Right section - Edit button and User menu */}
-        <div className="flex items-center space-x-3 flex-shrink-0 pr-4" data-debug="handbook-header-right">
-          {/* Edit button for admins - prominent placement */}
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0" data-debug="handbook-header-right">
+          {/* Edit Mode Toggle */}
           {canEdit && (
-            <Button 
-              onClick={handleToggleEdit}
+            <Button
+              onClick={onToggleEditMode}
               variant={isEditMode ? "default" : "outline"}
               size="sm"
-              className="flex items-center gap-2"
-              style={isEditMode ? { backgroundColor: primaryColor, borderColor: primaryColor } : {}}
+              className={`h-8 px-2 sm:px-3 text-xs sm:text-sm font-medium transition-all duration-200 ${
+                isEditMode 
+                  ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-sm' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">
-                {isEditMode ? "Stäng redigering" : "Redigera"}
+                {isEditMode ? 'Redigering på' : 'Redigera'}
+              </span>
+              <span className="sm:hidden">
+                {isEditMode ? 'På' : 'Ändra'}
               </span>
             </Button>
           )}
-          
-          {/* User menu */}
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="flex items-center gap-2 h-8 px-2 hover:bg-gray-100" 
-                  data-debug="handbook-user-trigger"
-                >
-                  <Avatar className="h-6 w-6 flex-shrink-0" data-component="handbook-avatar">
-                    <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email || ''} />
-                    <AvatarFallback className="text-xs font-medium bg-gray-200" data-component="handbook-avatar">
-                      {getUserInitial()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden sm:inline text-sm font-medium text-gray-700 max-w-[120px] truncate flex-shrink-0">
-                    {getUserDisplayName()}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white border border-gray-200 shadow-lg rounded-md" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.user_metadata?.full_name || 'Användare'}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem>
-                  <Link href="/dashboard" className="flex items-center w-full">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logga ut
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="relative h-8 w-8 sm:h-8 sm:w-auto sm:px-2 rounded-full sm:rounded-md"
+                data-debug="handbook-user-trigger"
+              >
+                <Avatar className="h-6 w-6 sm:h-7 sm:w-7">
+                  <AvatarImage 
+                    src={user?.user_metadata?.avatar_url} 
+                    alt={user?.user_metadata?.full_name || user?.email || "Användare"} 
+                  />
+                  <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm font-medium">
+                    {getUserInitials(user)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:inline ml-2 text-xs font-medium text-gray-700 truncate max-w-[100px]">
+                  {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Användare'}
+                </span>
+                <ChevronDown className="hidden sm:inline h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48 sm:w-56 bg-white border border-gray-200 shadow-lg rounded-md mr-2 sm:mr-0" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1 p-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user?.user_metadata?.full_name || 'Användare'}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
+                <Link href="/dashboard" className="flex items-center w-full">
+                  <Settings className="mr-3 h-4 w-4" />
+                  <span className="text-sm">Dashboard</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="min-h-[44px] sm:min-h-[36px]">
+                <LogOut className="mr-3 h-4 w-4" />
+                <span className="text-sm">Logga ut</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           {!user && (
             <Button variant="ghost" size="sm" asChild>

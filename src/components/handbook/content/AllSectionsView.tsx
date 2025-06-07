@@ -326,7 +326,7 @@ export function AllSectionsView({
       
       {/* Content with clean styling */}
       <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto p-8">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
           {/* Header explaining structure - only in edit mode */}
           {isEditMode && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -377,18 +377,18 @@ export function AllSectionsView({
               return (
                 <div key={section.id} id={`section-${section.id}`} className="notion-section-card border border-gray-200 rounded-lg overflow-hidden">
                   {/* Section Header */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
-                    <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border-b border-gray-200">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         {/* Section Icon */}
-                        <div className="flex items-center gap-2">
-                          <IconComponent className="h-5 w-5 text-blue-600" />
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
                           {isEditMode && (
-                            <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">SEKTION</span>
+                            <span className="hidden sm:inline text-xs font-medium text-blue-600 uppercase tracking-wide">SEKTION</span>
                           )}
                         </div>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         {/* Editable Section Title */}
                         {editingSectionTitles.has(section.id) && isEditMode ? (
                           <input
@@ -412,33 +412,23 @@ export function AllSectionsView({
                           />
                         ) : (
                           <h3 
-                            className={`text-base font-semibold text-gray-900 ${isEditMode ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                            className={`text-sm sm:text-base font-semibold text-gray-900 leading-tight ${isEditMode ? 'cursor-pointer hover:text-blue-600' : ''}`}
                             onClick={isEditMode ? () => startEditingSectionTitle(section.id, section.title) : undefined}
                             title={isEditMode ? "Klicka för att redigera titeln" : undefined}
                           >
                             {section.title}
                           </h3>
                         )}
-                        {section.description && !section.description.startsWith('{') && (
-                          <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                            {section.description}
-                          </p>
-                        )}
-                        {section.description && section.description.startsWith('{') && (
-                          <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                            {getTextSummary(parseEditorJSContent(section.description), 150)}
-                          </p>
-                        )}
                       </div>
                     </div>
 
                     {isEditMode && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                         <Button 
                           variant="ghost" 
                           size="sm"
                           onClick={() => toggleIconEdit(section.id)}
-                          className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-8 px-2"
+                          className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-7 w-7 sm:h-8 sm:w-8 p-0"
                           title="Ändra ikon"
                         >
                           🎨
@@ -447,10 +437,10 @@ export function AllSectionsView({
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleDeleteSection(section.id, section.title)}
-                          className="text-red-600 hover:bg-red-50 hover:text-red-700 h-8 px-2"
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700 h-7 w-7 sm:h-8 sm:w-8 p-0"
                           title="Radera sektion"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     )}
@@ -470,10 +460,10 @@ export function AllSectionsView({
                   )}
                   
                   {/* Section Content - Clickable for editing when in edit mode */}
-                  <div className={`px-4 pb-4 ${isEditMode ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+                  <div className={`px-3 sm:px-4 pb-3 sm:pb-4 ${isEditMode ? 'cursor-pointer hover:bg-gray-50' : ''}`}
                        onClick={isEditMode && !editingSections.has(section.id) ? () => startEditingSection(section.id) : undefined}>
                     {editingSections.has(section.id) && isEditMode ? (
-                      <div className="mt-3">
+                      <div className="mt-2 sm:mt-3">
                         <EditorJSComponent
                           content={parseEditorJSContent(section.description)}
                           onChange={(data) => handleSectionContentChange(section.id, data)}
@@ -483,13 +473,13 @@ export function AllSectionsView({
                         />
                       </div>
                     ) : (
-                      <div className="mt-3">
+                      <div className="mt-2 sm:mt-3">
                         {section.description ? (
-                          <div className="prose prose-sm max-w-none text-gray-600">
+                          <div className="prose prose-xs sm:prose-sm max-w-none text-gray-600">
                             <ReadOnlyEditorContent content={parseEditorJSContent(section.description)} />
                           </div>
                         ) : isEditMode ? (
-                          <p className="text-gray-400 italic py-4 text-center">
+                          <p className="text-gray-400 italic py-2 sm:py-4 text-center text-xs sm:text-sm">
                             Klicka här för att lägga till en beskrivning för denna sektion
                           </p>
                         ) : null}
@@ -502,15 +492,15 @@ export function AllSectionsView({
                     <div className="bg-white">
                       {section.pages.map((page) => (
                         <div key={page.id} className="border-t border-gray-100 p-4">
-                          <div className="flex items-start justify-between">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0">
                             <div className="flex items-start gap-3 flex-1">
                               <div className="flex items-center gap-2 mt-1">
                                 <FileText className="h-4 w-4 text-green-600" />
                                 {isEditMode && (
-                                  <span className="text-xs font-medium text-green-600 uppercase tracking-wide">SIDA</span>
+                                  <span className="hidden sm:inline text-xs font-medium text-green-600 uppercase tracking-wide">SIDA</span>
                                 )}
                               </div>
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 {/* Editable Page Title */}
                                 {editingPageTitles.has(page.id) && isEditMode ? (
                                   <input
@@ -574,11 +564,18 @@ export function AllSectionsView({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 ml-4">
+                            <div className="flex items-center justify-between sm:justify-end gap-2 sm:ml-4">
                               {page.lastUpdated && (
-                                <div className="flex items-center text-xs text-gray-400">
+                                <div className="flex sm:hidden items-center text-xs text-gray-400 order-1">
                                   <Clock className="h-3 w-3 mr-1" />
-                                  <span>{page.lastUpdated}</span>
+                                  <span className="truncate text-xs">{new Date(page.lastUpdated).toLocaleDateString('sv-SE')}</span>
+                                </div>
+                              )}
+                              
+                              {page.lastUpdated && (
+                                <div className="hidden sm:flex items-center text-xs text-gray-400">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  <span className="truncate">{page.lastUpdated}</span>
                                 </div>
                               )}
 
@@ -587,10 +584,10 @@ export function AllSectionsView({
                                   variant="ghost" 
                                   size="sm"
                                   onClick={() => handleDeletePage(page.id, section.id, page.title)}
-                                  className="text-red-600 hover:bg-red-50 hover:text-red-700 h-6 px-1"
+                                  className="text-red-600 hover:bg-red-50 hover:text-red-700 h-6 px-1 sm:h-8 sm:px-2 order-2"
                                   title="Radera sida"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </Button>
                               )}
                             </div>
