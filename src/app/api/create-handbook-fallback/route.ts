@@ -17,10 +17,9 @@ export async function POST(req: NextRequest) {
     
     // Try to create the handbook
     const handbookId = await createHandbookWithSectionsAndPages(
-      handbookName, 
-      subdomain, 
-      completeBRFHandbook, 
-      userId || null
+      handbookName,     // name: string
+      subdomain,        // slug: string
+      userId || null    // userId?: string
     );
     
     console.log(`[Fallback] Handbook created successfully with id: ${handbookId}`);

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     // Om SKIP_STRIPE är true, skapa handbok direkt och returnera lyckat svar
     if (process.env.SKIP_STRIPE === 'true') {
       try {
-        const handbookId = await createHandbookWithSectionsAndPages(name, subdomain, template, userId);
+        const handbookId = await createHandbookWithSectionsAndPages(name, subdomain, userId);
         console.log(`[SKIP_STRIPE] Handbok skapad direkt med id: ${handbookId}`);
         return new Response(JSON.stringify({ success: true, handbookId, message: 'Handbok skapad utan Stripe!' }), {
           status: 200,

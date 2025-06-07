@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
 async function createHandbookInSupabase(name: string, subdomain: string, userId: string | null) {
   try {
-    return await createHandbookWithSectionsAndPages(name, subdomain, completeBRFHandbook, userId);
+    return await createHandbookWithSectionsAndPages(name, subdomain, userId);
   } catch (error: unknown) {
     console.error('Error creating handbook in Supabase:', error);
     throw error;

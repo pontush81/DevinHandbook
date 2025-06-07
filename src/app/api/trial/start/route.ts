@@ -68,11 +68,10 @@ export async function POST(req: NextRequest) {
 
     // Skapa handbok med trial-flaggor
     const handbookId = await createHandbookWithSectionsAndPages(
-      name, 
-      subdomain, 
-      template, 
-      userId,
-      true // isTrialHandbook = true
+      name,        // name: string
+      subdomain,   // slug: string  
+      userId,      // userId?: string
+      true         // isTrialHandbook: boolean = true
     );
 
     return NextResponse.json({

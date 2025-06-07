@@ -89,17 +89,24 @@ export default function DashboardPage() {
       if (isSuperadmin) {
         ({ data, error } = await supabase
           .from("handbooks")
-          .select("*")
+          .select("id, title, slug, created_at, published")
           .order("created_at", { ascending: false }));
       } else {
         ({ data, error } = await supabase
           .from("handbooks")
-          .select("*")
+          .select("id, title, slug, created_at, published")
           .eq("owner_id", user.id as any)
           .order("created_at", { ascending: false }));
       }
       if (error) throw error;
-      setHandbooks((data as unknown as Handbook[]) || []);
+      
+      // Map slug to subdomain for interface compatibility
+      const mappedData = (data || []).map(handbook => ({
+        ...handbook,
+        subdomain: handbook.slug
+      }));
+      
+      setHandbooks(mappedData as Handbook[]);
     } catch (err: unknown) {
       console.error("Error fetching handbooks:", err);
       setError("Kunde inte hämta handböcker. Försök igen senare.");

@@ -1,5 +1,7 @@
 import { getServiceSupabase, getAdminClient, supabase } from '@/lib/supabase';
 import { HandbookTemplate } from '@/lib/templates/complete-brf-handbook';
+import { Handbook } from '@/types/handbook';
+import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 
 // Cache for handbooks (could be enhanced with Redis in production)
 const handbookCache: { [key: string]: { data: any; timestamp: number } } = {};
@@ -123,13 +125,13 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
         published,
         created_at,
         updated_at,
-        handbook_sections (
+        sections (
           id,
           title,
           description,
           order_index,
           is_active,
-          handbook_pages (
+          pages (
             id,
             title,
             content,
@@ -157,24 +159,29 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     return {
       id: handbook.id,
       title: handbook.title,
+      name: handbook.title,
+      subdomain: handbook.slug,
       slug: handbook.slug,
       description: handbook.description,
       owner_id: handbook.owner_id,
       published: handbook.published,
       created_at: handbook.created_at,
       updated_at: handbook.updated_at,
-      sections: handbook.handbook_sections?.map((section: any) => ({
+      sections: handbook.sections?.map((section: any) => ({
         id: section.id,
         title: section.title,
         description: section.description,
-        order: section.order_index,
-        isActive: section.is_active,
-        pages: section.handbook_pages?.map((page: any) => ({
+        order_index: section.order_index,
+        handbook_id: handbook.id,
+        is_public: section.is_public,
+        is_published: section.is_published,
+        pages: section.pages?.map((page: any) => ({
           id: page.id,
           title: page.title,
           content: page.content,
           slug: page.slug,
-          order: page.order_index
+          order_index: page.order_index,
+          section_id: section.id
         })) || []
       })) || []
     };
@@ -287,38 +294,54 @@ export async function toggleHandbookPublished(id: string, published: boolean) {
 
 // Helper function to create default sections
 async function createDefaultSections(handbookId: string) {
-  const defaultSections = [
-    {
-      title: 'Allmänt',
-      description: 'Allmän information om föreningen',
-      order_index: 1,
-      is_public: true,
-      is_published: true
-    },
-    {
-      title: 'Stadgar',
-      description: 'Föreningens stadgar och regler',
-      order_index: 2,
-      is_public: true,
-      is_published: true
-    },
-    {
-      title: 'Ekonomi',
-      description: 'Ekonomisk information och budgetar',
-      order_index: 3,
-      is_public: false,
-      is_published: true
-    }
-  ];
-
-  for (const section of defaultSections) {
-    await supabaseAdmin
+  console.log('[createDefaultSections] Creating sections from rich template for handbook:', handbookId);
+  
+  // Use the rich template instead of simple sections
+  for (const templateSection of completeBRFHandbook.sections) {
+    console.log('[createDefaultSections] Creating section:', templateSection.title);
+    
+    // Create the section
+    const { data: section, error: sectionError } = await supabaseAdmin
       .from('sections')
       .insert({
-        ...section,
-        handbook_id: handbookId
-      });
+        title: templateSection.title,
+        description: templateSection.description,
+        order_index: templateSection.order,
+        handbook_id: handbookId,
+        is_public: true,
+        is_published: true,
+        icon: 'BookOpen' // Default icon
+      })
+      .select()
+      .single();
+
+    if (sectionError) {
+      console.error('[createDefaultSections] Error creating section:', sectionError);
+      continue;
+    }
+
+    // Create pages for this section
+    for (const templatePage of templateSection.pages) {
+      console.log('[createDefaultSections] Creating page:', templatePage.title, 'in section:', section.id);
+      
+      const { error: pageError } = await supabaseAdmin
+        .from('pages')
+        .insert({
+          title: templatePage.title,
+          content: templatePage.content,
+          slug: templatePage.slug,
+          order_index: templatePage.order,
+          section_id: section.id,
+          is_published: true
+        });
+
+      if (pageError) {
+        console.error('[createDefaultSections] Error creating page:', pageError);
+      }
+    }
   }
+  
+  console.log('[createDefaultSections] ✅ Rich template sections created successfully');
 }
 
 // Helper function to create default forum categories
@@ -359,9 +382,17 @@ async function addHandbookMember(handbookId: string, userId: string, role: 'admi
     });
 
   if (error) {
+    // If it's a duplicate key error, that's fine - user is already a member
+    if (error.code === '23505') {
+      console.log('[addHandbookMember] User is already a member of this handbook:', { handbookId, userId });
+      return; // Exit gracefully
+    }
+    
     console.error('[addHandbookMember] Error:', error);
     throw error;
   }
+  
+  console.log('[addHandbookMember] Successfully added member:', { handbookId, userId, role });
 }
 
 // Backward compatibility alias for API routes
