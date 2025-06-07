@@ -6,26 +6,24 @@
 }
 
 .messages-header {
-  background: linear-gradient(to right, var(--color-blue-600), var(--color-blue-700));
-  color: white;
-  padding: var(--spacing-md) 0;
+  /* Remove the messages-header styles since we deleted the blue header block */
 }
 
 @media (min-width: 640px) {
   .messages-header {
-    padding: var(--spacing-lg) 0;
+    padding: 1.25rem 0;
   }
 }
 
 @media (min-width: 768px) {
   .messages-header {
-    padding: var(--spacing-xl) 0;
+    padding: 1.5rem 0;
   }
 }
 
 @media (min-width: 1024px) {
   .messages-header {
-    padding: var(--spacing-2xl) 0;
+    padding: 2rem 0;
   }
 }
 
@@ -46,7 +44,7 @@
 }
 
 .messages-header .back-link {
-  color: var(--color-blue-100);
+  color: #93c5fd;
   font-size: var(--font-size-xs);
   text-decoration: none;
   transition: color 0.2s;

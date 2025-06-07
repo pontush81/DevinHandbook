@@ -3,11 +3,11 @@ import { MessagesPageClient } from './MessagesPageClient';
 import { notFound } from 'next/navigation';
 
 interface MessagesPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export default async function MessagesPage({ params }: MessagesPageProps) {
-  const { slug } = params;
+  const { slug } = await params;
 
   console.log('🎯 [MessagesPage] Loading handbook for slug:', slug);
 

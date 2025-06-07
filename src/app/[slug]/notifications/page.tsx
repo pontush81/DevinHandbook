@@ -1,32 +1,18 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams, useRouter, notFound } from 'next/navigation';
-import { Bell, ArrowLeft, BookOpen } from 'lucide-react';
+import { notFound } from 'next/navigation';
+import { Bell, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import NotificationSettings from '@/components/NotificationSettings';
 import { getHandbookBySlug } from '@/lib/handbook-service';
 import AdminNotificationControls from '@/components/AdminNotificationControls';
 
-interface Handbook {
-  id: string;
-  name: string;
-  subdomain: string;
-  description?: string;
-}
-
 interface NotificationsPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export default async function NotificationsPage({ params }: NotificationsPageProps) {
-  const { slug } = params;
+  const { slug } = await params;
 
   console.log('🎯 [NotificationsPage] Loading handbook for slug:', slug);
 

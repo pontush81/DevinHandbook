@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal, Settings } from 'lucide-react';
+import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal, Settings, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { supabase } from '@/lib/supabase';
@@ -530,7 +530,7 @@ export function MessagesPageClient({
   }
 
   return (
-    <div className="messages-page mobile-natural-flow mobile-scrollable">
+    <div className="bg-white">
       {/* Success notification toast */}
       {successMessage && (
         <div className="success-toast">
@@ -543,36 +543,26 @@ export function MessagesPageClient({
         </div>
       )}
       
-      {/* Header med vit text på blå bakgrund */}
-      <div className="messages-header">
-        <div className="responsive-container">
-          <nav className="messages-header nav">
-            <Link 
-              href={`/${handbookSlug}`}
-              className="back-link"
-            >
-              ← Tillbaka till {handbookTitle}
-            </Link>
-          </nav>
-          <div className="messages-title-container">
-            <MessageCircle className="messages-icon" />
-            <h1 className="messages-title">Meddelanden</h1>
-          </div>
-          <p className="messages-subtitle">
-            Ställ frågor, dela tips och håll dig uppdaterad med dina grannar
-          </p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Simple back navigation */}
+        <div className="mb-6">
+          <Link 
+            href={`/${handbookSlug}`}
+            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Tillbaka till {handbookTitle}
+          </Link>
         </div>
-      </div>
-      
-      <div className="responsive-container messages-content mobile-natural-height mobile-scroll-container">
-        {/* Förenklad meddelandeöversikt */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+
+        {/* Header section */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">Meddelanden</h1>
-              <p className="text-gray-600 text-sm sm:text-base">Ställ frågor, dela tips och håll dig uppdaterad</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Meddelanden</h1>
+              <p className="text-gray-600">Ställ frågor, dela tips och håll dig uppdaterad</p>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-3 shrink-0">
               <Button 
                 onClick={() => setShowNotificationSettings(true)} 
                 variant="outline"
@@ -594,7 +584,7 @@ export function MessagesPageClient({
           </div>
         </div>
 
-        {/* Senaste meddelanden */}
+        {/* Messages section */}
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-gray-900">Senaste meddelanden</h3>
           

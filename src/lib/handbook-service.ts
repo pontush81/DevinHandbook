@@ -123,6 +123,7 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
         description,
         owner_id,
         published,
+        forum_enabled,
         created_at,
         updated_at,
         sections (
@@ -165,6 +166,7 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
       description: handbook.description,
       owner_id: handbook.owner_id,
       published: handbook.published,
+      forum_enabled: handbook.forum_enabled,
       created_at: handbook.created_at,
       updated_at: handbook.updated_at,
       sections: handbook.sections?.map((section: any) => ({
