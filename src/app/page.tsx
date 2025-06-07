@@ -141,9 +141,6 @@ export default function HomePage() {
                   <Link href="/login">Logga in</Link>
                 </Button>
               </div>
-              <p className="text-sm text-gray-500 mt-3">
-                💡 Nytt här? Börja med att skapa ett konto för att komma igång med din första handbok
-              </p>
             </div>
             <div className="rounded-lg overflow-hidden shadow-xl mt-8 md:mt-0">
               <div className="relative h-48 sm:h-64 md:h-96 bg-white border border-gray-200">
@@ -157,7 +154,7 @@ export default function HomePage() {
                         <div className="w-3 h-3 rounded-full bg-green-400"></div>
                       </div>
                       <div className="bg-gray-100 rounded px-3 py-1 text-xs text-gray-600">
-                        handbok.org/handbook/solgläntan
+                        handbok.org/solgläntan
                       </div>
                     </div>
                   </div>
@@ -247,7 +244,7 @@ export default function HomePage() {
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 md:mb-4">
               Är din förening redan med?
             </h2>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
+            <p className="text-base sm:text-lg text-gray-600 text-center">
               Sök efter din bostadsrättsförening för att få direkt tillgång till er digitala handbok.
             </p>
           </div>
@@ -272,12 +269,12 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Fördelar med en digital handbok</h2>
-            <p className="mt-3 md:mt-4 text-base sm:text-lg text-gray-600 max-w-3xl mx-auto px-4">
+            <p className="mt-3 md:mt-4 text-base sm:text-lg text-gray-600 text-center">
               Enkel tillgång till viktig information för alla medlemmar i föreningen
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <div className="rounded-lg p-6 shadow">
               <div className="h-12 w-12 rounded-md flex items-center justify-center mb-4 bg-muted">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -301,18 +298,6 @@ export default function HomePage() {
                 Uppdatera informationen enkelt. Medlemmarna ser alltid den senaste versionen.
               </p>
             </div>
-            
-            <div className="rounded-lg p-6 shadow">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center mb-4 bg-muted">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-medium mb-2">Säkert och pålitligt</h3>
-              <p>
-                Känslig information kan lösenordsskyddas. All data säkerhetskopieras automatiskt.
-              </p>
-            </div>
           </div>
         </div>
       </section>
@@ -322,7 +307,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Enkelt och förutsägbart pris</h2>
-            <p className="mt-3 md:mt-4 text-base sm:text-lg text-gray-600 max-w-3xl mx-auto px-4">
+            <p className="mt-3 md:mt-4 text-base sm:text-lg text-gray-600 text-center">
               Ingen krånglig prissättning. En fast årskostnad för obegränsad användning.
             </p>
           </div>
@@ -352,7 +337,7 @@ export default function HomePage() {
                       </svg>
                     </div>
                     <p className="ml-3 text-base">
-                      <span className="font-medium">Egen URL</span> - handbok.org/handbook/föreningsnamn
+                      <span className="font-medium">Egen URL</span> - handbok.org/föreningsnamn
                     </p>
                   </li>
                   <li className="flex items-start">
@@ -487,7 +472,7 @@ export default function HomePage() {
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold">
               Redo att förenkla informationsdelningen?
             </h2>
-            <p className="mt-3 md:mt-4 text-base sm:text-lg leading-6 px-4">
+            <p className="mt-3 md:mt-4 text-base sm:text-lg leading-6">
               Skapa er digitala handbok på mindre än 10 minuter.
             </p>
             <div className="mt-6 md:mt-8 flex flex-col sm:flex-row justify-center gap-3">
