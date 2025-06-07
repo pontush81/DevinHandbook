@@ -33,6 +33,7 @@ interface Handbook {
   name: string;
   subdomain: string;
   published: boolean;
+  forum_enabled?: boolean;
   created_at: string;
 }
 
@@ -374,7 +375,7 @@ export default function ContentManagementPage() {
           
           {/* Handbook published status toggle */}
           {selectedHandbook && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -412,6 +413,47 @@ export default function ContentManagementPage() {
                 </label>
                 <span className="text-xs text-gray-500">
                   (Synlig på {selectedHandbook.subdomain}.handbok.org)
+                </span>
+              </div>
+              
+              {/* Forum enabled toggle */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="handbook-forum-enabled"
+                  checked={selectedHandbook.forum_enabled || false}
+                  onChange={async (e) => {
+                    try {
+                      const { error } = await supabase
+                        .from('handbooks')
+                        .update({ forum_enabled: e.target.checked })
+                        .eq('id', selectedHandbook.id);
+                      
+                      if (error) throw error;
+                      
+                      // Update local state
+                      setHandbooks(prev => prev.map(h => 
+                        h.id === selectedHandbook.id ? { ...h, forum_enabled: e.target.checked } : h
+                      ));
+                      setSelectedHandbook(prev => prev ? { ...prev, forum_enabled: e.target.checked } : null);
+                      setSuccess(`Forum ${e.target.checked ? 'aktiverat' : 'inaktiverat'}`);
+                      setTimeout(() => setSuccess(''), 3000);
+                    } catch (err) {
+                      console.error('Error updating handbook forum status:', err);
+                      setError('Kunde inte uppdatera forum-inställning');
+                      setTimeout(() => setError(''), 5000);
+                    }
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label 
+                  htmlFor="handbook-forum-enabled"
+                  className="text-sm font-medium text-gray-700 cursor-pointer"
+                >
+                  Aktivera forum
+                </label>
+                <span className="text-xs text-gray-500">
+                  (Låter boende diskutera inom handboken)
                 </span>
               </div>
             </div>

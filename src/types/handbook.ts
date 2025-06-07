@@ -1,3 +1,25 @@
+export interface Handbook {
+  id: string;
+  title: string;
+  name: string;
+  subdomain: string;
+  published: boolean;
+  forum_enabled?: boolean;
+  organization_name?: string;
+  organization_address?: string;
+  organization_org_number?: string;
+  organization_phone?: string;
+  organization_email?: string;
+  created_at: string;
+  updated_at?: string;
+  sections: HandbookSection[];
+  theme?: {
+    primary_color?: string;
+    secondary_color?: string;
+    logo_url?: string | null;
+  };
+}
+
 export interface HandbookPage {
   id: string;
   title: string;

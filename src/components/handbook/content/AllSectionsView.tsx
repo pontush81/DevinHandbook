@@ -139,6 +139,12 @@ interface AllSectionsViewProps {
   onAddPage?: (sectionId: string, page: Partial<any>) => void;
   trialStatusBar?: React.ReactNode;
   handbookId?: string;
+  handbookData?: {
+    id: string;
+    title: string;
+    forum_enabled?: boolean;
+  };
+  onUpdateHandbook?: (handbookId: string, updates: { forum_enabled?: boolean }) => void;
 }
 
 export function AllSectionsView({ 
@@ -151,7 +157,9 @@ export function AllSectionsView({
   onAddSection,
   onAddPage,
   trialStatusBar,
-  handbookId
+  handbookId,
+  handbookData,
+  onUpdateHandbook
 }: AllSectionsViewProps) {
   // Initialize with all sections expanded for better UX
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -326,6 +334,30 @@ export function AllSectionsView({
               <p className="text-sm text-blue-700 mb-3">
                 <strong>Sektioner</strong> (📁) innehåller <strong>sidor</strong> (📄). I redigeringsläget kan du klicka direkt på titlar och innehåll för att redigera det, eller använda radera-knapparna för att ta bort sektioner och sidor.
               </p>
+              
+              {/* Handbook Settings */}
+              {handbookData && (
+                <div className="mb-4 p-3 bg-white border border-blue-200 rounded">
+                  <h4 className="font-medium text-blue-900 mb-3">⚙️ Handboksinställningar</h4>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="forum-enabled"
+                      checked={handbookData.forum_enabled || false}
+                      onChange={(e) => {
+                        if (onUpdateHandbook) {
+                          onUpdateHandbook(handbookData.id, { forum_enabled: e.target.checked });
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <label htmlFor="forum-enabled" className="text-sm text-blue-700">
+                      <strong>Aktivera meddelanden</strong> (Låter boende ställa frågor och dela tips)
+                    </label>
+                  </div>
+                </div>
+              )}
+              
               <Button
                 onClick={handleAddSection}
                 className="bg-green-600 hover:bg-green-700 text-white"

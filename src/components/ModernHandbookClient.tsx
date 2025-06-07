@@ -17,6 +17,8 @@ interface ModernHandbookClientProps {
     id: string;
     title: string;
     subtitle?: string;
+    subdomain?: string;
+    forum_enabled?: boolean;
     sections: Section[];
     theme?: {
       primary_color?: string;
@@ -692,6 +694,35 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
+  // Update handbook settings
+  const updateHandbook = async (handbookId: string, updates: { forum_enabled?: boolean }) => {
+    try {
+      console.log('🔄 Updating handbook settings:', { handbookId, updates });
+      
+      // Update in database
+      const { error } = await supabase
+        .from('handbooks')
+        .update(updates)
+        .eq('id', handbookId);
+
+      if (error) {
+        console.error('❌ Error updating handbook settings:', error);
+        throw error;
+      }
+
+      // Update local state
+      setHandbookData(prev => ({
+        ...prev,
+        ...updates
+      }));
+
+      console.log('✅ Handbook settings updated successfully');
+    } catch (error) {
+      console.error('❌ Error in updateHandbook:', error);
+      throw error;
+    }
+  };
+
   // Get theme colors with fallbacks
   const primaryColor = handbookData.theme?.primary_color || '#3498db';
   const secondaryColor = handbookData.theme?.secondary_color || '#2c3e50';
@@ -818,6 +849,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                 }
               }, 300);
             }}
+            subdomain={handbookData.subdomain}
+            forumEnabled={handbookData.forum_enabled}
             editMode={isEditMode}
             onEditSection={(sectionId) => {
               const section = visibleSections.find(s => s.id === sectionId);
@@ -862,6 +895,12 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                   onDeleteSection={deleteSection}
                   onExitEditMode={() => setIsEditMode(false)}
                   trialStatusBar={trialStatusBar}
+                  handbookData={{
+                    id: handbookData.id,
+                    title: handbookData.title,
+                    forum_enabled: handbookData.forum_enabled
+                  }}
+                  onUpdateHandbook={updateHandbook}
                 />
               </div>
             </div>

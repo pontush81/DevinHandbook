@@ -13,7 +13,8 @@ import {
   Car,
   Heart,
   BookOpen,
-  Info
+  Info,
+  MessageCircle
 } from 'lucide-react';
 import { HandbookSection } from '@/types/handbook';
 import { getIconComponent } from '@/lib/icon-utils';
@@ -28,12 +29,15 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import Link from 'next/link';
 
 interface ModernSidebarProps {
   sections: HandbookSection[];
   currentPageId?: string;
   onPageSelect: (pageId: string) => void;
   onSectionSelect?: (sectionId: string) => void;
+  subdomain?: string;
+  forumEnabled?: boolean;
 }
 
 // Enhanced menu items with categories
@@ -122,7 +126,7 @@ const getMenuItemForSection = (section: HandbookSection) => {
   // Om sektionen har en specifik ikon vald, använd den
   if (section.icon) {
     const IconComponent = getIconComponent(section.icon);
-    const matchedCategory = Object.values(menuCategories).find(cat => 
+    const matchedCategory = Object.entries(menuCategories).find(([_, cat]) => 
       cat.keywords.some(keyword => section.title.toLowerCase().includes(keyword))
     );
     
@@ -130,8 +134,8 @@ const getMenuItemForSection = (section: HandbookSection) => {
       title: section.title,
       icon: IconComponent,
       keywords: [],
-      color: matchedCategory?.color || "text-gray-600",
-      category: matchedCategory ? Object.keys(menuCategories).find(key => menuCategories[key] === matchedCategory) : "practical"
+      color: matchedCategory?.[1]?.color || "text-gray-600",
+      category: (matchedCategory?.[0] as keyof typeof menuCategories) || "practical"
     };
   }
   
@@ -145,7 +149,7 @@ const getMenuItemForSection = (section: HandbookSection) => {
     icon: BookOpen,
     keywords: [],
     color: "text-gray-600",
-    category: "practical"
+    category: "practical" as keyof typeof menuCategories
   };
 };
 
@@ -154,7 +158,9 @@ export function ModernSidebar({
   sections, 
   currentPageId, 
   onPageSelect, 
-  onSectionSelect
+  onSectionSelect,
+  subdomain,
+  forumEnabled
 }: ModernSidebarProps) {
   const { setOpenMobile } = useSidebar();
 
@@ -179,7 +185,7 @@ export function ModernSidebar({
                   const menuItem = getMenuItemForSection(section);
                   const IconComponent = menuItem.icon;
                   const categoryKey = menuItem.category as keyof typeof menuCategories;
-                  const category = menuCategories[categoryKey];
+                  const category = menuCategories[categoryKey] || menuCategories.practical;
 
                   return (
                     <SidebarMenuItem key={section.id}>
@@ -200,6 +206,27 @@ export function ModernSidebar({
                     </SidebarMenuItem>
                   );
                 })}
+                
+                {/* Meddelanden-länk när aktiverat */}
+                {forumEnabled && subdomain && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link 
+                        href={`/${subdomain}/meddelanden`}
+                        className={`group hover:bg-orange-50 hover:border-orange-200 transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50`}
+                      >
+                        <MessageCircle 
+                          className={`h-4 w-4 text-orange-600 group-hover:scale-110 transition-transform duration-200`} 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-gray-900 truncate block">
+                            Meddelanden
+                          </span>
+                        </div>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

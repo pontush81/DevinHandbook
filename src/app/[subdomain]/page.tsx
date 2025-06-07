@@ -43,6 +43,7 @@ interface Handbook {
   organization_email?: string;
   updated_at?: string;
   subdomain: string;
+  forum_enabled?: boolean;
   sections: Section[];
 }
 
@@ -118,6 +119,8 @@ export default function HandbookPage({ params }: Props) {
       id: handbook.id,
       title: handbook.title,
       subtitle: handbook.subtitle,
+      subdomain: handbook.subdomain,
+      forum_enabled: handbook.forum_enabled,
       sections: visibleSections.map(section => ({
         id: section.id,
         title: section.title,
