@@ -175,11 +175,13 @@ export function ModernSidebar({
   const { setOpenMobile } = useSidebar();
 
   const handleSectionClick = (sectionId: string) => {
-    console.log('🎯 Section clicked for scrolling:', sectionId);
+    console.log('🎯 ModernSidebar: Section clicked:', sectionId);
     
     // Call section select callback for scrolling
     onSectionSelect?.(sectionId);
-    setOpenMobile(false); // Stäng mobil-meny vid navigation
+    
+    // Close mobile sidebar
+    setOpenMobile(false);
   };
 
   const categorizedSections = groupSectionsByCategory(sections);

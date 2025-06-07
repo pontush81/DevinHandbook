@@ -794,23 +794,63 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             currentPageId={currentPageId}
             onPageSelect={setCurrentPageId}
             onSectionSelect={(sectionId) => {
+              console.log('🎯 Attempting to scroll to section:', sectionId);
+              
               // Clear current page to show all sections
               setCurrentPageId('');
               
-              // Then scroll to section after a brief delay
-              setTimeout(() => {
-                const element = document.getElementById(`section-${sectionId}`);
-                if (element) {
-                  const headerOffset = 80;
-                  const elementPosition = element.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+              // Use requestAnimationFrame to ensure DOM is updated first
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  const element = document.getElementById(`section-${sectionId}`);
+                  console.log('🔍 Found element:', element);
                   
-                  window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                  });
-                }
-              }, 100);
+                  if (element) {
+                    // Try to find the scrollable container
+                    const scrollContainer = document.querySelector('.main-content-scrollable') || 
+                                          document.querySelector('[data-radix-scroll-area-viewport]') ||
+                                          document.querySelector('.content-area-scroll') ||
+                                          window;
+                    
+                    console.log('📜 Using scroll container:', scrollContainer);
+                    
+                    // Get element position relative to its scroll container
+                    const elementRect = element.getBoundingClientRect();
+                    const headerOffset = 100; // Account for header height
+                    
+                    if (scrollContainer === window) {
+                      // Use window scrolling
+                      const offsetPosition = elementRect.top + window.pageYOffset - headerOffset;
+                      window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                      });
+                    } else {
+                      // Use container scrolling
+                      const containerRect = (scrollContainer as Element).getBoundingClientRect();
+                      const relativeTop = elementRect.top - containerRect.top;
+                      const currentScrollTop = (scrollContainer as Element).scrollTop;
+                      const targetScrollTop = currentScrollTop + relativeTop - headerOffset;
+                      
+                      (scrollContainer as Element).scrollTo({
+                        top: targetScrollTop,
+                        behavior: 'smooth'
+                      });
+                    }
+                    
+                    // Alternative: use native scrollIntoView as fallback
+                    setTimeout(() => {
+                      element.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start',
+                        inline: 'nearest'
+                      });
+                    }, 200);
+                  } else {
+                    console.warn('❌ Element not found for section:', sectionId);
+                  }
+                }, 150);
+              });
             }}
             handbookSlug={handbookData.handbookSlug}
             forumEnabled={handbookData.forum_enabled}
