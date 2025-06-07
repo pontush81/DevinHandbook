@@ -3,6 +3,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
+import { getServerSession } from '@/lib/auth';
 
 // Local server session function
 async function getServerSession() {
@@ -30,6 +31,29 @@ async function getServerSession() {
   } catch (error) {
     console.error('Error in getServerSession:', error);
     return null;
+  }
+}
+
+async function sendNotification(type: 'new_topic' | 'new_reply', data: any) {
+  try {
+    const notificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/notifications/send`;
+    
+    const response = await fetch(notificationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_WEBHOOK_SECRET}`
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send notification:', await response.text());
+    } else {
+      console.log('Notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Error sending notification:', error);
   }
 }
 
@@ -184,7 +208,7 @@ export async function POST(request: NextRequest) {
     // 3. Verify user has access to the handbook containing this topic
     const { data: topic, error: topicError } = await supabase
       .from('forum_topics')
-      .select('handbook_id, is_locked, reply_count')
+      .select('handbook_id, is_locked, reply_count, title')
       .eq('id', topic_id)
       .single();
 
@@ -254,6 +278,18 @@ export async function POST(request: NextRequest) {
       console.error('Error updating topic reply count:', updateError);
       // Don't fail the whole operation for this
     }
+
+    // 6. Send notification asynchronously (don't block the response)
+    setImmediate(() => {
+      sendNotification('new_reply', {
+        type: 'new_reply',
+        handbook_id: topic.handbook_id,
+        topic_id: topic_id,
+        post_id: reply.id,
+        author_name: author_name.trim(),
+        content_preview: content.trim()
+      });
+    });
 
     return NextResponse.json({
       success: true,

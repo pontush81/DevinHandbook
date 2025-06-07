@@ -2,11 +2,11 @@
 
 /**
  * Meddelanden-sektion med autentisering - endast för handbok-medlemmar
- * Använder path-baserad routing: /[subdomain]/meddelanden
+ * Använder path-baserad routing: /[handbookSlug]/meddelanden
  */
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 import { supabase } from '@/lib/supabase';
@@ -25,6 +25,8 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import NotificationSettings from '@/components/NotificationSettings';
+import AdminNotificationControls from '@/components/AdminNotificationControls';
 
 interface Message {
   id: string;
@@ -45,32 +47,39 @@ interface Reply {
   created_at: string;
 }
 
-interface Handbook {
-  id: string;
-  title: string;
-  subdomain: string;
-  forum_enabled: boolean;
-}
-
 interface Category {
   id: string;
   name: string;
   description: string;
 }
 
-export default function MessagesPage() {
-  const params = useParams();
+interface MessagesPageClientProps {
+  handbookId: string;
+  handbookTitle: string;
+  handbookSlug: string;
+  theme?: {
+    primary_color?: string;
+    secondary_color?: string;
+    logo_url?: string | null;
+  };
+}
+
+export function MessagesPageClient({ 
+  handbookId, 
+  handbookTitle, 
+  handbookSlug,
+  theme 
+}: MessagesPageClientProps) {
   const router = useRouter();
-  const subdomain = params.subdomain as string;
   const { user, isLoading: authLoading } = useAuth();
   
-  const [handbook, setHandbook] = useState<Handbook | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [accessLoading, setAccessLoading] = useState(true);
   const [showNewMessageForm, setShowNewMessageForm] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [deletingMessage, setDeletingMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -100,14 +109,10 @@ export default function MessagesPage() {
   });
   const [submittingReply, setSubmittingReply] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [subdomain]);
-
   // Separate effect for access checking when user changes
   useEffect(() => {
     async function checkAccess() {
-      if (!handbook?.id || !user?.id) {
+      if (!handbookId || !user?.id) {
         setHasAccess(false);
         setUserRole(null);
         setAccessLoading(false);
@@ -115,13 +120,13 @@ export default function MessagesPage() {
       }
 
       try {
-        console.log('Checking user access for handbook:', handbook.id);
+        console.log('Checking user access for handbook:', handbookId);
         
         // Client-side access check using direct Supabase query
         const { data: memberData, error } = await supabase
           .from('handbook_members')
           .select('id, role')
-          .eq('handbook_id', handbook.id)
+          .eq('handbook_id', handbookId)
           .eq('user_id', user.id)
           .single();
 
@@ -139,15 +144,15 @@ export default function MessagesPage() {
     }
 
     checkAccess();
-  }, [user, handbook?.id]);
+  }, [user, handbookId]);
 
   // Load messages when user has access
   useEffect(() => {
     loadMessagesAndCategories();
-  }, [handbook?.id, user?.id, hasAccess]);
+  }, [handbookId, user?.id, hasAccess]);
 
   async function loadMessagesAndCategories() {
-    if (!handbook?.id || !user?.id || !hasAccess || !handbook.forum_enabled) {
+    if (!handbookId || !user?.id || !hasAccess) {
       return;
     }
 
@@ -156,7 +161,7 @@ export default function MessagesPage() {
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('forum_categories')
         .select('*')
-        .eq('handbook_id', handbook.id)
+        .eq('handbook_id', handbookId)
         .order('name');
 
       console.log('Categories loaded:', categoriesData);
@@ -175,7 +180,7 @@ export default function MessagesPage() {
           reply_count,
           forum_categories!inner(name)
         `)
-        .eq('handbook_id', handbook.id)
+        .eq('handbook_id', handbookId)
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -194,31 +199,6 @@ export default function MessagesPage() {
       setMessages(formattedMessages);
     } catch (error) {
       console.error('Error loading messages and categories:', error);
-    }
-  }
-
-  async function loadData() {
-    try {
-      console.log('Loading data for subdomain:', subdomain);
-      
-      // Load handbook
-      const { data: handbookData, error: handbookError } = await supabase
-        .from('handbooks')
-        .select('*')
-        .eq('subdomain', subdomain)
-        .eq('published', true)
-        .single();
-
-      if (handbookError || !handbookData) {
-        console.error('Handbook error:', handbookError);
-        router.push('/404');
-        return;
-      }
-
-      console.log('Handbook loaded:', handbookData);
-      setHandbook(handbookData);
-    } catch (error) {
-      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -272,7 +252,7 @@ export default function MessagesPage() {
         content: formData.content.trim(),
         author_name: formData.author_name.trim(),
         category_id: formData.category_id,
-        handbook_id: handbook?.id
+        handbook_id: handbookId
       };
       
       console.log('Sending payload:', payload);
@@ -498,36 +478,6 @@ export default function MessagesPage() {
     );
   }
 
-  if (!handbook) {
-    return (
-      <div className="bg-white p-8">
-        <div className="max-w-4xl mx-auto text-center py-12">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Handbok hittades inte</h1>
-          <Link href="/">
-            <Button>Tillbaka till startsidan</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!handbook.forum_enabled) {
-    return (
-      <div className="bg-white p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center py-12">
-            <MessageCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Meddelanden inte aktiverat</h1>
-            <p className="text-gray-600">Meddelanden är inte aktiverat för denna handbok.</p>
-            <Link href={`/${subdomain}`}>
-              <Button className="mt-4">Tillbaka till handboken</Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Authentication required - not logged in
   if (!user) {
     return (
@@ -543,7 +493,7 @@ export default function MessagesPage() {
               <Link href="/login">
                 <Button>Logga in</Button>
               </Link>
-              <Link href={`/${subdomain}`}>
+              <Link href={`/${handbookSlug}`}>
                 <Button variant="outline">Tillbaka till handboken</Button>
               </Link>
             </div>
@@ -569,7 +519,7 @@ export default function MessagesPage() {
               <Link href="/dashboard">
                 <Button>Mina handböcker</Button>
               </Link>
-              <Link href={`/${subdomain}`}>
+              <Link href={`/${handbookSlug}`}>
                 <Button variant="outline">Tillbaka till handboken</Button>
               </Link>
             </div>
@@ -598,10 +548,10 @@ export default function MessagesPage() {
         <div className="responsive-container">
           <nav className="messages-header nav">
             <Link 
-              href={`/${subdomain}`}
+              href={`/${handbookSlug}`}
               className="back-link"
             >
-              ← Tillbaka till {handbook.title}
+              ← Tillbaka till {handbookTitle}
             </Link>
           </nav>
           <div className="messages-title-container">
@@ -622,14 +572,25 @@ export default function MessagesPage() {
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">Meddelanden</h1>
               <p className="text-gray-600 text-sm sm:text-base">Ställ frågor, dela tips och håll dig uppdaterad</p>
             </div>
-            <Button 
-              onClick={() => openNewMessageForm()} 
-              className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 h-10 px-4 text-sm font-medium self-start sm:self-auto"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Nytt meddelande</span>
-              <span className="sm:hidden">Nytt</span>
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button 
+                onClick={() => setShowNotificationSettings(true)} 
+                variant="outline"
+                className="h-10 px-4 text-sm font-medium"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Notifikationer</span>
+                <span className="sm:hidden">Notif.</span>
+              </Button>
+              <Button 
+                onClick={() => openNewMessageForm()} 
+                className="bg-blue-600 hover:bg-blue-700 text-white h-10 px-4 text-sm font-medium"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Nytt meddelande</span>
+                <span className="sm:hidden">Nytt</span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -869,6 +830,17 @@ export default function MessagesPage() {
             ))
           )}
         </div>
+        
+        {/* Admin Notification Controls - endast för admin/editor */}
+        {handbookId && userRole && ['admin', 'editor'].includes(userRole) && (
+          <div className="mt-8">
+            <AdminNotificationControls 
+              handbookId={handbookId}
+              handbookName={handbookTitle}
+              userRole={userRole as 'admin' | 'editor' | 'viewer'}
+            />
+          </div>
+        )}
       </div>
 
       {/* New Message Dialog */}
@@ -983,6 +955,39 @@ export default function MessagesPage() {
                 {submitting ? 'Skickar...' : 'Skicka meddelande'}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notification Settings Dialog */}
+      <Dialog open={showNotificationSettings} onOpenChange={setShowNotificationSettings}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden !bg-white shadow-2xl border border-gray-200 rounded-lg z-50 mx-4">
+          <DialogHeader className="space-y-3 pb-4 border-b border-gray-100">
+            <DialogTitle className="text-xl font-semibold text-gray-900">
+              Notifikationsinställningar
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Välj hur du vill få notifikationer om nya meddelanden och svar.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="overflow-y-auto max-h-[calc(85vh-180px)]">
+            {handbookId && (
+              <NotificationSettings 
+                handbookId={handbookId} 
+                handbookName={handbookTitle}
+              />
+            )}
+          </div>
+
+          <DialogFooter className="pt-4 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => setShowNotificationSettings(false)}
+              className="w-full"
+            >
+              Stäng
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

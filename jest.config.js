@@ -1,10 +1,13 @@
 /** @type {import("jest").Config} **/
 module.exports = {
-  testEnvironment: "jsdom",
+  testEnvironment: "node",
   transform: {
     "^.+\\.(js|jsx|ts|tsx)$": ["babel-jest", { configFile: './jest-config/babel-jest.js' }]
   },
-  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+  setupFilesAfterEnv: [
+    '@testing-library/jest-dom',
+    '<rootDir>/jest-config/setup-tests.js'
+  ],
   testPathIgnorePatterns: ["/node_modules/", "/dist/", "/.next/"],
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   // Lägg till moduleNameMapper för path aliases
@@ -23,8 +26,14 @@ module.exports = {
   modulePathIgnorePatterns: [
     "<rootDir>/.next/"
   ],
-  // Använd jest-environment-jsdom för testers
+  // Använd node environment för API tester
   testEnvironmentOptions: {
     url: "http://localhost/",
   },
+  // Global setup for Next.js API testing
+  globals: {
+    'ts-jest': {
+      useESM: true
+    }
+  }
 };

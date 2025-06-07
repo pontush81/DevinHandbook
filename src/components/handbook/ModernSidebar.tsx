@@ -36,8 +36,13 @@ interface ModernSidebarProps {
   currentPageId?: string;
   onPageSelect: (pageId: string) => void;
   onSectionSelect?: (sectionId: string) => void;
-  subdomain?: string;
+  handbookSlug?: string;
   forumEnabled?: boolean;
+  editMode?: boolean;
+  onEditSection?: (sectionId: string) => void;
+  onDeleteSection?: (sectionId: string) => void;
+  onToggleSection?: (sectionId: string) => void;
+  onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
 }
 
 // Enhanced menu items with categories
@@ -159,8 +164,13 @@ export function ModernSidebar({
   currentPageId, 
   onPageSelect, 
   onSectionSelect,
-  subdomain,
-  forumEnabled
+  handbookSlug,
+  forumEnabled,
+  editMode = false,
+  onEditSection,
+  onDeleteSection,
+  onToggleSection,
+  onMoveSection
 }: ModernSidebarProps) {
   const { setOpenMobile } = useSidebar();
 
@@ -208,11 +218,11 @@ export function ModernSidebar({
                 })}
                 
                 {/* Meddelanden-länk när aktiverat */}
-                {forumEnabled && subdomain && (
+                {forumEnabled && handbookSlug && (
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link 
-                        href={`/${subdomain}/meddelanden`}
+                        href={`/${handbookSlug}/meddelanden`}
                         className={`group hover:bg-orange-50 hover:border-orange-200 transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50`}
                       >
                         <MessageCircle 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -12,10 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Edit, Settings, ChevronDown } from 'lucide-react';
+import { User, LogOut, Edit, Settings, ChevronDown, Bell } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Badge } from '@/components/ui/badge';
 
 interface HandbookHeaderProps {
   handbookTitle: string;
+  handbookSlug?: string;
   canEdit?: boolean;
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
@@ -28,12 +31,14 @@ interface HandbookHeaderProps {
 
 export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
   handbookTitle,
+  handbookSlug,
   canEdit = false,
   isEditMode = false,
   onToggleEditMode,
   theme
 }) => {
   const { user, signOut } = useAuth();
+  const router = useRouter();
 
   // Cleanup any duplicate user menus on mount
   useEffect(() => {
@@ -187,6 +192,14 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
                   <span className="text-sm">Dashboard</span>
                 </Link>
               </DropdownMenuItem>
+              
+              <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
+                <Link href={handbookSlug ? `/${handbookSlug}/notifications` : "/notifications"} className="flex items-center w-full">
+                  <Bell className="mr-3 h-4 w-4" />
+                  <span className="text-sm">Notifikationer</span>
+                </Link>
+              </DropdownMenuItem>
+              
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="min-h-[44px] sm:min-h-[36px]">
                 <LogOut className="mr-3 h-4 w-4" />

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from '@/lib/auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -30,6 +31,29 @@ async function getServerSession() {
   } catch (error) {
     console.error('Error in getServerSession:', error);
     return null;
+  }
+}
+
+async function sendNotification(type: 'new_topic' | 'new_reply', data: any) {
+  try {
+    const notificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/notifications/send`;
+    
+    const response = await fetch(notificationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_WEBHOOK_SECRET}`
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send notification:', await response.text());
+    } else {
+      console.log('Notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Error sending notification:', error);
   }
 }
 
@@ -110,6 +134,18 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // 6. Send notification asynchronously (don't block the response)
+    setImmediate(() => {
+      sendNotification('new_topic', {
+        type: 'new_topic',
+        handbook_id,
+        topic_id: topic.id,
+        author_name: author_name.trim(),
+        content_preview: content.trim(),
+        title: title.trim()
+      });
+    });
 
     return NextResponse.json({ 
       success: true, 

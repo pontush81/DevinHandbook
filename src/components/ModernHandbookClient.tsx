@@ -17,7 +17,7 @@ interface ModernHandbookClientProps {
     id: string;
     title: string;
     subtitle?: string;
-    subdomain?: string;
+    handbookSlug?: string;
     forum_enabled?: boolean;
     sections: Section[];
     theme?: {
@@ -779,6 +779,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         {/* Header - Using new HandbookHeader with edit functionality */}
         <HandbookHeader 
           handbookTitle={handbookData.title}
+          handbookSlug={handbookData.handbookSlug}
           canEdit={canEdit}
           isEditMode={isEditMode}
           onToggleEditMode={() => setIsEditMode(!isEditMode)}
@@ -811,7 +812,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                 }
               }, 100);
             }}
-            subdomain={handbookData.subdomain}
+            handbookSlug={handbookData.handbookSlug}
             forumEnabled={handbookData.forum_enabled}
             editMode={isEditMode}
             onEditSection={(sectionId) => {
