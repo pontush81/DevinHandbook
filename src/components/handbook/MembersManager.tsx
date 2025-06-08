@@ -154,25 +154,49 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
   const fetchMembers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("handbook_members")
-        .select("id, user_id, role, created_at, profiles:user_id(email)")
-        .eq("handbook_id", handbookId);
-
-      if (error) throw error;
-
-      const formattedMembers = data.map((member) => ({
-        id: member.id,
-        user_id: member.user_id,
-        email: member.profiles?.email || "Okänd e-post",
-        role: member.role,
-        created_at: member.created_at,
-      }));
-
-      setMembers(formattedMembers);
+      console.log('[MembersManager] Fetching members for handbook:', handbookId);
+      
+      // Använd admin API för att hämta medlemmar med e-postadresser
+      // Detta kringgår RLS-problem och ger oss tillgång till auth.users tabellen
+      const response = await fetch(`/api/handbook/get-members?handbookId=${handbookId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch members');
+      }
+      
+      const data = await response.json();
+      
+      console.log('[MembersManager] Fetched members:', data);
+      setMembers(data.members || []);
     } catch (error) {
       console.error("Fel vid hämtning av medlemmar:", error);
       showMessage("Kunde inte hämta medlemmar. Försök igen senare.", true);
+      
+      // Fallback till direkt Supabase-anrop om API misslyckas
+      try {
+        console.log('[MembersManager] Trying fallback approach...');
+        const { data, error } = await supabase
+          .from("handbook_members")
+          .select("id, user_id, role, created_at")
+          .eq("handbook_id", handbookId);
+
+        if (error) throw error;
+
+        const formattedMembers = data.map((member) => ({
+          id: member.id,
+          user_id: member.user_id,
+          email: "E-post ej tillgänglig", // Placeholder när vi inte kan hämta e-post
+          role: member.role,
+          created_at: member.created_at,
+        }));
+
+        setMembers(formattedMembers);
+        console.log('[MembersManager] Fallback successful, showing members without emails');
+      } catch (fallbackError) {
+        console.error("Fallback också misslyckades:", fallbackError);
+        setMembers([]);
+      }
     } finally {
       setIsLoading(false);
     }

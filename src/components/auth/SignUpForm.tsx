@@ -46,13 +46,22 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
     try {
       // Development mode: Skip email confirmation if we're testing locally with join code
       const isDevelopment = process.env.NODE_ENV === 'development';
-      const skipEmailConfirmation = isDevelopment && joinCode;
+      const skipEmailConfirmation = isDevelopment; // Auto-confirm i alla development-fall
+      
+      // Säkerställ att vi har rätt redirect URL med join-kod
+      const redirectUrl = typeof window !== "undefined" ? 
+        isDevelopment 
+          ? `http://localhost:3000/auth/callback${joinCode ? `?join=${joinCode}` : ''}` 
+          : `${window.location.origin}/auth/callback${joinCode ? `?join=${joinCode}` : ''}` 
+        : undefined;
+      
+      console.log('[SignUp] Email redirect URL:', redirectUrl);
       
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback${joinCode ? `?join=${joinCode}` : ''}` : undefined,
+          emailRedirectTo: redirectUrl,
           data: joinCode ? { join_code: joinCode } : undefined
         },
       });

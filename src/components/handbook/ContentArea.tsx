@@ -7,6 +7,7 @@ interface ContentAreaProps {
   sections: Section[];
   currentPageId?: string;
   isEditMode?: boolean;
+  isAdmin?: boolean;
   handbookId: string;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
@@ -29,6 +30,7 @@ export function ContentArea({
   sections, 
   currentPageId, 
   isEditMode = false, 
+  isAdmin = false,
   handbookId, 
   onUpdateSection, 
   onUpdatePage, 
@@ -90,6 +92,7 @@ export function ContentArea({
         <AllSectionsView 
           sections={sectionsArray}
           isEditMode={isEditMode}
+          isAdmin={isAdmin}
           onUpdateSection={onUpdateSection}
           onUpdatePage={onUpdatePage}
           onDeleteSection={onDeleteSection}

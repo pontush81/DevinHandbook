@@ -81,15 +81,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         return;
       }
       
-      // DEVELOPMENT OVERRIDE: Allow edit permissions for logged-in users in development
-      if (process.env.NODE_ENV === 'development' && user) {
-        console.log('🔧 [ModernHandbookClient] DEVELOPMENT MODE: Allowing edit permissions for logged-in user');
-        setCanEdit(true);
-        setIsAdmin(true);
-        setIsLoading(false);
-        return;
-      }
-      
       // Require user to be logged in
       if (!user) {
         console.log('❌ [ModernHandbookClient] No user found, setting canEdit and isAdmin to false');
@@ -729,15 +720,20 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     try {
       console.log('🔄 Updating handbook settings:', { handbookId, updates });
       
-      // Update in database
-      const { error } = await supabase
-        .from('handbooks')
-        .update(updates)
-        .eq('id', handbookId);
+      // Use secure API endpoint instead of direct database update
+      const response = await fetch('/api/handbook/update-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          handbookId, 
+          forum_enabled: updates.forum_enabled 
+        }),
+      });
 
-      if (error) {
-        console.error('❌ Error updating handbook settings:', error);
-        throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update handbook settings');
       }
 
       // Update local state
@@ -912,6 +908,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                   sections={visibleSections}
                   currentPageId={currentPageId}
                   isEditMode={isEditMode}
+                  isAdmin={isAdmin}
                   handbookId={handbookData.id}
                   onUpdateSection={updateSection}
                   onUpdatePage={updatePage}

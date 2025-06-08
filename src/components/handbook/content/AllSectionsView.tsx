@@ -117,6 +117,7 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
 interface AllSectionsViewProps {
   sections: Section[];
   isEditMode?: boolean;
+  isAdmin?: boolean;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<any>) => void;
   onDeleteSection?: (sectionId: string) => void;
@@ -136,6 +137,7 @@ interface AllSectionsViewProps {
 export function AllSectionsView({ 
   sections, 
   isEditMode = false, 
+  isAdmin = false,
   onUpdateSection,
   onUpdatePage,
   onDeleteSection,
@@ -317,8 +319,8 @@ export function AllSectionsView({
                 <strong>Sektioner</strong> (📁) innehåller <strong>sidor</strong> (📄). I redigeringsläget kan du klicka direkt på titlar och innehåll för att redigera det, eller använda radera-knapparna för att ta bort sektioner och sidor.
               </p>
               
-              {/* Handbook Settings */}
-              {handbookData && (
+              {/* Handbook Settings - endast för admins */}
+              {handbookData && isAdmin && (
                 <div className="mb-4 p-3 bg-white border border-blue-200 rounded">
                   <h4 className="font-medium text-blue-900 mb-3">⚙️ Handboksinställningar</h4>
                   <div className="flex items-center space-x-2">

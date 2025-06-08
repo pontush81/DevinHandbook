@@ -1,97 +1,88 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// Skapa admin-klient med service role
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+import { getServiceSupabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
-
+    
     if (!email) {
-      return NextResponse.json({ error: 'E-postadress krävs' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email krävs" },
+        { status: 400 }
+      );
     }
 
-    console.log(`[Admin] Försöker radera användare med e-post: ${email}`);
-
-    // Hitta användaren först
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    const supabase = getServiceSupabase();
     
-    if (listError) {
-      console.error('[Admin] Fel vid listning av användare:', listError);
-      return NextResponse.json({ error: 'Kunde inte hämta användarlista' }, { status: 500 });
-    }
-
-    const userToDelete = users.users.find(user => user.email === email);
+    // 1. Hitta användaren
+    const { data: authUsers, error: userSearchError } = await supabase.auth.admin.listUsers();
     
-    if (!userToDelete) {
-      console.log(`[Admin] Ingen användare hittad med e-post: ${email}`);
-      return NextResponse.json({ message: 'Ingen användare hittad med den e-postadressen' }, { status: 404 });
+    if (userSearchError) {
+      return NextResponse.json(
+        { error: "Kunde inte söka användare", details: userSearchError },
+        { status: 500 }
+      );
     }
 
-    console.log(`[Admin] Hittade användare med ID: ${userToDelete.id}`);
-
-    // Radera alla handböcker som användaren äger
-    const { data: handbooks, error: handbooksError } = await supabaseAdmin
-      .from('handbooks')
-      .select('id')
-      .eq('owner_id', userToDelete.id);
-
-    if (handbooksError) {
-      console.error('[Admin] Fel vid hämtning av handböcker:', handbooksError);
-    } else if (handbooks && handbooks.length > 0) {
-      console.log(`[Admin] Raderar ${handbooks.length} handböcker för användaren`);
-      
-      for (const handbook of handbooks) {
-        // Radera sidor först (på grund av foreign key constraints)
-        await supabaseAdmin.from('pages').delete().eq('handbook_id', handbook.id);
-        // Radera sektioner
-        await supabaseAdmin.from('sections').delete().eq('handbook_id', handbook.id);
-        // Radera medlemskap
-        await supabaseAdmin.from('handbook_members').delete().eq('handbook_id', handbook.id);
-        // Radera handboken
-        await supabaseAdmin.from('handbooks').delete().eq('id', handbook.id);
-      }
+    const targetUser = authUsers.users.find(user => user.email === email);
+    
+    if (!targetUser) {
+      return NextResponse.json(
+        { error: `Användare med e-post ${email} finns inte` },
+        { status: 404 }
+      );
     }
 
-    // Radera användarens profil från public.profiles tabellen
-    const { error: profileError } = await supabaseAdmin
+    // 2. Ta bort från handbook_members
+    const { error: memberDeleteError } = await supabase
+      .from('handbook_members')
+      .delete()
+      .eq('user_id', targetUser.id);
+
+    if (memberDeleteError) {
+      console.error("Fel vid borttagning av medlemskap:", memberDeleteError);
+    }
+
+    // 3. Ta bort från user_notification_preferences
+    const { error: notificationDeleteError } = await supabase
+      .from('user_notification_preferences')
+      .delete()
+      .eq('user_id', targetUser.id);
+
+    if (notificationDeleteError) {
+      console.error("Fel vid borttagning av notifikationsinställningar:", notificationDeleteError);
+    }
+
+    // 4. Ta bort från profiles (om det finns)
+    const { error: profileDeleteError } = await supabase
       .from('profiles')
       .delete()
-      .eq('id', userToDelete.id);
+      .eq('id', targetUser.id);
 
-    if (profileError) {
-      console.error('[Admin] Fel vid radering av profil:', profileError);
-    } else {
-      console.log(`[Admin] Raderade profil för användare: ${userToDelete.id}`);
+    if (profileDeleteError) {
+      console.error("Fel vid borttagning av profil:", profileDeleteError);
     }
 
-    // Radera användaren från auth.users
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
+    // 5. Ta bort användaren från auth
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(targetUser.id);
 
-    if (deleteError) {
-      console.error('[Admin] Fel vid radering av användare:', deleteError);
-      return NextResponse.json({ error: 'Kunde inte radera användaren' }, { status: 500 });
+    if (authDeleteError) {
+      return NextResponse.json(
+        { error: "Kunde inte ta bort användare från auth", details: authDeleteError },
+        { status: 500 }
+      );
     }
 
-    console.log(`[Admin] Användare ${email} raderad framgångsrikt`);
-
-    return NextResponse.json({ 
-      message: 'Användare raderad framgångsrikt',
-      deletedUserId: userToDelete.id,
-      deletedEmail: email
+    return NextResponse.json({
+      success: true,
+      message: `Användaren ${email} har tagits bort helt från systemet`,
+      deletedUserId: targetUser.id
     });
-
-  } catch (error) {
-    console.error('[Admin] Oväntat fel:', error);
-    return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Fel vid borttagning av användare:", error);
+    return NextResponse.json(
+      { error: "Ett oväntat fel inträffade", details: error.message },
+      { status: 500 }
+    );
   }
 } 

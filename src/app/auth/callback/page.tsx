@@ -19,7 +19,7 @@ function AuthCallbackContent() {
     const type = params.get("type"); // Type kan vara 'signup', 'recovery', etc.
     
     // Check for join code in query parameters
-    const joinCode = searchParams.get("join");
+    let joinCode = searchParams.get("join");
 
     if (!access_token || !refresh_token) {
       setStatus("error");
@@ -35,6 +35,12 @@ function AuthCallbackContent() {
           setMessage("Kunde inte logga in. Prova igen eller kontakta support.");
         } else {
           setStatus("success");
+          
+          // Om vi inte har join-kod i URL, kolla i användarens metadata
+          if (!joinCode && data.user?.user_metadata?.join_code) {
+            joinCode = data.user.user_metadata.join_code;
+            console.log('[Auth Callback] Found join code in user metadata:', joinCode);
+          }
           
           // Bestäm redirection baserat på verifieringstyp
           if (type === "recovery") {

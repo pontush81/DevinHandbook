@@ -14,18 +14,18 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 2. Validera indata
-    const { handbookId, memberId, role } = await request.json();
+    const { handbookId, forum_enabled } = await request.json();
     
-    if (!handbookId || !memberId || !role) {
+    if (!handbookId) {
       return NextResponse.json(
-        { success: false, message: "Ofullständiga uppgifter" },
+        { success: false, message: "Handbook ID krävs" },
         { status: 400 }
       );
     }
 
-    if (!["admin", "editor", "viewer"].includes(role)) {
+    if (typeof forum_enabled !== 'boolean') {
       return NextResponse.json(
-        { success: false, message: "Ogiltig roll" },
+        { success: false, message: "forum_enabled måste vara en boolean" },
         { status: 400 }
       );
     }
@@ -56,57 +56,29 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 4. Kontrollera att medlemmen finns och tillhör den angivna handboken
-    const { data: member, error: memberError } = await supabase
-      .from("handbook_members")
-      .select("id, user_id")
-      .eq("id", memberId)
-      .eq("handbook_id", handbookId)
-      .maybeSingle();
-
-    if (memberError) {
-      console.error("Fel vid kontroll av medlemskap:", memberError);
-      return NextResponse.json(
-        { success: false, message: "Kunde inte verifiera medlemskap" },
-        { status: 500 }
-      );
-    }
-
-    if (!member) {
-      return NextResponse.json(
-        { success: false, message: "Medlemmen hittades inte" },
-        { status: 404 }
-      );
-    }
-
-    // 5. Förhindra att användaren ändrar sin egen roll från admin
-    if (member.user_id === session.user.id && role !== "admin") {
-      return NextResponse.json(
-        { success: false, message: "Du kan inte ändra din egen roll från administratör" },
-        { status: 403 }
-      );
-    }
-
-    // 6. Uppdatera användarens roll
+    // 4. Uppdatera handbok-inställningar
     const { error: updateError } = await supabase
-      .from("handbook_members")
-      .update({ role })
-      .eq("id", memberId);
+      .from("handbooks")
+      .update({ 
+        forum_enabled,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", handbookId);
 
     if (updateError) {
-      console.error("Fel vid uppdatering av roll:", updateError);
+      console.error("Fel vid uppdatering av handbok-inställningar:", updateError);
       return NextResponse.json(
-        { success: false, message: "Kunde inte uppdatera användarens roll" },
+        { success: false, message: "Kunde inte uppdatera handbok-inställningar" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Användarens roll har uppdaterats"
+      message: `Forum ${forum_enabled ? 'aktiverat' : 'inaktiverat'}`
     });
   } catch (error) {
-    console.error("Oväntat fel vid uppdatering av roll:", error);
+    console.error("Oväntat fel vid uppdatering av handbok-inställningar:", error);
     return NextResponse.json(
       { success: false, message: "Ett oväntat fel inträffade" },
       { status: 500 }

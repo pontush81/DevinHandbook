@@ -22,13 +22,32 @@ export async function POST(request: NextRequest) {
 
     console.log('[Dev API] Confirming user:', userId, 'with join code:', joinCode);
 
-    // Confirm the user's email using admin API
-    const { data: userData, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      {
-        email_confirm: true
+    // Försök bekräfta användaren med retry-logik (ibland behöver Supabase lite tid)
+    let userData;
+    let confirmError;
+    
+    for (let attempts = 0; attempts < 3; attempts++) {
+      if (attempts > 0) {
+        console.log(`[Dev API] Retry attempt ${attempts + 1} for user:`, userId);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Vänta 1 sekund
       }
-    );
+      
+      const result = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        {
+          email_confirm: true
+        }
+      );
+      
+      userData = result.data;
+      confirmError = result.error;
+      
+      if (!confirmError) {
+        break; // Lyckades!
+      }
+      
+      console.log(`[Dev API] Attempt ${attempts + 1} failed:`, confirmError);
+    }
 
     if (confirmError) {
       console.error('[Dev API] Error confirming user:', confirmError);

@@ -145,29 +145,88 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
           // Ignorera fel vid läsning av felmeddelande
         }
         
+        // Kontrollera för auth-fel med 403-status
+        if (!response.ok && response.status === 403) {
+          const errorText = await response.text();
+          let error403Data;
+          try {
+            error403Data = JSON.parse(errorText);
+          } catch {
+            error403Data = errorText;
+          }
+          
+          // Kontrollera för user_not_found fel
+          if (error403Data?.code === 'user_not_found' || error403Data?.message?.includes('User from sub claim in JWT does not exist')) {
+            console.log('User not found in JWT - forcerar utloggning');
+            
+            // Forcera utloggning på klientsidan
+            if (typeof window !== 'undefined') {
+              // Rensa all auth-data
+              const authKeys = ['sb-auth-token', 'sb-kjsquvjzctdwgjypcjrg-auth-token', 'sb-auth'];
+              authKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+                customStorage.removeItem(key);
+              });
+              
+              // Rensa cookies
+              document.cookie.split(";").forEach((c) => {
+                const eqPos = c.indexOf("=");
+                const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+                if (name.trim().includes('sb-') || name.trim().includes('auth')) {
+                  document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+                }
+              });
+              
+              // Skicka event för att UI ska hantera utloggning
+              const signOutEvent = new CustomEvent('supabase.auth.signout', { 
+                detail: { 
+                  reason: 'user_not_found',
+                  message: 'Användaren hittades inte, loggar ut automatiskt'
+                }
+              });
+              window.dispatchEvent(signOutEvent);
+              
+              // Redirecta till startsidan efter en kort fördröjning
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 100);
+            }
+            
+            const authError = new Error('User not found - automatically signed out');
+            authError.name = 'AuthError';
+            throw authError;
+          }
+          
+          // Sätt som original auth error för andra 403-fel
+          originalAuthError = error403Data;
+        }
+        
         // Kontrollera om detta är ett permanent fel som inte bör återförsökas
         const isPermanentError = PERMANENT_ERROR_CODES.some(code => 
           errorData.includes(code) || errorCode === code
         ) || (response.status === 400 && url.includes('/auth/v1/token'));
         
         if (isPermanentError) {
-          console.log(`Avbryter återförsök: Permanent fel detekterat i error`);
+          console.log(`Avbryter återförsök: Permanent fel detekterat i response`);
           
-          // För auth-fel, rensa session och omdirigera
-          if (url.includes('/auth/v1/token') || PERMANENT_ERROR_CODES.some(code => 
-            errorData.includes(code) || errorCode === code
-          )) {
-            // Skicka ett globalt event för att hantera sessionsfel i UI
-            if (typeof window !== 'undefined') {
-              const errorEvent = new CustomEvent('supabase.auth.error', { 
-                detail: { 
-                  error: { message: `Auth error: ${errorData}` },
-                  message: 'Permanent auth error',
-                  shouldSignOut: true
-                }
-              });
-              window.dispatchEvent(errorEvent);
-            }
+          // För auth-fel, bevara det ursprungliga felet
+          if (originalAuthError) {
+            const authError = new Error(originalAuthError.message || originalAuthError.error_description || 'Authentication error');
+            (authError as any).code = originalAuthError.code || originalAuthError.error_code;
+            throw authError;
+          }
+          
+          // Skicka ett globalt event för att hantera sessionsfel i UI
+          if (typeof window !== 'undefined') {
+            const errorEvent = new CustomEvent('supabase.auth.error', { 
+              detail: { 
+                error: { message: `Auth error: ${errorData}` },
+                message: 'Permanent auth error',
+                shouldSignOut: true
+              }
+            });
+            window.dispatchEvent(errorEvent);
           }
           
           break; // Avbryt återförsök för permanenta fel

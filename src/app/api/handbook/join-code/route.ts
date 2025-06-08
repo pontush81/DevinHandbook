@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceSupabase();
     
     // Check if user is admin of this handbook
-    const { data: adminCheck } = await supabase
+    const { data: adminCheck, error: adminError } = await supabase
       .from("handbook_members")
       .select("id")
       .eq("handbook_id", handbookId)
@@ -95,13 +95,17 @@ export async function GET(request: NextRequest) {
       .eq("role", "admin")
       .maybeSingle();
 
-    // DEVELOPMENT OVERRIDE: Allow access for logged-in users in development
-    const isAdmin = !!adminCheck;
-    const allowAccess = process.env.NODE_ENV === 'development' || isAdmin;
-
-    if (!allowAccess) {
+    if (adminError) {
+      console.error('Fel vid kontroll av admin-behörighet:', adminError);
       return NextResponse.json(
-        { success: false, message: "Du har inte admin-behörighet för denna handbok" },
+        { success: false, message: 'Kunde inte verifiera admin-behörighet' },
+        { status: 500 }
+      );
+    }
+
+    if (!adminCheck) {
+      return NextResponse.json(
+        { success: false, message: 'Du har inte admin-behörighet för denna handbok' },
         { status: 403 }
       );
     }
@@ -160,7 +164,7 @@ export async function DELETE(request: NextRequest) {
     const supabase = getServiceSupabase();
     
     // Check if user is admin of this handbook
-    const { data: adminCheck } = await supabase
+    const { data: adminCheck, error: adminError } = await supabase
       .from("handbook_members")
       .select("id")
       .eq("handbook_id", handbookId)
@@ -168,13 +172,17 @@ export async function DELETE(request: NextRequest) {
       .eq("role", "admin")
       .maybeSingle();
 
-    // DEVELOPMENT OVERRIDE: Allow access for logged-in users in development
-    const isAdmin = !!adminCheck;
-    const allowAccess = process.env.NODE_ENV === 'development' || isAdmin;
-
-    if (!allowAccess) {
+    if (adminError) {
+      console.error('Fel vid kontroll av admin-behörighet:', adminError);
       return NextResponse.json(
-        { success: false, message: "Du har inte admin-behörighet för denna handbok" },
+        { success: false, message: 'Kunde inte verifiera admin-behörighet' },
+        { status: 500 }
+      );
+    }
+
+    if (!adminCheck) {
+      return NextResponse.json(
+        { success: false, message: 'Du har inte admin-behörighet för denna handbok' },
         { status: 403 }
       );
     }

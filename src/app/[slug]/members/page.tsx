@@ -61,11 +61,9 @@ export default async function MembersPage({ params }: MembersPageProps) {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  // DEVELOPMENT OVERRIDE: Allow access for logged-in users in development
   const isAdmin = memberData?.role === 'admin';
-  const allowAccess = process.env.NODE_ENV === 'development' || isAdmin;
 
-  if (memberError || !memberData || !allowAccess) {
+  if (memberError || !memberData || !isAdmin) {
     redirect(`/${slug}`); // Redirect to handbook if not admin
   }
 

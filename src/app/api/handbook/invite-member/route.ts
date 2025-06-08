@@ -52,11 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // DEVELOPMENT OVERRIDE: Allow access for logged-in users in development
-    const isAdmin = !!adminCheck;
-    const allowAccess = process.env.NODE_ENV === 'development' || isAdmin;
-
-    if (!allowAccess) {
+    if (!adminCheck) {
       return NextResponse.json(
         { success: false, message: "Du har inte admin-behörighet för denna handbok" },
         { status: 403 }
