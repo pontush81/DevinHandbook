@@ -17,6 +17,9 @@ function AuthCallbackContent() {
     const access_token = params.get("access_token");
     const refresh_token = params.get("refresh_token");
     const type = params.get("type"); // Type kan vara 'signup', 'recovery', etc.
+    
+    // Check for join code in query parameters
+    const joinCode = searchParams.get("join");
 
     if (!access_token || !refresh_token) {
       setStatus("error");
@@ -26,7 +29,7 @@ function AuthCallbackContent() {
 
     // Sätt sessionen i Supabase-klienten
     supabase.auth.setSession({ access_token, refresh_token })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           setStatus("error");
           setMessage("Kunde inte logga in. Prova igen eller kontakta support.");
@@ -40,6 +43,39 @@ function AuthCallbackContent() {
             setTimeout(() => {
               router.replace("/reset-password");
             }, 1500);
+          } else if (joinCode) {
+            // If user has a join code, try to join the handbook automatically
+            setMessage("E-post bekräftad! Går med i handboken...");
+            
+            try {
+              const joinResponse = await fetch('/api/handbook/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ joinCode }),
+              });
+
+              const joinData = await joinResponse.json();
+
+              if (joinResponse.ok && joinData.success) {
+                setMessage(`E-post bekräftad och gått med i ${joinData.handbook.title}! Du dirigeras dit nu...`);
+                setTimeout(() => {
+                  router.replace(`/${joinData.handbook.slug}`);
+                }, 2000);
+              } else {
+                // Join failed, redirect to login with join code
+                setMessage("E-post bekräftad! Du dirigeras nu till inloggning för att gå med i handboken...");
+                setTimeout(() => {
+                  router.replace(`/login?verified=true&from=email_confirmation&join=${joinCode}`);
+                }, 1500);
+              }
+            } catch (error) {
+              console.error('Error joining handbook:', error);
+              // Join failed, redirect to login with join code
+              setMessage("E-post bekräftad! Du dirigeras nu till inloggning för att gå med i handboken...");
+              setTimeout(() => {
+                router.replace(`/login?verified=true&from=email_confirmation&join=${joinCode}`);
+              }, 1500);
+            }
           } else {
             // För alla andra typer (inkl. signup, email eller ospecificerat), gå till login med verified=true
             setMessage("E-post bekräftad! Du dirigeras nu till inloggningssidan...");
@@ -50,7 +86,7 @@ function AuthCallbackContent() {
           }
         }
       });
-  }, [router]);
+  }, [router, searchParams]);
   
   // Funktion för att kontrollera om användaren har handböcker (används inte längre i det direkta flödet)
   const checkForHandbooks = async (userId: string) => {

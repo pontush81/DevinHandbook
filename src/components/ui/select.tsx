@@ -104,21 +104,30 @@ interface SelectValueProps {
 
 export function SelectValue({ placeholder = "Välj...", className }: SelectValueProps) {
   const { value } = useSelectContext();
-  const [selectedLabel, setSelectedLabel] = React.useState<string>("");
-
-  // Find the selected option label from the SelectItems
-  React.useEffect(() => {
-    const selectElement = document.querySelector(`[data-select-value="${value}"]`);
-    if (selectElement) {
-      setSelectedLabel(selectElement.textContent || "");
-    } else {
-      setSelectedLabel("");
+  
+  // Create a mapping for common role values
+  const roleMapping: Record<string, string> = {
+    'admin': 'Administratör',
+    'editor': 'Redaktör', 
+    'viewer': 'Läsare'
+  };
+  
+  // Use mapping if available, otherwise look for data attribute
+  const getDisplayValue = () => {
+    if (roleMapping[value]) {
+      return roleMapping[value];
     }
-  }, [value]);
+    
+    // Fallback to searching DOM
+    const selectElement = document.querySelector(`[data-select-value="${value}"]`);
+    return selectElement?.textContent || "";
+  };
+  
+  const displayValue = getDisplayValue();
 
   return (
-    <span className={cn("block truncate", !selectedLabel && "text-gray-400", className)}>
-      {selectedLabel || placeholder}
+    <span className={cn("block truncate", !displayValue && "text-gray-400", className)}>
+      {displayValue || placeholder}
     </span>
   );
 }

@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Edit, Settings, ChevronDown, Bell } from 'lucide-react';
+import { User, LogOut, Edit, Settings, ChevronDown, Bell, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 
@@ -20,6 +20,7 @@ interface HandbookHeaderProps {
   handbookTitle: string;
   handbookSlug?: string;
   canEdit?: boolean;
+  isAdmin?: boolean;
   isEditMode?: boolean;
   onToggleEditMode?: () => void;
   theme?: {
@@ -33,6 +34,7 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
   handbookTitle,
   handbookSlug,
   canEdit = false,
+  isAdmin = false,
   isEditMode = false,
   onToggleEditMode,
   theme
@@ -186,12 +188,25 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               
-              <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
-                <Link href="/dashboard" className="flex items-center w-full">
-                  <Settings className="mr-3 h-4 w-4" />
-                  <span className="text-sm">Dashboard</span>
-                </Link>
-              </DropdownMenuItem>
+              {/* Dashboard - endast för admins */}
+              {isAdmin && (
+                <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
+                  <Link href="/dashboard" className="flex items-center w-full">
+                    <Settings className="mr-3 h-4 w-4" />
+                    <span className="text-sm">Dashboard</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+
+              {/* Hantera medlemmar - endast för admins */}
+              {isAdmin && (
+                <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
+                  <Link href={`/${handbookSlug}/members`} className="flex items-center w-full">
+                    <Users className="mr-3 h-4 w-4" />
+                    <span className="text-sm">Hantera medlemmar</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
               
               <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
                 <Link href={handbookSlug ? `/${handbookSlug}/notifications` : "/notifications"} className="flex items-center w-full">

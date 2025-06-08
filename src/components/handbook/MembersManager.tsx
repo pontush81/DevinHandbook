@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { AlertCircle, UserPlus, Trash2, UserCheck } from "lucide-react";
+import { AlertCircle, UserPlus, Trash2, UserCheck, Key, Copy, RefreshCw, Eye, EyeOff } from "lucide-react";
 
 type MemberRole = "admin" | "editor" | "viewer";
 
@@ -15,6 +15,12 @@ interface Member {
   email: string;
   role: MemberRole;
   created_at: string;
+}
+
+interface JoinCodeData {
+  joinCode: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
 }
 
 interface MembersManagerProps {
@@ -30,12 +36,119 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{message: string, isError: boolean} | null>(null);
+  
+  // Join code state
+  const [joinCodeData, setJoinCodeData] = useState<JoinCodeData>({ joinCode: null, expiresAt: null, isActive: false });
+  const [isLoadingJoinCode, setIsLoadingJoinCode] = useState(false);
+  const [showJoinCode, setShowJoinCode] = useState(false);
 
   const showMessage = (message: string, isError: boolean = false) => {
     setStatusMessage({ message, isError });
     setTimeout(() => {
       setStatusMessage(null);
     }, 3000);
+  };
+
+  const fetchJoinCode = useCallback(async () => {
+    setIsLoadingJoinCode(true);
+    try {
+      const response = await fetch(`/api/handbook/join-code?handbookId=${handbookId}`);
+      const data = await response.json();
+
+      console.log('[MembersManager] fetchJoinCode response:', { response: response.ok, data });
+
+      if (response.ok) {
+        const newJoinCodeData = {
+          joinCode: data.joinCode,
+          expiresAt: data.expiresAt,
+          isActive: data.isActive
+        };
+        console.log('[MembersManager] Setting joinCodeData:', newJoinCodeData);
+        setJoinCodeData(newJoinCodeData);
+      } else {
+        // No join code exists yet, that's fine
+        console.log('[MembersManager] No join code found, setting to null');
+        setJoinCodeData({ joinCode: null, expiresAt: null, isActive: false });
+      }
+    } catch (error) {
+      console.error("Fel vid hämtning av join-kod:", error);
+    } finally {
+      setIsLoadingJoinCode(false);
+    }
+  }, [handbookId]);
+
+  const handleCreateJoinCode = async () => {
+    setIsLoadingJoinCode(true);
+    try {
+      const response = await fetch("/api/handbook/join-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handbookId, expiresInDays: 30 }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Något gick fel");
+      }
+
+      showMessage("Join-kod skapad!");
+      setShowJoinCode(true); // Automatically show the join code after creation
+      await fetchJoinCode(); // Refresh join code data
+    } catch (error) {
+      console.error("Fel vid skapande av join-kod:", error);
+      showMessage(error instanceof Error ? error.message : "Kunde inte skapa join-kod", true);
+    } finally {
+      setIsLoadingJoinCode(false);
+    }
+  };
+
+  const handleDeactivateJoinCode = async () => {
+    setIsLoadingJoinCode(true);
+    try {
+      const response = await fetch("/api/handbook/join-code", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handbookId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Något gick fel");
+      }
+
+      showMessage("Join-kod inaktiverad");
+      await fetchJoinCode(); // Refresh join code data
+    } catch (error) {
+      console.error("Fel vid inaktivering av join-kod:", error);
+      showMessage(error instanceof Error ? error.message : "Kunde inte inaktivera join-kod", true);
+    } finally {
+      setIsLoadingJoinCode(false);
+    }
+  };
+
+  const copyJoinCode = async () => {
+    if (joinCodeData.joinCode) {
+      try {
+        await navigator.clipboard.writeText(joinCodeData.joinCode);
+        showMessage("Join-kod kopierad till urklipp!");
+      } catch (error) {
+        showMessage("Kunde inte kopiera join-kod", true);
+      }
+    }
+  };
+
+  const copyJoinUrl = async () => {
+    if (joinCodeData.joinCode) {
+      const joinUrl = `${window.location.origin}/signup?join=${joinCodeData.joinCode}`;
+      try {
+        await navigator.clipboard.writeText(joinUrl);
+        showMessage("Join-länk kopierad till urklipp!");
+      } catch (error) {
+        showMessage("Kunde inte kopiera join-länk", true);
+      }
+    }
   };
 
   const fetchMembers = useCallback(async () => {
@@ -67,7 +180,8 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
   useEffect(() => {
     fetchMembers();
-  }, [fetchMembers]);
+    fetchJoinCode();
+  }, [fetchMembers, fetchJoinCode]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,43 +287,132 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         </div>
       )}
 
-      <form onSubmit={handleInvite} className="mb-6 space-y-4">
-        <div className="flex flex-col gap-3">
-          <Input
-            type="email"
-            placeholder="Ange e-postadress"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full text-base"
-            required
-          />
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Select value={role} onValueChange={(value) => setRole(value as MemberRole)}>
-              <SelectTrigger className="w-full sm:w-40 h-10">
-                <SelectValue placeholder="Välj roll" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Administratör</SelectItem>
-                <SelectItem value="editor">Redaktör</SelectItem>
-                <SelectItem value="viewer">Läsare</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="w-full sm:w-auto h-10 touch-manipulation"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Bjuder in..." : "Bjud in"}
-            </Button>
-          </div>
+      {/* Join Code Section */}
+      <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
+        <div className="flex items-center gap-2 mb-3">
+          <Key className="h-5 w-5 text-blue-600" />
+          <h3 className="font-medium text-lg text-blue-900">Join-kod för handboken</h3>
         </div>
-        <p className="text-xs sm:text-sm text-gray-500">
-          <AlertCircle className="h-4 w-4 inline mr-1" />
-          Administratörer kan hantera alla aspekter av handboken, redaktörer kan redigera 
-          innehåll, och läsare kan endast läsa.
+        
+        <p className="text-sm text-blue-700 mb-4">
+          Skapa en join-kod som nya användare kan använda för att gå med i handboken. 
+          Dela koden eller länken med personer som ska ha tillgång.
         </p>
-      </form>
+
+        {joinCodeData.joinCode && joinCodeData.isActive ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                type={showJoinCode ? "text" : "password"}
+                value={joinCodeData.joinCode}
+                readOnly
+                className="font-mono text-lg text-center bg-white"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowJoinCode(!showJoinCode)}
+                title={showJoinCode ? "Dölj kod" : "Visa kod"}
+              >
+                {showJoinCode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={copyJoinCode}
+                className="whitespace-nowrap"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Kopiera kod
+              </Button>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={copyJoinUrl}
+                className="flex-1"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Kopiera registreringslänk
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleCreateJoinCode}
+                disabled={isLoadingJoinCode}
+                className="flex-1"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Förnya kod
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeactivateJoinCode}
+                disabled={isLoadingJoinCode}
+                className="flex-1"
+              >
+                Inaktivera
+              </Button>
+            </div>
+
+            {joinCodeData.expiresAt && (
+              <p className="text-xs text-blue-600">
+                Kod går ut: {new Date(joinCodeData.expiresAt).toLocaleDateString('sv-SE')} {new Date(joinCodeData.expiresAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
+          </div>
+        ) : (
+          <Button
+            onClick={handleCreateJoinCode}
+            disabled={isLoadingJoinCode}
+            className="w-full"
+          >
+            <Key className="h-4 w-4 mr-2" />
+            {isLoadingJoinCode ? "Skapar..." : "Skapa join-kod"}
+          </Button>
+        )}
+      </div>
+
+      {/* Email Invite Section */}
+      <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+        <h3 className="font-medium text-lg mb-3">Bjud in via e-post</h3>
+        <form onSubmit={handleInvite} className="space-y-4">
+          <div className="flex flex-col gap-3">
+            <Input
+              type="email"
+              placeholder="Ange e-postadress"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full text-base"
+              required
+            />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Select value={role} onValueChange={(value) => setRole(value as MemberRole)}>
+                <SelectTrigger className="w-full sm:w-40 h-10">
+                  <SelectValue placeholder="Välj roll" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administratör</SelectItem>
+                  <SelectItem value="editor">Redaktör</SelectItem>
+                  <SelectItem value="viewer">Läsare</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="w-full sm:w-auto h-10 touch-manipulation"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                {isSubmitting ? "Bjuder in..." : "Bjud in"}
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500">
+            <AlertCircle className="h-4 w-4 inline mr-1" />
+            Administratörer kan hantera alla aspekter av handboken, redaktörer kan redigera 
+            innehåll, och läsare kan endast läsa.
+          </p>
+        </form>
+      </div>
 
       <div className="border-t pt-4">
         <h3 className="font-medium text-base sm:text-lg mb-3">Medlemmar</h3>

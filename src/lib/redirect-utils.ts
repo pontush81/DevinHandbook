@@ -124,30 +124,58 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
 
     console.log(`[Smart Redirect] Fetching handbooks for user: ${userId}`);
 
-    // Get user's handbooks
-    const { data: handbooks, error, count: handbookCount } = await (supabase as any)
-      .from('handbooks')
-      .select('id, slug, title')  // Changed from 'subdomain' to 'slug'
-      .eq('owner_id', userId)
-      .limit(5);
+    // Get user's handbooks (both owned and member of)
+    const [ownedHandbooks, memberHandbooks] = await Promise.all([
+      // Handbooks user owns
+      (supabase as any)
+        .from('handbooks')
+        .select('id, slug, title')
+        .eq('owner_id', userId)
+        .limit(5),
+      
+      // Handbooks user is member of
+      (supabase as any)
+        .from('handbook_members')
+        .select(`
+          handbook_id,
+          handbooks!inner(id, slug, title)
+        `)
+        .eq('user_id', userId)
+        .limit(5)
+    ]);
 
-    if (error) {
-      console.error('[Smart Redirect] Error fetching handbooks:', error);
+    if (ownedHandbooks.error && memberHandbooks.error) {
+      console.error('[Smart Redirect] Error fetching handbooks:', { 
+        ownedError: ownedHandbooks.error,
+        memberError: memberHandbooks.error 
+      });
       console.log('[Smart Redirect] Falling back to dashboard due to error');
       window.location.href = '/dashboard';
       return;
     }
 
-    console.log(`[Smart Redirect] Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map((h: any) => h.slug));
+    // Combine and deduplicate handbooks
+    const allHandbooks = [
+      ...(ownedHandbooks.data || []),
+      ...(memberHandbooks.data || []).map((m: any) => m.handbooks)
+    ];
+    
+    // Remove duplicates based on ID
+    const uniqueHandbooks = allHandbooks.filter((handbook, index, self) => 
+      index === self.findIndex(h => h.id === handbook.id)
+    );
 
-    if (!handbooks || handbooks.length === 0) {
+    console.log(`[Smart Redirect] Found ${uniqueHandbooks.length} total handbooks for user ${userId}:`, 
+      uniqueHandbooks?.map((h: any) => h.slug));
+
+    if (!uniqueHandbooks || uniqueHandbooks.length === 0) {
       console.log('[Smart Redirect] No handbooks found, redirecting to create handbook');
       window.location.href = '/create-handbook';
       return;
     }
 
-    if (handbooks.length === 1) {
-      const handbook = handbooks[0] as any;
+    if (uniqueHandbooks.length === 1) {
+      const handbook = uniqueHandbooks[0] as any;
       // Validate slug before redirect
       if (!handbook || !handbook.slug || typeof handbook.slug !== 'string') {
         console.error('[Smart Redirect] Invalid handbook or slug:', handbook);
@@ -165,7 +193,10 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
       window.location.href = handbookUrl;
       return;
     }
-    
+
+    // Multiple handbooks - go to dashboard
+    console.log(`[Smart Redirect] Multiple handbooks found (${uniqueHandbooks.length}), redirecting to dashboard`);
+    window.location.href = '/dashboard';
   } catch (error) {
     console.error('[Smart Redirect] Unexpected error:', error);
     // Fallback to create-handbook for better onboarding experience
@@ -219,15 +250,31 @@ export async function smartRedirectWithPolling(
 
       console.log(`[Smart Redirect Polling] Attempt ${attempts}: Fetching handbooks for user: ${userId}`);
       
-      // Fetch user's handbooks ONLY
-      const { data: handbooks, error } = await (supabase as any)
-        .from('handbooks')
-        .select('id, slug, title')
-        .eq('owner_id', userId)
-        .order('created_at', { ascending: false });
+      // Fetch user's handbooks (both owned and member of)
+      const [ownedHandbooks, memberHandbooks] = await Promise.all([
+        // Handbooks user owns
+        (supabase as any)
+          .from('handbooks')
+          .select('id, slug, title')
+          .eq('owner_id', userId)
+          .order('created_at', { ascending: false }),
+        
+        // Handbooks user is member of
+        (supabase as any)
+          .from('handbook_members')
+          .select(`
+            handbook_id,
+            handbooks!inner(id, slug, title)
+          `)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) {
-        console.error(`[Smart Redirect Polling] Attempt ${attempts}: Error fetching handbooks:`, error);
+      if (ownedHandbooks.error && memberHandbooks.error) {
+        console.error(`[Smart Redirect Polling] Attempt ${attempts}: Error fetching handbooks:`, {
+          ownedError: ownedHandbooks.error,
+          memberError: memberHandbooks.error
+        });
         if (attempts >= maxAttempts) {
           console.log('[Smart Redirect Polling] Max attempts reached, falling back to create-handbook for onboarding');
           window.location.href = '/create-handbook?new=true';
@@ -238,8 +285,20 @@ export async function smartRedirectWithPolling(
         return;
       }
 
-      const handbookCount = handbooks?.length || 0;
-      console.log(`[Smart Redirect Polling] Attempt ${attempts}: Found ${handbookCount} handbooks for user ${userId}:`, handbooks?.map((h: any) => h.slug));
+      // Combine and deduplicate handbooks
+      const allHandbooks = [
+        ...(ownedHandbooks.data || []),
+        ...(memberHandbooks.data || []).map((m: any) => m.handbooks)
+      ];
+      
+      // Remove duplicates based on ID
+      const uniqueHandbooks = allHandbooks.filter((handbook, index, self) => 
+        index === self.findIndex(h => h.id === handbook.id)
+      );
+
+      const handbookCount = uniqueHandbooks?.length || 0;
+      console.log(`[Smart Redirect Polling] Attempt ${attempts}: Found ${handbookCount} total handbooks for user ${userId}:`, 
+        uniqueHandbooks?.map((h: any) => h.slug));
 
       if (handbookCount === 0) {
         if (attempts >= maxAttempts) {
@@ -252,7 +311,7 @@ export async function smartRedirectWithPolling(
         return;
         
       } else if (handbookCount === 1) {
-        const handbook = handbooks[0];
+        const handbook = uniqueHandbooks[0];
         console.log(`[Smart Redirect Polling] Found single handbook: ${handbook.slug}`);
         
         // Validate slug before redirect

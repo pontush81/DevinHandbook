@@ -4,6 +4,9 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 import { getServerSession } from '@/lib/auth';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Local server session function
 async function getServerSession() {
@@ -34,26 +37,205 @@ async function getServerSession() {
   }
 }
 
-async function sendNotification(type: 'new_topic' | 'new_reply', data: any) {
+async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any) {
   try {
-    const notificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/notifications/send`;
-    
-    const response = await fetch(notificationUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_WEBHOOK_SECRET}`
-      },
-      body: JSON.stringify(data)
-    });
+    console.log('[Replies] Processing notification directly:', { type, handbook_id: data.handbook_id, topic_id: data.topic_id });
 
-    if (!response.ok) {
-      console.error('Failed to send notification:', await response.text());
-    } else {
-      console.log('Notification sent successfully');
+    const supabase = getServiceSupabase();
+    const { handbook_id, topic_id, post_id, author_name, content_preview } = data;
+
+    // Get handbook details
+    const { data: handbook, error: handbookError } = await supabase
+      .from('handbooks')
+      .select('title, slug')
+      .eq('id', handbook_id)
+      .single();
+
+    if (handbookError || !handbook) {
+      console.error('[Replies] Handbook not found:', handbookError);
+      return;
     }
+
+    // Get topic details
+    const { data: topic, error: topicError } = await supabase
+      .from('forum_topics')
+      .select('title, author_id')
+      .eq('id', topic_id)
+      .single();
+
+    if (topicError || !topic) {
+      console.error('[Replies] Topic not found:', topicError);
+      return;
+    }
+
+    // Get all members of the handbook with their notification preferences
+    const { data: members, error: membersError } = await supabase
+      .from('handbook_members')
+      .select('user_id')
+      .eq('handbook_id', handbook_id);
+
+    if (membersError || !members) {
+      console.error('[Replies] Failed to get members:', membersError);
+      return;
+    }
+
+    // Get user details and preferences for each member
+    let enrichedMembers: any[] = [];
+    
+    for (const member of members) {
+      // Get user notification preferences first
+      const { data: preferences } = await supabase
+        .from('user_notification_preferences')
+        .select('email_new_topics, email_new_replies, email_mentions, app_new_topics, app_new_replies, app_mentions')
+        .eq('user_id', member.user_id)
+        .eq('handbook_id', handbook_id)
+        .single();
+
+      // Try to get user email from handbook_members table if we have it there, or we'll skip email for now
+      // Since we can't easily access auth.users from server functions, we'll work with what we have
+      // For now, let's use the author_email from posts to identify users who participated
+      
+      enrichedMembers.push({
+        user_id: member.user_id,
+        preferences: preferences || {
+          email_new_topics: true,
+          email_new_replies: true, 
+          email_mentions: true,
+          app_new_topics: true,
+          app_new_replies: true,
+          app_mentions: true
+        }
+      });
+    }
+
+    let notificationRecipients: any[] = [];
+    
+    if (type === 'new_reply') {
+      // Get reply author ID
+      const { data: replyData, error: replyError } = await supabase
+        .from('forum_posts')
+        .select('author_id')
+        .eq('id', post_id)
+        .single();
+
+      if (replyError || !replyData) {
+        console.error('[Replies] Reply not found:', replyError);
+        return;
+      }
+
+      // Get all unique participants in this topic with their emails
+      const { data: participants, error: participantsError } = await supabase
+        .from('forum_posts')
+        .select('author_id, author_email')
+        .eq('topic_id', topic_id);
+
+      if (participantsError) {
+        console.error('[Replies] Failed to get participants:', participantsError);
+        return;
+      }
+
+      // Create a map of user_id to email from participants
+      const userEmailMap = new Map();
+      const uniqueParticipants = new Set([topic.author_id]);
+      
+      participants?.forEach(p => {
+        if (p.author_email) {
+          userEmailMap.set(p.author_id, p.author_email);
+          uniqueParticipants.add(p.author_id);
+        }
+      });
+
+      // Remove the current reply author
+      uniqueParticipants.delete(replyData.author_id);
+
+      notificationRecipients = enrichedMembers
+        .filter(member => 
+          uniqueParticipants.has(member.user_id) &&
+          userEmailMap.has(member.user_id)
+        )
+        .map(member => ({
+          email: userEmailMap.get(member.user_id),
+          userId: member.user_id,
+          preferences: member.preferences,
+          shouldCreateAppNotification: member.preferences?.app_new_replies !== false,
+          shouldSendEmail: member.preferences?.email_new_replies !== false
+        }));
+    }
+
+    console.log('[Replies] Processing', notificationRecipients.length, 'recipients');
+
+    // Create in-app notifications first
+    for (const recipient of notificationRecipients.filter(r => r.shouldCreateAppNotification)) {
+      try {
+        await supabase
+          .from('forum_notifications')
+          .insert({
+            recipient_id: recipient.userId,
+            topic_id: topic_id,
+            post_id: post_id,
+            notification_type: type,
+            is_read: false,
+            email_sent: false
+          });
+      } catch (error) {
+        console.error('[Replies] Failed to create app notification for:', recipient.email, error);
+      }
+    }
+
+    // Send emails to those who want them
+    const emailRecipients = notificationRecipients.filter(r => r.shouldSendEmail);
+    
+    if (emailRecipients.length > 0) {
+      const subject = `Nytt svar på: ${topic.title}`;
+      const messageUrl = `https://${handbook.slug}.${process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/meddelanden`;
+      const fromEmail = `${handbook.title} <noreply@${process.env.RESEND_DOMAIN || 'yourdomain.com'}>`;
+
+      for (const recipient of emailRecipients) {
+        try {
+          await resend.emails.send({
+            from: fromEmail,
+            to: recipient.email,
+            subject: subject,
+            html: `
+              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+                <div style="background-color: #10b981; color: white; padding: 20px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 24px;">Nytt svar</h1>
+                </div>
+                <div style="padding: 20px; background-color: #ffffff;">
+                  <h2 style="color: #10b981; margin-top: 0;">${topic.title}</h2>
+                  <p><strong>${author_name}</strong> har svarat på en diskussion du deltar i:</p>
+                  <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0;">
+                    <p style="margin: 0; line-height: 1.5;">${content_preview.substring(0, 200)}${content_preview.length > 200 ? '...' : ''}</p>
+                  </div>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${messageUrl}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Läs svaret</a>
+                  </div>
+                </div>
+              </div>
+            `
+          });
+          
+          // Mark as email sent
+          await supabase
+            .from('forum_notifications')
+            .update({
+              email_sent: true,
+              email_sent_at: new Date().toISOString()
+            })
+            .eq('topic_id', topic_id)
+            .eq('notification_type', type)
+            .eq('recipient_id', recipient.userId)
+            .is('post_id', post_id || null);
+            
+        } catch (error) {
+          console.error('[Replies] Failed to send email to:', recipient.email, error);
+        }
+      }
+    }
+
+    console.log('[Replies] Notification processing complete');
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('[Replies] Error in notification processing:', error);
   }
 }
 
@@ -281,7 +463,7 @@ export async function POST(request: NextRequest) {
 
     // 6. Send notification asynchronously (don't block the response)
     setImmediate(() => {
-      sendNotification('new_reply', {
+      sendNotificationDirect('new_reply', {
         type: 'new_reply',
         handbook_id: topic.handbook_id,
         topic_id: topic_id,

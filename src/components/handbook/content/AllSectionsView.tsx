@@ -1,5 +1,5 @@
 import React, { useState, useCallback, createElement } from 'react';
-import { HandbookSection as Section } from '@/types/handbook';
+import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
 import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen, Trash2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { EditorJSComponent } from '@/components/ui/EditorJSComponent';
 import { IconPicker } from '@/components/ui/IconPicker';
 import { parseEditorJSContent, stringifyEditorJSContent } from '@/lib/utils/editorjs';
 import { getIconComponent } from '@/lib/icon-utils';
+import { OutputData } from '@editorjs/editorjs';
 
 // Simple read-only content renderer for EditorJS data (used for pages only)
 const ReadOnlyEditorContent = ({ content }: { content: any }) => {
@@ -230,7 +231,7 @@ export function AllSectionsView({
     });
   }, [tempPageTitles, onUpdatePage]);
 
-  const handlePageContentChange = useCallback((pageId: string, data: any) => {
+  const handlePageContentChange = useCallback((pageId: string, data: OutputData) => {
     setPageContents(prev => new Map(prev.set(pageId, data)));
     
     // Auto-save after 2 seconds of inactivity

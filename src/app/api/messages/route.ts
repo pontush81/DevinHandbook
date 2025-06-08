@@ -36,19 +36,32 @@ async function getServerSession() {
 
 async function sendNotification(type: 'new_topic' | 'new_reply', data: any) {
   try {
+    // Add debugging
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const authHeader = `Bearer ${serviceKey}`;
+    
+    console.log('[Messages] SendNotification debug:', {
+      hasServiceKey: !!serviceKey,
+      serviceKeyLength: serviceKey?.length || 0,
+      authHeaderLength: authHeader.length,
+      authHeaderPreview: authHeader.substring(0, 20) + '...'
+    });
+
+    // Anropa notifikations-API:et direkt utan webhook-autentisering
     const notificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/notifications/send`;
     
     const response = await fetch(notificationUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_WEBHOOK_SECRET}`
+        'Authorization': authHeader
       },
       body: JSON.stringify(data)
     });
 
     if (!response.ok) {
-      console.error('Failed to send notification:', await response.text());
+      const errorText = await response.text();
+      console.error('Failed to send notification:', errorText);
     } else {
       console.log('Notification sent successfully');
     }

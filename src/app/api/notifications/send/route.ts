@@ -24,12 +24,29 @@ interface EmailRecipient {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify webhook authentication
+    // Add debugging
     const authHeader = request.headers.get('authorization');
-    const expectedAuth = `Bearer ${process.env.SUPABASE_WEBHOOK_SECRET}`;
+    const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const hasWebhookSecret = !!process.env.SUPABASE_WEBHOOK_SECRET;
     
-    if (!authHeader || authHeader !== expectedAuth) {
-      console.error('[Notification] Invalid authentication');
+    console.log('[Notification] Debug auth:', {
+      authHeaderExists: !!authHeader,
+      authHeaderValue: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
+      hasServiceKey,
+      hasWebhookSecret,
+      serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0
+    });
+
+    // Verify authentication - acceptera både webhook secret och service role key
+    const expectedWebhookAuth = `Bearer ${process.env.SUPABASE_WEBHOOK_SECRET}`;
+    const expectedServiceAuth = `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`;
+    
+    if (!authHeader || (authHeader !== expectedWebhookAuth && authHeader !== expectedServiceAuth)) {
+      console.error('[Notification] Invalid authentication - Details:', {
+        received: authHeader,
+        expectedServiceAuth: expectedServiceAuth ? expectedServiceAuth.substring(0, 20) + '...' : 'none',
+        expectedWebhookAuth: expectedWebhookAuth ? expectedWebhookAuth.substring(0, 20) + '...' : 'none'
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

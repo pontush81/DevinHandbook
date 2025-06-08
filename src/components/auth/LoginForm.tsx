@@ -8,8 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from "@/lib/supabase";
 import { smartRedirectWithPolling } from '@/lib/redirect-utils';
+import { User } from "@supabase/supabase-js";
 
-export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean }) {
+interface LoginFormProps {
+  showSignupLink?: boolean;
+  onSuccess?: (user: User) => void;
+  joinCode?: string | null;
+}
+
+export function LoginForm({ showSignupLink = true, onSuccess, joinCode }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -104,8 +111,14 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         } else if (!data.session) {
           setError("Kunde inte skapa en aktiv session. Försök igen eller kontakta support.");
         } else {
-          // Inloggning lyckades, implementera en mer robust omdirigering med hantering av return URL
+          // Inloggning lyckades
           console.log("Inloggning lyckades, förbereder omdirigering...");
+          
+          // If there's a join code and onSuccess callback, use that
+          if (onSuccess && data.user) {
+            onSuccess(data.user);
+            return;
+          }
           
           // Kontrollera om det finns en return URL från session renewal
           const urlParams = new URLSearchParams(window.location.search);
@@ -180,7 +193,7 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         email,
         password,
         options: {
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback${joinCode ? `?join=${joinCode}` : ''}` : undefined,
         },
       });
       
@@ -286,7 +299,7 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         >
           {isLoading 
             ? (resetMode ? "Skickar..." : "Loggar in...")
-            : (resetMode ? "Skicka återställningslänk" : "Logga in")
+            : (resetMode ? "Skicka återställningslänk" : (joinCode ? "Logga in och gå med" : "Logga in"))
           }
         </Button>
 
@@ -310,7 +323,7 @@ export function LoginForm({ showSignupLink = true }: { showSignupLink?: boolean 
         <div className="text-center mt-4">
           <p className="text-sm text-gray-600">
             Har du inget konto?{" "}
-            <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+            <Link href={`/signup${joinCode ? `?join=${joinCode}` : ''}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
               Registrera konto
             </Link>
           </p>

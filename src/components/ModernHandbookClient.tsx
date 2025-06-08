@@ -35,9 +35,10 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 }) => {
   const { user, isLoading: authLoading } = useAuth();
   const [handbookData, setHandbookData] = useState(initialData);
-  const [currentPageId, setCurrentPageId] = useState<string | undefined>(undefined);
+  const [currentPageId, setCurrentPageId] = useState<string>('');
   const [isEditMode, setIsEditMode] = useState(defaultEditMode);
   const [canEdit, setCanEdit] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -63,7 +64,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     timestamp: new Date().toISOString() // Cache buster for deployment
   });
 
-  // Check if user can edit this handbook (admin role required)
+  // Check if user can edit this handbook and if they are admin
   useEffect(() => {
     const checkEditPermissions = async () => {
       console.log('🔍 [ModernHandbookClient] Checking edit permissions...', {
@@ -84,14 +85,16 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       if (process.env.NODE_ENV === 'development' && user) {
         console.log('🔧 [ModernHandbookClient] DEVELOPMENT MODE: Allowing edit permissions for logged-in user');
         setCanEdit(true);
+        setIsAdmin(true);
         setIsLoading(false);
         return;
       }
       
       // Require user to be logged in
       if (!user) {
-        console.log('❌ [ModernHandbookClient] No user found, setting canEdit to false');
+        console.log('❌ [ModernHandbookClient] No user found, setting canEdit and isAdmin to false');
         setCanEdit(false);
+        setIsAdmin(false);
         setIsLoading(false);
         return;
       }
@@ -102,32 +105,44 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       });
 
       try {
-        console.log('🔍 [ModernHandbookClient] Checking handbook admin permissions...');
-        // Check if user is admin for this handbook
+        console.log('🔍 [ModernHandbookClient] Checking handbook member permissions...');
+        // Check user's role for this handbook
         const { data: memberData, error } = await supabase
           .from('handbook_members')
           .select('role')
           .eq('handbook_id', initialData.id)
           .eq('user_id', user.id)
-          .eq('role', 'admin')
           .maybeSingle();
 
         if (error) {
-          console.error('❌ [ModernHandbookClient] Error checking handbook admin permissions:', error);
+          console.error('❌ [ModernHandbookClient] Error checking handbook member permissions:', error);
           setCanEdit(false);
-        } else {
-          const isAdmin = !!memberData;
-          console.log('📋 [ModernHandbookClient] Handbook admin check:', {
+          setIsAdmin(false);
+        } else if (memberData) {
+          const userRole = memberData.role;
+          const canEditContent = userRole === 'admin' || userRole === 'editor';
+          const isAdminUser = userRole === 'admin';
+          
+          console.log('📋 [ModernHandbookClient] Handbook member check:', {
             handbookId: initialData.id,
             userId: user.id,
-            isAdmin,
+            userRole,
+            canEditContent,
+            isAdminUser,
             memberData
           });
-          setCanEdit(isAdmin);
+          
+          setCanEdit(canEditContent);
+          setIsAdmin(isAdminUser);
+        } else {
+          console.log('❌ [ModernHandbookClient] User is not a member of this handbook');
+          setCanEdit(false);
+          setIsAdmin(false);
         }
       } catch (error) {
         console.error('❌ [ModernHandbookClient] Error checking edit permissions:', error);
         setCanEdit(false);
+        setIsAdmin(false);
       } finally {
         console.log('🏁 [ModernHandbookClient] Setting isLoading to false');
         setIsLoading(false);
@@ -140,8 +155,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     const timeoutId = setTimeout(() => {
       if (authLoading) {
         console.log('⏰ [ModernHandbookClient] Auth loading timeout');
-        // Only allow edit mode in development if user exists
         setCanEdit(false);
+        setIsAdmin(false);
         setIsLoading(false);
       }
     }, 5000);
@@ -796,6 +811,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           handbookTitle={handbookData.title}
           handbookSlug={handbookData.handbookSlug}
           canEdit={canEdit}
+          isAdmin={isAdmin}
           isEditMode={isEditMode}
           onToggleEditMode={() => setIsEditMode(!isEditMode)}
           theme={handbookData.theme}
@@ -871,18 +887,12 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             forumEnabled={handbookData.forum_enabled}
             editMode={isEditMode}
             onEditSection={(sectionId) => {
-              const section = visibleSections.find(s => s.id === sectionId);
-              if (section) {
-                setEditingSection(section);
-                setOpenSectionDialog(true);
-              }
+              console.log('Edit section:', sectionId);
+              // TODO: Implement section editing functionality
             }}
             onDeleteSection={(sectionId) => {
-              const section = visibleSections.find(s => s.id === sectionId);
-              if (section) {
-                setSectionToDelete(section);
-                setOpenDeleteSectionDialog(true);
-              }
+              console.log('Delete section:', sectionId);
+              // TODO: Implement section deletion functionality
             }}
             onToggleSection={(sectionId) => {
               const section = visibleSections.find(s => s.id === sectionId);

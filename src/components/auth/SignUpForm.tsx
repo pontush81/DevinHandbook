@@ -1,14 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
-import { InfoIcon, CheckCircle2, MailIcon } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Mail as MailIcon, Info as InfoIcon, Key } from "lucide-react";
 
-export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }) {
+interface SignUpFormProps {
+  showLoginLink?: boolean;
+  onSuccess?: (user: User) => void;
+  joinCode?: string | null;
+}
+
+export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUpFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -36,11 +44,16 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
     }
 
     try {
+      // Development mode: Skip email confirmation if we're testing locally with join code
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const skipEmailConfirmation = isDevelopment && joinCode;
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback${joinCode ? `?join=${joinCode}` : ''}` : undefined,
+          data: joinCode ? { join_code: joinCode } : undefined
         },
       });
       
@@ -50,15 +63,63 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
         } else {
           setError(error.message);
         }
+      } else if (data.user && skipEmailConfirmation && !data.user.email_confirmed_at) {
+        // Development mode: Auto-confirm user and process join
+        console.log('[SignUp] Development mode: Auto-confirming user for join code testing...');
+        try {
+          const response = await fetch('/api/dev/confirm-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              userId: data.user.id, 
+              joinCode 
+            }),
+          });
+          
+          if (response.ok) {
+            console.log('[SignUp] Development mode: User confirmed and joined!');
+            // Don't redirect back to signup - that causes a loop!
+            // Instead, call the onSuccess callback or redirect to handbook
+            if (onSuccess) {
+              // Re-fetch the user to get updated auth state
+              const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+              if (refreshedUser) {
+                onSuccess(refreshedUser);
+              }
+            } else {
+              // If no onSuccess callback, redirect to dashboard
+              router.push('/dashboard');
+            }
+          } else {
+            console.log('[SignUp] Development mode: Failed to confirm user, falling back to normal flow');
+            // Fall back to normal email confirmation flow
+            setSuccessMessage("success");
+            setTimeout(() => {
+              router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
+            }, 3000);
+          }
+        } catch (devError) {
+          console.log('[SignUp] Development mode: Error in auto-confirm, falling back:', devError);
+          // Fall back to normal email confirmation flow
+          setSuccessMessage("success");
+          setTimeout(() => {
+            router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
+          }, 3000);
+        }
       } else if (!data.user && !data.session) {
         setSuccessMessage("success");
         
         // Efter 3 sekunder, omdirigera till inloggningssidan med information om e-postverifiering
         setTimeout(() => {
-          router.push("/login?registration=success");
+          router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
         }, 3000);
-      } else {
-        router.push("/dashboard");
+      } else if (data.user) {
+        // User is immediately logged in (email confirmation disabled or already confirmed)
+        if (onSuccess) {
+          onSuccess(data.user);
+        } else {
+          router.push("/dashboard");
+        }
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Ett fel uppstod vid registrering");
@@ -70,13 +131,28 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
   return (
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg border border-gray-200 shadow-lg space-y-5">
-        <div className="p-3 bg-blue-50 border border-blue-100 rounded-md mb-4">
+        <div className={`p-3 border rounded-md mb-4 ${joinCode ? 'bg-blue-50 border-blue-100' : 'bg-blue-50 border-blue-100'}`}>
           <div className="flex items-start gap-2">
-            <InfoIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            {joinCode ? (
+              <Key className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            ) : (
+              <InfoIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            )}
             <div className="text-sm text-blue-700">
-              <p className="font-medium">Nästa steg:</p>
-              <p>1. Du får ett bekräftelsemail - klicka på länken för att aktivera kontot</p>
-              <p>2. Logga sedan in för att skapa din första digitala handbok</p>
+              {joinCode ? (
+                <>
+                  <p className="font-medium">Du kommer att gå med i handboken efter registrering!</p>
+                  <p>1. Skapa ditt konto nedan</p>
+                  <p>2. Du får ett bekräftelsemail - klicka på länken</p>
+                  <p>3. Du kommer automatiskt att bli medlem i handboken</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium">Nästa steg:</p>
+                  <p>1. Du får ett bekräftelsemail - klicka på länken för att aktivera kontot</p>
+                  <p>2. Logga sedan in för att skapa din första digitala handbok</p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -150,9 +226,14 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <span className="text-blue-600 text-sm mt-0.5">📚</span>
+                {joinCode ? (
+                  <Key className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <span className="text-blue-600 text-sm mt-0.5">📚</span>
+                )}
                 <div className="text-sm">
-                  <span className="font-bold text-blue-600">STEG 2:</span> Logga in och skapa din första handbok
+                  <span className="font-bold text-blue-600">STEG 2:</span> 
+                  {joinCode ? " Du kommer automatiskt att gå med i handboken" : " Logga in och skapa din första handbok"}
                 </div>
               </div>
             </div>
@@ -166,7 +247,7 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
           className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           disabled={isLoading}
         >
-          {isLoading ? "Skapar konto..." : "Skapa konto"}
+          {isLoading ? "Skapar konto..." : (joinCode ? "Skapa konto och gå med" : "Skapa konto")}
         </Button>
       </form>
 
@@ -174,7 +255,7 @@ export function SignUpForm({ showLoginLink = true }: { showLoginLink?: boolean }
         <div className="text-center mt-4">
           <p className="text-sm text-gray-600">
             Har du redan ett konto?{" "}
-            <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+            <Link href={`/login${joinCode ? `?join=${joinCode}` : ''}`} className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
               Logga in
             </Link>
           </p>

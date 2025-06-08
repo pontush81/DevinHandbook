@@ -25,19 +25,68 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Använd check_trial_status funktion med admin privileges
-    const { data, error } = await supabaseAdmin
-      .rpc('check_trial_status', { user_uuid: userId });
+    // Hämta användarens trial-status direkt från user_profiles
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    if (error) {
-      console.error('Error checking trial status:', error);
-      return NextResponse.json(
-        { error: 'Failed to check trial status' },
-        { status: 500 }
-      );
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      // Om användaren inte har en profil, skapa en med default trial
+      if (profileError.code === 'PGRST116') {
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+        
+        const { data: newProfile, error: createError } = await supabaseAdmin
+          .from('user_profiles')
+          .insert({
+            id: userId,
+            trial_started_at: new Date().toISOString(),
+            trial_ends_at: trialEndsAt.toISOString(),
+            trial_used: false,
+            subscription_status: 'trial'
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating user profile:', createError);
+          return NextResponse.json(
+            { error: 'Failed to create user profile' },
+            { status: 500 }
+          );
+        }
+        
+        // Använd den nya profilen för beräkningar
+        const trialDaysRemaining = Math.max(0, Math.ceil((new Date(newProfile.trial_ends_at!).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+        
+        return NextResponse.json({
+          isInTrial: true,
+          trialDaysRemaining,
+          subscriptionStatus: 'trial',
+          trialEndsAt: newProfile.trial_ends_at,
+          canCreateHandbook: true,
+          hasUsedTrial: false
+        });
+      } else {
+        return NextResponse.json(
+          { error: 'Failed to fetch user profile' },
+          { status: 500 }
+        );
+      }
     }
 
-    const result = data[0];
+    // Beräkna trial-status
+    const now = new Date();
+    const isInTrial = userProfile.subscription_status === 'trial' 
+      && userProfile.trial_ends_at 
+      && new Date(userProfile.trial_ends_at) > now;
+    
+    const trialDaysRemaining = userProfile.trial_ends_at 
+      ? Math.max(0, Math.ceil((new Date(userProfile.trial_ends_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
     
     // Kontrollera också om användaren har handböcker
     const { data: handbooks, error: handbooksError } = await supabaseAdmin
@@ -53,11 +102,11 @@ export async function GET(req: NextRequest) {
     const hasTrialHandbook = handbooks?.some(h => h.created_during_trial) || false;
 
     return NextResponse.json({
-      isInTrial: result?.is_in_trial || false,
-      trialDaysRemaining: result?.trial_days_remaining || 0,
-      subscriptionStatus: result?.subscription_status || 'none',
-      trialEndsAt: result?.trial_ends_at || null,
-      canCreateHandbook: !hasHandbooks || result?.is_in_trial || result?.subscription_status === 'active',
+      isInTrial,
+      trialDaysRemaining,
+      subscriptionStatus: userProfile.subscription_status || 'none',
+      trialEndsAt: userProfile.trial_ends_at,
+      canCreateHandbook: !hasHandbooks || isInTrial || userProfile.subscription_status === 'active',
       hasUsedTrial: hasTrialHandbook
     });
 
@@ -84,11 +133,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const trialStatus = await getTrialStatus(userId);
+    // Använd samma logik som GET-metoden
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      return NextResponse.json(
+        { error: 'Failed to fetch user profile' },
+        { status: 500 }
+      );
+    }
+
+    // Beräkna trial-status
+    const now = new Date();
+    const isInTrial = userProfile.subscription_status === 'trial' 
+      && userProfile.trial_ends_at 
+      && new Date(userProfile.trial_ends_at) > now;
+    
+    const trialDaysRemaining = userProfile.trial_ends_at 
+      ? Math.max(0, Math.ceil((new Date(userProfile.trial_ends_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
 
     return NextResponse.json({
       success: true,
-      trialStatus
+      trialStatus: {
+        isInTrial,
+        trialDaysRemaining,
+        subscriptionStatus: userProfile.subscription_status || 'none',
+        trialEndsAt: userProfile.trial_ends_at
+      }
     });
 
   } catch (error) {

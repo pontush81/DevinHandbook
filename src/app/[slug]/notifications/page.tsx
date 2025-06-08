@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import NotificationSettings from '@/components/NotificationSettings';
 import { getHandbookBySlug } from '@/lib/handbook-service';
 import AdminNotificationControls from '@/components/AdminNotificationControls';
+import { getServerSession } from '@/lib/auth-utils';
+import { getServiceSupabase } from '@/lib/supabase';
 
 interface NotificationsPageProps {
   params: Promise<{ slug: string }>;
@@ -28,6 +30,22 @@ export default async function NotificationsPage({ params }: NotificationsPagePro
     title: handbookData.title,
     slug: handbookData.slug
   });
+
+  // Hämta användarens session och roll
+  const session = await getServerSession();
+  let userRole = null;
+
+  if (session?.user) {
+    const supabase = getServiceSupabase();
+    const { data: memberData } = await supabase
+      .from('handbook_members')
+      .select('role')
+      .eq('handbook_id', handbookData.id)
+      .eq('user_id', session.user.id)
+      .single();
+    
+    userRole = memberData?.role || null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,14 +80,16 @@ export default async function NotificationsPage({ params }: NotificationsPagePro
           />
         </div>
 
-        {/* Admin Notification Controls */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <AdminNotificationControls 
-            handbookId={handbookData.id}
-            handbookName={handbookData.title}
-            userRole="admin" // TODO: Get actual user role
-          />
-        </div>
+        {/* Admin Notification Controls - endast för admin */}
+        {userRole === 'admin' && (
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <AdminNotificationControls 
+              handbookId={handbookData.id}
+              handbookName={handbookData.title}
+              userRole={userRole}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
