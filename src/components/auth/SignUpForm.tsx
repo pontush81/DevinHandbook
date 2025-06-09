@@ -105,7 +105,7 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
             setSuccessMessage("success");
             setTimeout(() => {
               router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
-            }, 3000);
+            }, 8000);
           }
         } catch (devError) {
           console.log('[SignUp] Development mode: Error in auto-confirm, falling back:', devError);
@@ -113,15 +113,15 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
           setSuccessMessage("success");
           setTimeout(() => {
             router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
-          }, 3000);
+          }, 8000);
         }
       } else if (!data.user && !data.session) {
         setSuccessMessage("success");
         
-        // Efter 3 sekunder, omdirigera till inloggningssidan med information om e-postverifiering
+        // Efter 8 sekunder, omdirigera till inloggningssidan med information om e-postverifiering
         setTimeout(() => {
           router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
-        }, 3000);
+        }, 8000);
       } else if (data.user) {
         // User is immediately logged in (email confirmation disabled or already confirmed)
         if (onSuccess) {
@@ -247,7 +247,17 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
               </div>
             </div>
             
-            <p className="text-sm italic text-blue-600">Du omdirigeras nu till inloggningssidan...</p>
+            <div className="text-sm italic text-blue-600 flex items-center gap-2">
+              <span>Du omdirigeras till inloggningssidan om 8 sekunder...</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`)}
+                className="ml-2"
+              >
+                Gå dit nu
+              </Button>
+            </div>
           </div>
         )}
 

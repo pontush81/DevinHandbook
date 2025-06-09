@@ -26,11 +26,21 @@ export async function POST(request: NextRequest) {
     let userData;
     let confirmError;
     
-    for (let attempts = 0; attempts < 3; attempts++) {
+    for (let attempts = 0; attempts < 5; attempts++) {
       if (attempts > 0) {
         console.log(`[Dev API] Retry attempt ${attempts + 1} for user:`, userId);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Vänta 1 sekund
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Vänta 1.5 sekunder
       }
+      
+      // Först, kontrollera om användaren existerar
+      const { data: existingUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      
+      if (getUserError || !existingUser) {
+        console.log(`[Dev API] User not found yet, attempt ${attempts + 1}:`, getUserError?.message);
+        continue; // Försök igen
+      }
+      
+      console.log(`[Dev API] User exists, confirming email for:`, existingUser.user?.email);
       
       const result = await supabaseAdmin.auth.admin.updateUserById(
         userId,
