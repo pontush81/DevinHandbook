@@ -310,7 +310,7 @@ export function AllSectionsView({
       
       {/* Content with clean styling */}
       <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
+        <div className="max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12">
           {/* Header explaining structure - only in edit mode */}
           {isEditMode && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -353,7 +353,7 @@ export function AllSectionsView({
             </div>
           )}
 
-          {/* Simple list of all sections */}
+          {/* Vertical list of all sections */}
           <div className="space-y-4">
             {sections.map((section, index) => {
               const IconComponent = getIconComponent(section.icon);
@@ -366,7 +366,7 @@ export function AllSectionsView({
                       <div className="flex items-center gap-2">
                         {/* Section Icon */}
                         <div className="flex items-center gap-1 sm:gap-2">
-                          <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                          <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600 flex-shrink-0" />
                           {isEditMode && (
                             <span className="hidden sm:inline text-xs font-medium text-blue-600 uppercase tracking-wide">SEKTION</span>
                           )}
@@ -396,7 +396,7 @@ export function AllSectionsView({
                           />
                         ) : (
                           <h3 
-                            className={`text-sm sm:text-base font-semibold text-gray-900 leading-tight ${isEditMode ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                            className={`text-sm sm:text-base lg:text-lg font-semibold text-gray-900 leading-tight ${isEditMode ? 'cursor-pointer hover:text-blue-600' : ''}`}
                             onClick={isEditMode ? () => startEditingSectionTitle(section.id, section.title) : undefined}
                             title={isEditMode ? "Klicka för att redigera titeln" : undefined}
                           >

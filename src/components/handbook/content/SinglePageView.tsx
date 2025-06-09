@@ -86,10 +86,10 @@ export function SinglePageView({
   return (
     <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-white">
       {/* Header with save status */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 lg:px-8 xl:px-10 py-4 lg:py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
+            <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900">{page.title}</h1>
             {isEditMode && (
               <div className="flex items-center space-x-2">
                 <Badge variant={hasUnsavedChanges ? "destructive" : "default"}>
@@ -165,10 +165,10 @@ export function SinglePageView({
 
       {/* Content area with beautiful page styling */}
       <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto p-6">
+        <div className="max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto p-6 lg:p-8 xl:p-10">
           <article className="page-article">
             <div className="page-header">
-              <h2 className="page-title">{page.title}</h2>
+              <h2 className="page-title text-xl lg:text-2xl xl:text-3xl">{page.title}</h2>
             </div>
             
             <div className="prose">
