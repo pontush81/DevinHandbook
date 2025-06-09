@@ -4,6 +4,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Script from 'next/script';
 import { SessionReconnectHandler } from "@/components/SessionReconnectHandler";
 import { AuthDebugButton } from "@/components/debug/AuthDebugButton";
+// Import dev utils to make forceLogout available globally
+import "@/lib/dev-utils";
 
 const inter = Inter({
   subsets: ["latin"],

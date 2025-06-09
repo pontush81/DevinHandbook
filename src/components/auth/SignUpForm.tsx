@@ -44,27 +44,23 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
     }
 
     try {
-      // Development mode: Skip email confirmation if we're testing locally with join code
-      const isDevelopment = process.env.NODE_ENV === 'development';
-      const skipEmailConfirmation = isDevelopment; // Auto-confirm i alla development-fall
-      
-      // Säkerställ att vi har rätt redirect URL med join-kod
-      const redirectUrl = typeof window !== "undefined" ? 
-        isDevelopment 
-          ? `http://localhost:3000/auth/callback${joinCode ? `?join=${joinCode}` : ''}` 
-          : `${window.location.origin}/auth/callback${joinCode ? `?join=${joinCode}` : ''}` 
-        : undefined;
-      
-      console.log('[SignUp] Email redirect URL:', redirectUrl);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: joinCode ? { join_code: joinCode } : undefined
-        },
-      });
+              // Store join code in localStorage for persistence across redirects
+        if (joinCode) {
+          localStorage.setItem('pending_join_code', joinCode);
+          localStorage.setItem('join_process_started', Date.now().toString());
+          console.log('[SignUpForm] Stored join code in localStorage:', joinCode);
+        }
+
+        // Create user with custom email handling in development
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            // In development, completely disable Supabase emails
+            emailRedirectTo: process.env.NODE_ENV === 'development' ? '' : undefined,
+            data: joinCode ? { join_code: joinCode } : undefined
+          },
+        });
       
       if (error) {
         if (error.code === "user_already_exists" || error.code === "email_exists") {
@@ -72,62 +68,38 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
         } else {
           setError(error.message);
         }
-      } else if (data.user && skipEmailConfirmation && !data.user.email_confirmed_at) {
-        // Development mode: Auto-confirm user and process join
-        console.log('[SignUp] Development mode: Auto-confirming user for join code testing...');
+      } else if (data.user) {
+        // User created successfully, send custom confirmation email via Resend
+        console.log('[SignUp] User created, sending custom confirmation email...');
+        
         try {
-          const response = await fetch('/api/dev/confirm-user', {
+          const emailResponse = await fetch('/api/auth/send-confirmation-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              userId: data.user.id, 
+              email: data.user.email,
+              userId: data.user.id,
               joinCode 
             }),
           });
-          
-          if (response.ok) {
-            console.log('[SignUp] Development mode: User confirmed and joined!');
-            // Don't redirect back to signup - that causes a loop!
-            // Instead, call the onSuccess callback or redirect to handbook
-            if (onSuccess) {
-              // Re-fetch the user to get updated auth state
-              const { data: { user: refreshedUser } } = await supabase.auth.getUser();
-              if (refreshedUser) {
-                onSuccess(refreshedUser);
-              }
-            } else {
-              // If no onSuccess callback, redirect to dashboard
-              router.push('/dashboard');
-            }
-          } else {
-            console.log('[SignUp] Development mode: Failed to confirm user, falling back to normal flow');
-            // Fall back to normal email confirmation flow
+
+          if (emailResponse.ok) {
+            const emailData = await emailResponse.json();
+            console.log('[SignUp] Custom confirmation email sent successfully', emailData);
+            
             setSuccessMessage("success");
+            
+            // Efter 8 sekunder, omdirigera till inloggningssidan
             setTimeout(() => {
               router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
             }, 8000);
+          } else {
+            console.error('[SignUp] Failed to send custom confirmation email');
+            setError('Kontot skapades men bekräftelsemail kunde inte skickas. Försök skicka ett nytt bekräftelsemail.');
           }
-        } catch (devError) {
-          console.log('[SignUp] Development mode: Error in auto-confirm, falling back:', devError);
-          // Fall back to normal email confirmation flow
-          setSuccessMessage("success");
-          setTimeout(() => {
-            router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
-          }, 8000);
-        }
-      } else if (!data.user && !data.session) {
-        setSuccessMessage("success");
-        
-        // Efter 8 sekunder, omdirigera till inloggningssidan med information om e-postverifiering
-        setTimeout(() => {
-          router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`);
-        }, 8000);
-      } else if (data.user) {
-        // User is immediately logged in (email confirmation disabled or already confirmed)
-        if (onSuccess) {
-          onSuccess(data.user);
-        } else {
-          router.push("/dashboard");
+        } catch (emailError) {
+          console.error('[SignUp] Error sending custom confirmation email:', emailError);
+          setError('Kontot skapades men bekräftelsemail kunde inte skickas. Försök skicka ett nytt bekräftelsemail.');
         }
       }
     } catch (err: unknown) {

@@ -103,6 +103,42 @@ async function transferSessionToSubdomain(subdomain: string): Promise<void> {
  */
 export async function smartRedirect(userId?: string, isSuperAdmin: boolean = false): Promise<void> {
   try {
+    // Check if user is currently joining a handbook via code - if so, don't interfere
+    if (typeof window !== 'undefined') {
+      const joiningFlag = localStorage.getItem('joining_handbook_via_code');
+      const pendingJoinCode = localStorage.getItem('pending_join_code');
+      const joinProcessStarted = localStorage.getItem('join_process_started');
+      const windowJoiningFlag = (window as any).__joining_handbook;
+      
+      console.log('[Smart Redirect] Checking join flags:', { 
+        joiningFlag, 
+        pendingJoinCode, 
+        joinProcessStarted,
+        windowJoiningFlag 
+      });
+      
+      if (joiningFlag === 'true' || pendingJoinCode || joinProcessStarted || windowJoiningFlag) {
+        // Check if join process is stale (older than 5 minutes)
+        if (joinProcessStarted) {
+          const startTime = parseInt(joinProcessStarted);
+          const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+          if (startTime < fiveMinutesAgo && !windowJoiningFlag) {
+            console.log('[Smart Redirect] Join process is stale, clearing flags and continuing');
+            localStorage.removeItem('joining_handbook_via_code');
+            localStorage.removeItem('pending_join_code');
+            localStorage.removeItem('join_process_started');
+            delete (window as any).__joining_handbook;
+          } else {
+            console.log('[Smart Redirect] User is joining handbook via code, skipping redirect');
+            return;
+          }
+        } else {
+          console.log('[Smart Redirect] User is joining handbook via code, skipping redirect');
+          return;
+        }
+      }
+    }
+
     // Super admins always go to dashboard for overview
     if (isSuperAdmin) {
       console.log('[Smart Redirect] Super admin detected, redirecting to dashboard');
@@ -223,6 +259,24 @@ export async function smartRedirectWithPolling(
     console.log(`[Smart Redirect Polling] Attempt ${attempts}/${maxAttempts}`);
     
     try {
+      // Check if user is currently joining a handbook via code - if so, don't interfere
+      if (typeof window !== 'undefined') {
+        const joiningFlag = localStorage.getItem('joining_handbook_via_code');
+        const pendingJoinCode = localStorage.getItem('pending_join_code');
+        const windowJoiningFlag = (window as any).__joining_handbook;
+        
+        console.log('[Smart Redirect Polling] Checking joining flags:', { 
+          joiningFlag, 
+          pendingJoinCode, 
+          windowJoiningFlag 
+        });
+        
+        if (joiningFlag === 'true' || pendingJoinCode || windowJoiningFlag) {
+          console.log('[Smart Redirect Polling] User is joining handbook via code, skipping redirect');
+          return;
+        }
+      }
+
       // Super admins always go to dashboard for overview
       if (isSuperAdmin) {
         console.log('[Smart Redirect Polling] Super admin detected, redirecting to dashboard');

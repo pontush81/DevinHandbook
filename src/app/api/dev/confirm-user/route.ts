@@ -67,6 +67,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!userData || !userData.user) {
+      console.error('[Dev API] User data is null or invalid after confirmation');
+      return NextResponse.json(
+        { error: 'User confirmation completed but user data is invalid' },
+        { status: 500 }
+      );
+    }
+
     console.log('[Dev API] User confirmed successfully:', userData.user?.email);
 
     // If there's a join code, process it

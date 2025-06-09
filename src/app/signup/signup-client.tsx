@@ -58,63 +58,45 @@ export default function SignupClient() {
     hasRedirected
   });
 
-  // Emergency useLayoutEffect to track what happens immediately
+  // Set joining flags immediately when component mounts with join code
   useLayoutEffect(() => {
     console.log('[useLayoutEffect] Running immediately on mount');
     console.log('[useLayoutEffect] Current URL:', window.location.href);
-    console.log('[useLayoutEffect] Join code from URL:', searchParams.get('join'));
+    const joinParam = searchParams.get('join');
+    console.log('[useLayoutEffect] Join code from URL:', joinParam);
     
-    // Prevent any immediate redirects
-    let redirectPrevented = false;
-    const originalPush = router.push;
-    const originalReplace = router.replace;
-    
-    router.push = (...args) => {
-      console.log('[useLayoutEffect] INTERCEPTED router.push:', args);
-      if (!redirectPrevented && args[0] && args[0].includes('create-handbook')) {
-        console.log('[useLayoutEffect] PREVENTING redirect to create-handbook');
-        redirectPrevented = true;
-        return Promise.resolve(true);
-      }
-      return originalPush.apply(router, args);
-    };
-    
-    router.replace = (...args) => {
-      console.log('[useLayoutEffect] INTERCEPTED router.replace:', args);
-      if (!redirectPrevented && args[0] && args[0].includes('create-handbook')) {
-        console.log('[useLayoutEffect] PREVENTING redirect to create-handbook');
-        redirectPrevented = true;
-        return Promise.resolve(true);
-      }
-      return originalReplace.apply(router, args);
-    };
-    
-    // Track window.location changes
-    const originalLocation = window.location.href;
-    setTimeout(() => {
-      if (window.location.href !== originalLocation) {
-        console.log('[useLayoutEffect] Window location changed from', originalLocation, 'to', window.location.href);
-      }
-    }, 100);
-    
-    return () => {
-      router.push = originalPush;
-      router.replace = originalReplace;
-    };
-  }, []);
+    // If we have a join code, set the joining flag immediately to prevent smartRedirect
+    if (joinParam) {
+      console.log('[useLayoutEffect] Setting joining flags immediately for join code:', joinParam);
+      localStorage.setItem('joining_handbook_via_code', 'true');
+      localStorage.setItem('pending_join_code', joinParam);
+      localStorage.setItem('join_process_started', Date.now().toString());
+      
+      // Set a flag to indicate we're in join mode
+      window.__joining_handbook = true;
+      console.log('[useLayoutEffect] Set window.__joining_handbook to true');
+    }
+  }, [searchParams]);
 
-  // Check for join code in URL
+  // Check for join code in URL or localStorage
   useEffect(() => {
     console.log('[UseEffect-JoinCode] Running with searchParams:', searchParams.toString());
     const joinParam = searchParams.get('join');
-    console.log('[UseEffect-JoinCode] joinParam value:', joinParam);
+    const storedJoinCode = localStorage.getItem('pending_join_code');
+    console.log('[UseEffect-JoinCode] joinParam value:', joinParam, 'stored:', storedJoinCode);
     
     if (joinParam) {
       console.log('[UseEffect-JoinCode] Found join code in URL:', joinParam);
+      // Store it in localStorage for persistence
+      localStorage.setItem('pending_join_code', joinParam);
       setJoinCode(joinParam);
       validateJoinCode(joinParam);
+    } else if (storedJoinCode) {
+      console.log('[UseEffect-JoinCode] Found stored join code:', storedJoinCode);
+      setJoinCode(storedJoinCode);
+      validateJoinCode(storedJoinCode);
     } else {
-      console.log('[UseEffect-JoinCode] No join code found in URL');
+      console.log('[UseEffect-JoinCode] No join code found in URL or storage');
       setJoinCode(''); // Set empty string to distinguish from null (loading)
     }
   }, [searchParams]);
@@ -150,9 +132,13 @@ export default function SignupClient() {
     if (!joinCode || !handbookInfo) return;
 
     // Check if user has confirmed email - if not, they should go through email confirmation flow
-    if (!newUser.email_confirmed_at) {
+    // Exception: In development, email confirmation might be disabled, so allow join anyway
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    if (!newUser.email_confirmed_at && !isDevelopment) {
       console.log('[Join] User needs email confirmation first, join will be handled by auth callback');
       return;
+    } else if (!newUser.email_confirmed_at && isDevelopment) {
+      console.log('[Join] Development mode: Proceeding with join despite unconfirmed email');
     }
 
     setIsJoining(true);
@@ -251,8 +237,18 @@ export default function SignupClient() {
             }
             // NOTE: Don't use smartRedirect here - let the join result determine what happens
           } else if (joinCode === '') {
-            console.log('[UseEffect] No join code (confirmed), using smartRedirect');
-            // Only use smart redirect if we're certain there's no join code (empty string)
+            console.log('[UseEffect] No join code (confirmed), checking if joining handbook via code...');
+            
+            // Check if user is currently joining a handbook via code - if so, don't redirect
+            const joiningFlag = localStorage.getItem('joining_handbook_via_code');
+            console.log('[UseEffect] Joining flag:', joiningFlag);
+            
+            if (joiningFlag === 'true') {
+              console.log('[UseEffect] User is joining handbook via code, skipping smartRedirect');
+              return;
+            }
+            
+            // Only use smart redirect if we're certain there's no join code (empty string) and not joining
             setRedirecting(true);
             setTimeout(() => {
               console.log('[UseEffect] Calling smartRedirect with userId:', user.id);

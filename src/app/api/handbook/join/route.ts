@@ -44,6 +44,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
     
+    console.log('[Join API] About to call join_handbook_with_code with:', {
+      join_code: joinCode.trim().toUpperCase(),
+      user_id: currentUserId,
+      user_role: role
+    });
+    
     // Call the stored function to join handbook
     const { data, error } = await supabase
       .rpc('join_handbook_with_code', {
@@ -51,6 +57,8 @@ export async function POST(request: NextRequest) {
         user_id: currentUserId,
         user_role: role
       });
+
+    console.log('[Join API] join_handbook_with_code result:', { data, error });
 
     if (error) {
       console.error('Error joining handbook with code:', error);

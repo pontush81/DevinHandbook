@@ -36,10 +36,15 @@ function AuthCallbackContent() {
         } else {
           setStatus("success");
           
-          // Om vi inte har join-kod i URL, kolla i användarens metadata
+          // Om vi inte har join-kod i URL, kolla i användarens metadata eller localStorage
           if (!joinCode && data.user?.user_metadata?.join_code) {
             joinCode = data.user.user_metadata.join_code;
             console.log('[Auth Callback] Found join code in user metadata:', joinCode);
+          } else if (!joinCode) {
+            joinCode = localStorage.getItem('pending_join_code');
+            if (joinCode) {
+              console.log('[Auth Callback] Found join code in localStorage:', joinCode);
+            }
           }
           
           // Bestäm redirection baserat på verifieringstyp
@@ -53,35 +58,67 @@ function AuthCallbackContent() {
             // If user has a join code, try to join the handbook automatically
             setMessage("E-post bekräftad! Går med i handboken...");
             
-            try {
-              const joinResponse = await fetch('/api/handbook/join', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ joinCode }),
-              });
+            // Set flags in localStorage to prevent smartRedirect from interfering
+            console.log('[Auth Callback] Setting joining_handbook_via_code flag to true');
+            localStorage.setItem('joining_handbook_via_code', 'true');
+            localStorage.setItem('pending_join_code', joinCode);
+            localStorage.setItem('join_process_started', Date.now().toString());
+            
+            // Add a small delay to ensure session is properly established
+            setTimeout(async () => {
+              try {
+                const joinResponse = await fetch('/api/handbook/join', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ joinCode }),
+                });
 
-              const joinData = await joinResponse.json();
+                const joinData = await joinResponse.json();
 
-              if (joinResponse.ok && joinData.success) {
-                setMessage(`E-post bekräftad och gått med i ${joinData.handbook.title}! Du dirigeras dit nu...`);
-                setTimeout(() => {
-                  router.replace(`/${joinData.handbook.slug}`);
-                }, 2000);
-              } else {
+                if (joinResponse.ok && joinData.success) {
+                  setMessage(`E-post bekräftad och gått med i ${joinData.handbook.title}! Du dirigeras dit nu...`);
+                  // Clear all join-related flags before redirecting
+                  console.log('[Auth Callback] Clearing join flags - join successful');
+                  localStorage.removeItem('joining_handbook_via_code');
+                  localStorage.removeItem('pending_join_code');
+                  localStorage.removeItem('join_process_started');
+                  if (typeof window !== 'undefined') {
+                    delete (window as any).__joining_handbook;
+                  }
+                  setTimeout(() => {
+                    router.replace(`/${joinData.handbook.slug}`);
+                  }, 2000);
+                } else {
+                  console.error('[Auth Callback] Join failed:', joinData);
+                  // Clear all join-related flags on failure
+                  localStorage.removeItem('joining_handbook_via_code');
+                  localStorage.removeItem('pending_join_code');
+                  localStorage.removeItem('join_process_started');
+                  if (typeof window !== 'undefined') {
+                    delete (window as any).__joining_handbook;
+                  }
+                  // Join failed, redirect to login with join code
+                  setMessage("E-post bekräftad! Du dirigeras nu till inloggning för att gå med i handboken...");
+                  setTimeout(() => {
+                    router.replace(`/login?verified=true&from=email_confirmation&join=${joinCode}`);
+                  }, 1500);
+                }
+              } catch (error) {
+                console.error('Error joining handbook:', error);
+                // Clear all join-related flags on error
+                localStorage.removeItem('joining_handbook_via_code');
+                localStorage.removeItem('pending_join_code');
+                localStorage.removeItem('join_process_started');
+                if (typeof window !== 'undefined') {
+                  delete (window as any).__joining_handbook;
+                }
                 // Join failed, redirect to login with join code
                 setMessage("E-post bekräftad! Du dirigeras nu till inloggning för att gå med i handboken...");
                 setTimeout(() => {
                   router.replace(`/login?verified=true&from=email_confirmation&join=${joinCode}`);
                 }, 1500);
               }
-            } catch (error) {
-              console.error('Error joining handbook:', error);
-              // Join failed, redirect to login with join code
-              setMessage("E-post bekräftad! Du dirigeras nu till inloggning för att gå med i handboken...");
-              setTimeout(() => {
-                router.replace(`/login?verified=true&from=email_confirmation&join=${joinCode}`);
-              }, 1500);
-            }
+            }, 2000); // 2 second delay to ensure session is established
           } else {
             // För alla andra typer (inkl. signup, email eller ospecificerat), gå till login med verified=true
             setMessage("E-post bekräftad! Du dirigeras nu till inloggningssidan...");
