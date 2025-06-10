@@ -526,25 +526,65 @@ export default function ContentManagementPage() {
                   
                   {/* Section public status toggle */}
                   <div className="ml-6 mt-1 mb-2">
-                    <div className="flex items-center space-x-2">
+                    <div className="text-xs text-gray-500 font-medium mb-2">Synlighet:</div>
+                    
+                    {/* Draft/Utkast */}
+                    <div className="flex items-center space-x-2 mb-1">
                       <input
-                        type="checkbox"
-                        id={`section-public-${section.id}`}
-                        checked={section.is_public !== false}
-                        onChange={async (e) => {
+                        type="radio"
+                        id={`section-draft-${section.id}`}
+                        name={`section-visibility-${section.id}`}
+                        checked={section.is_published === false}
+                        onChange={async () => {
                           try {
                             const { error } = await supabase
                               .from('sections')
-                              .update({ is_public: e.target.checked })
+                              .update({ is_published: false })
                               .eq('id', section.id);
                             
                             if (error) throw error;
                             
-                            // Update local state
                             setSections(prev => prev.map(s => 
-                              s.id === section.id ? { ...s, is_public: e.target.checked } : s
+                              s.id === section.id ? { ...s, is_published: false } : s
                             ));
-                            setSuccess('Sektionens synlighet uppdaterad');
+                            setSuccess('Sektion är nu ett utkast');
+                            setTimeout(() => setSuccess(''), 3000);
+                          } catch (err) {
+                            console.error('Error updating section status:', err);
+                            setError('Kunde inte uppdatera sektionens status');
+                            setTimeout(() => setError(''), 5000);
+                          }
+                        }}
+                        className="h-3 w-3 text-gray-600 focus:ring-gray-500"
+                      />
+                      <label 
+                        htmlFor={`section-draft-${section.id}`}
+                        className="text-sm text-gray-600 cursor-pointer flex items-center gap-1"
+                      >
+                        📝 Utkast
+                      </label>
+                    </div>
+
+                    {/* Members Only */}
+                    <div className="flex items-center space-x-2 mb-1">
+                      <input
+                        type="radio"
+                        id={`section-members-${section.id}`}
+                        name={`section-visibility-${section.id}`}
+                        checked={section.is_published !== false && section.is_public === false}
+                        onChange={async () => {
+                          try {
+                            const { error } = await supabase
+                              .from('sections')
+                              .update({ is_published: true, is_public: false })
+                              .eq('id', section.id);
+                            
+                            if (error) throw error;
+                            
+                            setSections(prev => prev.map(s => 
+                              s.id === section.id ? { ...s, is_published: true, is_public: false } : s
+                            ));
+                            setSuccess('Sektion visas endast för medlemmar');
                             setTimeout(() => setSuccess(''), 3000);
                           } catch (err) {
                             console.error('Error updating section visibility:', err);
@@ -552,48 +592,50 @@ export default function ContentManagementPage() {
                             setTimeout(() => setError(''), 5000);
                           }
                         }}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-3 w-3 text-orange-600 focus:ring-orange-500"
                       />
                       <label 
-                        htmlFor={`section-public-${section.id}`}
-                        className="text-sm text-gray-600 cursor-pointer"
+                        htmlFor={`section-members-${section.id}`}
+                        className="text-sm text-gray-600 cursor-pointer flex items-center gap-1"
                       >
-                        Publik sektion
+                        🔒 Endast medlemmar
                       </label>
                     </div>
-                    <div className="flex items-center space-x-2 mt-1">
+
+                    {/* Public */}
+                    <div className="flex items-center space-x-2">
                       <input
-                        type="checkbox"
-                        id={`section-published-${section.id}`}
-                        checked={section.is_published !== false}
-                        onChange={async (e) => {
+                        type="radio"
+                        id={`section-public-${section.id}`}
+                        name={`section-visibility-${section.id}`}
+                        checked={section.is_published !== false && section.is_public !== false}
+                        onChange={async () => {
                           try {
                             const { error } = await supabase
                               .from('sections')
-                              .update({ is_published: e.target.checked })
+                              .update({ is_published: true, is_public: true })
                               .eq('id', section.id);
                             
                             if (error) throw error;
                             
-                            // Update local state
                             setSections(prev => prev.map(s => 
-                              s.id === section.id ? { ...s, is_published: e.target.checked } : s
+                              s.id === section.id ? { ...s, is_published: true, is_public: true } : s
                             ));
-                            setSuccess('Sektionens publiceringsstatus uppdaterad');
+                            setSuccess('Sektion visas för alla');
                             setTimeout(() => setSuccess(''), 3000);
                           } catch (err) {
-                            console.error('Error updating section published status:', err);
-                            setError('Kunde inte uppdatera sektionens publiceringsstatus');
+                            console.error('Error updating section visibility:', err);
+                            setError('Kunde inte uppdatera sektionens synlighet');
                             setTimeout(() => setError(''), 5000);
                           }
                         }}
-                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                        className="h-3 w-3 text-green-600 focus:ring-green-500"
                       />
                       <label 
-                        htmlFor={`section-published-${section.id}`}
-                        className="text-sm text-gray-600 cursor-pointer"
+                        htmlFor={`section-public-${section.id}`}
+                        className="text-sm text-gray-600 cursor-pointer flex items-center gap-1"
                       >
-                        Publicerad sektion
+                        🌐 Synlig för alla
                       </label>
                     </div>
                   </div>
@@ -648,8 +690,15 @@ export default function ContentManagementPage() {
                                 }
                               }}
                               className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                              title="Publicerad sida"
+                              title={page.is_published !== false ? "Sidan är publicerad och synlig" : "Sidan är ett utkast och dold"}
                             />
+                            <label 
+                              htmlFor={`page-published-${page.id}`}
+                              className="text-xs text-gray-600 cursor-pointer ml-1"
+                              title={page.is_published !== false ? "Sidan är publicerad och synlig" : "Sidan är ett utkast och dold"}
+                            >
+                              Publicerad
+                            </label>
                           </div>
                           
                           {section.pages.length > 1 && (

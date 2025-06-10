@@ -98,6 +98,7 @@ export function ContentArea({
         onDeletePage={onDeletePage}
         onAddSection={onAddSection}
         onAddPage={onAddPage}
+        onMoveSection={onMoveSection}
         trialStatusBar={trialStatusBar}
         handbookId={handbookId}
         handbookData={handbookData}

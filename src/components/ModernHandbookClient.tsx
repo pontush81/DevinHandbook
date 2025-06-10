@@ -262,6 +262,17 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }));
       
       console.log('[ModernHandbookClient] Local page state updated successfully');
+      
+      // Check if section status should be updated based on page changes
+      if ('is_published' in updates) {
+        const pageSection = handbookData.sections.find(section => 
+          section.pages.some(page => page.id === pageId)
+        );
+        if (pageSection) {
+          // Check cascade logic after state update
+          checkAndUpdateSectionStatus(pageSection.id);
+        }
+      }
     } catch (error) {
       console.error('[ModernHandbookClient] Error updating page:', error);
       throw error; // Re-throw so SinglePageView/AllSectionsView can handle the error
@@ -587,6 +598,9 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }
 
       console.log('[ModernHandbookClient] Local state updated after page deletion');
+      
+      // Check if section status should be updated after page deletion
+      checkAndUpdateSectionStatus(sectionId);
     } catch (error) {
       console.error('[ModernHandbookClient] Error deleting page:', error);
       alert('Det gick inte att radera sidan. Försök igen.');
@@ -623,79 +637,262 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
+  // Helper function to check if section should be automatically set to draft
+  const checkAndUpdateSectionStatus = async (sectionId: string) => {
+    console.log(`[checkAndUpdateSectionStatus] Starting check for section: ${sectionId}`);
+    
+    // Use a callback to get the most recent state
+    setHandbookData(currentHandbookData => {
+      const section = currentHandbookData.sections.find(s => s.id === sectionId);
+      if (!section) {
+        console.log(`[checkAndUpdateSectionStatus] Section not found: ${sectionId}`);
+        return currentHandbookData;
+      }
+
+      // Count published pages in this section
+      const publishedPages = section.pages.filter(page => page.is_published !== false);
+      const totalPages = section.pages.length;
+
+      console.log(`[checkAndUpdateSectionStatus] Section "${section.title}":`);
+      console.log(`  - Total pages: ${totalPages}`);
+      console.log(`  - Published pages: ${publishedPages.length}`);
+      console.log(`  - Section is_published: ${section.is_published}`);
+      console.log(`  - Section is_public: ${section.is_public}`);
+      console.log(`  - Page details:`, section.pages.map(p => ({ title: p.title, is_published: p.is_published })));
+
+      // If section has pages but none are published, set section to draft
+      if (totalPages > 0 && publishedPages.length === 0 && section.is_published !== false) {
+        console.log(`[checkAndUpdateSectionStatus] ✅ CASCADING: All pages are drafts, setting section to draft`);
+        // Update section in background without affecting current state update
+        setTimeout(() => {
+          updateSection(sectionId, { is_published: false });
+        }, 50);
+      }
+      // If section is draft but has published pages, set section to published
+      else if (publishedPages.length > 0 && section.is_published === false) {
+        console.log(`[checkAndUpdateSectionStatus] ✅ CASCADING: Has published pages, setting section to published`);
+        // Restore to public if is_public is not explicitly false
+        setTimeout(() => {
+          updateSection(sectionId, { 
+            is_published: true, 
+            is_public: section.is_public !== false ? true : false 
+          });
+        }, 50);
+      } else {
+        console.log(`[checkAndUpdateSectionStatus] ❌ NO CASCADE NEEDED: Section status is appropriate`);
+      }
+
+      return currentHandbookData; // Return unchanged state
+    });
+  };
+
   // Get visible sections based on edit mode, auth status, and section properties
   const getVisibleSections = (sections: Section[]) => {
+    // First, sort all sections by order_index to ensure consistent ordering
+    const sortedSections = [...sections].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+    
+    console.log(`[getVisibleSections] Input sections order:`, sections.map(s => `${s.title}(${s.order_index})`).join(', '));
+    console.log(`[getVisibleSections] Sorted sections order:`, sortedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
+    
+    // Also sort pages within each section by order_index for consistency
+    const sectionsWithSortedPages = sortedSections.map(section => ({
+      ...section,
+      pages: section.pages ? [...section.pages].sort((a, b) => (a.order_index || 0) - (b.order_index || 0)) : []
+    }));
+    
     if (isEditMode) {
       // In edit mode, show ALL sections regardless of visibility status
       console.log('[getVisibleSections] Edit mode: showing all sections');
-      return sections;
+      return sectionsWithSortedPages;
     }
     
-    const filtered = sections.filter(section => {
-      // Section must be published
+    const filtered = sectionsWithSortedPages.filter(section => {
+      // First check: Section must not be in draft mode
       if (section.is_published === false) {
-        console.log(`[getVisibleSections] Section "${section.title}": not published, hidden`);
+        console.log(`[getVisibleSections] Section "${section.title}": draft mode, hidden from all users`);
         return false;
       }
       
-      // If section is public, show to everyone
-      if (section.is_public !== false) {
+      // Second check: Determine audience (public vs members-only)
+      if (section.is_public === false) {
+        // Members-only section - only show to logged-in users
+        if (user) {
+          console.log(`[getVisibleSections] Section "${section.title}": members-only, visible to logged-in user`);
+          return true;
+        } else {
+          console.log(`[getVisibleSections] Section "${section.title}": members-only, hidden from non-logged-in user`);
+          return false;
+        }
+      } else {
+        // Public section - show to everyone
         console.log(`[getVisibleSections] Section "${section.title}": public section, visible to all`);
         return true;
-      }
-      
-      // If section is not public, only show to logged-in users
-      if (user) {
-        console.log(`[getVisibleSections] Section "${section.title}": member-only section, visible to logged-in user`);
-        return true;
-      } else {
-        console.log(`[getVisibleSections] Section "${section.title}": member-only section, hidden from non-logged-in user`);
-        return false;
       }
     });
     
     console.log(`[getVisibleSections] Normal mode: showing ${filtered.length}/${sections.length} sections (user: ${user ? 'logged in' : 'not logged in'})`);
+    console.log(`[getVisibleSections] Final filtered order:`, filtered.map(s => `${s.title}(${s.order_index})`).join(', '));
     return filtered;
   };
 
+  // Normalize order_index values on component mount
+  useEffect(() => {
+    if (handbookData && handbookData.sections && handbookData.sections.length > 0) {
+      // Check if normalization is needed
+      const orderIndexes = handbookData.sections.map(s => s.order_index || 0);
+      const uniqueIndexes = new Set(orderIndexes);
+      const hasGaps = Math.max(...orderIndexes) !== orderIndexes.length - 1;
+      
+      if (uniqueIndexes.size !== orderIndexes.length || hasGaps) {
+        console.log('🔧 Order indexes need normalization');
+        normalizeOrderIndexes();
+      }
+    }
+  }, [handbookData.id]); // Only run when handbook changes
+
   const visibleSections = getVisibleSections(handbookData.sections);
+
+  // Helper function to normalize order_index values to be sequential and unique
+  const normalizeOrderIndexes = async () => {
+    try {
+      console.log('🔧 [normalizeOrderIndexes] Starting normalization...');
+      
+      // Sort sections by current order_index, then by created_at as fallback
+      const sortedSections = [...handbookData.sections].sort((a, b) => {
+        if (a.order_index !== b.order_index) {
+          return (a.order_index || 0) - (b.order_index || 0);
+        }
+        // Fallback to created_at if order_index is the same
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      });
+      
+      console.log('🔧 [normalizeOrderIndexes] Current order:', sortedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
+      
+      const updatedSections = [];
+      
+      // Update each section with a new sequential order_index
+      for (let i = 0; i < sortedSections.length; i++) {
+        const section = sortedSections[i];
+        if (section.order_index !== i) {
+          console.log(`🔧 [normalizeOrderIndexes] Updating ${section.title}: ${section.order_index} -> ${i}`);
+          
+          await supabase
+            .from('sections')
+            .update({ order_index: i })
+            .eq('id', section.id);
+            
+          updatedSections.push({ ...section, order_index: i });
+        } else {
+          updatedSections.push(section);
+        }
+      }
+      
+      // Update local state with normalized order_index values
+      setHandbookData(prev => ({
+        ...prev,
+        sections: updatedSections
+      }));
+      
+      console.log('✅ [normalizeOrderIndexes] Normalization completed');
+      console.log('✅ [normalizeOrderIndexes] New order:', updatedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
+    } catch (error) {
+      console.error('❌ [normalizeOrderIndexes] Error:', error);
+    }
+  };
 
   // Move section up or down
   const moveSection = async (sectionId: string, direction: 'up' | 'down') => {
     try {
-      const currentIndex = handbookData.sections.findIndex(s => s.id === sectionId);
-      if (currentIndex === -1) return;
+      console.log('🔄 [moveSection] Starting move operation:', { sectionId, direction });
+      
+      // First ensure order indexes are normalized
+      await normalizeOrderIndexes();
+      
+      // Wait a moment for state to update after normalization
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get the current state synchronously
+      const currentSections = [...handbookData.sections].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+      const currentIndex = currentSections.findIndex(s => s.id === sectionId);
+      console.log('🔍 [moveSection] Current index found:', currentIndex);
+      
+      if (currentIndex === -1) {
+        console.log('❌ [moveSection] Section not found in sections array');
+        return;
+      }
 
       const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      console.log('📍 [moveSection] Target index:', newIndex);
       
       // Check bounds
-      if (newIndex < 0 || newIndex >= handbookData.sections.length) return;
+      if (newIndex < 0 || newIndex >= currentSections.length) {
+        console.log('❌ [moveSection] Target index out of bounds');
+        return;
+      }
 
-      const currentSection = handbookData.sections[currentIndex];
-      const targetSection = handbookData.sections[newIndex];
-
-      // Swap order_index in database
-      await supabase
-        .from('sections')
-        .update({ order_index: targetSection.order_index })
-        .eq('id', currentSection.id);
-
-      await supabase
-        .from('sections')
-        .update({ order_index: currentSection.order_index })
-        .eq('id', targetSection.id);
-
-      // Update local state
-      const newSections = [...handbookData.sections];
-      [newSections[currentIndex], newSections[newIndex]] = [newSections[newIndex], newSections[currentIndex]];
+      const currentSection = currentSections[currentIndex];
+      const targetSection = currentSections[newIndex];
       
-      setHandbookData(prev => ({
-        ...prev,
-        sections: newSections
-      }));
+      console.log('🔄 [moveSection] Swapping sections:', {
+        current: { id: currentSection.id, title: currentSection.title, order_index: currentSection.order_index },
+        target: { id: targetSection.id, title: targetSection.title, order_index: targetSection.order_index }
+      });
+
+      // Update order_index values in database - swap the order_index values
+      console.log('💾 [moveSection] Updating database...');
+      const currentNewOrderIndex = targetSection.order_index;
+      const targetNewOrderIndex = currentSection.order_index;
+      
+      const result1 = await supabase
+        .from('sections')
+        .update({ order_index: currentNewOrderIndex })
+        .eq('id', currentSection.id);
+        
+      if (result1.error) {
+        console.error('❌ [moveSection] Error updating current section:', result1.error);
+        return;
+      }
+
+      const result2 = await supabase
+        .from('sections')
+        .update({ order_index: targetNewOrderIndex })
+        .eq('id', targetSection.id);
+        
+      if (result2.error) {
+        console.error('❌ [moveSection] Error updating target section:', result2.error);
+        return;
+      }
+
+      console.log('✅ [moveSection] Database updated successfully');
+
+      // Update local state by creating a new sorted array with the swapped positions
+      console.log('🔄 [moveSection] Updating local state...');
+      setHandbookData(prev => {
+        const newSections = [...prev.sections];
+        
+        // Find and update the sections with their new order_index values
+        const updatedSections = newSections.map(section => {
+          if (section.id === currentSection.id) {
+            return { ...section, order_index: currentNewOrderIndex };
+          } else if (section.id === targetSection.id) {
+            return { ...section, order_index: targetNewOrderIndex };
+          }
+          return section;
+        });
+
+        // Sort to ensure consistent order
+        updatedSections.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        
+        return {
+          ...prev,
+          sections: updatedSections
+        };
+      });
+      
+      console.log('✅ [moveSection] Operation completed successfully');
 
     } catch (error) {
-      console.error('Error moving section:', error);
+      console.error('❌ [moveSection] Error moving section:', error);
     }
   };
 
@@ -880,7 +1077,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             onMoveSection={moveSection}
           />
 
-          <SidebarInset style={{ flex: 1, height: '100vh', overflow: 'auto' }}>
+          <SidebarInset className="flex-1 overflow-auto">
             <ContentArea
                 sections={visibleSections}
                 currentPageId={currentPageId}

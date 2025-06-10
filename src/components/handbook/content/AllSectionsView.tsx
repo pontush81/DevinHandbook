@@ -1,6 +1,6 @@
 import React, { useState, useCallback, createElement } from 'react';
 import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
-import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen, Trash2, FileText } from 'lucide-react';
+import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen, Trash2, FileText, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -124,6 +124,7 @@ interface AllSectionsViewProps {
   onDeletePage?: (pageId: string, sectionId: string) => void;
   onAddSection?: (section: Partial<Section>) => void;
   onAddPage?: (sectionId: string, page: Partial<any>) => Promise<{ id: string } | undefined>;
+  onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   trialStatusBar?: React.ReactNode;
   handbookId?: string;
   handbookData?: {
@@ -144,11 +145,20 @@ export function AllSectionsView({
   onDeletePage,
   onAddSection,
   onAddPage,
+  onMoveSection,
   trialStatusBar,
   handbookId,
   handbookData,
   onUpdateHandbook
 }: AllSectionsViewProps) {
+  // Debug log to check props
+  console.log('🔍 [AllSectionsView] Props received:', {
+    sectionsCount: sections.length,
+    isEditMode,
+    hasOnMoveSection: !!onMoveSection,
+    onMoveSectionType: typeof onMoveSection
+  });
+  
   // Initialize with all sections expanded for better UX
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(sections.map(section => section.id))
@@ -405,42 +415,73 @@ export function AllSectionsView({
 
                       {/* Section Settings in Edit Mode */}
                       {isEditMode && (
-                        <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="checkbox"
-                              id={`section-public-${section.id}`}
-                              checked={section.is_public !== false}
-                              onChange={(e) => {
-                                onUpdateSection?.(section.id, { is_public: e.target.checked });
-                              }}
-                              className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <label 
-                              htmlFor={`section-public-${section.id}`}
-                              className="text-gray-600 cursor-pointer"
-                              title="Synlig för alla (även icke-inloggade)"
-                            >
-                              Publik sektion
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="checkbox"
-                              id={`section-published-${section.id}`}
-                              checked={section.is_published !== false}
-                              onChange={(e) => {
-                                onUpdateSection?.(section.id, { is_published: e.target.checked });
-                              }}
-                              className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                            />
-                            <label 
-                              htmlFor={`section-published-${section.id}`}
-                              className="text-gray-600 cursor-pointer"
-                              title="Sektion är färdig och klar att visas"
-                            >
-                              Publicerad sektion
-                            </label>
+                        <div className="mt-2 flex flex-wrap gap-4 text-xs">
+                                                     {/* Section Status Selector */}
+                           <div className="flex items-center gap-3">
+                             <span className="text-gray-500 font-medium">Synlighet:</span>
+                             
+                             {/* Draft/Utkast */}
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="radio"
+                                id={`section-draft-${section.id}`}
+                                name={`section-visibility-${section.id}`}
+                                checked={section.is_published === false}
+                                onChange={() => {
+                                  onUpdateSection?.(section.id, { is_published: false });
+                                }}
+                                className="h-3 w-3 text-gray-600 focus:ring-gray-500"
+                              />
+                              <label 
+                                htmlFor={`section-draft-${section.id}`}
+                                className="text-gray-600 cursor-pointer flex items-center gap-1"
+                                title="Dold för alla utom redigerare - används för sektioner som inte är klara"
+                              >
+                                📝 Utkast
+                              </label>
+                            </div>
+
+                            {/* Members Only */}
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="radio"
+                                id={`section-members-${section.id}`}
+                                name={`section-visibility-${section.id}`}
+                                checked={section.is_published !== false && section.is_public === false}
+                                onChange={() => {
+                                  onUpdateSection?.(section.id, { is_published: true, is_public: false });
+                                }}
+                                className="h-3 w-3 text-orange-600 focus:ring-orange-500"
+                              />
+                              <label 
+                                htmlFor={`section-members-${section.id}`}
+                                className="text-gray-600 cursor-pointer flex items-center gap-1"
+                                title="Synlig endast för inloggade medlemmar"
+                              >
+                                🔒 Endast medlemmar
+                              </label>
+                            </div>
+
+                            {/* Public */}
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="radio"
+                                id={`section-public-${section.id}`}
+                                name={`section-visibility-${section.id}`}
+                                checked={section.is_published !== false && section.is_public !== false}
+                                onChange={() => {
+                                  onUpdateSection?.(section.id, { is_published: true, is_public: true });
+                                }}
+                                className="h-3 w-3 text-green-600 focus:ring-green-500"
+                              />
+                              <label 
+                                htmlFor={`section-public-${section.id}`}
+                                className="text-gray-600 cursor-pointer flex items-center gap-1"
+                                title="Synlig för alla besökare"
+                              >
+                                🌐 Synlig för alla
+                              </label>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -449,6 +490,33 @@ export function AllSectionsView({
 
                   {isEditMode && (
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      {/* Move Section Up/Down Buttons */}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          console.log('⬆️ [AllSectionsView] Up button clicked for section:', section.id, section.title);
+                          onMoveSection?.(section.id, 'up');
+                        }}
+                        disabled={index === 0}
+                        className="text-gray-600 hover:bg-gray-50 hover:text-gray-700 h-7 w-7 sm:h-8 sm:w-8 p-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Flytta sektion uppåt"
+                      >
+                        <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          console.log('⬇️ [AllSectionsView] Down button clicked for section:', section.id, section.title);
+                          onMoveSection?.(section.id, 'down');
+                        }}
+                        disabled={index === sections.length - 1}
+                        className="text-gray-600 hover:bg-gray-50 hover:text-gray-700 h-7 w-7 sm:h-8 sm:w-8 p-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Flytta sektion nedåt"
+                      >
+                        <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -592,13 +660,14 @@ export function AllSectionsView({
                                       onUpdatePage?.(page.id, { is_published: e.target.checked });
                                     }}
                                     className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                                    title="Publicerad sida"
+                                    title={page.is_published !== false ? "Sidan är publicerad och synlig" : "Sidan är ett utkast och dold"}
                                   />
                                   <label 
                                     htmlFor={`page-published-${page.id}`}
                                     className="text-xs text-gray-600 cursor-pointer"
+                                    title={page.is_published !== false ? "Sidan är publicerad och synlig" : "Sidan är ett utkast och dold"}
                                   >
-                                    Publicerad sida
+                                    Publicerad
                                   </label>
                                 </div>
                                 <Button 
