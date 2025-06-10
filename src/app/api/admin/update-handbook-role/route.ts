@@ -1,6 +1,230 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getServerSession } from '@/lib/auth-utils';
+import { Resend } from 'resend';
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+// Helper-funktion för att skicka email när admin lägger till användare
+async function sendAdminAddedEmail({
+  email,
+  handbookTitle,
+  handbookSlug,
+  adminName,
+  role
+}: {
+  email: string;
+  handbookTitle: string;
+  handbookSlug: string;
+  adminName: string;
+  role: string;
+}) {
+  if (!resend) {
+    console.warn('[Admin Add] Resend not available, skipping email notification');
+    return;
+  }
+
+  const roleName = {
+    admin: 'Administratör',
+    editor: 'Redaktör', 
+    viewer: 'Läsare'
+  }[role] || role;
+
+  const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+  const handbookUrl = `${protocol}://${baseUrl}/${handbookSlug}`;
+
+  const emailContent = `
+    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+      <div style="background-color: #2563eb; color: white; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">📚 Du har lagts till i en handbok</h1>
+      </div>
+      <div style="padding: 20px; background-color: #ffffff;">
+        <h2 style="color: #2563eb; margin-top: 0;">${handbookTitle}</h2>
+        <p><strong>${adminName}</strong> har lagt till dig som medlem i <strong>${handbookTitle}</strong> med rollen <strong>${roleName}</strong>.</p>
+        <p>Du kan nu komma åt handboken genom att klicka på knappen nedan:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${handbookUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Öppna handboken</a>
+        </div>
+        <div style="background-color: #f8fafc; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Din roll: ${roleName}</strong></p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">
+            ${role === 'admin' ? 'Du kan redigera innehåll och hantera medlemmar.' : 
+              role === 'editor' ? 'Du kan redigera innehåll i handboken.' : 
+              'Du kan läsa och kommentera i handboken.'}
+          </p>
+        </div>
+      </div>
+      <div style="background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+        <p style="margin: 0;">Du får detta e-postmeddelande eftersom ${adminName} har lagt till dig i ${handbookTitle}.</p>
+        <p style="margin: 5px 0 0 0;">Om du har frågor kan du kontakta handbokens administratör.</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    console.log('[Admin Add] About to send email via Resend...');
+    
+    const fromDomain = process.env.NODE_ENV === 'production' 
+      ? process.env.RESEND_DOMAIN || 'yourdomain.com'
+      : 'onboarding@resend.dev';
+    
+    const fromEmail = process.env.NODE_ENV === 'production'
+      ? `${handbookTitle} <noreply@${fromDomain}>`
+      : `${handbookTitle} <${fromDomain}>`;
+    
+    const replyToDomain = process.env.NODE_ENV === 'production'
+      ? process.env.RESEND_DOMAIN || 'yourdomain.com' 
+      : 'onboarding@resend.dev';
+    
+    console.log('[Admin Add] Using from email:', fromEmail);
+    
+    const emailResult = await resend.emails.send({
+      from: fromEmail,
+      to: email,
+      subject: `Du har lagts till i ${handbookTitle}`,
+      html: emailContent,
+      reply_to: process.env.NODE_ENV === 'production' 
+        ? `no-reply@${replyToDomain}`
+        : fromDomain,
+      tags: [
+        { name: 'type', value: 'admin_added_user' },
+        { name: 'handbook', value: handbookSlug },
+        { name: 'role', value: role }
+      ]
+    });
+
+    console.log('[Admin Add] Resend response:', emailResult);
+    
+    if (emailResult.data) {
+      console.log('[Admin Add] Email sent successfully! ID:', emailResult.data.id);
+    } else {
+      console.error('[Admin Add] No data in Resend response:', emailResult);
+    }
+
+    console.log('[Admin Add] Notification email sent to:', email, 'for handbook:', handbookTitle);
+  } catch (error) {
+    console.error('[Admin Add] Failed to send notification email to:', email);
+    console.error('[Admin Add] Error details:', error);
+    console.error('[Admin Add] Error message:', error instanceof Error ? error.message : 'Unknown error');
+    // Vi kastar inte fel här för att inte stoppa hela processen
+  }
+}
+
+// Helper-funktion för att skicka email när admin uppdaterar användares roll
+async function sendRoleUpdateEmail({
+  email,
+  handbookTitle,
+  handbookSlug,
+  adminName,
+  oldRole,
+  newRole
+}: {
+  email: string;
+  handbookTitle: string;
+  handbookSlug: string;
+  adminName: string;
+  oldRole: string;
+  newRole: string;
+}) {
+  if (!resend) {
+    console.warn('[Role Update] Resend not available, skipping email notification');
+    return;
+  }
+
+  const oldRoleName = {
+    admin: 'Administratör',
+    editor: 'Redaktör', 
+    viewer: 'Läsare'
+  }[oldRole] || oldRole;
+
+  const newRoleName = {
+    admin: 'Administratör',
+    editor: 'Redaktör', 
+    viewer: 'Läsare'
+  }[newRole] || newRole;
+
+  const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+  const handbookUrl = `${protocol}://${baseUrl}/${handbookSlug}`;
+
+  const emailContent = `
+    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+      <div style="background-color: #10b981; color: white; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">🔄 Din roll har uppdaterats</h1>
+      </div>
+      <div style="padding: 20px; background-color: #ffffff;">
+        <h2 style="color: #10b981; margin-top: 0;">${handbookTitle}</h2>
+        <p><strong>${adminName}</strong> har uppdaterat din roll i <strong>${handbookTitle}</strong>.</p>
+        <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Rollförändring:</strong></p>
+          <p style="margin: 5px 0;">Från: <span style="color: #666;">${oldRoleName}</span></p>
+          <p style="margin: 5px 0;">Till: <strong style="color: #10b981;">${newRoleName}</strong></p>
+        </div>
+        <p style="font-size: 14px; color: #666;">
+          ${newRole === 'admin' ? 'Du kan nu redigera innehåll och hantera medlemmar.' : 
+            newRole === 'editor' ? 'Du kan nu redigera innehåll i handboken.' : 
+            'Du kan läsa och kommentera i handboken.'}
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${handbookUrl}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Öppna handboken</a>
+        </div>
+      </div>
+      <div style="background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+        <p style="margin: 0;">Detta e-postmeddelande skickades eftersom din roll i ${handbookTitle} har ändrats av ${adminName}.</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    console.log('[Role Update] About to send email via Resend...');
+    
+    const fromDomain = process.env.NODE_ENV === 'production' 
+      ? process.env.RESEND_DOMAIN || 'yourdomain.com'
+      : 'onboarding@resend.dev';
+    
+    const fromEmail = process.env.NODE_ENV === 'production'
+      ? `${handbookTitle} <noreply@${fromDomain}>`
+      : `${handbookTitle} <${fromDomain}>`;
+    
+    const replyToDomain = process.env.NODE_ENV === 'production'
+      ? process.env.RESEND_DOMAIN || 'yourdomain.com' 
+      : 'onboarding@resend.dev';
+    
+    console.log('[Role Update] Using from email:', fromEmail);
+    
+    const emailResult = await resend.emails.send({
+      from: fromEmail,
+      to: email,
+      subject: `Din roll i ${handbookTitle} har uppdaterats`,
+      html: emailContent,
+      reply_to: process.env.NODE_ENV === 'production' 
+        ? `no-reply@${replyToDomain}`
+        : fromDomain,
+      tags: [
+        { name: 'type', value: 'admin_role_update' },
+        { name: 'handbook', value: handbookSlug },
+        { name: 'old_role', value: oldRole },
+        { name: 'new_role', value: newRole }
+      ]
+    });
+
+    console.log('[Role Update] Resend response:', emailResult);
+    
+    if (emailResult.data) {
+      console.log('[Role Update] Email sent successfully! ID:', emailResult.data.id);
+    } else {
+      console.error('[Role Update] No data in Resend response:', emailResult);
+    }
+
+    console.log('[Role Update] Role update email sent to:', email, 'for handbook:', handbookTitle);
+  } catch (error) {
+    console.error('[Role Update] Failed to send role update email to:', email);
+    console.error('[Role Update] Error details:', error);
+    console.error('[Role Update] Error message:', error instanceof Error ? error.message : 'Unknown error');
+    // Vi kastar inte fel här för att inte stoppa hela processen
+  }
+}
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -49,7 +273,7 @@ export async function PATCH(request: NextRequest) {
     // 4. Kontrollera att handboken finns
     const { data: handbook, error: handbookError } = await supabase
       .from("handbooks")
-      .select("id, title")
+      .select("id, title, slug")
       .eq("id", handbookId)
       .maybeSingle();
 
@@ -60,7 +284,18 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 5. Kontrollera att användaren finns
+    // 5. Hämta admin-användarens namn
+    const { data: adminProfile, error: adminProfileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    const adminName = adminProfile?.first_name && adminProfile?.last_name 
+      ? `${adminProfile.first_name} ${adminProfile.last_name}`
+      : session.user.email || 'En administratör';
+
+    // 6. Kontrollera att användaren finns
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const targetUser = authUsers?.users.find(u => u.id === userId);
     
@@ -71,7 +306,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 6. Kontrollera om användaren redan är medlem
+    // 7. Kontrollera om användaren redan är medlem
     const { data: existingMember, error: memberError } = await supabase
       .from("handbook_members")
       .select("id, role")
@@ -88,7 +323,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (existingMember) {
-      // 7. Uppdatera befintlig medlems roll
+      // 8. Uppdatera befintlig medlems roll
       const { error: updateError } = await supabase
         .from("handbook_members")
         .update({ role })
@@ -102,13 +337,25 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
+      // 9. Skicka email när användarens roll uppdateras (bara om rollen ändras)
+      if (existingMember.role !== role) {
+        await sendRoleUpdateEmail({
+          email: targetUser.email,
+          handbookTitle: handbook.title,
+          handbookSlug: handbook.slug,
+          adminName: adminName,
+          oldRole: existingMember.role,
+          newRole: role
+        });
+      }
+
       return NextResponse.json({
         success: true,
         message: `${targetUser.email}s roll i ${handbook.title} har uppdaterats till ${role}`,
         action: 'updated'
       });
     } else {
-      // 8. Lägg till användaren som ny medlem
+      // 9. Lägg till användaren som ny medlem
       const { error: insertError } = await supabase
         .from("handbook_members")
         .insert({
@@ -125,7 +372,7 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      // 9. Skapa notifikationsinställningar för ny medlem
+      // 10. Skapa notifikationsinställningar för ny medlem
       const { error: notificationError } = await supabase
         .from('user_notification_preferences')
         .insert({
@@ -143,6 +390,15 @@ export async function PATCH(request: NextRequest) {
         console.error("Fel vid skapande av notifikationsinställningar:", notificationError);
         // Fortsätt ändå, detta är inte kritiskt
       }
+
+      // 11. Skicka email när användaren läggs till i handbok
+      await sendAdminAddedEmail({
+        email: targetUser.email,
+        handbookTitle: handbook.title,
+        handbookSlug: handbook.slug,
+        adminName: adminName,
+        role: role
+      });
 
       return NextResponse.json({
         success: true,
