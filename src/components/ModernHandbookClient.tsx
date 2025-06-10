@@ -623,7 +623,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   };
 
-  // Get visible sections based on edit mode and section properties
+  // Get visible sections based on edit mode, auth status, and section properties
   const getVisibleSections = (sections: Section[]) => {
     if (isEditMode) {
       // In edit mode, show ALL sections regardless of visibility status
@@ -631,14 +631,30 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       return sections;
     }
     
-    // For normal view mode, filter by both is_public AND is_published
     const filtered = sections.filter(section => {
-      const isVisible = section.is_public !== false && section.is_published !== false;
-      console.log(`[getVisibleSections] Section "${section.title}": is_public=${section.is_public}, is_published=${section.is_published}, visible=${isVisible}`);
-      return isVisible;
+      // Section must be published
+      if (section.is_published === false) {
+        console.log(`[getVisibleSections] Section "${section.title}": not published, hidden`);
+        return false;
+      }
+      
+      // If section is public, show to everyone
+      if (section.is_public !== false) {
+        console.log(`[getVisibleSections] Section "${section.title}": public section, visible to all`);
+        return true;
+      }
+      
+      // If section is not public, only show to logged-in users
+      if (user) {
+        console.log(`[getVisibleSections] Section "${section.title}": member-only section, visible to logged-in user`);
+        return true;
+      } else {
+        console.log(`[getVisibleSections] Section "${section.title}": member-only section, hidden from non-logged-in user`);
+        return false;
+      }
     });
     
-    console.log(`[getVisibleSections] Normal mode: showing ${filtered.length}/${sections.length} sections`);
+    console.log(`[getVisibleSections] Normal mode: showing ${filtered.length}/${sections.length} sections (user: ${user ? 'logged in' : 'not logged in'})`);
     return filtered;
   };
 
@@ -801,7 +817,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   return (
     <SidebarProvider defaultOpen={true}>
       {/* Full viewport container with mobile-friendly layout */}
-      <div className="h-screen w-full flex flex-col overflow-hidden md:h-screen mobile-natural-flow">
+      <div className="h-screen w-full flex flex-col md:h-screen mobile-natural-flow">
         {/* Header - Using new HandbookHeader with edit functionality */}
         <HandbookHeader 
           handbookTitle={handbookData.title}
@@ -814,7 +830,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         />
 
         {/* Main layout container - mobile optimized */}
-        <div className="flex flex-1 min-h-0 overflow-hidden touch-pan-y mobile-scrollable">
+        <div className="flex flex-1 min-h-0">
           {/* Sidebar - Fixed width sidebar */}
           <ModernSidebar
             sections={visibleSections}
@@ -833,46 +849,11 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                   console.log('🔍 Found element:', element);
                   
                   if (element) {
-                    // Try to find the scrollable container
-                    const scrollContainer = document.querySelector('.main-content-scrollable') || 
-                                          document.querySelector('[data-radix-scroll-area-viewport]') ||
-                                          document.querySelector('.content-area-scroll') ||
-                                          window;
-                    
-                    console.log('📜 Using scroll container:', scrollContainer);
-                    
-                    // Get element position relative to its scroll container
-                    const elementRect = element.getBoundingClientRect();
-                    const headerOffset = 100; // Account for header height
-                    
-                    if (scrollContainer === window) {
-                      // Use window scrolling
-                      const offsetPosition = elementRect.top + window.pageYOffset - headerOffset;
-                      window.scrollTo({
-                        top: offsetPosition,
-                        behavior: 'smooth'
-                      });
-                    } else {
-                      // Use container scrolling
-                      const containerRect = (scrollContainer as Element).getBoundingClientRect();
-                      const relativeTop = elementRect.top - containerRect.top;
-                      const currentScrollTop = (scrollContainer as Element).scrollTop;
-                      const targetScrollTop = currentScrollTop + relativeTop - headerOffset;
-                      
-                      (scrollContainer as Element).scrollTo({
-                        top: targetScrollTop,
-                        behavior: 'smooth'
-                      });
-                    }
-                    
-                    // Alternative: use native scrollIntoView as fallback
-                    setTimeout(() => {
-                      element.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start',
-                        inline: 'nearest'
-                      });
-                    }, 200);
+                    element.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'start',
+                      inline: 'nearest'
+                    });
                   } else {
                     console.warn('❌ Element not found for section:', sectionId);
                   }
@@ -899,35 +880,29 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             onMoveSection={moveSection}
           />
 
-          <SidebarInset className="flex-1 min-h-0 mobile-natural-flow">
-            {/* Main content - Mobile optimized scrollable container */}
-            <div className="main-content-scrollable flex flex-col mobile-scroll-container">
-              <div className="flex-1 min-h-0 mobile-natural-flow">
-                {/* Main content with proper mobile-optimized flex properties */}
-                <ContentArea
-                  sections={visibleSections}
-                  currentPageId={currentPageId}
-                  isEditMode={isEditMode}
-                  isAdmin={isAdmin}
-                  handbookId={handbookData.id}
-                  onUpdateSection={updateSection}
-                  onUpdatePage={updatePage}
-                  onAddPage={addPage}
-                  onDeletePage={deletePage}
-                  onAddSection={addSection}
-                  onMoveSection={moveSection}
-                  onDeleteSection={deleteSection}
-                  onExitEditMode={() => setIsEditMode(false)}
-                  trialStatusBar={trialStatusBar}
-                  handbookData={{
-                    id: handbookData.id,
-                    title: handbookData.title,
-                    forum_enabled: handbookData.forum_enabled
-                  }}
-                  onUpdateHandbook={updateHandbook}
-                />
-              </div>
-            </div>
+          <SidebarInset style={{ flex: 1, height: '100vh', overflow: 'auto' }}>
+            <ContentArea
+                sections={visibleSections}
+                currentPageId={currentPageId}
+                isEditMode={isEditMode}
+                isAdmin={isAdmin}
+                handbookId={handbookData.id}
+                onUpdateSection={updateSection}
+                onUpdatePage={updatePage}
+                onAddPage={addPage}
+                onDeletePage={deletePage}
+                onDeleteSection={deleteSection}
+                onAddSection={addSection}
+                onMoveSection={moveSection}
+                onExitEditMode={() => setIsEditMode(false)}
+                trialStatusBar={trialStatusBar}
+                handbookData={{
+                  id: handbookData.id,
+                  title: handbookData.title,
+                  forum_enabled: handbookData.forum_enabled
+                }}
+                onUpdateHandbook={updateHandbook}
+              />
           </SidebarInset>
         </div>
       </div>

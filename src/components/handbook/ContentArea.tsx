@@ -76,7 +76,7 @@ export function ContentArea({
   if (currentPageId && currentPage) {
     // SINGLE PAGE MODE: Show just the requested page
     return (
-      <div className="content-area-scroll">
+      <div style={{padding: '1rem'}}>
         <SinglePageView 
           page={currentPage}
           isEditMode={isEditMode}
@@ -88,23 +88,21 @@ export function ContentArea({
   } else {
     // ALL SECTIONS MODE: Show scrollable overview of all sections
     return (
-      <div className="content-area-scroll">
-        <AllSectionsView 
-          sections={sectionsArray}
-          isEditMode={isEditMode}
-          isAdmin={isAdmin}
-          onUpdateSection={onUpdateSection}
-          onUpdatePage={onUpdatePage}
-          onDeleteSection={onDeleteSection}
-          onDeletePage={onDeletePage}
-          onAddSection={onAddSection}
-          onAddPage={onAddPage}
-          trialStatusBar={trialStatusBar}
-          handbookId={handbookId}
-          handbookData={handbookData}
-          onUpdateHandbook={onUpdateHandbook}
-        />
-      </div>
+      <AllSectionsView 
+        sections={sectionsArray}
+        isEditMode={isEditMode}
+        isAdmin={isAdmin}
+        onUpdateSection={onUpdateSection}
+        onUpdatePage={onUpdatePage}
+        onDeleteSection={onDeleteSection}
+        onDeletePage={onDeletePage}
+        onAddSection={onAddSection}
+        onAddPage={onAddPage}
+        trialStatusBar={trialStatusBar}
+        handbookId={handbookId}
+        handbookData={handbookData}
+        onUpdateHandbook={onUpdateHandbook}
+      />
     );
   }
 } 

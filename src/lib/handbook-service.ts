@@ -131,7 +131,8 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
           title,
           description,
           order_index,
-          is_active,
+          is_public,
+          is_published,
           pages (
             id,
             title,

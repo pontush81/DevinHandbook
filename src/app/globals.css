@@ -57,6 +57,34 @@ p {
   width: 100%;
 }
 
+/* Content area scrolling */
+.content-area-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  min-height: 100vh;
+  width: 100%;
+  padding: 1rem;
+}
+
+.main-content-scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  height: 100vh;
+  width: 100%;
+}
+
+.content-area-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: visible;
+}
+
 /* Fix main layout on mobile */
 @media (max-width: 768px) {
   body {
