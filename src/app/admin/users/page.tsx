@@ -36,17 +36,20 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
+      console.log('[Users Page] Fetching users...');
       setIsLoading(true);
       setError(null);
       
       // Använd API direkt istället för att försöka komma åt users-tabellen
       const response = await fetch('/api/admin/users');
+      console.log('[Users Page] API response status:', response.status);
       
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status}`);
       }
       
       const apiResult = await response.json();
+      console.log('[Users Page] API result:', apiResult);
       
       if (apiResult.error) {
         throw new Error(apiResult.error);
@@ -54,6 +57,8 @@ export default function UsersPage() {
       
       // API returns { data: users[] }, so we need to access the data property
       const authUsers = apiResult.data || [];
+      console.log('[Users Page] Setting users:', authUsers.length, 'users found');
+      console.log('[Users Page] User emails:', authUsers.map(u => u.email));
       setUsers(Array.isArray(authUsers) ? authUsers : []);
     } catch (err) {
       console.error("Error fetching users:", err);

@@ -19,7 +19,8 @@ import {
   LogOut,
   Menu,
   X,
-  Database
+  Database,
+  UserCheck
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -29,6 +30,7 @@ interface AdminLayoutProps {
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/handbooks', label: 'Handböcker', icon: BookOpen },
+  { href: '/admin/users', label: 'Användare', icon: UserCheck },
   { href: '/admin/customers', label: 'Kunder', icon: Users },
   { href: '/admin/content', label: 'Innehåll', icon: FileText },
   { href: '/admin/analytics', label: 'Statistik', icon: BarChart3 },

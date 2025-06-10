@@ -113,35 +113,7 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
     });
   }, [safeUsers, emailFilter, handbookFilter, roleFilter, superadminFilter]);
 
-  const toggleUserAdminStatus = async (userId: string, makeAdmin: boolean) => {
-    try {
-      setIsProcessing(userId);
-      setError(null);
-      setSuccess(null);
-      
-      const response = await fetch('/api/admin/set-admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId, isAdmin: makeAdmin }),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok || result.error) {
-        throw new Error(result.error || 'Kunde inte uppdatera användarroll');
-      }
-      
-      setSuccess(makeAdmin ? 'Användaren har gjorts till superadmin' : 'Superadmin-status har tagits bort');
-      onDataChange();
-    } catch (err: unknown) {
-      console.error("Error updating user admin status:", err);
-      setError(err instanceof Error ? err.message : "Kunde inte uppdatera användarroll");
-    } finally {
-      setIsProcessing(null);
-    }
-  };
+
 
   const deleteUser = async (user: User) => {
     try {
@@ -187,34 +159,20 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
 
   const fetchAvailableHandbooks = async (user: User) => {
     try {
-      console.log('Fetching available handbooks for user:', user.email);
       const response = await fetch('/api/admin/handbooks');
-      console.log('Response status:', response.status);
       
       if (response.ok) {
         const result = await response.json();
-        console.log('API response:', result);
         
         if (result.success && result.data) {
-          console.log('Total handbooks found:', result.data.length);
           // Filtrera bort handböcker där användaren redan är medlem
           const userHandbookIds = new Set(user.handbooks?.map(h => h.id) || []);
-          console.log('User is already member of:', Array.from(userHandbookIds));
-          
           const available = result.data.filter((h: any) => !userHandbookIds.has(h.id));
-          console.log('Available handbooks after filtering:', available.length);
-          console.log('Available handbooks:', available);
-          
           setAvailableHandbooks(available);
-          console.log('Set availableHandbooks to:', available);
         } else {
-          console.error('API response missing success or data:', result);
           setAvailableHandbooks([]);
         }
       } else {
-        console.error('API request failed with status:', response.status);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
         setAvailableHandbooks([]);
       }
     } catch (error) {
@@ -320,7 +278,37 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
     }
   };
 
-  const isUserSuperAdmin = (user: User) => {
+  const updateUserSystemRole = async (userId: string, makeAdmin: boolean) => {
+    try {
+      setIsEditingRoles(true);
+      setError(null);
+      
+      const response = await fetch('/api/admin/set-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, isAdmin: makeAdmin }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Kunde inte uppdatera systemroll');
+      }
+      
+      setSuccess(makeAdmin ? 'Användaren har gjorts till superadmin' : 'Superadmin-status har tagits bort');
+      onDataChange();
+    } catch (err: unknown) {
+      console.error("Error updating system role:", err);
+      setError(err instanceof Error ? err.message : "Kunde inte uppdatera systemroll");
+    } finally {
+      setIsEditingRoles(false);
+    }
+  };
+
+  const isUserSuperAdmin = (user: User | null) => {
+    if (!user) return false;
     return user.is_superadmin === true || user.app_metadata?.is_superadmin === true;
   };
 
@@ -359,10 +347,7 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
     }
   }, [success]);
 
-  // Debug: logga när availableHandbooks förändras
-  React.useEffect(() => {
-    console.log('availableHandbooks state changed:', availableHandbooks);
-  }, [availableHandbooks]);
+
 
   return (
     <>
@@ -581,34 +566,6 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => toggleUserAdminStatus(user.id, !isUserSuperAdmin(user))}
-                        disabled={isProcessing === user.id}
-                        className={isUserSuperAdmin(user) 
-                          ? "text-orange-600 hover:text-orange-700" 
-                          : "text-blue-600 hover:text-blue-700"
-                        }
-                      >
-                        {isProcessing === user.id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
-                            Uppdaterar...
-                          </>
-                        ) : isUserSuperAdmin(user) ? (
-                          <>
-                            <ShieldCheck className="h-3 w-3 mr-1" />
-                            Ta bort admin
-                          </>
-                        ) : (
-                          <>
-                            <Shield className="h-3 w-3 mr-1" />
-                            Gör till admin
-                          </>
-                        )}
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
                         onClick={() => handleEditRolesClick(user)}
                         disabled={isProcessing === user.id}
                         className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
@@ -656,41 +613,43 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
             <AlertDialogDescription className="text-left">
               Är du säker på att du vill ta bort användaren{" "}
               <strong className="text-gray-900">{userToDelete?.email}</strong>?
-              <br /><br />
-              
-              {userToDelete?.handbooks && userToDelete.handbooks.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
-                  <div className="text-blue-800 font-medium text-sm mb-2">Användaren är medlem i:</div>
-                  <ul className="text-blue-700 text-sm space-y-1">
-                    {userToDelete.handbooks.map((handbook) => (
-                      <li key={handbook.id} className="flex justify-between">
-                        <span>{handbook.title}</span>
-                        <Badge className={`text-xs ${getRoleBadgeColor(handbook.role)}`}>
-                          {getRoleDisplayName(handbook.role)}
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-3">
-                <div className="flex items-start space-x-2">
-                  <div className="text-amber-600 font-medium text-sm">⚠️ Varning:</div>
-                </div>
-                <div className="text-amber-700 text-sm mt-1">
-                  Detta kommer att permanent ta bort:
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>Användarens konto och inloggning</li>
-                    <li>Alla handbok-medlemskap</li>
-                    <li>Användarens profil och inställningar</li>
-                    <li>Notifikationsinställningar</li>
-                  </ul>
-                  <p className="mt-2 font-medium">Denna åtgärd kan inte ångras.</p>
-                </div>
-              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          <div className="px-6 py-4">
+            {userToDelete?.handbooks && userToDelete.handbooks.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
+                <div className="text-blue-800 font-medium text-sm mb-2">Användaren är medlem i:</div>
+                <ul className="text-blue-700 text-sm space-y-1">
+                  {userToDelete.handbooks.map((handbook) => (
+                    <li key={handbook.id} className="flex justify-between">
+                      <span>{handbook.title}</span>
+                      <Badge className={`text-xs ${getRoleBadgeColor(handbook.role)}`}>
+                        {getRoleDisplayName(handbook.role)}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <div className="flex items-start space-x-2">
+                <div className="text-amber-600 font-medium text-sm">⚠️ Varning:</div>
+              </div>
+              <div className="text-amber-700 text-sm mt-1">
+                Detta kommer att permanent ta bort:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Användarens konto och inloggning</li>
+                  <li>Alla handbok-medlemskap</li>
+                  <li>Användarens profil och inställningar</li>
+                  <li>Notifikationsinställningar</li>
+                </ul>
+                <div className="mt-2 font-medium">Denna åtgärd kan inte ångras.</div>
+              </div>
+            </div>
+          </div>
+          
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
             <AlertDialogAction
@@ -712,11 +671,50 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
               <span>Hantera roller för {userToEditRoles?.email}</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="text-left">
-              Hantera användarens roller i olika handböcker. Du kan ändra roll eller ta bort användaren från en handbok.
+              Hantera användarens system-roll och handbok-roller. Du kan ändra roller, lägga till i handböcker eller ta bort användaren från handböcker.
             </AlertDialogDescription>
           </AlertDialogHeader>
           
           <div className="max-h-96 overflow-y-auto">
+            {/* System Role Section */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                <ShieldCheck className="h-4 w-4 mr-2 text-blue-600" />
+                System-roll
+              </h4>
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                <div className="flex-1">
+                  <div className="font-medium text-sm text-gray-900">Global systemåtkomst</div>
+                  <div className="text-xs text-gray-500">
+                    Nuvarande roll: <Badge className={`ml-1 ${isUserSuperAdmin(userToEditRoles) ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {isUserSuperAdmin(userToEditRoles) ? 'Superadmin' : 'Användare'}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Select
+                    value={isUserSuperAdmin(userToEditRoles) ? "superadmin" : "user"}
+                    onValueChange={(newRole) => userToEditRoles && updateUserSystemRole(userToEditRoles.id, newRole === "superadmin")}
+                    disabled={isEditingRoles}
+                  >
+                    <SelectTrigger className="w-32 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Användare</SelectItem>
+                      <SelectItem value="superadmin">Superadmin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Handbook Roles Section */}
+            <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+              <Building2 className="h-4 w-4 mr-2 text-purple-600" />
+              Handbok-roller
+            </h4>
             {userToEditRoles?.handbooks && userToEditRoles.handbooks.length > 0 ? (
               <div className="space-y-3">
                 {userToEditRoles.handbooks.map((handbook) => (
@@ -733,7 +731,7 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                     <div className="flex items-center space-x-2">
                       <Select
                         value={handbook.role}
-                        onValueChange={(newRole) => updateUserHandbookRole(userToEditRoles.id, handbook.id, newRole)}
+                        onValueChange={(newRole) => userToEditRoles && updateUserHandbookRole(userToEditRoles.id, handbook.id, newRole)}
                         disabled={isEditingRoles}
                       >
                         <SelectTrigger className="w-32 text-sm">
@@ -749,7 +747,7 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => removeUserFromHandbook(userToEditRoles.id, handbook.id)}
+                        onClick={() => userToEditRoles && removeUserFromHandbook(userToEditRoles.id, handbook.id)}
                         disabled={isEditingRoles}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         title="Ta bort från handbok"
@@ -770,12 +768,8 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                          {/* Add to new handbook section */}
              <div className="mt-6 p-4 border-t">
                <h4 className="text-sm font-medium text-gray-900 mb-3">Lägg till i handbok</h4>
-               {console.log('Rendering: availableHandbooks.length =', availableHandbooks.length, 'availableHandbooks =', availableHandbooks)}
-               {console.log('First handbook structure:', availableHandbooks[0])}
-               {availableHandbooks.map((h, i) => console.log(`Handbook ${i}:`, h.id, h.title))}
                {availableHandbooks.length > 0 ? (
                  <div className="flex items-center space-x-3">
-                   {/* Temporary HTML select for debugging */}
                    <select
                      value={selectedNewHandbook}
                      onChange={(e) => setSelectedNewHandbook(e.target.value)}
@@ -783,37 +777,12 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                      className="flex-1 text-sm border rounded px-3 py-2"
                    >
                      <option value="">Välj handbok...</option>
-                     {availableHandbooks.map((handbook) => {
-                       console.log('Rendering option for:', handbook.id, handbook.title);
-                       return (
-                         <option key={handbook.id} value={handbook.id}>
-                           {handbook.title}
-                         </option>
-                       );
-                     })}
+                     {availableHandbooks.map((handbook) => (
+                       <option key={handbook.id} value={handbook.id}>
+                         {handbook.title}
+                       </option>
+                     ))}
                    </select>
-                   
-                   {/* Original Select - commented out for debugging
-                   <Select
-                     value={selectedNewHandbook}
-                     onValueChange={setSelectedNewHandbook}
-                     disabled={isEditingRoles}
-                   >
-                     <SelectTrigger className="flex-1 text-sm">
-                       <SelectValue placeholder="Välj handbok..." />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {availableHandbooks.map((handbook) => {
-                         console.log('Rendering SelectItem for:', handbook.id, handbook.title);
-                         return (
-                           <SelectItem key={handbook.id} value={handbook.id}>
-                             {handbook.title}
-                           </SelectItem>
-                         );
-                       })}
-                     </SelectContent>
-                   </Select>
-                   */}
                    
                    <Select
                      value={selectedNewRole}
