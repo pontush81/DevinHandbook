@@ -64,7 +64,17 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
       
       if (error) {
         if (error.code === "user_already_exists" || error.code === "email_exists") {
-          setError("E-postadressen är redan registrerad. Vill du logga in istället?");
+          // Instead of showing an error, gracefully redirect to login
+          console.log('[SignUpForm] User already exists, redirecting to login...');
+          setSuccessMessage("redirect_to_login");
+          
+          // Add a short delay so user can see the message
+          setTimeout(() => {
+            const loginUrl = `/login${joinCode ? `?join=${joinCode}` : ''}`;
+            router.push(loginUrl);
+          }, 2000);
+          
+          return; // Don't proceed with registration flow
         } else {
           setError(error.message);
         }
@@ -194,42 +204,77 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
 
         {successMessage && (
           <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-md">
-            <div className="flex items-start gap-2 mb-3">
-              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <span className="text-green-700 font-medium">Konto skapat! 🎉</span>
-            </div>
-            
-            <div className="space-y-2 mb-3">
-              <div className="flex items-start gap-2">
-                <MailIcon className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <span className="font-bold text-red-600">STEG 1:</span> Kolla din e-post och klicka på bekräftelselänken
+            {successMessage === "redirect_to_login" ? (
+              // Message for existing users
+              <>
+                <div className="flex items-start gap-2 mb-3">
+                  <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-blue-700 font-medium">Du har redan ett konto! 👍</span>
                 </div>
-              </div>
-              <div className="flex items-start gap-2">
-                {joinCode ? (
-                  <Key className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <span className="text-blue-600 text-sm mt-0.5">📚</span>
-                )}
-                <div className="text-sm">
-                  <span className="font-bold text-blue-600">STEG 2:</span> 
-                  {joinCode ? " Du kommer automatiskt att gå med i handboken" : " Logga in och skapa din första handbok"}
+                
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-600 text-sm mt-0.5">🔐</span>
+                    <div className="text-sm">
+                      Vi omdirigerar dig till inloggningssidan så du kan logga in
+                      {joinCode ? " och gå med i handboken" : ""}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            
-            <div className="text-sm italic text-blue-600 flex items-center gap-2">
-              <span>Du omdirigeras till inloggningssidan om 8 sekunder...</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`)}
-                className="ml-2"
-              >
-                Gå dit nu
-              </Button>
-            </div>
+                
+                <div className="text-sm italic text-blue-600 flex items-center gap-2">
+                  <span>Omdirigerar om 2 sekunder...</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push(`/login${joinCode ? `?join=${joinCode}` : ''}`)}
+                    className="ml-2"
+                  >
+                    Gå dit nu
+                  </Button>
+                </div>
+              </>
+            ) : (
+              // Message for new users
+              <>
+                <div className="flex items-start gap-2 mb-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-green-700 font-medium">Konto skapat! 🎉</span>
+                </div>
+                
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-start gap-2">
+                    <MailIcon className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <span className="font-bold text-red-600">STEG 1:</span> Kolla din e-post och klicka på bekräftelselänken
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    {joinCode ? (
+                      <Key className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <span className="text-blue-600 text-sm mt-0.5">📚</span>
+                    )}
+                    <div className="text-sm">
+                      <span className="font-bold text-blue-600">STEG 2:</span> 
+                      {joinCode ? " Du kommer automatiskt att gå med i handboken" : " Logga in och skapa din första handbok"}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-sm italic text-blue-600 flex items-center gap-2">
+                  <span>Du omdirigeras till inloggningssidan om 8 sekunder...</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push(`/login?registration=success${joinCode ? `&join=${joinCode}` : ''}`)}
+                    className="ml-2"
+                  >
+                    Gå dit nu
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

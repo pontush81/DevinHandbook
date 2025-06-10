@@ -38,12 +38,13 @@ export default function SignupClient() {
   
   // Join code related state
   const [joinCode, setJoinCode] = useState<string | null>(null);
-  const [handbookInfo, setHandbookInfo] = useState<HandbookInfo | null>(null);
+  const [handbookInfo, setHandbookInfo] = useState<HandbookInfo | undefined>(undefined);
   const [joinCodeValidating, setJoinCodeValidating] = useState(false);
   const [joinCodeError, setJoinCodeError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const [joinSuccess, setJoinSuccess] = useState(false);
   const [hasRedirected, setHasRedirected] = useState(false);
+  const [isExistingMember, setIsExistingMember] = useState(false);
 
   console.log('[SignupClient] Current state:', {
     loading,
@@ -55,7 +56,8 @@ export default function SignupClient() {
     joinCodeError,
     isJoining,
     joinSuccess,
-    hasRedirected
+    hasRedirected,
+    isExistingMember
   });
 
   // Set joining flags immediately when component mounts with join code
@@ -158,46 +160,76 @@ export default function SignupClient() {
         console.log('[HandleJoinHandbook] Response data:', data);
         console.log('[HandleJoinHandbook] HandbookInfo:', handbookInfo);
         
-        setJoinSuccess(true);
-        // Redirect to handbook after successful join
-        setTimeout(() => {
-          const targetUrl = `/${handbookInfo.slug}`;
-          console.log('[HandleJoinHandbook] About to redirect to:', targetUrl);
-          console.log('[HandleJoinHandbook] Using router.push');
-          
-          // Prevent multiple redirects
-          if (hasRedirected) {
-            console.log('[HandleJoinHandbook] Already redirected, skipping');
-            return;
-          }
-          
-          setHasRedirected(true);
-          
-          // Add a backup redirect using window.location
-          router.push(targetUrl);
-          
-          // Backup redirect after another 1 second
+        // Handle both new members and existing members gracefully
+        if (data.already_member) {
+          console.log('[HandleJoinHandbook] User is already a member with role:', data.current_role);
+          // For existing members, show a different message and redirect faster
+          setJoinSuccess(true);
+          setIsExistingMember(true);
           setTimeout(() => {
-            console.log('[HandleJoinHandbook] Backup redirect to:', targetUrl);
-            if (!hasRedirected) {
-              console.log('[HandleJoinHandbook] Router.push failed, using window.location');
-              window.location.href = targetUrl;
+            const targetUrl = `/${handbookInfo.slug}`;
+            console.log('[HandleJoinHandbook] Redirecting existing member to:', targetUrl);
+            
+            if (hasRedirected) {
+              console.log('[HandleJoinHandbook] Already redirected, skipping');
+              return;
             }
-          }, 1000);
-        }, 2000);
+            
+            setHasRedirected(true);
+            router.push(targetUrl);
+          }, 1000); // Faster redirect for existing members
+        } else {
+          console.log('[HandleJoinHandbook] New member joined with role:', data.role);
+          setJoinSuccess(true);
+          // Normal redirect flow for new members
+          setTimeout(() => {
+            const targetUrl = `/${handbookInfo.slug}`;
+            console.log('[HandleJoinHandbook] About to redirect to:', targetUrl);
+            
+            if (hasRedirected) {
+              console.log('[HandleJoinHandbook] Already redirected, skipping');
+              return;
+            }
+            
+            setHasRedirected(true);
+            router.push(targetUrl);
+            
+            // Backup redirect after another 1 second
+            setTimeout(() => {
+              console.log('[HandleJoinHandbook] Backup redirect to:', targetUrl);
+              if (!hasRedirected) {
+                console.log('[HandleJoinHandbook] Router.push failed, using window.location');
+                window.location.href = targetUrl;
+              }
+            }, 1000);
+          }, 2000);
+        }
       } else {
         console.log('[HandleJoinHandbook] Join failed:', data);
-        // Handle specific error cases
+        
+        // Improved error handling based on response
         if (response.status === 400) {
-          // User is likely already a member or invalid join code
-          setJoinCodeError(`Du är redan medlem i "${handbookInfo.title}" eller join-koden är ogiltig.`);
+          // Handle specific error messages from the improved API
+          if (data.message && data.message.includes('redan medlem')) {
+            // This should now be handled as success, but just in case
+            setJoinCodeError(`Du är redan medlem i "${handbookInfo.title}".`);
+          } else if (data.message && data.message.includes('utgången')) {
+            setJoinCodeError('Join-koden har gått ut. Kontakta administratören för en ny kod.');
+          } else if (data.message && data.message.includes('ogiltig')) {
+            setJoinCodeError('Join-koden är ogiltig. Kontrollera att du har skrivit in den korrekt.');
+          } else {
+            setJoinCodeError(data.message || `Kunde inte gå med i "${handbookInfo.title}".`);
+          }
+        } else if (response.status === 409) {
+          // Conflict - likely duplicate email or similar
+          setJoinCodeError('Det finns redan ett konto med din e-postadress. Försök logga in istället.');
         } else {
           setJoinCodeError(data.message || 'Kunde inte gå med i handboken');
         }
       }
     } catch (error) {
       console.error('Error joining handbook:', error);
-      setJoinCodeError('Kunde inte gå med i handboken');
+      setJoinCodeError('Ett oväntat fel inträffade. Försök igen senare.');
     } finally {
       setIsJoining(false);
     }
@@ -283,14 +315,16 @@ export default function SignupClient() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
-              <span>Välkommen!</span>
+              <span>{isExistingMember ? 'Välkommen tillbaka!' : 'Välkommen!'}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Alert>
               <AlertDescription>
-                Du har gått med i <strong>{handbookInfo?.title}</strong>! 
-                Du omdirigeras dit nu...
+                {isExistingMember 
+                  ? `Du är redan medlem i <strong>${handbookInfo?.title}</strong>. Du omdirigeras dit nu...`
+                  : `Du har gått med i <strong>${handbookInfo?.title}</strong>! Du omdirigeras dit nu...`
+                }
               </AlertDescription>
             </Alert>
             <div className="mt-4 flex items-center justify-center">

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     
     console.log('[Join API] About to call join_handbook_with_code with:', {
       join_code: joinCode.trim().toUpperCase(),
-      user_id: currentUserId,
+      p_user_id: currentUserId,
       user_role: role
     });
     
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .rpc('join_handbook_with_code', {
         join_code: joinCode.trim().toUpperCase(),
-        user_id: currentUserId,
+        p_user_id: currentUserId,
         user_role: role
       });
 
@@ -62,64 +62,46 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error joining handbook with code:', error);
-      
-      // Handle specific errors better
-      if (error.message && error.message.includes('already a member')) {
-        return NextResponse.json(
-          { success: false, message: "Du är redan medlem i denna handbok" },
-          { status: 400 }
-        );
-      }
-      
-      // Handle duplicate notification preferences 
-      if (error.code === '23505' && error.message.includes('user_notification_preferences')) {
-        // User is already a member, just return success with the handbook info
-        console.log('[Join API] User already has notification preferences, checking if member...');
-        
-        // Get handbook info for response
-        const { data: handbook, error: handbookError } = await supabase
-          .from('handbooks')
-          .select('id, title, slug')
-          .eq('join_code', joinCode.trim().toUpperCase())
-          .eq('join_code_active', true)
-          .single();
-        
-        if (!handbookError && handbook) {
-          return NextResponse.json({
-            success: true,
-            handbook: {
-              id: handbook.id,
-              title: handbook.title,
-              slug: handbook.slug
-            },
-            message: "Du är redan medlem i denna handbok"
-          });
-        }
-      }
-      
       return NextResponse.json(
         { success: false, message: "Kunde inte gå med i handboken" },
         { status: 500 }
       );
     }
 
-    // The function returns JSON with success status
-    if (!data.success) {
+    // Handle the improved response format from the stored function
+    if (!data || !data.success) {
+      const errorMessage = data?.error || "Ogiltig eller utgången join-kod";
       return NextResponse.json(
-        { success: false, message: data.error || "Ogiltig eller utgången join-kod" },
+        { success: false, message: errorMessage },
         { status: 400 }
       );
     }
 
-    return NextResponse.json({
+    // Determine appropriate message based on whether user was already a member
+    const message = data.already_member 
+      ? `Du är redan medlem i "${data.handbook_title}"`
+      : `Välkommen till "${data.handbook_title}"!`;
+
+    const responseData: any = {
       success: true,
-      message: `Du har gått med i handboken "${data.handbook_title}"`,
+      message: data.message || message,
       handbook: {
         id: data.handbook_id,
         title: data.handbook_title,
         slug: data.handbook_slug
       }
-    });
+    };
+
+    // Add additional info for existing members
+    if (data.already_member) {
+      responseData.already_member = true;
+      responseData.current_role = data.current_role;
+    } else {
+      responseData.role = data.role;
+    }
+
+    console.log('[Join API] Returning successful response:', responseData);
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Error in POST /api/handbook/join:', error);
