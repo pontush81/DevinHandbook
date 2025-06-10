@@ -92,6 +92,10 @@ async function transferSessionToSubdomain(subdomain: string): Promise<void> {
   }
 }
 
+// Throttling for smartRedirect to prevent multiple rapid calls
+let lastRedirectTime = 0;
+const REDIRECT_THROTTLE_MS = 2000; // 2 seconds
+
 /**
  * Smart redirect logic based on user's handbooks
  * - 0 handbooks: Go to create-handbook (improved onboarding)
@@ -102,12 +106,30 @@ async function transferSessionToSubdomain(subdomain: string): Promise<void> {
  * @param isSuperAdmin - Optional flag to force dashboard for superadmins
  */
 export async function smartRedirect(userId?: string, isSuperAdmin: boolean = false): Promise<void> {
+  // Throttle rapid calls to prevent multiple redirects
+  const now = Date.now();
+  if (now - lastRedirectTime < REDIRECT_THROTTLE_MS) {
+    console.log('[Smart Redirect] Throttled - too soon since last redirect');
+    return;
+  }
+  lastRedirectTime = now;
+
   try {
     // Check if user is currently joining a handbook via code - if so, don't interfere
     if (typeof window !== 'undefined') {
-      const joiningFlag = localStorage.getItem('joining_handbook_via_code');
-      const pendingJoinCode = localStorage.getItem('pending_join_code');
-      const joinProcessStarted = localStorage.getItem('join_process_started');
+      let joiningFlag = null;
+      let pendingJoinCode = null;
+      let joinProcessStarted = null;
+      
+      // Safe localStorage access
+      try {
+        joiningFlag = localStorage.getItem('joining_handbook_via_code');
+        pendingJoinCode = localStorage.getItem('pending_join_code');
+        joinProcessStarted = localStorage.getItem('join_process_started');
+      } catch (e) {
+        console.warn('[Smart Redirect] Cannot access localStorage:', e);
+      }
+      
       const windowJoiningFlag = (window as any).__joining_handbook;
       
       console.log('[Smart Redirect] Checking join flags:', { 
@@ -124,9 +146,13 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
           const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
           if (startTime < fiveMinutesAgo && !windowJoiningFlag) {
             console.log('[Smart Redirect] Join process is stale, clearing flags and continuing');
-            localStorage.removeItem('joining_handbook_via_code');
-            localStorage.removeItem('pending_join_code');
-            localStorage.removeItem('join_process_started');
+            try {
+              localStorage.removeItem('joining_handbook_via_code');
+              localStorage.removeItem('pending_join_code');
+              localStorage.removeItem('join_process_started');
+            } catch (e) {
+              console.warn('[Smart Redirect] Cannot clear localStorage flags:', e);
+            }
             delete (window as any).__joining_handbook;
           } else {
             console.log('[Smart Redirect] User is joining handbook via code, skipping redirect');
@@ -261,8 +287,17 @@ export async function smartRedirectWithPolling(
     try {
       // Check if user is currently joining a handbook via code - if so, don't interfere
       if (typeof window !== 'undefined') {
-        const joiningFlag = localStorage.getItem('joining_handbook_via_code');
-        const pendingJoinCode = localStorage.getItem('pending_join_code');
+        let joiningFlag = null;
+        let pendingJoinCode = null;
+        
+        // Safe localStorage access
+        try {
+          joiningFlag = localStorage.getItem('joining_handbook_via_code');
+          pendingJoinCode = localStorage.getItem('pending_join_code');
+        } catch (e) {
+          console.warn('[Smart Redirect Polling] Cannot access localStorage:', e);
+        }
+        
         const windowJoiningFlag = (window as any).__joining_handbook;
         
         console.log('[Smart Redirect Polling] Checking joining flags:', { 

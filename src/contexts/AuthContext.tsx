@@ -171,11 +171,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Prevent double initialization
+  const [initialized, setInitialized] = useState(false);
+
   // Initiera session från Supabase
   useEffect(() => {
+    // Prevent double initialization
+    if (initialized) {
+      console.log('🔄 AuthContext: Already initialized, skipping...');
+      return;
+    }
+
     const setData = async () => {
       console.log('🔄 AuthContext: Initializing auth state...');
       setIsLoading(true);
+      setInitialized(true);
       
       try {
         // Kontrollera om vi är på klientsidan och har tillgång till storage
@@ -187,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('🌐 AuthContext: Running on client, proceeding with auth check');
 
-        // Kontrollera logout-flagga först
+        // Kontrollera logout-flagga först med safe localStorage access
         try {
           const logoutFlag = localStorage.getItem('__logout_flag__');
           if (logoutFlag) {
@@ -298,7 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     
     setData();
-  }, [createUserProfileIfNeeded]);
+  }, []); // Removed dependency to prevent re-runs
 
   // Separat useEffect för lyssnare för att undvika race conditions
   useEffect(() => {
