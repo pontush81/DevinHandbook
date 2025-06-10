@@ -203,4 +203,30 @@ p {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ==============================================
+   EDITOR.JS STYLING - FORCE INDENTATION FIX
+   ============================================== */
+
+/* Higher specificity to override EditorJS default styles */
+.codex-editor .ce-block .ce-paragraph {
+  margin-left: -35px !important;
+  padding-left: 15px !important;
+}
+
+.codex-editor .ce-block .ce-header {
+  margin-left: -35px !important;
+  padding-left: 15px !important;
+}
+
+/* Also target the content container with higher specificity */
+.codex-editor .ce-block__content .ce-paragraph {
+  margin-left: -35px !important;
+  padding-left: 15px !important;
+}
+
+.codex-editor .ce-block__content .ce-header {
+  margin-left: -35px !important;
+  padding-left: 15px !important;
 } 

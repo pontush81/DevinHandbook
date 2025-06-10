@@ -403,6 +403,46 @@ export function AllSectionsView({
                             {section.title}
                           </h3>
                         )}
+
+                        {/* Section Settings in Edit Mode */}
+                        {isEditMode && (
+                          <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                id={`section-public-${section.id}`}
+                                checked={section.is_public !== false}
+                                onChange={(e) => {
+                                  onUpdateSection?.(section.id, { is_public: e.target.checked });
+                                }}
+                                className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              />
+                              <label 
+                                htmlFor={`section-public-${section.id}`}
+                                className="text-gray-600 cursor-pointer"
+                              >
+                                Publik
+                              </label>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                id={`section-published-${section.id}`}
+                                checked={section.is_published !== false}
+                                onChange={(e) => {
+                                  onUpdateSection?.(section.id, { is_published: e.target.checked });
+                                }}
+                                className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                              />
+                              <label 
+                                htmlFor={`section-published-${section.id}`}
+                                className="text-gray-600 cursor-pointer"
+                              >
+                                Publicerad
+                              </label>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -539,16 +579,37 @@ export function AllSectionsView({
                                 </div>
                               )}
 
+                              {/* Page Settings in Edit Mode */}
                               {isEditMode && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handleDeletePage(page.id, section.id, page.title)}
-                                  className="text-red-600 hover:bg-red-50 hover:text-red-700 h-6 px-1 sm:h-8 sm:px-2 order-2"
-                                  title="Radera sida"
-                                >
-                                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="checkbox"
+                                      id={`page-published-${page.id}`}
+                                      checked={page.is_published !== false}
+                                      onChange={(e) => {
+                                        onUpdatePage?.(page.id, { is_published: e.target.checked });
+                                      }}
+                                      className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                      title="Publicerad sida"
+                                    />
+                                    <label 
+                                      htmlFor={`page-published-${page.id}`}
+                                      className="text-xs text-gray-600 cursor-pointer"
+                                    >
+                                      Pub
+                                    </label>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleDeletePage(page.id, section.id, page.title)}
+                                    className="text-red-600 hover:bg-red-50 hover:text-red-700 h-6 px-1 sm:h-8 sm:px-2"
+                                    title="Radera sida"
+                                  >
+                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           </div>
