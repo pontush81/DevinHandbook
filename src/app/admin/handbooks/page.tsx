@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { HandbooksTable } from "../HandbooksTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +9,12 @@ import Link from "next/link";
 
 interface Handbook {
   id: string;
-  name: string;
-  subdomain: string;
+  title: string;
+  slug: string;
   created_at: string;
   published: boolean;
   owner_id: string;
+  organization_name?: string;
 }
 
 export default function HandbooksPage() {
@@ -25,13 +25,19 @@ export default function HandbooksPage() {
   const fetchHandbooks = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("handbooks")
-        .select("*")
-        .order("created_at", { ascending: false });
+      setError(null);
       
-      if (error) throw error;
-      setHandbooks(data || []);
+      const response = await fetch('/api/admin/handbooks');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        setHandbooks(result.data);
+      } else {
+        throw new Error(result.message || 'Oväntat API-svar');
+      }
     } catch (err) {
       console.error("Error fetching handbooks:", err);
       setError("Kunde inte hämta handböcker");

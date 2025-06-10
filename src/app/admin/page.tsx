@@ -21,11 +21,12 @@ import Link from "next/link";
 
 interface Handbook {
   id: string;
-  name: string;
-  subdomain: string;
+  title: string;
+  slug: string;
   created_at: string;
   published: boolean;
   owner_id: string;
+  organization_name?: string;
 }
 
 interface User {
@@ -74,27 +75,49 @@ export default function AdminDashboardPage() {
       setIsLoadingData(true);
       
       // Fetch handbooks
-      const { data: handbooksData, error: handbooksError } = await supabase
-        .from("handbooks")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const response = await fetch('/api/admin/handbooks');
+      let handbooksData: Handbook[] = [];
       
-      if (handbooksError) throw handbooksError;
-      
-      setHandbooks(handbooksData || []);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          handbooksData = result.data;
+          setHandbooks(handbooksData);
+        } else {
+          throw new Error(result.message || 'Kunde inte hämta handböcker');
+        }
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       // Fetch users with detailed time filtering
       const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("id, email, created_at");
       
+      let allUsers: User[] = [];
+      
       if (usersError) {
         // Fallback to API if direct access fails
+        console.log("Direct DB access failed, trying API fallback");
         const response = await fetch('/api/admin/users');
-        const authUsers = await response.json();
-        setUsers(authUsers || []);
+        
+        if (response.ok) {
+          const apiResult = await response.json();
+          if (apiResult.data && Array.isArray(apiResult.data)) {
+            allUsers = apiResult.data;
+            setUsers(allUsers);
+          } else {
+            console.error("API returned invalid data format");
+            setUsers([]);
+          }
+        } else {
+          console.error("API request failed");
+          setUsers([]);
+        }
       } else {
-        setUsers(usersData || []);
+        allUsers = Array.isArray(usersData) ? usersData : [];
+        setUsers(allUsers);
       }
 
       // Calculate detailed stats
@@ -102,8 +125,6 @@ export default function AdminDashboardPage() {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
       const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-      const allUsers = usersData || [];
       const newUsersToday = allUsers.filter(u => new Date(u.created_at) >= today).length;
       const newUsersThisWeek = allUsers.filter(u => new Date(u.created_at) >= weekAgo).length;
       const newUsersThisMonth = allUsers.filter(u => new Date(u.created_at) >= monthAgo).length;
@@ -145,7 +166,7 @@ export default function AdminDashboardPage() {
         activities.push({
           id: `handbook-${handbook.id}`,
           type: 'handbook_created',
-          handbook_name: handbook.name,
+          handbook_name: handbook.title,
           created_at: handbook.created_at
         });
         
@@ -153,7 +174,7 @@ export default function AdminDashboardPage() {
           activities.push({
             id: `published-${handbook.id}`,
             type: 'handbook_published',
-            handbook_name: handbook.name,
+            handbook_name: handbook.title,
             created_at: handbook.updated_at || handbook.created_at
           });
         }
@@ -338,9 +359,9 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center space-x-4">
                           <BookOpen className="h-8 w-8 text-gray-400" />
                           <div>
-                            <h3 className="font-medium">{handbook.name}</h3>
+                            <h3 className="font-medium">{handbook.title}</h3>
                             <p className="text-sm text-gray-500">
-                              {handbook.subdomain}.handbok.org
+                              {handbook.slug}.handbok.org
                             </p>
                           </div>
                         </div>
@@ -349,12 +370,12 @@ export default function AdminDashboardPage() {
                             {handbook.published ? "Publicerad" : "Utkast"}
                           </Badge>
                           <div className="flex space-x-2">
-                            <Link href={`/${handbook.subdomain}`}>
+                            <Link href={`/${handbook.slug}`}>
                               <Button variant="outline" size="sm">
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Link href={`/${handbook.subdomain}`} target="_blank">
+                            <Link href={`/${handbook.slug}`} target="_blank">
                               <Button variant="outline" size="sm">
                                 <Eye className="h-4 w-4" />
                               </Button>

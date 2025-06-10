@@ -5,10 +5,28 @@ import { supabase } from "@/lib/supabase";
 import { UsersTable } from "../UsersTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface Handbook {
+  id: string;
+  title: string;
+  subdomain?: string;
+  role: string;
+}
+
 interface User {
   id: string;
   email: string;
   created_at: string;
+  app_metadata?: {
+    is_superadmin?: boolean;
+  };
+  handbooks?: Handbook[];
+  handbook_count?: number;
+  is_superadmin?: boolean;
+  is_handbook_admin?: boolean;
+  is_handbook_editor?: boolean;
+  is_handbook_viewer?: boolean;
+  roles?: string[];
+  primary_role?: string;
 }
 
 export default function UsersPage() {
@@ -19,21 +37,28 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const { data: usersData, error: usersError } = await supabase
-        .from("users")
-        .select("id, email, created_at");
+      setError(null);
       
-      if (usersError) {
-        // Fallback to API if direct access fails
-        const response = await fetch('/api/admin/users');
-        const authUsers = await response.json();
-        setUsers(authUsers || []);
-      } else {
-        setUsers(usersData || []);
+      // Använd API direkt istället för att försöka komma åt users-tabellen
+      const response = await fetch('/api/admin/users');
+      
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
       }
+      
+      const apiResult = await response.json();
+      
+      if (apiResult.error) {
+        throw new Error(apiResult.error);
+      }
+      
+      // API returns { data: users[] }, so we need to access the data property
+      const authUsers = apiResult.data || [];
+      setUsers(Array.isArray(authUsers) ? authUsers : []);
     } catch (err) {
       console.error("Error fetching users:", err);
-      setError("Kunde inte hämta användare");
+      setError(err instanceof Error ? err.message : "Kunde inte hämta användare");
+      setUsers([]); // Ensure users is always an array even on error
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +85,7 @@ export default function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Alla användare</CardTitle>
+          <CardTitle>Alla användare ({users.length})</CardTitle>
           <CardDescription>
             Översikt över alla registrerade användare
           </CardDescription>

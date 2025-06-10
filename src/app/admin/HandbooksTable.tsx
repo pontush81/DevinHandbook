@@ -20,10 +20,11 @@ import { Trash2 } from 'lucide-react';
 interface Handbook {
   id: string;
   title: string;
-  subdomain: string;
+  slug: string;
   created_at: string;
   published: boolean;
   owner_id: string;
+  organization_name?: string;
 }
 
 interface HandbooksTableProps {
@@ -39,9 +40,9 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
     handbook: null
   });
 
-  const revalidateHandbook = async (subdomain: string) => {
+  const revalidateHandbook = async (slug: string) => {
     try {
-      setIsProcessing(subdomain);
+      setIsProcessing(slug);
       setError(null);
       
       const response = await fetch('/api/admin/revalidate-handbook', {
@@ -49,7 +50,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ subdomain }),
+        body: JSON.stringify({ slug }),
       });
       
       const data = await response.json();
@@ -59,7 +60,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
       }
       
       // Show temporary success message
-      setError(`Cache för handbok.org/${subdomain} har uppdaterats`);
+      setError(`Cache för handbok.org/${slug} har uppdaterats`);
       setTimeout(() => setError(null), 3000);
     } catch (err: unknown) {
       console.error("Error revalidating handbook:", err);
@@ -158,7 +159,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                 Namn
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Subdomän
+                Slug
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Skapad
@@ -188,7 +189,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                     {handbook.title}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    handbok.org/{handbook.subdomain}
+                    handbok.org/{handbook.slug}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
@@ -204,7 +205,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-3">
                       <a
-                        href={`/handbook/${handbook.subdomain}`}
+                        href={`/handbook/${handbook.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-black hover:underline"
@@ -212,17 +213,17 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                         Visa
                       </a>
                       <Link
-                        href={`/${handbook.subdomain}`}
+                        href={`/${handbook.slug}`}
                         className="text-black hover:underline"
                       >
                         Redigera
                       </Link>
                       <Button
-                        onClick={() => revalidateHandbook(handbook.subdomain)}
-                        disabled={isProcessing === handbook.subdomain}
+                        onClick={() => revalidateHandbook(handbook.slug)}
+                        disabled={isProcessing === handbook.slug}
                         className="text-black hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isProcessing === handbook.subdomain ? 'Uppdaterar...' : 'Uppdatera cache'}
+                        {isProcessing === handbook.slug ? 'Uppdaterar...' : 'Uppdatera cache'}
                       </Button>
                       <Button
                         onClick={() => toggleHandbookPublished(handbook.id, !handbook.published)}

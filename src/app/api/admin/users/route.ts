@@ -3,21 +3,69 @@ import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    
     const supabase = getServiceSupabase();
     
+    // Hämta alla användare från auth
     const { data, error } = await supabase.auth.admin.listUsers();
     
     if (error) {
       throw error;
     }
     
-    const users = data.users.map(user => ({
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at,
-      app_metadata: user.app_metadata
-    }));
+    // Hämta alla handbok-medlemskap med handbok-information
+    const { data: memberships, error: membershipError } = await supabase
+      .from('handbook_members')
+      .select(`
+        user_id,
+        role,
+        handbook_id,
+        handbooks (
+          id,
+          title,
+          slug
+        )
+      `);
+    
+    if (membershipError) {
+      console.error('Error fetching memberships:', membershipError);
+    }
+    
+    // Bygg upp användare med deras handbok-information
+    const users = data.users.map(user => {
+      // Hitta alla handböcker för denna användare
+      const userMemberships = memberships?.filter(m => m.user_id === user.id) || [];
+      
+      // Gruppera roller per handbok
+      const handbooks = userMemberships.map(membership => ({
+        id: membership.handbook_id,
+        title: membership.handbooks?.title || 'Okänd handbok',
+        slug: membership.handbooks?.slug,
+        role: membership.role
+      }));
+      
+      // Samla unika roller
+      const roles = [...new Set(userMemberships.map(m => m.role))];
+      const isHandbookAdmin = roles.includes('admin');
+      const isHandbookEditor = roles.includes('editor');
+      const isHandbookViewer = roles.includes('viewer');
+      
+      return {
+        id: user.id,
+        email: user.email,
+        created_at: user.created_at,
+        app_metadata: user.app_metadata,
+        // BRF/Handbok information
+        handbooks: handbooks,
+        handbook_count: handbooks.length,
+        // Rollsammanfattning
+        is_superadmin: user.app_metadata?.is_superadmin === true,
+        is_handbook_admin: isHandbookAdmin,
+        is_handbook_editor: isHandbookEditor,
+        is_handbook_viewer: isHandbookViewer,
+        roles: roles,
+        primary_role: isHandbookAdmin ? 'admin' : isHandbookEditor ? 'editor' : isHandbookViewer ? 'viewer' : 'none'
+      };
+    });
     
     return NextResponse.json({ data: users });
   } catch (error: unknown) {
