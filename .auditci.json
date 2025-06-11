@@ -1,0 +1,13 @@
+{
+  "low": false,
+  "moderate": true,
+  "high": true,
+  "critical": true,
+  "report": true,
+  "summary": true,
+  "allowlist": [
+    "GHSA-v6h2-p8h4-qcjw"
+  ],
+  "skip-dev": false,
+  "report-type": "summary"
+} 
