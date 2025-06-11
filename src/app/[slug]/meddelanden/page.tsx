@@ -1,13 +1,16 @@
 import { getHandbookBySlug } from '@/lib/handbook-service';
 import { MessagesPageClient } from './MessagesPageClient';
 import { notFound } from 'next/navigation';
+import { getNavigationContext, getDefaultBackLink } from '@/lib/navigation-utils';
 
 interface MessagesPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string }>;
 }
 
-export default async function MessagesPage({ params }: MessagesPageProps) {
+export default async function MessagesPage({ params, searchParams }: MessagesPageProps) {
   const { slug } = await params;
+  const searchParamsResolved = await searchParams;
 
   console.log('🎯 [MessagesPage] Loading handbook for slug:', slug);
 
@@ -17,6 +20,11 @@ export default async function MessagesPage({ params }: MessagesPageProps) {
     console.log('❌ [MessagesPage] No handbook found for slug:', slug);
     notFound();
   }
+
+  // Get navigation context
+  const urlSearchParams = new URLSearchParams(searchParamsResolved);
+  const navigationContext = getNavigationContext(urlSearchParams, slug);
+  const defaultBackLink = getDefaultBackLink(slug, handbookData.title);
 
   console.log('✅ [MessagesPage] Handbook loaded:', {
     id: handbookData.id,
@@ -37,6 +45,8 @@ export default async function MessagesPage({ params }: MessagesPageProps) {
       handbookTitle={handbookData.title}
       handbookSlug={handbookData.slug}
       theme={handbookData.theme}
+      navigationContext={navigationContext}
+      defaultBackLink={defaultBackLink}
     />
   );
 } 

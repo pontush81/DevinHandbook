@@ -25,8 +25,9 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { NavigationContext } from '@/lib/navigation-utils';
 
-import AdminNotificationControls from '@/components/AdminNotificationControls';
+
 
 interface Message {
   id: string;
@@ -62,13 +63,17 @@ interface MessagesPageClientProps {
     secondary_color?: string;
     logo_url?: string | null;
   };
+  navigationContext: NavigationContext | null;
+  defaultBackLink: NavigationContext;
 }
 
 export function MessagesPageClient({ 
   handbookId, 
   handbookTitle, 
   handbookSlug,
-  theme 
+  theme,
+  navigationContext,
+  defaultBackLink
 }: MessagesPageClientProps) {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
@@ -544,14 +549,14 @@ export function MessagesPageClient({
       )}
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Simple back navigation */}
+        {/* Smart back navigation */}
         <div className="mb-6">
           <Link 
-            href={`/${handbookSlug}`}
+            href={navigationContext?.href ?? defaultBackLink.href}
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Tillbaka till {handbookTitle}
+            {navigationContext?.title ?? defaultBackLink.title}
           </Link>
         </div>
 
@@ -813,16 +818,7 @@ export function MessagesPageClient({
           )}
         </div>
         
-        {/* Admin Notification Controls - endast för admin/editor */}
-        {handbookId && userRole && ['admin', 'editor'].includes(userRole) && (
-          <div className="mt-8">
-            <AdminNotificationControls 
-              handbookId={handbookId}
-              handbookName={handbookTitle}
-              userRole={userRole as 'admin' | 'editor' | 'viewer'}
-            />
-          </div>
-        )}
+        {/* Note: Admin notification controls removed - users manage their own settings via Settings page */}
       </div>
 
       {/* New Message Dialog */}

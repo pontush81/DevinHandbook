@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Users, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MembersManager } from '@/components/handbook/MembersManager';
 import { getHandbookBySlug } from '@/lib/handbook-service';
@@ -8,19 +8,27 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Database } from '@/types/supabase';
+import { getNavigationContext, getDefaultBackLink } from '@/lib/navigation-utils';
 
 interface MembersPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string }>;
 }
 
-export default async function MembersPage({ params }: MembersPageProps) {
+export default async function MembersPage({ params, searchParams }: MembersPageProps) {
   const { slug } = await params;
+  const searchParamsResolved = await searchParams;
 
   // Get handbook data
   const handbookData = await getHandbookBySlug(slug);
   if (!handbookData) {
     redirect('/404');
   }
+
+  // Get navigation context
+  const urlSearchParams = new URLSearchParams(searchParamsResolved);
+  const navigationContext = getNavigationContext(urlSearchParams, slug);
+  const defaultBackLink = getDefaultBackLink(slug, handbookData.title);
 
   // Check if user is authenticated and has admin permissions
   const cookieStore = await cookies();
@@ -73,12 +81,28 @@ export default async function MembersPage({ params }: MembersPageProps) {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
-            <Link href={`/${slug}`}>
-              <Button variant="outline" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Tillbaka till {handbookData.title}
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Smart navigation based on where user came from */}
+              <Link href={navigationContext?.href ?? defaultBackLink.href}>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {navigationContext?.title ?? defaultBackLink.title}
+                  </span>
+                  <span className="sm:hidden">Tillbaka</span>
+                </Button>
+              </Link>
+              
+              {/* Secondary navigation to settings if not coming from settings */}
+              {navigationContext?.source !== 'settings' && (
+                <Link href={`/${slug}/settings`}>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                    <Settings className="h-4 w-4" />
+                    <span className="hidden sm:inline">Inställningar</span>
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center gap-3 mb-4">

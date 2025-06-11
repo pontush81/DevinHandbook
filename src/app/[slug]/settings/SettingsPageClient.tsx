@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { buildUrlWithSource } from '@/lib/navigation-utils';
 
 interface SettingsPageClientProps {
   handbookData: {
@@ -219,13 +220,13 @@ export default function SettingsPageClient({
                   <span className="text-xs sm:text-sm font-medium text-gray-700 min-w-0">
                     {forumUpdating ? 'Sparar...' : (forumEnabled ? 'Aktiverat' : 'Inaktiverat')}
                   </span>
-                  {forumEnabled && (
-                    <Button variant="outline" size="sm" asChild className="hidden sm:flex">
-                      <Link href={`/${handbookSlug}/meddelanden`}>
-                        Visa meddelanden
-                      </Link>
-                    </Button>
-                  )}
+                                     {forumEnabled && (
+                     <Button variant="outline" size="sm" asChild className="hidden sm:flex">
+                       <Link href={buildUrlWithSource(`/${handbookSlug}/meddelanden`, 'settings')}>
+                         Visa meddelanden
+                       </Link>
+                     </Button>
+                   )}
                 </div>
               </div>
 
@@ -233,7 +234,7 @@ export default function SettingsPageClient({
               {forumEnabled && (
                 <div className="sm:hidden">
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link href={`/${handbookSlug}/meddelanden`}>
+                    <Link href={buildUrlWithSource(`/${handbookSlug}/meddelanden`, 'settings')}>
                       Visa meddelanden
                     </Link>
                   </Button>
@@ -252,7 +253,7 @@ export default function SettingsPageClient({
                   </div>
                 </div>
                 <Button variant="outline" size="sm" asChild className="self-start sm:self-center">
-                  <Link href={`/${handbookSlug}/members`}>
+                  <Link href={buildUrlWithSource(`/${handbookSlug}/members`, 'settings')}>
                     <Users className="h-4 w-4 mr-2 sm:hidden" />
                     Hantera medlemmar
                   </Link>
@@ -275,13 +276,7 @@ export default function SettingsPageClient({
             <div className="flex items-center gap-2">
               <User className="h-5 w-5 text-blue-600" />
               <CardTitle className="text-blue-900 text-base sm:text-lg">Mina inställningar</CardTitle>
-              <Badge className="bg-blue-100 text-blue-700 text-xs">
-                Personligt
-              </Badge>
             </div>
-            <CardDescription className="text-blue-700 text-sm">
-              Inställningar som bara påverkar dig
-            </CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-3 sm:space-y-4">
@@ -290,9 +285,9 @@ export default function SettingsPageClient({
               <div className="flex items-start gap-3">
                 <Mail className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <h4 className="font-medium text-gray-900 text-sm sm:text-base">E-postnotifikationer</h4>
+                  <h4 className="font-medium text-gray-900 text-sm sm:text-base">E-post</h4>
                   <p className="text-xs sm:text-sm text-gray-600">
-                    Få e-post när det skapas nya meddelanden eller svar
+                    Få meddelanden via e-post
                   </p>
                 </div>
               </div>
@@ -315,16 +310,9 @@ export default function SettingsPageClient({
                   />
                 </button>
                 <span className="text-xs sm:text-sm font-medium text-gray-700 min-w-0">
-                  {emailLoading ? 'Sparar...' : (emailNotifications ? 'Aktiverat' : 'Inaktiverat')}
+                  {emailLoading ? 'Sparar...' : (emailNotifications ? 'Påslagen' : 'Avstängd')}
                 </span>
               </div>
-            </div>
-
-            {/* Info for personal settings */}
-            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-xs sm:text-sm text-green-800">
-                <strong>💡 Personliga inställningar:</strong> Dessa inställningar påverkar bara dina notifikationer.
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -341,7 +329,7 @@ export default function SettingsPageClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {forumEnabled && (
                 <Button variant="outline" asChild className="h-auto p-3 text-left">
-                  <Link href={`/${handbookSlug}/meddelanden`}>
+                  <Link href={buildUrlWithSource(`/${handbookSlug}/meddelanden`, 'settings')}>
                     <div className="flex items-center gap-3">
                       <MessageSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />
                       <div>
@@ -354,7 +342,7 @@ export default function SettingsPageClient({
               )}
               {isAdmin && (
                 <Button variant="outline" asChild className="h-auto p-3 text-left">
-                  <Link href={`/${handbookSlug}/members`}>
+                  <Link href={buildUrlWithSource(`/${handbookSlug}/members`, 'settings')}>
                     <div className="flex items-center gap-3">
                       <Users className="h-5 w-5 text-green-600 flex-shrink-0" />
                       <div>
