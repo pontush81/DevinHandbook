@@ -83,7 +83,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const response = await fetch("/api/handbook/join-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handbookId, expiresInDays: 30 }),
+        body: JSON.stringify({ handbookId, expiresInDays: 90 }), // 3 months instead of 1
       });
 
       const data = await response.json();
@@ -92,9 +92,23 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         throw new Error(data.message || "Något gick fel");
       }
 
-      showMessage("Join-kod skapad!");
-      setShowJoinCode(true); // Automatically show the join code after creation
-      await fetchJoinCode(); // Refresh join code data
+      console.log('[MembersManager] Created join code, response data:', data);
+
+      // Set the join code data directly from the response
+      if (data.joinCode) {
+        const newJoinCodeData = {
+          joinCode: data.joinCode,
+          expiresAt: data.expiresAt,
+          isActive: true
+        };
+        console.log('[MembersManager] Setting join code data directly:', newJoinCodeData);
+        setJoinCodeData(newJoinCodeData);
+        setShowJoinCode(true); // Automatically show the join code after creation
+      } else {
+        // Fallback to fetchJoinCode if direct data isn't available
+        await fetchJoinCode();
+        setShowJoinCode(true);
+      }
     } catch (error) {
       console.error("Fel vid skapande av join-kod:", error);
       showMessage(error instanceof Error ? error.message : "Kunde inte skapa join-kod", true);
@@ -132,7 +146,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     if (joinCodeData.joinCode) {
       try {
         await navigator.clipboard.writeText(joinCodeData.joinCode);
-        showMessage("Join-kod kopierad till urklipp!");
+        // Silent copy - no notification needed
       } catch (error) {
         showMessage("Kunde inte kopiera join-kod", true);
       }
@@ -144,7 +158,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const joinUrl = `${window.location.origin}/signup?join=${joinCodeData.joinCode}`;
       try {
         await navigator.clipboard.writeText(joinUrl);
-        showMessage("Join-länk kopierad till urklipp!");
+        // Silent copy - no notification needed
       } catch (error) {
         showMessage("Kunde inte kopiera join-länk", true);
       }
@@ -167,7 +181,9 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       
       const data = await response.json();
       
-      console.log('[MembersManager] Fetched members:', data);
+      console.log('[MembersManager] Fetched members API response:', data);
+      console.log('[MembersManager] Members array length:', data.members?.length || 0);
+      console.log('[MembersManager] Members array:', data.members);
       setMembers(data.members || []);
     } catch (error) {
       console.error("Fel vid hämtning av medlemmar:", error);
@@ -320,7 +336,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         
         <p className="text-sm text-blue-700 mb-4">
           Skapa en join-kod som nya användare kan använda för att gå med i handboken. 
-          Dela koden eller länken med personer som ska ha tillgång.
+          Koden är aktiv i 3 månader av säkerhetsskäl och kan förnyas vid behov.
         </p>
 
         {joinCodeData.joinCode && joinCodeData.isActive ? (
@@ -379,8 +395,9 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
             </div>
 
             {joinCodeData.expiresAt && (
-              <p className="text-xs text-blue-600">
-                Kod går ut: {new Date(joinCodeData.expiresAt).toLocaleDateString('sv-SE')} {new Date(joinCodeData.expiresAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+              <p className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                ⏰ Koden går ut: {new Date(joinCodeData.expiresAt).toLocaleDateString('sv-SE')} 
+                (kan förnyas genom att klicka "Förnya kod")
               </p>
             )}
           </div>
@@ -439,7 +456,21 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       </div>
 
       <div className="border-t pt-4">
-        <h3 className="font-medium text-base sm:text-lg mb-3">Medlemmar</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium text-base sm:text-lg">Medlemmar</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log('[MembersManager] Manual refresh triggered');
+              fetchMembers();
+            }}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Laddar...' : 'Uppdatera'}
+          </Button>
+        </div>
         {isLoading ? (
           <div className="py-8 text-center text-gray-500 text-sm sm:text-base">Laddar medlemmar...</div>
         ) : members.length === 0 ? (

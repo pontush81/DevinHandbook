@@ -1084,6 +1084,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                 isEditMode={isEditMode}
                 isAdmin={isAdmin}
                 handbookId={handbookData.id}
+                handbookSlug={handbookData.handbookSlug}
                 onUpdateSection={updateSection}
                 onUpdatePage={updatePage}
                 onAddPage={addPage}

@@ -9,6 +9,7 @@ interface ContentAreaProps {
   isEditMode?: boolean;
   isAdmin?: boolean;
   handbookId: string;
+  handbookSlug?: string;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   onAddPage?: (sectionId: string, page: Partial<Page>) => Promise<{ id: string } | undefined>;
@@ -32,6 +33,7 @@ export function ContentArea({
   isEditMode = false, 
   isAdmin = false,
   handbookId, 
+  handbookSlug,
   onUpdateSection, 
   onUpdatePage, 
   onAddPage, 
@@ -101,6 +103,7 @@ export function ContentArea({
         onMoveSection={onMoveSection}
         trialStatusBar={trialStatusBar}
         handbookId={handbookId}
+        handbookSlug={handbookSlug}
         handbookData={handbookData}
         onUpdateHandbook={onUpdateHandbook}
       />

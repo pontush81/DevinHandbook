@@ -198,14 +198,22 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
                 </DropdownMenuItem>
               )}
 
-              {/* Hantera medlemmar - endast för admins */}
+              {/* Admin Settings - endast för admins */}
               {isAdmin && (
-                <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
-                  <Link href={`/${handbookSlug}/members`} className="flex items-center w-full">
-                    <Users className="mr-3 h-4 w-4" />
-                    <span className="text-sm">Hantera medlemmar</span>
-                  </Link>
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
+                    <Link href={`/${handbookSlug}/members`} className="flex items-center w-full">
+                      <Users className="mr-3 h-4 w-4" />
+                      <span className="text-sm">Hantera medlemmar</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
+                    <Link href={`/${handbookSlug}/admin-settings`} className="flex items-center w-full">
+                      <Settings className="mr-3 h-4 w-4" />
+                      <span className="text-sm">Handboksinställningar</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </>
               )}
               
               <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">

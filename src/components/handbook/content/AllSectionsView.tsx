@@ -9,6 +9,7 @@ import { IconPicker } from '@/components/ui/IconPicker';
 import { parseEditorJSContent, stringifyEditorJSContent } from '@/lib/utils/editorjs';
 import { getIconComponent } from '@/lib/icon-utils';
 import { OutputData } from '@editorjs/editorjs';
+import { HandbookAdminSettings } from '@/components/handbook/admin/HandbookAdminSettings';
 
 // Simple read-only content renderer for EditorJS data (used for pages only)
 const ReadOnlyEditorContent = ({ content }: { content: any }) => {
@@ -127,6 +128,7 @@ interface AllSectionsViewProps {
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   trialStatusBar?: React.ReactNode;
   handbookId?: string;
+  handbookSlug?: string;
   handbookData?: {
     id: string;
     title: string;
@@ -148,6 +150,7 @@ export function AllSectionsView({
   onMoveSection,
   trialStatusBar,
   handbookId,
+  handbookSlug,
   handbookData,
   onUpdateHandbook
 }: AllSectionsViewProps) {
@@ -320,6 +323,19 @@ export function AllSectionsView({
       
       {/* Content with clean styling */}
       <div className="max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12">
+        {/* Admin Settings Panel - only in edit mode */}
+        {isEditMode && handbookData && handbookSlug && (
+          <HandbookAdminSettings
+            handbookData={handbookData}
+            handbookSlug={handbookSlug}
+            isAdmin={isAdmin}
+            onUpdateHandbook={onUpdateHandbook}
+            onOpenMembersManager={() => {
+              window.location.href = `/${handbookSlug}/members`;
+            }}
+          />
+        )}
+
         {/* Header explaining structure - only in edit mode */}
         {isEditMode && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -327,29 +343,6 @@ export function AllSectionsView({
             <p className="text-sm text-blue-700 mb-3">
               <strong>Sektioner</strong> (📁) innehåller <strong>sidor</strong> (📄). I redigeringsläget kan du klicka direkt på titlar och innehåll för att redigera det, eller använda radera-knapparna för att ta bort sektioner och sidor.
             </p>
-            
-            {/* Handbook Settings - endast för admins */}
-            {handbookData && isAdmin && (
-              <div className="mb-4 p-3 bg-white border border-blue-200 rounded">
-                <h4 className="font-medium text-blue-900 mb-3">⚙️ Handboksinställningar</h4>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="forum-enabled"
-                    checked={handbookData.forum_enabled || false}
-                    onChange={(e) => {
-                      if (onUpdateHandbook) {
-                        onUpdateHandbook(handbookData.id, { forum_enabled: e.target.checked });
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <label htmlFor="forum-enabled" className="text-sm text-blue-700">
-                    <strong>Aktivera meddelanden</strong> (Låter boende ställa frågor och dela tips)
-                  </label>
-                </div>
-              </div>
-            )}
             
             <Button
               onClick={handleAddSection}
