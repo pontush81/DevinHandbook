@@ -41,28 +41,27 @@ function ConfirmEmailContent() {
           return;
         }
 
-        // Token är giltig, bekräfta användaren
+        // Token är giltig, bekräfta användaren via säker server-side endpoint
         setMessage('Token verifierad! Bekräftar ditt konto...');
 
-        // Bekräfta användaren i Supabase
-        const { error: adminError } = await supabase.auth.admin.updateUserById(userId, {
-          email_confirm: true
+        // Bekräfta användaren via säker server-endpoint (inte client-side admin calls!)
+        const confirmResponse = await fetch('/api/auth/confirm-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            token, 
+            userId, 
+            email, 
+            timestamp,
+            joinCode 
+          }),
         });
 
-        if (adminError) {
-          console.error('Error confirming user:', adminError);
-          // Försök igen med dev API
-          const confirmResponse = await fetch('/api/dev/confirm-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, joinCode }),
-          });
-
-          if (!confirmResponse.ok) {
-            setStatus('error');
-            setMessage('Kunde inte bekräfta ditt konto. Försök igen eller kontakta support.');
-            return;
-          }
+        if (!confirmResponse.ok) {
+          const errorData = await confirmResponse.json();
+          setStatus('error');
+          setMessage(errorData.error || 'Kunde inte bekräfta ditt konto. Försök igen eller kontakta support.');
+          return;
         }
 
         setStatus('success');

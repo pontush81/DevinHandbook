@@ -17,6 +17,8 @@
     "check-stripe": "node scripts/check-stripe-mode.js",
     "fix-routes": "node scripts/fix-duplicate-routes.js",
     "check-architecture": "./scripts/check-architecture.sh",
+    "security:check": "node scripts/security-check.js",
+    "security:full": "npm run security:check && npm audit && npx snyk test",
     "devfix": "npm run fix-routes && npm run dev"
   },
   "dependencies": {

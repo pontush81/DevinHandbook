@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
-  // Only allow in development
+  // DEPRECATED: This endpoint is deprecated in favor of /api/auth/confirm-user
+  // Only allow in development and log deprecation warning
   if (process.env.NODE_ENV !== 'development') {
+    console.error('[SECURITY] Attempt to access dev endpoint in production blocked');
     return NextResponse.json(
       { error: 'This endpoint is only available in development' },
       { status: 403 }
     );
   }
+
+  console.warn('[DEPRECATED] /api/dev/confirm-user is deprecated. Use /api/auth/confirm-user instead.');
 
   try {
     const { userId, joinCode } = await request.json();

@@ -42,6 +42,11 @@ if (typeof window !== 'undefined') {
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase miljövariabler saknas! Applikationen kommer inte att fungera korrekt.');
   }
+  
+  // SECURITY WARNING: Admin operations should NEVER be called from client-side
+  if ('admin' in (globalThis as any) || (globalThis as any).supabaseAdmin) {
+    console.warn('⚠️ SECURITY: Admin Supabase client detected on client-side. This is a security risk!');
+  }
 }
 
 // Server-side check (för att undvika fel i browsers)
