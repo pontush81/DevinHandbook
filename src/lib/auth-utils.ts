@@ -114,4 +114,32 @@ export async function hasHandbookAccess(userId: string, handbookId: string): Pro
     console.error('Oväntat fel vid kontroll av handbok åtkomst:', error);
     return false;
   }
+}
+
+/**
+ * Hämtar användarens roll för en viss handbok
+ */
+export async function getUserRole(userId: string, handbookId: string): Promise<'admin' | 'editor' | 'viewer' | null> {
+  if (!userId || !handbookId) return null;
+  
+  try {
+    const supabase = getServiceSupabase();
+    
+    const { data, error } = await supabase
+      .from('handbook_members')
+      .select('role')
+      .eq('handbook_id', handbookId)
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Fel vid hämtning av användarroll:', error);
+      return null;
+    }
+    
+    return data?.role as 'admin' | 'editor' | 'viewer' | null;
+  } catch (error) {
+    console.error('Oväntat fel vid hämtning av användarroll:', error);
+    return null;
+  }
 } 

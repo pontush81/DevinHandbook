@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import NotificationSettings from '@/components/NotificationSettings';
+
 import AdminNotificationControls from '@/components/AdminNotificationControls';
 
 interface Message {
@@ -79,7 +79,7 @@ export function MessagesPageClient({
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [accessLoading, setAccessLoading] = useState(true);
   const [showNewMessageForm, setShowNewMessageForm] = useState(false);
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+
   const [userRole, setUserRole] = useState<string | null>(null);
   const [deletingMessage, setDeletingMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -563,15 +563,7 @@ export function MessagesPageClient({
               <p className="text-gray-600">Ställ frågor, dela tips och håll dig uppdaterad</p>
             </div>
             <div className="flex gap-3 shrink-0">
-              <Button 
-                onClick={() => setShowNotificationSettings(true)} 
-                variant="outline"
-                className="h-10 px-4 text-sm font-medium"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Notifikationer</span>
-                <span className="sm:hidden">Notif.</span>
-              </Button>
+
               <Button 
                 onClick={() => openNewMessageForm()} 
                 className="bg-blue-600 hover:bg-blue-700 text-white h-10 px-4 text-sm font-medium"
@@ -949,38 +941,7 @@ export function MessagesPageClient({
         </DialogContent>
       </Dialog>
 
-      {/* Notification Settings Dialog */}
-      <Dialog open={showNotificationSettings} onOpenChange={setShowNotificationSettings}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden !bg-white shadow-2xl border border-gray-200 rounded-lg z-50 mx-4">
-          <DialogHeader className="space-y-3 pb-4 border-b border-gray-100">
-            <DialogTitle className="text-xl font-semibold text-gray-900">
-              Notifikationsinställningar
-            </DialogTitle>
-            <DialogDescription className="text-gray-600">
-              Välj hur du vill få notifikationer om nya meddelanden och svar.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="overflow-y-auto max-h-[calc(85vh-180px)]">
-            {handbookId && (
-              <NotificationSettings 
-                handbookId={handbookId} 
-                handbookName={handbookTitle}
-              />
-            )}
-          </div>
 
-          <DialogFooter className="pt-4 border-t border-gray-100">
-            <Button
-              variant="outline"
-              onClick={() => setShowNotificationSettings(false)}
-              className="w-full"
-            >
-              Stäng
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 } 

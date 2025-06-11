@@ -1,20 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Mail, Smartphone, Check, X } from 'lucide-react';
+import { Bell, Mail, Check, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface NotificationPreferences {
   id: string;
-  email_new_topics: boolean;
-  email_new_replies: boolean;
-  email_mentions: boolean;
-  app_new_topics: boolean;
-  app_new_replies: boolean;
-  app_mentions: boolean;
+  email_notifications: boolean;
 }
 
 interface NotificationSettingsProps {
@@ -41,7 +35,15 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
         throw new Error(data.error || 'Kunde inte ladda inställningar');
       }
 
-      setPreferences(data.preferences);
+      // Convert old format to new simplified format
+      const emailEnabled = data.preferences?.email_new_topics || 
+                          data.preferences?.email_new_replies || 
+                          false;
+
+      setPreferences({
+        id: data.preferences?.id || '',
+        email_notifications: emailEnabled
+      });
     } catch (error) {
       console.error('Error loading preferences:', error);
       setMessage({ type: 'error', text: 'Kunde inte ladda notifikationsinställningar' });
@@ -62,7 +64,13 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
         },
         body: JSON.stringify({
           handbook_id: handbookId,
-          ...preferences
+          // Map simplified setting to old format for backward compatibility
+          email_new_topics: preferences.email_notifications,
+          email_new_replies: preferences.email_notifications,
+          email_mentions: false,
+          app_new_topics: false,
+          app_new_replies: false,
+          app_mentions: false
         }),
       });
 
@@ -84,12 +92,12 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
     }
   }
 
-  function updatePreference(key: keyof NotificationPreferences, value: boolean) {
+  function toggleEmailNotifications() {
     if (!preferences) return;
     
     setPreferences({
       ...preferences,
-      [key]: value
+      email_notifications: !preferences.email_notifications
     });
   }
 
@@ -129,7 +137,7 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
           Notifikationsinställningar
         </CardTitle>
         <CardDescription>
-          Hantera hur du vill få notifikationer för {handbookName}
+          Välj hur du vill få notifikationer för {handbookName}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -153,96 +161,25 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
             <h3 className="font-medium">E-postnotifikationer</h3>
           </div>
           
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Nya meddelanden</p>
-                <p className="text-xs text-gray-600">
-                  Få e-post när någon skapar ett nytt meddelande
-                </p>
-              </div>
-              <Switch
-                checked={preferences.email_new_topics}
-                onCheckedChange={(checked) => updatePreference('email_new_topics', checked)}
-              />
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <p className="font-medium text-sm">Få e-post om aktivitet i handboken</p>
+              <p className="text-xs text-gray-600">
+                Du får e-post när det skapas nya meddelanden eller svar
+              </p>
             </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Nya svar</p>
-                <p className="text-xs text-gray-600">
-                  Få e-post när någon svarar på meddelanden du deltar i
-                </p>
-              </div>
-              <Switch
-                checked={preferences.email_new_replies}
-                onCheckedChange={(checked) => updatePreference('email_new_replies', checked)}
+            <button
+              onClick={toggleEmailNotifications}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                preferences.email_notifications ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  preferences.email_notifications ? 'translate-x-6' : 'translate-x-1'
+                }`}
               />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Omnämnanden</p>
-                <p className="text-xs text-gray-600">
-                  Få e-post när någon nämner dig (framtida funktion)
-                </p>
-              </div>
-              <Switch
-                checked={preferences.email_mentions}
-                onCheckedChange={(checked) => updatePreference('email_mentions', checked)}
-                disabled={true}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* App-notifikationer */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <Smartphone className="h-4 w-4 text-green-600" />
-            <h3 className="font-medium">In-app notifikationer</h3>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Nya meddelanden</p>
-                <p className="text-xs text-gray-600">
-                  Visa notifikationer i appen för nya meddelanden
-                </p>
-              </div>
-              <Switch
-                checked={preferences.app_new_topics}
-                onCheckedChange={(checked) => updatePreference('app_new_topics', checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Nya svar</p>
-                <p className="text-xs text-gray-600">
-                  Visa notifikationer i appen för nya svar
-                </p>
-              </div>
-              <Switch
-                checked={preferences.app_new_replies}
-                onCheckedChange={(checked) => updatePreference('app_new_replies', checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Omnämnanden</p>
-                <p className="text-xs text-gray-600">
-                  Visa notifikationer när någon nämner dig (framtida funktion)
-                </p>
-              </div>
-              <Switch
-                checked={preferences.app_mentions}
-                onCheckedChange={(checked) => updatePreference('app_mentions', checked)}
-                disabled={true}
-              />
-            </div>
+            </button>
           </div>
         </div>
 

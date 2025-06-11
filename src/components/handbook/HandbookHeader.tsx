@@ -128,7 +128,7 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
           </div>
         </div>
 
-        {/* Right section - Edit button and User menu */}
+        {/* Right section - Edit button, Settings button and User menu */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0" data-debug="handbook-header-right">
           {/* Edit Mode Toggle */}
           {canEdit && (
@@ -149,6 +149,22 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
               <span className="sm:hidden">
                 {isEditMode ? 'Spara' : 'Redigera'}
               </span>
+            </Button>
+          )}
+
+          {/* Settings Button - only for logged in users */}
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="h-8 px-2 sm:px-3 text-xs sm:text-sm font-medium border-blue-300 text-blue-700 hover:bg-blue-50 transition-all duration-200"
+            >
+              <Link href={`/${handbookSlug}/settings`}>
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Inställningar</span>
+                <span className="sm:hidden">Inställningar</span>
+              </Link>
             </Button>
           )}
 
@@ -196,24 +212,6 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
                     <span className="text-sm">Dashboard</span>
                   </Link>
                 </DropdownMenuItem>
-              )}
-
-              {/* Admin Settings - endast för admins */}
-              {isAdmin && (
-                <>
-                  <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
-                    <Link href={`/${handbookSlug}/members`} className="flex items-center w-full">
-                      <Users className="mr-3 h-4 w-4" />
-                      <span className="text-sm">Hantera medlemmar</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
-                    <Link href={`/${handbookSlug}/admin-settings`} className="flex items-center w-full">
-                      <Settings className="mr-3 h-4 w-4" />
-                      <span className="text-sm">Handboksinställningar</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </>
               )}
               
               <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">

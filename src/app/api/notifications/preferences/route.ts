@@ -94,9 +94,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  console.log('🔔 PUT /api/notifications/preferences started');
+  
   try {
     const session = await getServerSession();
+    console.log('📝 Session check:', { hasSession: !!session, userId: session?.user?.id });
+    
     if (!session?.user) {
+      console.log('❌ No valid session found');
       return NextResponse.json(
         { error: 'Du måste vara inloggad' },
         { status: 401 }
@@ -104,6 +109,8 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('📦 Request body:', body);
+    
     const {
       handbook_id,
       email_new_topics,
@@ -115,6 +122,7 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     if (!handbook_id) {
+      console.log('❌ Missing handbook_id');
       return NextResponse.json(
         { error: 'handbook_id är obligatorisk' },
         { status: 400 }
@@ -122,8 +130,11 @@ export async function PUT(request: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
+    console.log('🔗 Supabase client created');
 
     // Verify user has access to this handbook
+    console.log('🔍 Checking handbook access for:', { handbookId: handbook_id, userId: session.user.id });
+    
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('id')
@@ -131,46 +142,61 @@ export async function PUT(request: NextRequest) {
       .eq('user_id', session.user.id)
       .single();
 
+    console.log('👥 Member check result:', { memberData, memberError });
+
     if (memberError || !memberData) {
+      console.log('❌ Access denied - user not member of handbook');
       return NextResponse.json(
         { error: 'Du har inte behörighet till denna handbok' },
         { status: 403 }
       );
     }
 
+    // Prepare update data
+    const updateData = {
+      user_id: session.user.id,
+      handbook_id: handbook_id,
+      email_new_topics: email_new_topics ?? true,
+      email_new_replies: email_new_replies ?? true,
+      email_mentions: email_mentions ?? false,
+      app_new_topics: app_new_topics ?? false,
+      app_new_replies: app_new_replies ?? false,
+      app_mentions: app_mentions ?? false,
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('💾 Updating preferences with data:', updateData);
+
     // Update notification preferences
     const { data: updatedPreferences, error: updateError } = await supabase
       .from('user_notification_preferences')
-      .upsert({
-        user_id: session.user.id,
-        handbook_id: handbook_id,
-        email_new_topics: email_new_topics ?? true,
-        email_new_replies: email_new_replies ?? true,
-        email_mentions: email_mentions ?? true,
-        app_new_topics: app_new_topics ?? true,
-        app_new_replies: app_new_replies ?? true,
-        app_mentions: app_mentions ?? true,
-        updated_at: new Date().toISOString()
+      .upsert(updateData, { 
+        onConflict: 'user_id,handbook_id',
+        ignoreDuplicates: false 
       })
       .select()
       .single();
 
+    console.log('📊 Update result:', { updatedPreferences, updateError });
+
     if (updateError) {
-      console.error('Error updating preferences:', updateError);
+      console.error('❌ Error updating preferences:', updateError);
       return NextResponse.json(
-        { error: 'Kunde inte uppdatera notifikationsinställningar' },
+        { error: 'Kunde inte uppdatera notifikationsinställningar', details: updateError.message },
         { status: 500 }
       );
     }
 
+    console.log('✅ Preferences updated successfully');
+    
     return NextResponse.json({
       success: true,
       preferences: updatedPreferences
     });
   } catch (error) {
-    console.error('Error in PUT /api/notifications/preferences:', error);
+    console.error('💥 Unexpected error in PUT /api/notifications/preferences:', error);
     return NextResponse.json(
-      { error: 'Internt serverfel' },
+      { error: 'Internt serverfel', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

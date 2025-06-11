@@ -10,8 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-import NotificationSettings from '@/components/NotificationSettings';
-import AdminNotificationControls from '@/components/AdminNotificationControls';
+
+
 
 interface AdminSettingsClientProps {
   handbookData: {
@@ -163,31 +163,9 @@ export default function AdminSettingsClient({
           </CardContent>
         </Card>
 
-        {/* Notifikationsinställningar */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-purple-600" />
-              Notifikationsinställningar
-            </CardTitle>
-            <CardDescription>
-              Hantera e-post och app-notifikationer för dig själv
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <NotificationSettings 
-              handbookId={handbookData.id} 
-              handbookName={handbookData.title}
-            />
-          </CardContent>
-        </Card>
 
-        {/* Admin Notification Controls */}
-        <AdminNotificationControls 
-          handbookId={handbookData.id}
-          handbookName={handbookData.title}
-          userRole="admin"
-        />
+
+
 
         {/* Medlemshantering */}
         <Card>
@@ -202,13 +180,15 @@ export default function AdminSettingsClient({
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
-              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <Users className="h-12 w-12 mx-auto mb-4 text-green-300" />
               <h4 className="font-medium text-gray-900 mb-2">Medlemshantering</h4>
               <p className="text-gray-600 mb-4">
-                Denna funktionalitet kommer att implementeras i nästa version
+                Bjud in nya medlemmar och hantera användarroller
               </p>
-              <Button variant="outline" disabled>
-                Kommer snart
+              <Button variant="outline" asChild>
+                <Link href={`/${handbookSlug}/members`}>
+                  Hantera medlemmar
+                </Link>
               </Button>
             </div>
           </CardContent>
