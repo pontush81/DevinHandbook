@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { AlertCircle, CheckCircle2, Loader2, Gift } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Gift, Upload } from "lucide-react";
+import { DocumentImport } from "@/components/handbook/DocumentImport";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function CreateHandbookForm() {
   const { user } = useAuth();
@@ -18,6 +20,8 @@ export function CreateHandbookForm() {
   const [isEligibleForProvState, setIsEligibleForProvState] = useState<boolean>(false);
   const [provStatus, setProvStatus] = useState<any>(null);
   const [isCheckingProv, setIsCheckingProv] = useState(true);
+  const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual');
+  const [importedSections, setImportedSections] = useState<any[]>([]);
 
   // Kontrollera prov-status när komponenten laddas
   useEffect(() => {
@@ -140,6 +144,19 @@ export function CreateHandbookForm() {
     }, 500);
   };
 
+  const handleImportComplete = (sections: any[]) => {
+    setImportedSections(sections);
+    // Auto-fyll namn baserat på första sektionen eller dokumenttitel
+    if (sections.length > 0 && !name) {
+      const firstSection = sections[0];
+      const suggestedName = firstSection.title.includes('handbok') 
+        ? firstSection.title 
+        : `${firstSection.title} Handbok`;
+      setName(suggestedName);
+    }
+    setActiveTab('manual'); // Växla tillbaka till manual för att visa formuläret
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -166,6 +183,37 @@ export function CreateHandbookForm() {
     setError(null);
 
     try {
+      // Använd importerade sektioner om de finns, annars standard-template
+      const templateSections = importedSections.length > 0 
+        ? importedSections.map((section, index) => ({
+            title: section.title,
+            description: section.content.substring(0, 200) + '...',
+            order: index + 1,
+            isActive: true,
+            pages: [{
+              title: section.title,
+              content: section.content,
+              order: 1,
+              slug: section.title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+            }]
+          }))
+        : [
+            {
+              title: "Välkommen",
+              description: "Introduktion och översikt",
+              order: 1,
+              isActive: true,
+              pages: [
+                {
+                  title: "Översikt",
+                  content: "Välkommen till din digitala handbok! Här hittar du all viktig information om din bostadsrättsförening.",
+                  order: 1,
+                  slug: "oversikt"
+                }
+              ]
+            }
+          ];
+
       const handbookData = {
         name: name,
         subdomain: subdomain,
@@ -182,7 +230,7 @@ export function CreateHandbookForm() {
               email: ''
             }
           },
-          sections: [
+          sections: templateSections.length > 0 ? templateSections : [
             {
               title: "Välkommen",
               description: "Introduktion och översikt",
@@ -403,7 +451,53 @@ export function CreateHandbookForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Tabs för att välja mellan manuell och import */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'import')} className="mb-8">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="manual" className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Skapa manuellt
+            </TabsTrigger>
+            <TabsTrigger value="import" className="flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Importera befintlig handbok
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="import" className="mt-6">
+            <DocumentImport 
+              onImportComplete={handleImportComplete}
+              isLoading={isLoading}
+            />
+            
+            {importedSections.length > 0 && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-green-800">Import slutförd!</span>
+                </div>
+                <p className="text-sm text-green-700 mb-3">
+                  {importedSections.length} sektioner importerades från ditt dokument. 
+                  Växla till "Skapa manuellt" för att slutföra handboksskapandet.
+                </p>
+                <div className="space-y-1">
+                  {importedSections.slice(0, 3).map((section, index) => (
+                    <div key={index} className="text-xs text-green-600">
+                      • {section.title}
+                    </div>
+                  ))}
+                  {importedSections.length > 3 && (
+                    <div className="text-xs text-green-600">
+                      ... och {importedSections.length - 3} till
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="manual" className="mt-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label htmlFor="name" className="block text-sm font-semibold text-gray-900">
               Handbokens namn
@@ -494,6 +588,8 @@ export function CreateHandbookForm() {
             </p>
           </div>
         </form>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
