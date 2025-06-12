@@ -33,6 +33,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text och metadata krävs' }, { status: 400 });
     }
 
+    // Kontrollera om texten är för kort eller är en fallback-text
+    if (text.trim().length < 100 || text.includes('textextraktion misslyckades')) {
+      return NextResponse.json({ 
+        error: 'Dokumentet kunde inte bearbetas automatiskt. Textextraktionen misslyckades eller texten är för kort för AI-analys. Vänligen ladda upp dokumentet i ett annat format eller skapa handboken manuellt.',
+        fallback: true
+      }, { status: 400 });
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ 
         error: 'OpenAI API-nyckel är inte konfigurerad' 

@@ -147,6 +147,11 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
       });
 
       if (!analysisResponse.ok) {
+        const errorData = await analysisResponse.json();
+        if (errorData.fallback) {
+          // Speciell hantering för fallback-fall
+          throw new Error(errorData.error);
+        }
         throw new Error('Misslyckades med AI-analys');
       }
 
