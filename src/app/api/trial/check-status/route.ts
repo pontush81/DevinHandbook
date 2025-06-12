@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       console.error('Error fetching user profile:', profileError);
       // Om användaren inte har en profil, skapa en med default trial
       if (profileError.code === 'PGRST116') {
+        console.log('Creating new user profile for userId:', userId);
         const trialEndsAt = new Date();
         trialEndsAt.setDate(trialEndsAt.getDate() + 30);
         
@@ -54,10 +55,12 @@ export async function GET(req: NextRequest) {
         if (createError) {
           console.error('Error creating user profile:', createError);
           return NextResponse.json(
-            { error: 'Failed to create user profile' },
+            { error: 'Failed to create user profile: ' + createError.message },
             { status: 500 }
           );
         }
+        
+        console.log('User profile created successfully:', newProfile);
         
         // Använd den nya profilen för beräkningar
         const trialDaysRemaining = Math.max(0, Math.ceil((new Date(newProfile.trial_ends_at!).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
@@ -71,8 +74,9 @@ export async function GET(req: NextRequest) {
           hasUsedTrial: false
         });
       } else {
+        console.error('Unhandled profile error:', profileError);
         return NextResponse.json(
-          { error: 'Failed to fetch user profile' },
+          { error: 'Failed to fetch user profile: ' + profileError.message },
           { status: 500 }
         );
       }
