@@ -44,40 +44,56 @@ export async function POST(request: NextRequest) {
 
       if (fileData.file_type === 'application/pdf') {
         try {
-          // Försök först med pdf-parse
-          const pdf = (await import('pdf-parse')).default;
-          const pdfData = await pdf(buffer);
-          extractedText = pdfData.text;
-          metadata.totalPages = pdfData.numpages;
-          metadata.documentType = 'pdf';
-        } catch (pdfError) {
-          console.error('PDF parsing with pdf-parse failed:', pdfError);
+          // Använd pdfjs-dist direkt istället för pdf-parse som har problem
+          const pdfjsLib = await import('pdfjs-dist');
           
-          try {
-            // Backup: använd pdfjs-dist
-            const pdfjsLib = await import('pdfjs-dist');
-            const pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
-            metadata.totalPages = pdfDoc.numPages;
-            
-            let fullText = '';
-            for (let i = 1; i <= pdfDoc.numPages; i++) {
+          // Konfigurera worker för server-side användning
+          pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+          
+          const pdfDoc = await pdfjsLib.getDocument({ 
+            data: buffer,
+            useSystemFonts: true,
+            disableFontFace: true
+          }).promise;
+          
+          metadata.totalPages = pdfDoc.numPages;
+          
+          let fullText = '';
+          for (let i = 1; i <= pdfDoc.numPages; i++) {
+            try {
               const page = await pdfDoc.getPage(i);
               const textContent = await page.getTextContent();
               const pageText = textContent.items
-                .map((item: any) => item.str)
+                .filter((item: any) => item.str && typeof item.str === 'string')
+                .map((item: any) => item.str.trim())
+                .filter((str: string) => str.length > 0)
                 .join(' ');
-              fullText += pageText + '\n';
+              
+              if (pageText.trim()) {
+                fullText += pageText + '\n\n';
+              }
+            } catch (pageError) {
+              console.error(`Error processing page ${i}:`, pageError);
+              // Fortsätt med nästa sida
             }
-            
-            extractedText = fullText;
-            metadata.documentType = 'pdf_pdfjs';
-          } catch (pdfjsError) {
-            console.error('PDF parsing with pdfjs failed:', pdfjsError);
-            // Sista fallback: försök extrahera som text (kommer troligen inte fungera för PDF)
-            extractedText = buffer.toString('utf-8');
-            metadata.documentType = 'pdf_fallback';
-            metadata.totalPages = 1;
           }
+          
+          extractedText = fullText.trim();
+          metadata.documentType = 'pdf_pdfjs';
+          
+          // Om ingen text extraherades, försök fallback
+          if (!extractedText || extractedText.length < 10) {
+            console.log('No meaningful text extracted from PDF, using fallback');
+            extractedText = 'PDF-dokument uppladdad - textextraktion misslyckades. Manuell bearbetning krävs.';
+            metadata.documentType = 'pdf_no_text';
+          }
+          
+        } catch (pdfError) {
+          console.error('PDF parsing with pdfjs failed:', pdfError);
+          // Fallback: skapa en placeholder-text
+          extractedText = 'PDF-dokument uppladdad - textextraktion misslyckades. Manuell bearbetning krävs.';
+          metadata.documentType = 'pdf_fallback';
+          metadata.totalPages = 1;
         }
       } 
       else if (fileData.file_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
@@ -119,8 +135,16 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
+      // Rensa texten från problematiska Unicode-tecken
+      extractedText = extractedText
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Ta bort kontrolltecken
+        .replace(/[\uFFFE\uFFFF]/g, '') // Ta bort ogiltiga Unicode-tecken
+        .trim();
+
       // Uppdatera databasen med extraherad text
-      const { error: updateError } = await supabase
+      console.log('Attempting to update database with extracted text length:', extractedText.length);
+      
+      const { data: updateData, error: updateError } = await supabase
         .from('document_imports')
         .update({ 
           status: 'text_extracted',
@@ -133,16 +157,20 @@ export async function POST(request: NextRequest) {
               characterCount: extractedText.length,
               extractedAt: new Date().toISOString()
             }
-          }
+          },
+          updated_at: new Date().toISOString()
         })
-        .eq('id', fileId);
+        .eq('id', fileId)
+        .select();
 
       if (updateError) {
         console.error('Fel vid uppdatering av databas:', updateError);
         return NextResponse.json({ 
-          error: 'Kunde inte spara extraherad text' 
+          error: 'Kunde inte spara extraherad text: ' + updateError.message 
         }, { status: 500 });
       }
+
+      console.log('Database update successful:', updateData);
 
       return NextResponse.json({ 
         success: true,
