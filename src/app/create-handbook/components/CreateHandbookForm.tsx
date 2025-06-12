@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { AlertCircle, CheckCircle2, Loader2, Gift, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Gift, Upload, Brain } from "lucide-react";
 import { DocumentImport } from "@/components/handbook/DocumentImport";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createTemplateFromImportedSections, getDefaultTemplate } from "@/lib/handbook-templates";
+
 
 export function CreateHandbookForm() {
   const { user } = useAuth();
@@ -22,6 +23,115 @@ export function CreateHandbookForm() {
   const [isCheckingProv, setIsCheckingProv] = useState(true);
   const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual');
   const [importedSections, setImportedSections] = useState<any[]>([]);
+  const [importStatus, setImportStatus] = useState({ hasFile: false, isAnalyzing: false, hasResults: false });
+  const [isRestoringState, setIsRestoringState] = useState(false);
+
+  // Refs för att bevara state vid fönsterbyte
+  const importedSectionsRef = useRef<any[]>([]);
+  const activeTabRef = useRef<'manual' | 'import'>('manual');
+  const nameRef = useRef<string>('');
+  const subdomainRef = useRef<string>('');
+
+  // Synkronisera state med refs
+  useEffect(() => {
+    importedSectionsRef.current = importedSections;
+  }, [importedSections]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    nameRef.current = name;
+  }, [name]);
+
+  useEffect(() => {
+    subdomainRef.current = subdomain;
+  }, [subdomain]);
+
+  // Återställ state från refs vid fönsterbyte
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Återställ importerade sektioner om de försvunnit
+        if (importedSections.length === 0 && importedSectionsRef.current.length > 0) {
+          console.log('🔄 Återställer importerade sektioner efter fönsterbyte');
+          setImportedSections(importedSectionsRef.current);
+        }
+        
+        // Återställ aktiv tab om den förändrats
+        if (activeTab !== activeTabRef.current) {
+          console.log('🔄 Återställer aktiv tab efter fönsterbyte');
+          setActiveTab(activeTabRef.current);
+        }
+
+        // Återställ namn och subdomain om de försvunnit
+        if (!name && nameRef.current) {
+          console.log('🔄 Återställer namn efter fönsterbyte');
+          setName(nameRef.current);
+        }
+        
+        if (!subdomain && subdomainRef.current) {
+          console.log('🔄 Återställer subdomain efter fönsterbyte');
+          setSubdomain(subdomainRef.current);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [importedSections, activeTab, name, subdomain]);
+
+  // Återställ från localStorage vid komponentstart
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem('handbook-form-state');
+      const savedTimestamp = localStorage.getItem('handbook-form-timestamp');
+      
+      if (savedState && savedTimestamp) {
+        const timestamp = parseInt(savedTimestamp);
+        const now = Date.now();
+        const tenMinutes = 10 * 60 * 1000; // 10 minuter i millisekunder
+        
+        // Återställ endast om det är mindre än 10 minuter sedan
+        if (now - timestamp < tenMinutes) {
+          const state = JSON.parse(savedState);
+          console.log('🔄 Återställer formulärstate från localStorage:', state);
+          
+          setIsRestoringState(true);
+          
+          // Återställ alla fält
+          if (state.name) setName(state.name);
+          if (state.subdomain) setSubdomain(state.subdomain);
+          if (state.activeTab) setActiveTab(state.activeTab);
+          if (state.importedSections && state.importedSections.length > 0) {
+            setImportedSections(state.importedSections);
+          }
+          
+          // Kontrollera subdomain-tillgänglighet om det finns en subdomain
+          if (state.subdomain && state.subdomain.length >= 2) {
+            setTimeout(() => {
+              checkSubdomainAvailability(state.subdomain);
+            }, 500);
+          }
+          
+          // Dölj återställningsindikator efter en kort stund
+          setTimeout(() => {
+            setIsRestoringState(false);
+          }, 2000);
+        } else {
+          // Rensa gamla data
+          localStorage.removeItem('handbook-form-state');
+          localStorage.removeItem('handbook-form-timestamp');
+          // Rensa även gamla format
+          localStorage.removeItem('handbook-import-sections');
+          localStorage.removeItem('handbook-import-timestamp');
+        }
+      }
+    } catch (error) {
+      console.warn('Kunde inte återställa från localStorage:', error);
+    }
+  }, []);
 
   // Kontrollera prov-status när komponenten laddas
   useEffect(() => {
@@ -144,18 +254,102 @@ export function CreateHandbookForm() {
     }, 500);
   };
 
-  const handleImportComplete = (sections: any[]) => {
+  const handleImportComplete = useCallback((sections: any[]) => {
+    console.log('🎯 [IMPORT] Import complete, received sections:', {
+      count: sections.length,
+      sections: sections.map(s => ({ title: s.title, contentLength: s.content?.length }))
+    });
+    
     setImportedSections(sections);
-    // Auto-fyll namn baserat på första sektionen eller dokumenttitel
-    if (sections.length > 0 && !name) {
-      const firstSection = sections[0];
-      const suggestedName = firstSection.title.includes('handbok') 
-        ? firstSection.title 
-        : `${firstSection.title} Handbok`;
-      setName(suggestedName);
+    console.log('🎯 [IMPORT] State updated with sections:', sections.length);
+    
+    // INTE växla tab automatiskt - låt användaren se resultatet i import-vyn
+    // Detta gör UX:en tydligare och mindre förvirrande
+    console.log('🎯 [IMPORT] Keeping user in import tab to show results');
+    
+    // Verifiera att state faktiskt uppdaterades
+    setTimeout(() => {
+      console.log('🔍 [IMPORT] Verifying state update after timeout:', {
+        importedSectionsLength: sections.length,
+        firstSectionTitle: sections[0]?.title
+      });
+    }, 100);
+    
+    // State sparas automatiskt via useEffect, men spara direkt också för säkerhets skull
+    setTimeout(() => {
+      try {
+        const formState = {
+          name,
+          subdomain,
+          activeTab, // Behåll nuvarande tab (import)
+          importedSections: sections, // Use the new sections directly
+          timestamp: Date.now()
+        };
+        
+        localStorage.setItem('handbook-form-state', JSON.stringify(formState));
+        localStorage.setItem('handbook-form-timestamp', Date.now().toString());
+        
+        console.log('💾 [IMPORT] Sparar formulärstate efter import:', {
+          sectionsCount: formState.importedSections.length,
+          activeTab: formState.activeTab,
+          sectionTitles: formState.importedSections.map(s => s.title)
+        });
+      } catch (error) {
+        console.warn('Kunde inte spara formulärstate:', error);
+      }
+    }, 100);
+  }, [name, subdomain, activeTab]);
+
+  const handleImportStatusChange = useCallback((status: { hasFile: boolean; isAnalyzing: boolean; hasResults: boolean }) => {
+    setImportStatus(status);
+  }, []);
+
+  // Funktion för att spara hela formulärets state
+  const saveFormState = useCallback(() => {
+    try {
+      const formState = {
+        name,
+        subdomain,
+        activeTab,
+        importedSections,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem('handbook-form-state', JSON.stringify(formState));
+      localStorage.setItem('handbook-form-timestamp', Date.now().toString());
+      
+      console.log('💾 Sparar formulärstate:', formState);
+    } catch (error) {
+      console.warn('Kunde inte spara formulärstate:', error);
     }
-    setActiveTab('manual'); // Växla tillbaka till manual för att visa formuläret
-  };
+  }, [name, subdomain, activeTab, importedSections]);
+
+  // Spara state automatiskt när något ändras
+  useEffect(() => {
+    // Spara endast om vi har något meningsfullt att spara
+    if (name || subdomain || importedSections.length > 0) {
+      const timeoutId = setTimeout(() => {
+        try {
+          const formState = {
+            name,
+            subdomain,
+            activeTab,
+            importedSections,
+            timestamp: Date.now()
+          };
+          
+          localStorage.setItem('handbook-form-state', JSON.stringify(formState));
+          localStorage.setItem('handbook-form-timestamp', Date.now().toString());
+          
+          console.log('💾 Sparar formulärstate:', formState);
+        } catch (error) {
+          console.warn('Kunde inte spara formulärstate:', error);
+        }
+      }, 1000); // Debounce med 1 sekund
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [name, subdomain, activeTab, importedSections]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,36 +377,51 @@ export function CreateHandbookForm() {
     setError(null);
 
     try {
-      // Använd importerade sektioner om de finns, annars standard-template
-      const templateSections = importedSections.length > 0 
-        ? importedSections.map((section, index) => ({
-            title: section.title,
-            description: section.content.substring(0, 200) + '...',
-            order: index + 1,
-            isActive: true,
-            pages: [{
-              title: section.title,
-              content: section.content,
-              order: 1,
-              slug: section.title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
-            }]
-          }))
-        : [
-            {
-              title: "Välkommen",
-              description: "Introduktion och översikt",
-              order: 1,
-              isActive: true,
-              pages: [
-                {
-                  title: "Översikt",
-                  content: "Välkommen till din digitala handbok! Här hittar du all viktig information om din bostadsrättsförening.",
-                  order: 1,
-                  slug: "oversikt"
-                }
-              ]
-            }
-          ];
+      // Debug: Kontrollera importerade sektioner
+      console.log('🔍 [SUBMIT] Checking imported sections:', {
+        count: importedSections.length,
+        activeTab,
+        sections: importedSections.map(s => ({ title: s.title, contentLength: s.content?.length }))
+      });
+      
+      // Debug: Kontrollera localStorage också
+      try {
+        const savedState = localStorage.getItem('handbook-form-state');
+        if (savedState) {
+          const parsed = JSON.parse(savedState);
+          console.log('🔍 [SUBMIT] LocalStorage state:', {
+            importedSectionsCount: parsed.importedSections?.length || 0,
+            activeTab: parsed.activeTab
+          });
+        }
+      } catch (e) {
+        console.log('🔍 [SUBMIT] No localStorage state found');
+      }
+
+      // Debug: Kontrollera vilken template-logik som kommer att användas
+      console.log('🔍 [SUBMIT] Template logic check:', {
+        importedSectionsLength: importedSections.length,
+        willUseImported: importedSections.length > 0,
+        activeTab: activeTab
+      });
+
+      // Använd importerade sektioner om de finns OCH användaren är i import-läge, annars standard-template
+      const shouldUseImported = importedSections.length > 0 && activeTab === 'import';
+      console.log('🔍 [SUBMIT] Template decision:', {
+        importedSectionsLength: importedSections.length,
+        activeTab: activeTab,
+        shouldUseImported: shouldUseImported
+      });
+
+      const templateSections = shouldUseImported 
+        ? createTemplateFromImportedSections(importedSections)
+        : getDefaultTemplate();
+
+      console.log('📊 Template sections created:', {
+        count: templateSections.length,
+        usingImported: shouldUseImported,
+        sections: templateSections.map(s => ({ title: s.title, pagesCount: s.pages?.length }))
+      });
 
       const handbookData = {
         name: name,
@@ -230,100 +439,19 @@ export function CreateHandbookForm() {
               email: ''
             }
           },
-          sections: templateSections.length > 0 ? templateSections : [
-            {
-              title: "Välkommen",
-              description: "Introduktion och översikt",
-              order: 1,
-              isActive: true,
-              pages: [
-                {
-                  title: "Översikt",
-                  content: "Välkommen till din digitala handbok! Här hittar du all viktig information om din bostadsrättsförening.",
-                  order: 1,
-                  slug: "oversikt"
-                }
-              ]
-            },
-            {
-              title: "Kontaktuppgifter",
-              description: "Viktiga kontakter och information",
-              order: 2,
-              isActive: true,
-              pages: [
-                {
-                  title: "Förvaltning",
-                  content: "Kontaktuppgifter till förvaltningsbolaget.",
-                  order: 1,
-                  slug: "forvaltning"
-                },
-                {
-                  title: "Styrelse",
-                  content: "Här hittar du kontaktuppgifter till styrelsen.",
-                  order: 2,
-                  slug: "styrelse"
-                }
-              ]
-            },
-            {
-              title: "Regler och ordningsföreskrifter",
-              description: "Föreningens regler och bestämmelser",
-              order: 3,
-              isActive: true,
-              pages: [
-                {
-                  title: "Ordningsföreskrifter",
-                  content: "Föreningens ordningsföreskrifter och regler för boende.",
-                  order: 1,
-                  slug: "ordningsforeskrifter"
-                }
-              ]
-            },
-            {
-              title: "Ekonomi",
-              description: "Ekonomisk information och avgifter",
-              order: 4,
-              isActive: true,
-              pages: [
-                {
-                  title: "Avgifter",
-                  content: "Information om månadsavgifter och andra kostnader.",
-                  order: 1,
-                  slug: "avgifter"
-                }
-              ]
-            },
-            {
-              title: "Underhåll och reparationer",
-              description: "Information om underhåll och felanmälan",
-              order: 5,
-              isActive: true,
-              pages: [
-                {
-                  title: "Felanmälan",
-                  content: "Så här anmäler du fel och skador.",
-                  order: 1,
-                  slug: "felanmalan"
-                }
-              ]
-            },
-            {
-              title: "Gemensamma utrymmen",
-              description: "Tvättstuga, förråd och andra faciliteter",
-              order: 6,
-              isActive: true,
-              pages: [
-                {
-                  title: "Tvättstuga",
-                  content: "Regler och bokning av tvättstuga.",
-                  order: 1,
-                  slug: "tvattstuga"
-                }
-              ]
-            }
-          ]
+          sections: templateSections
         }
       };
+
+      // Debug: Logga den slutgiltiga handbookData som skickas till API:et
+      console.log('🚀 [SUBMIT] Final handbookData being sent to API:', {
+        name: handbookData.name,
+        subdomain: handbookData.subdomain,
+        sectionsCount: handbookData.template.sections.length,
+        sectionTitles: handbookData.template.sections.map(s => s.title),
+        usingImportedData: importedSections.length > 0,
+        firstSectionContent: handbookData.template.sections[0]?.pages?.[0]?.content?.substring(0, 100) + '...'
+      });
 
       // Om användaren är berättigad till prov, använd prov-endpoint
       if (isEligibleForProvState) {
@@ -341,6 +469,17 @@ export function CreateHandbookForm() {
         }
 
         const result = await response.json();
+        
+        // Rensa localStorage när handboken skapas framgångsrikt
+        try {
+          localStorage.removeItem('handbook-form-state');
+          localStorage.removeItem('handbook-form-timestamp');
+          // Rensa även gamla format
+          localStorage.removeItem('handbook-import-sections');
+          localStorage.removeItem('handbook-import-timestamp');
+        } catch (error) {
+          console.warn('Kunde inte rensa localStorage:', error);
+        }
         
         // Redirect till den nya handboken
         window.location.href = result.redirectUrl;
@@ -360,6 +499,17 @@ export function CreateHandbookForm() {
       }
 
       const { url } = await response.json();
+      
+      // Rensa localStorage innan redirect till Stripe
+      try {
+        localStorage.removeItem('handbook-form-state');
+        localStorage.removeItem('handbook-form-timestamp');
+        // Rensa även gamla format
+        localStorage.removeItem('handbook-import-sections');
+        localStorage.removeItem('handbook-import-timestamp');
+      } catch (error) {
+        console.warn('Kunde inte rensa localStorage:', error);
+      }
       
       // Redirect to Stripe Checkout
       window.location.href = url;
@@ -387,6 +537,17 @@ export function CreateHandbookForm() {
 
   return (
     <div className="space-y-8">
+      {/* Återställningsindikator */}
+      {isRestoringState && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+          <div>
+            <p className="font-medium text-blue-900">Återställer ditt arbete...</p>
+            <p className="text-sm text-blue-700">Vi hittade sparad data från din tidigare session.</p>
+          </div>
+        </div>
+      )}
+
       {/* Prisvisning för icke-prov användare */}
       {!isEligibleForProvState && (
         <div className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl p-6">
@@ -451,55 +612,8 @@ export function CreateHandbookForm() {
           </div>
         )}
 
-        {/* Tabs för att välja mellan manuell och import */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'import')} className="mb-6 md:mb-8">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="manual" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Skapa manuellt</span>
-              <span className="sm:hidden">Manuellt</span>
-            </TabsTrigger>
-            <TabsTrigger value="import" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <Upload className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Importera befintlig handbok</span>
-              <span className="sm:hidden">Importera</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="import" className="mt-6">
-            <DocumentImport 
-              onImportComplete={handleImportComplete}
-              isLoading={isLoading}
-            />
-            
-            {importedSections.length > 0 && (
-              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span className="font-medium text-green-800">Import slutförd!</span>
-                </div>
-                <p className="text-sm text-green-700 mb-3">
-                  {importedSections.length} sektioner importerades från ditt dokument. 
-                  Växla till "Skapa manuellt" för att slutföra handboksskapandet.
-                </p>
-                <div className="space-y-1">
-                  {importedSections.slice(0, 3).map((section, index) => (
-                    <div key={index} className="text-xs text-green-600">
-                      • {section.title}
-                    </div>
-                  ))}
-                  {importedSections.length > 3 && (
-                    <div className="text-xs text-green-600">
-                      ... och {importedSections.length - 3} till
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="manual" className="mt-6">
-            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+        {/* Grundläggande information först */}
+        <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
           <div className="space-y-2">
             <label htmlFor="name" className="block text-sm font-semibold text-gray-900">
               Handbokens namn
@@ -556,6 +670,116 @@ export function CreateHandbookForm() {
             </div>
           </div>
 
+          {/* Innehållsval sektion */}
+          <div className="space-y-4">
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Hur vill du skapa innehållet?</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Välj om du vill använda vår standardmall eller importera innehåll från dina egna dokument.
+              </p>
+              
+              {/* Innehållsval knappar */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Standard mall */}
+                <div className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  activeTab === 'manual' && importedSections.length === 0
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => {
+                  console.log('🔄 [UI] Standard template clicked, current state:', {
+                    currentActiveTab: activeTab,
+                    currentImportedSections: importedSections.length
+                  });
+                  setActiveTab('manual');
+                  // Rensa importerade sektioner när användaren väljer standardmall
+                  if (importedSections.length > 0) {
+                    setImportedSections([]);
+                    console.log('🔄 [UI] Cleared imported sections - switching to standard template');
+                    
+                    // Rensa även localStorage för att förhindra återställning
+                    try {
+                      localStorage.removeItem('handbook-form-state');
+                      localStorage.removeItem('handbook-form-timestamp');
+                      console.log('🔄 [UI] Cleared localStorage to prevent restoration of imported sections');
+                    } catch (error) {
+                      console.warn('Could not clear localStorage:', error);
+                    }
+                  }
+                  console.log('🔄 [UI] After clearing - activeTab will be: manual, importedSections will be: 0');
+                }}>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900 mb-1">Använd standardmall</h4>
+                      <p className="text-sm text-gray-600">
+                        Börja med vår färdiga mall för bostadsrättsföreningar med 6 grundläggande sektioner.
+                      </p>
+                    </div>
+                  </div>
+                  {activeTab === 'manual' && importedSections.length === 0 && (
+                    <div className="absolute top-2 right-2">
+                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Import */}
+                <div className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  importedSections.length > 0
+                    ? 'border-green-500 bg-green-50' 
+                    : activeTab === 'import'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab('import')}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      importedSections.length > 0 ? 'bg-green-100' : 'bg-blue-100'
+                    }`}>
+                      <Upload className={`h-5 w-5 ${importedSections.length > 0 ? 'text-green-600' : 'text-blue-600'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900 mb-1">
+                        {importedSections.length > 0 ? '🎉 AI-import slutförd!' : 'Importera befintlig handbok'}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {importedSections.length > 0 
+                          ? `${importedSections.length} sektioner importerades från ditt dokument`
+                          : 'Ladda upp din PDF eller Word-fil så analyserar AI:n innehållet automatiskt.'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  {importedSections.length > 0 && (
+                    <div className="absolute top-2 right-2">
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Import sektion */}
+              {activeTab === 'import' && (
+                <div className="border border-gray-200 rounded-xl p-4 md:p-6 bg-gray-50">
+                  <DocumentImport 
+                    onImportComplete={handleImportComplete}
+                    onImportStatusChange={handleImportStatusChange}
+                    isLoading={isLoading}
+                  />
+                </div>
+              )}
+
+
+            </div>
+          </div>
+
           {error && (
             <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
               <AlertCircle size={20} className="flex-shrink-0" />
@@ -563,11 +787,54 @@ export function CreateHandbookForm() {
             </div>
           )}
 
+          {/* Visa hjälptext när användaren är i import-flödet men inte har slutfört det */}
+          {activeTab === 'import' && importedSections.length === 0 && (
+            <div className="pt-3 md:pt-4">
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Brain className="h-6 w-6 text-amber-600" />
+                  <span className="font-bold text-amber-900 text-lg">
+                    {importStatus.isAnalyzing ? '🤖 AI analyserar ditt dokument...' : '📄 Ladda upp och analysera ditt dokument'}
+                  </span>
+                </div>
+                <p className="text-sm text-amber-800 mb-3">
+                  {importStatus.isAnalyzing 
+                    ? 'AI:n läser igenom ditt dokument och skapar automatiskt sektioner för din handbok.'
+                    : importStatus.hasFile
+                      ? 'Klicka på "Analysera dokument" för att låta AI:n skapa sektioner från ditt dokument.'
+                      : 'Ladda först upp din PDF eller Word-fil, sedan analyserar AI:n innehållet automatiskt.'
+                  }
+                </p>
+                {!importStatus.hasFile && (
+                  <p className="text-xs text-amber-700 font-medium">
+                    ⬆️ Använd "Välj fil" knappen ovan för att ladda upp ditt dokument
+                  </p>
+                )}
+                {importStatus.hasFile && !importStatus.isAnalyzing && (
+                  <p className="text-xs text-amber-700 font-medium">
+                    🔍 Använd "Analysera dokument" knappen för att fortsätta
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Submit knapp - alltid synlig men korrekt disabled */}
           <div className="pt-3 md:pt-4">
             <Button
               type="submit"
-              className={`w-full h-10 md:h-12 text-sm md:text-base font-semibold ${isEligibleForProvState ? 'bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'} text-white shadow-lg transition-all duration-200`}
-              disabled={isLoading || isSubdomainAvailable === false}
+              className={`w-full h-10 md:h-12 text-sm md:text-base font-semibold transition-all duration-200 shadow-lg ${
+                (activeTab === 'import' && importedSections.length === 0) || isLoading || isSubdomainAvailable === false
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
+                  : isEligibleForProvState 
+                    ? 'bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white'
+              }`}
+              disabled={
+                isLoading || 
+                isSubdomainAvailable === false || 
+                (activeTab === 'import' && importedSections.length === 0)
+              }
             >
               {isLoading ? (
                 <>
@@ -577,26 +844,59 @@ export function CreateHandbookForm() {
                 </>
               ) : isEligibleForProvState ? (
                 <>
-                  <Gift className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-                  <span className="hidden sm:inline">Starta 30 dagars prov</span>
-                  <span className="sm:hidden">Starta prov</span>
+                  <Gift className={`mr-2 h-4 w-4 md:h-5 md:w-5 ${(activeTab === 'import' && importedSections.length === 0) ? 'opacity-50' : ''}`} />
+                  <span className="hidden sm:inline">
+                    {(activeTab === 'import' && importedSections.length === 0) 
+                      ? 'Slutför AI-analysen först'
+                      : importedSections.length > 0 
+                        ? 'Skapa handbok med AI-innehåll' 
+                        : 'Starta 30 dagars prov'
+                    }
+                  </span>
+                  <span className="sm:hidden">
+                    {(activeTab === 'import' && importedSections.length === 0) 
+                      ? 'Slutför analys först'
+                      : importedSections.length > 0 
+                        ? 'Skapa med AI' 
+                        : 'Starta prov'
+                    }
+                  </span>
                 </>
               ) : (
                 <>
-                  <span className="hidden sm:inline">Gå vidare till betalning</span>
-                  <span className="sm:hidden">Till betalning</span>
+                  <span className="hidden sm:inline">
+                    {(activeTab === 'import' && importedSections.length === 0) 
+                      ? 'Slutför AI-analysen först'
+                      : importedSections.length > 0 
+                        ? 'Skapa handbok med AI-innehåll' 
+                        : 'Gå vidare till betalning'
+                    }
+                  </span>
+                  <span className="sm:hidden">
+                    {(activeTab === 'import' && importedSections.length === 0) 
+                      ? 'Slutför analys först'
+                      : importedSections.length > 0 
+                        ? 'Skapa med AI' 
+                        : 'Till betalning'
+                    }
+                  </span>
                 </>
               )}
             </Button>
             
-            <p className="text-xs text-gray-500 text-center mt-3 md:mt-4 px-2">
-              Efter {isEligibleForProvState ? 'prov-start' : 'betalning'} kommer din handbok att vara tillgänglig på{" "}
-              <span className="font-medium text-gray-700 break-all">handbok.org/{subdomain || 'din-förening'}</span>
-            </p>
+            <div className="text-xs text-center mt-3 md:mt-4 px-2 space-y-1">
+              {importedSections.length > 0 && (
+                <p className="text-green-600 font-medium">
+                  🤖 Din handbok kommer att skapas med {importedSections.length} AI-analyserade sektioner
+                </p>
+              )}
+              <p className="text-gray-500">
+                Efter {isEligibleForProvState ? 'prov-start' : 'betalning'} kommer din handbok att vara tillgänglig på{" "}
+                <span className="font-medium text-gray-700 break-all">handbok.org/{subdomain || 'din-förening'}</span>
+              </p>
+            </div>
           </div>
         </form>
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   );

@@ -35,6 +35,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Debug: Log template data
+    console.log('[Trial Start] Template data received:', {
+      hasTemplate: !!template,
+      sectionsCount: template?.sections?.length || 0,
+      sectionTitles: template?.sections?.map((s: any) => s.title) || []
+    });
+
     // Kontrollera om användaren är berättigad till trial
     const eligible = await isEligibleForTrial(userId);
     
@@ -71,7 +78,8 @@ export async function POST(req: NextRequest) {
       name,        // name: string
       subdomain,   // slug: string  
       userId,      // userId?: string
-      true         // isTrialHandbook: boolean = true
+      true,        // isTrialHandbook: boolean = true
+      template     // customTemplate?: any - Pass the AI template data
     );
 
     return NextResponse.json({

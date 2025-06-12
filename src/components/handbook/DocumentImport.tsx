@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,9 +12,10 @@ import {
   AlertCircle, 
   Loader2,
   BookOpen,
-  Download
+  Download,
+  Info
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { showToast } from '@/components/ui/use-toast';
 
 interface ImportedSection {
   title: string;
@@ -25,6 +26,7 @@ interface ImportedSection {
 
 interface DocumentImportProps {
   onImportComplete: (sections: ImportedSection[]) => void;
+  onImportStatusChange?: (status: { hasFile: boolean; isAnalyzing: boolean; hasResults: boolean }) => void;
   isLoading?: boolean;
 }
 
@@ -38,22 +40,49 @@ interface AnalysisResult {
   };
 }
 
-export function DocumentImport({ onImportComplete, isLoading = false }: DocumentImportProps) {
+// Memoize the component to prevent unnecessary re-renders
+export const DocumentImport = memo(function DocumentImport({ onImportComplete, onImportStatusChange, isLoading = false }: DocumentImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [analysisStep, setAnalysisStep] = useState<string>('');
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState('');
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  
+  // Använd useRef för att förhindra onödiga re-renders
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isProcessingRef = useRef(false);
+  const analysisResultRef = useRef<AnalysisResult | null>(null);
+  
+  // Synkronisera state med ref för att förhindra förlust vid re-renders
+  useEffect(() => {
+    analysisResultRef.current = analysisResult;
+  }, [analysisResult]);
+  
+  // Återställ analysisResult från ref om det försvinner vid fönsterbyte
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && !analysisResult && analysisResultRef.current) {
+        console.log('Återställer analysresultat efter fönsterbyte');
+        setAnalysisResult(analysisResultRef.current);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [analysisResult]);
 
-  const supportedFileTypes = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
-    'text/plain'
-  ];
+  // Rapportera status-ändringar till parent
+  useEffect(() => {
+    if (onImportStatusChange) {
+      onImportStatusChange({
+        hasFile: !!file,
+        isAnalyzing,
+        hasResults: !!analysisResult
+      });
+    }
+  }, [file, isAnalyzing, analysisResult, onImportStatusChange]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -75,7 +104,18 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
     }
   }, []);
 
-  const handleFileSelection = (selectedFile: File) => {
+  const handleFileSelection = useCallback((selectedFile: File) => {
+    // Förhindra dubbelbearbetning
+    if (isProcessingRef.current) return;
+    
+    // Kontrollera filtyp
+    const supportedFileTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain'
+    ];
+    
     if (!supportedFileTypes.includes(selectedFile.type)) {
       setError('Filtypen stöds inte. Vänligen välj en PDF, Word-dokument eller textfil.');
       return;
@@ -85,17 +125,19 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
       setError('Filen är för stor. Maximal filstorlek är 10MB.');
       return;
     }
-
+    
     setFile(selectedFile);
     setError(null);
-  };
+    setAnalysisResult(null);
+  }, []);
 
-  const analyzeDocument = async () => {
-    if (!file) return;
-
+  const analyzeDocument = useCallback(async () => {
+    if (!file || isAnalyzing || isProcessingRef.current) return;
+    
+    isProcessingRef.current = true;
     setIsAnalyzing(true);
-    setAnalysisProgress(0);
     setError(null);
+    setAnalysisProgress(0);
 
     try {
       // Steg 1: Ladda upp fil
@@ -118,7 +160,7 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
 
       // Steg 2: Extrahera text
       setAnalysisStep('Extraherar text från dokument...');
-      setAnalysisProgress(40);
+      setAnalysisProgress(50);
 
       const extractResponse = await fetch('/api/documents/extract-text', {
         method: 'POST',
@@ -127,7 +169,7 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
       });
 
       if (!extractResponse.ok) {
-        throw new Error('Misslyckades med att extrahera text');
+        throw new Error('Misslyckades med textextraktion');
       }
 
       const { text, metadata } = await extractResponse.json();
@@ -163,15 +205,20 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
 
       setAnalysisResult(result);
 
-      toast({
+      showToast({
         title: "Analys slutförd",
         description: `Hittade ${result.sections.length} sektioner i dokumentet.`,
       });
 
+      // Automatiskt anropa onImportComplete när analysen är klar
+      // Detta eliminerar behovet av en extra knapp-klick
+      console.log('🎯 [DocumentImport] Auto-importing sections after analysis completion');
+      onImportComplete(result.sections);
+
     } catch (err) {
       console.error('Fel vid dokumentanalys:', err);
       setError(err instanceof Error ? err.message : 'Ett oväntat fel inträffade');
-      toast({
+      showToast({
         title: "Fel vid analys",
         description: "Kunde inte analysera dokumentet. Försök igen.",
         variant: "destructive",
@@ -180,8 +227,9 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
       setIsAnalyzing(false);
       setAnalysisStep('');
       setAnalysisProgress(0);
+      isProcessingRef.current = false;
     }
-  };
+  }, [file, isAnalyzing, onImportComplete]);
 
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'bg-green-100 text-green-800';
@@ -189,17 +237,11 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
     return 'bg-red-100 text-red-800';
   };
 
-  const handleImport = () => {
-    if (analysisResult) {
-      onImportComplete(analysisResult.sections);
-    }
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
             <Brain className="h-5 w-5" />
             Smart handboksimport
           </CardTitle>
@@ -211,7 +253,7 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
           {/* File Upload Area */}
           <div
             className={`
-              border-2 border-dashed rounded-lg p-4 md:p-8 text-center transition-colors
+              border-2 border-dashed rounded-lg p-4 md:p-6 text-center transition-colors
               ${dragActive ? 'border-primary bg-primary/5' : 'border-gray-300'}
               ${file ? 'border-green-500 bg-green-50' : ''}
             `}
@@ -220,12 +262,12 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <div className="flex flex-col items-center space-y-3 md:space-y-4">
+            <div className="flex flex-col items-center space-y-3">
               {file ? (
                 <>
                   <FileText className="h-10 w-10 md:h-12 md:w-12 text-green-600" />
                   <div className="text-center">
-                    <p className="font-medium text-sm md:text-base break-all">{file.name}</p>
+                    <p className="font-medium text-sm md:text-base break-all px-2">{file.name}</p>
                     <p className="text-xs md:text-sm text-muted-foreground">
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
@@ -246,21 +288,19 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
               )}
               
               <input
+                ref={fileInputRef}
                 type="file"
                 className="hidden"
                 accept=".pdf,.docx,.doc,.txt"
                 onChange={(e) => e.target.files?.[0] && handleFileSelection(e.target.files[0])}
                 id="file-upload"
-                ref={(input) => {
-                  if (input) {
-                    input.onclick = () => input.value = '';
-                  }
-                }}
               />
               <Button 
+                type="button"
                 variant="outline" 
                 className="cursor-pointer text-sm md:text-base"
-                onClick={() => document.getElementById('file-upload')?.click()}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isAnalyzing || isLoading}
               >
                 Välj fil
               </Button>
@@ -274,14 +314,14 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="text-sm">{error}</AlertDescription>
             </Alert>
           )}
 
           {/* Analysis Progress */}
           {isAnalyzing && (
             <Card className="border-blue-200 bg-blue-50">
-              <CardContent className="pt-6">
+              <CardContent className="pt-4 pb-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -296,47 +336,47 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
           {/* Analysis Results */}
           {analysisResult && !isAnalyzing && (
             <Card className="border-green-200 bg-green-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-green-800 text-lg">
                   <CheckCircle className="h-5 w-5" />
                   Analys slutförd
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Dokumenttitel:</span> {analysisResult.metadata.title}
-                  </div>
-                  <div>
-                    <span className="font-medium">Sidor:</span> {analysisResult.metadata.totalPages}
-                  </div>
-                  <div>
-                    <span className="font-medium">Språk:</span> {analysisResult.metadata.language}
-                  </div>
-                  <div>
-                    <span className="font-medium">Typ:</span> {analysisResult.metadata.documentType}
-                  </div>
-                </div>
-
                 <div>
-                  <h4 className="font-medium mb-2">Identifierade sektioner ({analysisResult.sections.length}):</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="font-medium">Identifierade sektioner ({analysisResult.sections.length}):</h4>
+                    <div className="group relative">
+                      <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Procentsatsen visar hur säker AI:n är på identifieringen
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
                     {analysisResult.sections.map((section, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{section.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {section.content.substring(0, 100)}...
-                          </p>
-                          {section.suggestedMapping && (
-                            <p className="text-xs text-blue-600 mt-1">
-                              → {section.suggestedMapping}
-                            </p>
-                          )}
+                      <div key={index} className="p-4 bg-white rounded-lg border shadow-sm">
+                        <div className="flex items-start justify-between mb-2">
+                          <h5 className="font-medium text-base break-words pr-2">{section.title}</h5>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Badge variant="outline" className={`${getConfidenceColor(section.confidence)}`}>
+                              {Math.round(section.confidence * 100)}%
+                            </Badge>
+                          </div>
                         </div>
-                        <Badge variant="outline" className={getConfidenceColor(section.confidence)}>
-                          {Math.round(section.confidence * 100)}%
-                        </Badge>
+                        <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
+                          {section.content.length > 200 
+                            ? section.content.substring(0, 200) + '...' 
+                            : section.content
+                          }
+                        </p>
+                        {section.suggestedMapping && (
+                          <div className="flex items-center gap-1 text-sm text-blue-600">
+                            <span>→</span>
+                            <span className="font-medium">{section.suggestedMapping}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -346,30 +386,17 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-2 justify-end">
-            {file && !analysisResult && (
+          <div className="flex flex-col sm:flex-row gap-2 justify-end">
+            {file && !analysisResult && !isAnalyzing && (
               <Button 
+                type="button"
                 onClick={analyzeDocument} 
                 disabled={isAnalyzing || isLoading}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg ring-2 ring-blue-300 ring-opacity-50 transition-all duration-200 transform hover:scale-105"
+                size="lg"
               >
-                {isAnalyzing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Brain className="h-4 w-4" />
-                )}
-                Analysera dokument
-              </Button>
-            )}
-            
-            {analysisResult && (
-              <Button 
-                onClick={handleImport}
-                disabled={isLoading}
-                className="flex items-center gap-2"
-              >
-                <BookOpen className="h-4 w-4" />
-                Importera handbok
+                <Brain className="h-5 w-5" />
+                🤖 Analysera dokument
               </Button>
             )}
           </div>
@@ -377,4 +404,4 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
       </Card>
     </div>
   );
-} 
+}); 

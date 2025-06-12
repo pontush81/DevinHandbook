@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -30,71 +30,113 @@ function CreateHandbookContent() {
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
-  // Kontrollera query-parametern new=true för att avgöra om formuläret ska visas initialt
-  const forceNewHandbook = searchParams?.get('new') === 'true';
-  // Om forceNewHandbook är true, ska vi alltid visa formuläret
+  
+  // Use refs to prevent unnecessary re-renders
+  const hasInitialized = useRef(false);
+  const userIdRef = useRef<string | null>(null);
+  
+  // Memoize search params to prevent unnecessary re-renders
+  const forceNewHandbook = useMemo(() => 
+    searchParams?.get('new') === 'true', 
+    [searchParams]
+  );
+  
   const [showCreateForm, setShowCreateForm] = useState(true);
 
+  // Memoize redirect function to prevent re-creation
+  const redirectToLogin = useCallback(() => {
+    router.push("/login");
+  }, [router]);
+
+  // Only redirect if user changes from logged in to logged out
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login");
+    if (!isLoading && !user && hasInitialized.current) {
+      redirectToLogin();
     }
-  }, [user, isLoading, router]);
+    if (user) {
+      hasInitialized.current = true;
+    }
+  }, [user, isLoading, redirectToLogin]);
 
-  useEffect(() => {
-    const fetchSuperadmin = async () => {
-      if (!user) return;
-      try {
-        // Använd den nya hjälpfunktionen som säkerställer att profilen finns
-        const isSuperAdmin = await checkIsSuperAdmin(
-          supabase as any, 
-          user.id, 
-          user.email || ''
-        );
-        setIsSuperadmin(isSuperAdmin);
-      } catch (error) {
-        console.error("Error checking superadmin status:", error);
-        setIsSuperadmin(false);
-      }
-    };
-    if (user) fetchSuperadmin();
-  }, [user]);
+  // Memoize superadmin check to prevent unnecessary calls
+  const checkSuperadmin = useCallback(async (userId: string) => {
+    try {
+      const isSuperAdmin = await checkIsSuperAdmin(
+        supabase as any, 
+        userId, 
+        user?.email || ''
+      );
+      setIsSuperadmin(isSuperAdmin);
+    } catch (error) {
+      console.error("Error checking superadmin status:", error);
+      setIsSuperadmin(false);
+    }
+  }, [user?.email]);
 
+  // Only check superadmin when user ID actually changes
   useEffect(() => {
-    const fetchHandbooks = async () => {
-      if (!user) return;
-      setIsLoadingHandbooks(true);
+    if (user?.id && userIdRef.current !== user.id) {
+      userIdRef.current = user.id;
+      checkSuperadmin(user.id);
+    }
+  }, [user?.id, checkSuperadmin]);
+
+  // Memoize handbook fetching to prevent unnecessary calls
+  const fetchHandbooks = useCallback(async (userId: string) => {
+    setIsLoadingHandbooks(true);
+    try {
       const { data, error } = await (supabase as any)
         .from("handbooks")
         .select("id, title, slug, created_at, published")
-        .eq("owner_id", user.id)
+        .eq("owner_id", userId)
         .order("created_at", { ascending: false });
       
       if (data && !error) {
-        // Map the database fields to our interface
         const mappedHandbooks: Handbook[] = data.map((item: any) => ({
           id: item.id,
           title: item.title,
-          subdomain: item.slug, // Map 'slug' from database to 'subdomain' in interface
+          subdomain: item.slug,
           created_at: item.created_at,
           published: item.published
         }));
         setHandbooks(mappedHandbooks);
       }
+    } catch (error) {
+      console.error("Error fetching handbooks:", error);
+    } finally {
       setIsLoadingHandbooks(false);
-    };
-    if (user) fetchHandbooks();
-  }, [user]);
+    }
+  }, []);
 
-  // När searchParams ändras och new=true är satt, visa alltid formuläret
+  // Only fetch handbooks when user ID actually changes
   useEffect(() => {
-    if (forceNewHandbook) {
+    if (user?.id && userIdRef.current === user.id) {
+      fetchHandbooks(user.id);
+    }
+  }, [user?.id, fetchHandbooks]);
+
+  // Handle force new handbook parameter - only set once
+  useEffect(() => {
+    if (forceNewHandbook && !showCreateForm) {
       setShowCreateForm(true);
     }
-  }, [forceNewHandbook]);
+  }, [forceNewHandbook]); // Removed showCreateForm from dependencies
 
-  if (isLoading || isLoadingHandbooks) {
-    return <div className="min-h-screen flex items-center justify-center"><div>Laddar...</div></div>;
+  // Memoize loading state to prevent flicker
+  const isPageLoading = useMemo(() => 
+    isLoading || (user && isLoadingHandbooks), 
+    [isLoading, isLoadingHandbooks, user]
+  );
+
+  if (isPageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div>Laddar...</div>
+        </div>
+      </div>
+    );
   }
 
   // Kontrollera om användaren redan har en handbok (begränsning för nya användare)

@@ -44,56 +44,91 @@ export async function POST(request: NextRequest) {
 
       if (fileData.file_type === 'application/pdf') {
         try {
-          // Använd pdfjs-dist direkt istället för pdf-parse som har problem
-          const pdfjsLib = await import('pdfjs-dist');
+          // Använd pdf2json som är mer stabil för server-side användning
+          const PDFParser = await import('pdf2json');
           
-          // Konfigurera worker för server-side användning
-          pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+          console.log('Attempting PDF parsing with pdf2json...');
           
-          const pdfDoc = await pdfjsLib.getDocument({ 
-            data: buffer,
-            useSystemFonts: true,
-            disableFontFace: true
-          }).promise;
-          
-          metadata.totalPages = pdfDoc.numPages;
-          
-          let fullText = '';
-          for (let i = 1; i <= pdfDoc.numPages; i++) {
-            try {
-              const page = await pdfDoc.getPage(i);
-              const textContent = await page.getTextContent();
-              const pageText = textContent.items
-                .filter((item: any) => item.str && typeof item.str === 'string')
-                .map((item: any) => item.str.trim())
-                .filter((str: string) => str.length > 0)
-                .join(' ');
-              
-              if (pageText.trim()) {
-                fullText += pageText + '\n\n';
+          // Skapa en Promise för att hantera pdf2json's callback-baserade API
+          const pdfData = await new Promise<{ text: string; pages: number }>((resolve, reject) => {
+            const pdfParser = new PDFParser.default(null, 1);
+            
+            let extractedText = '';
+            let pageCount = 0;
+            
+            pdfParser.on('pdfParser_dataError', (errData: any) => {
+              console.error('PDF parsing error:', errData.parserError);
+              reject(new Error(errData.parserError));
+            });
+            
+            pdfParser.on('pdfParser_dataReady', (pdfData: any) => {
+              try {
+                pageCount = pdfData.Pages ? pdfData.Pages.length : 0;
+                
+                // Extrahera text från alla sidor
+                if (pdfData.Pages) {
+                  for (const page of pdfData.Pages) {
+                    if (page.Texts) {
+                      for (const textObj of page.Texts) {
+                        if (textObj.R) {
+                          for (const textRun of textObj.R) {
+                            if (textRun.T) {
+                              // Dekoda URI-kodad text
+                              const decodedText = decodeURIComponent(textRun.T);
+                              extractedText += decodedText + ' ';
+                            }
+                          }
+                        }
+                      }
+                    }
+                    extractedText += '\n\n'; // Lägg till radbrytning mellan sidor
+                  }
+                }
+                
+                resolve({ 
+                  text: extractedText.trim(), 
+                  pages: pageCount 
+                });
+              } catch (parseError) {
+                reject(parseError);
               }
-            } catch (pageError) {
-              console.error(`Error processing page ${i}:`, pageError);
-              // Fortsätt med nästa sida
-            }
-          }
+            });
+            
+            // Starta parsing
+            pdfParser.parseBuffer(buffer);
+          });
           
-          extractedText = fullText.trim();
-          metadata.documentType = 'pdf_pdfjs';
+          extractedText = pdfData.text;
+          metadata.totalPages = pdfData.pages;
+          metadata.documentType = 'pdf_json_parsed';
           
-          // Om ingen text extraherades, försök fallback
-          if (!extractedText || extractedText.length < 10) {
-            console.log('No meaningful text extracted from PDF, using fallback');
-            extractedText = 'PDF-dokument uppladdad - textextraktion misslyckades. Manuell bearbetning krävs.';
-            metadata.documentType = 'pdf_no_text';
+          console.log(`PDF parsed successfully: ${pdfData.pages} pages, ${extractedText.length} characters`);
+          
+          // Rensa och validera extraherad text
+          if (extractedText && extractedText.trim().length > 10) {
+            // Rensa texten från problematiska tecken
+            extractedText = extractedText
+              .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ') // Ersätt kontrolltecken med mellanslag
+              .replace(/[\uFFFE\uFFFF]/g, '') // Ta bort ogiltiga Unicode-tecken
+              .replace(/\s+/g, ' ') // Normalisera mellanslag
+              .trim();
+          } else {
+            console.log('PDF parsed but no meaningful text found');
+            extractedText = '';
           }
           
         } catch (pdfError) {
-          console.error('PDF parsing with pdfjs failed:', pdfError);
-          // Fallback: skapa en placeholder-text
+          console.error('PDF parsing with pdf2json failed:', pdfError);
+          extractedText = '';
+          metadata.documentType = 'pdf_parse_failed';
+        }
+        
+        // Om PDF-parsing misslyckades eller gav för lite text, använd fallback
+        if (!extractedText || extractedText.length < 10) {
+          console.log('Using fallback text for PDF');
           extractedText = 'PDF-dokument uppladdad - textextraktion misslyckades. Manuell bearbetning krävs.';
           metadata.documentType = 'pdf_fallback';
-          metadata.totalPages = 1;
+          metadata.totalPages = metadata.totalPages || 1;
         }
       } 
       else if (fileData.file_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
@@ -135,7 +170,7 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      // Rensa texten från problematiska Unicode-tecken
+      // Slutlig rensning av texten
       extractedText = extractedText
         .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Ta bort kontrolltecken
         .replace(/[\uFFFE\uFFFF]/g, '') // Ta bort ogiltiga Unicode-tecken

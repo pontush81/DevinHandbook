@@ -14,7 +14,8 @@ export async function createHandbook(
   name: string,
   slug: string,
   userId?: string,
-  isTrialHandbook: boolean = true
+  isTrialHandbook: boolean = true,
+  customTemplate?: any
 ) {
   console.log('[Handbook] Creating handbook with owner_id:', { name, slug, userId: userId || 'guest', isTrialHandbook });
 
@@ -96,9 +97,15 @@ export async function createHandbook(
     await createDefaultForumCategories(handbook.id);
   }
 
-  // Create default sections
-  console.log('[Handbook] Creating default sections for handbook:', handbook.id);
-  await createDefaultSections(handbook.id);
+  // Create sections - use custom template if provided, otherwise use default
+  console.log('[Handbook] Creating sections for handbook:', handbook.id);
+  if (customTemplate && customTemplate.sections && customTemplate.sections.length > 0) {
+    console.log('[Handbook] Using custom template with', customTemplate.sections.length, 'sections');
+    await createSectionsFromTemplate(handbook.id, customTemplate.sections);
+  } else {
+    console.log('[Handbook] Using default template');
+    await createDefaultSections(handbook.id);
+  }
 
   // If user is provided, add them as admin
   if (userId) {
@@ -293,6 +300,78 @@ export async function toggleHandbookPublished(id: string, published: boolean) {
     console.error('Error toggling handbook published status:', error);
     return { success: false, error };
   }
+}
+
+// Helper function to create sections from custom template (AI-imported data)
+async function createSectionsFromTemplate(handbookId: string, templateSections: any[]) {
+  console.log('[createSectionsFromTemplate] Creating sections from custom template for handbook:', handbookId);
+  console.log('[createSectionsFromTemplate] Template sections:', templateSections.length);
+  
+  for (const templateSection of templateSections) {
+    console.log('[createSectionsFromTemplate] Creating section:', templateSection.title);
+    
+    // Create the section
+    const { data: section, error: sectionError } = await supabaseAdmin
+      .from('sections')
+      .insert({
+        title: templateSection.title,
+        description: templateSection.description || templateSection.title,
+        order_index: templateSection.order || 1,
+        handbook_id: handbookId,
+        is_public: true,
+        is_published: true,
+        icon: 'BookOpen' // Default icon
+      })
+      .select()
+      .single();
+
+    if (sectionError) {
+      console.error('[createSectionsFromTemplate] Error creating section:', sectionError);
+      continue;
+    }
+
+    // Create pages for this section
+    if (templateSection.pages && templateSection.pages.length > 0) {
+      for (const templatePage of templateSection.pages) {
+        console.log('[createSectionsFromTemplate] Creating page:', templatePage.title, 'in section:', section.id);
+        
+        const { error: pageError } = await supabaseAdmin
+          .from('pages')
+          .insert({
+            title: templatePage.title,
+            content: templatePage.content,
+            slug: templatePage.slug,
+            order_index: templatePage.order || 1,
+            section_id: section.id,
+            is_published: true
+          });
+
+        if (pageError) {
+          console.error('[createSectionsFromTemplate] Error creating page:', pageError);
+        }
+      }
+    } else {
+      // If no pages provided, create a single page with the section content
+      console.log('[createSectionsFromTemplate] Creating single page for section:', section.id);
+      
+      const { error: pageError } = await supabaseAdmin
+        .from('pages')
+        .insert({
+          title: templateSection.title,
+          content: templateSection.content || 'Innehåll kommer snart...',
+          slug: templateSection.title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
+          order_index: 1,
+          section_id: section.id,
+          is_published: true
+        });
+
+      if (pageError) {
+        console.error('[createSectionsFromTemplate] Error creating single page:', pageError);
+      }
+    }
+  }
+  
+  console.log('[createSectionsFromTemplate] ✅ Custom template sections created successfully');
 }
 
 // Helper function to create default sections
