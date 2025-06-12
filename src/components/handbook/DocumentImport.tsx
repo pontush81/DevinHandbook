@@ -206,7 +206,7 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
           {/* File Upload Area */}
           <div
             className={`
-              border-2 border-dashed rounded-lg p-8 text-center transition-colors
+              border-2 border-dashed rounded-lg p-4 md:p-8 text-center transition-colors
               ${dragActive ? 'border-primary bg-primary/5' : 'border-gray-300'}
               ${file ? 'border-green-500 bg-green-50' : ''}
             `}
@@ -215,25 +215,25 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <div className="flex flex-col items-center space-y-4">
+            <div className="flex flex-col items-center space-y-3 md:space-y-4">
               {file ? (
                 <>
-                  <FileText className="h-12 w-12 text-green-600" />
-                  <div>
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <FileText className="h-10 w-10 md:h-12 md:w-12 text-green-600" />
+                  <div className="text-center">
+                    <p className="font-medium text-sm md:text-base break-all">{file.name}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
                 </>
               ) : (
                 <>
-                  <Upload className="h-12 w-12 text-gray-400" />
-                  <div>
-                    <p className="text-lg font-medium">
+                  <Upload className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+                  <div className="text-center">
+                    <p className="text-base md:text-lg font-medium">
                       Dra och släpp din handbok här
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       Eller klicka för att välja fil
                     </p>
                   </div>
@@ -254,13 +254,13 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
               />
               <Button 
                 variant="outline" 
-                className="cursor-pointer"
+                className="cursor-pointer text-sm md:text-base"
                 onClick={() => document.getElementById('file-upload')?.click()}
               >
                 Välj fil
               </Button>
               
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground text-center px-2">
                 Stöder PDF, Word (.docx), och textfiler upp till 10MB
               </div>
             </div>

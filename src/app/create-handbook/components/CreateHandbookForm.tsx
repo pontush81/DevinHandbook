@@ -421,28 +421,28 @@ export function CreateHandbookForm() {
       )}
 
       {/* Huvudformulär - Elegant white card */}
-      <div className="bg-white rounded-xl shadow-sm p-8">
+      <div className="bg-white rounded-xl shadow-sm p-4 md:p-8">
         {/* Prov-erbjudande - Inuti den vita boxen */}
         {isEligibleForProvState && (
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-6">
-              <div className="flex items-start space-x-4">
+          <div className="mb-6 md:mb-8">
+            <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-4 md:p-6">
+              <div className="flex items-start space-x-3 md:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full flex items-center justify-center">
-                    <Gift className="h-6 w-6 text-white" />
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full flex items-center justify-center">
+                    <Gift className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">30 dagars prov</h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-2">
+                    <h3 className="text-base md:text-lg font-semibold text-gray-900">30 dagars prov</h3>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mt-1 sm:mt-0 w-fit">
                       🎉 Kostnadsfritt
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-3">
+                  <p className="text-gray-600 mb-2 md:mb-3 text-sm md:text-base">
                     Som ny användare får du prova vår tjänst gratis i 30 dagar. Ingen betalning krävs nu.
                   </p>
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-xs md:text-sm text-gray-500">
                     <span>Efter prov-perioden: {price.toFixed(2)} kr/år</span>
                   </div>
                 </div>
@@ -452,15 +452,17 @@ export function CreateHandbookForm() {
         )}
 
         {/* Tabs för att välja mellan manuell och import */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'import')} className="mb-8">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'import')} className="mb-6 md:mb-8">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="manual" className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Skapa manuellt
+            <TabsTrigger value="manual" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Skapa manuellt</span>
+              <span className="sm:hidden">Manuellt</span>
             </TabsTrigger>
-            <TabsTrigger value="import" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Importera befintlig handbok
+            <TabsTrigger value="import" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <Upload className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Importera befintlig handbok</span>
+              <span className="sm:hidden">Importera</span>
             </TabsTrigger>
           </TabsList>
 
@@ -497,7 +499,7 @@ export function CreateHandbookForm() {
           </TabsContent>
 
           <TabsContent value="manual" className="mt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           <div className="space-y-2">
             <label htmlFor="name" className="block text-sm font-semibold text-gray-900">
               Handbokens namn
@@ -508,7 +510,7 @@ export function CreateHandbookForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="T.ex. Brf Solgläntan"
-              className="w-full h-12 text-base border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full h-10 md:h-12 text-sm md:text-base border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isLoading}
             />
           </div>
@@ -518,14 +520,14 @@ export function CreateHandbookForm() {
               Adressen till din handbok blir:
             </label>
             <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-              <span className="text-gray-500 px-3 text-base font-medium">handbok.org/</span>
+              <span className="text-gray-500 px-2 md:px-3 text-sm md:text-base font-medium">handbok.org/</span>
               <Input
                 id="subdomain"
                 type="text"
                 value={subdomain}
                 onChange={handleSubdomainChange}
                 placeholder="solgläntan"
-                className={`flex-1 h-12 text-base border-0 bg-transparent focus:ring-0 ${isSubdomainAvailable === true ? 'text-green-600' : isSubdomainAvailable === false ? 'text-red-600' : ''}`}
+                className={`flex-1 h-10 md:h-12 text-sm md:text-base border-0 bg-transparent focus:ring-0 ${isSubdomainAvailable === true ? 'text-green-600' : isSubdomainAvailable === false ? 'text-red-600' : ''}`}
                 disabled={isLoading}
               />
             </div>
@@ -561,30 +563,35 @@ export function CreateHandbookForm() {
             </div>
           )}
 
-          <div className="pt-4">
+          <div className="pt-3 md:pt-4">
             <Button
               type="submit"
-              className={`w-full h-12 text-base font-semibold ${isEligibleForProvState ? 'bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'} text-white shadow-lg transition-all duration-200`}
+              className={`w-full h-10 md:h-12 text-sm md:text-base font-semibold ${isEligibleForProvState ? 'bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'} text-white shadow-lg transition-all duration-200`}
               disabled={isLoading || isSubdomainAvailable === false}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  {isEligibleForProvState ? 'Startar prov...' : 'Förbereder betalning...'}
+                  <Loader2 className="mr-2 h-4 w-4 md:h-5 md:w-5 animate-spin" />
+                  <span className="hidden sm:inline">{isEligibleForProvState ? 'Startar prov...' : 'Förbereder betalning...'}</span>
+                  <span className="sm:hidden">{isEligibleForProvState ? 'Startar...' : 'Förbereder...'}</span>
                 </>
               ) : isEligibleForProvState ? (
                 <>
-                  <Gift className="mr-2 h-5 w-5" />
-                  Starta 30 dagars prov
+                  <Gift className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden sm:inline">Starta 30 dagars prov</span>
+                  <span className="sm:hidden">Starta prov</span>
                 </>
               ) : (
-                'Gå vidare till betalning'
+                <>
+                  <span className="hidden sm:inline">Gå vidare till betalning</span>
+                  <span className="sm:hidden">Till betalning</span>
+                </>
               )}
             </Button>
             
-            <p className="text-xs text-gray-500 text-center mt-4">
+            <p className="text-xs text-gray-500 text-center mt-3 md:mt-4 px-2">
               Efter {isEligibleForProvState ? 'prov-start' : 'betalning'} kommer din handbok att vara tillgänglig på{" "}
-              <span className="font-medium text-gray-700">handbok.org/{subdomain || 'din-förening'}</span>
+              <span className="font-medium text-gray-700 break-all">handbok.org/{subdomain || 'din-förening'}</span>
             </p>
           </div>
         </form>

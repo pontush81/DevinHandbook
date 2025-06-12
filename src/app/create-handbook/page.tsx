@@ -100,38 +100,38 @@ function CreateHandbookContent() {
   // Kontrollera om användaren redan har en handbok (begränsning för nya användare)
   if (handbooks.length >= 1 && !isSuperadmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-16 px-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
               Du har redan en handbok
             </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
+            <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto px-2">
               Som ny användare kan du skapa en handbok. För att skapa fler handböcker behöver du uppgradera ditt konto.
             </p>
           </div>
           
-          <Card className="shadow-lg border-0 mb-8">
-            <CardContent className="p-8">
-              <div className="text-center space-y-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                  <span className="text-3xl">📚</span>
+          <Card className="shadow-lg border-0 mb-6 md:mb-8">
+            <CardContent className="p-4 md:p-8">
+              <div className="text-center space-y-4 md:space-y-6">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-2xl md:text-3xl">📚</span>
                 </div>
                 
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Din befintliga handbok</h3>
-                  <div className="space-y-4">
+                  <h3 className="text-lg md:text-xl font-semibold mb-2">Din befintliga handbok</h3>
+                  <div className="space-y-3 md:space-y-4">
                     {handbooks.map(handbook => (
-                      <div key={handbook.id} className="p-4 border rounded-lg">
-                        <h4 className="font-medium text-lg">{handbook.title}</h4>
-                        <p className="text-gray-500 mb-3">handbok.org/{handbook.subdomain}</p>
-                        <div className="space-x-2">
-                          <Button asChild size="sm">
+                      <div key={handbook.id} className="p-3 md:p-4 border rounded-lg">
+                        <h4 className="font-medium text-base md:text-lg">{handbook.title}</h4>
+                        <p className="text-gray-500 mb-3 text-sm md:text-base break-all">handbok.org/{handbook.subdomain}</p>
+                        <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2 sm:space-y-0">
+                          <Button asChild size="sm" className="w-full sm:w-auto">
                             <a href={`/${handbook.subdomain}`}>
                               Redigera handbok
                             </a>
                           </Button>
-                          <Button asChild variant="outline" size="sm">
+                          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                             <a href={`https://www.handbok.org/${handbook.subdomain}`} target="_blank" rel="noopener noreferrer">
                               Visa handbok
                             </a>
@@ -142,16 +142,16 @@ function CreateHandbookContent() {
                   </div>
                 </div>
                 
-                <div className="border-t pt-6">
-                  <h4 className="font-semibold mb-3">Vill du skapa fler handböcker?</h4>
-                  <p className="text-gray-600 mb-4">
+                <div className="border-t pt-4 md:pt-6">
+                  <h4 className="font-semibold mb-2 md:mb-3 text-sm md:text-base">Vill du skapa fler handböcker?</h4>
+                  <p className="text-gray-600 mb-3 md:mb-4 text-sm md:text-base">
                     Uppgradera till vårt Pro-konto för att skapa obegränsat antal handböcker, få avancerade funktioner och prioriterad support.
                   </p>
-                  <div className="space-y-3">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                  <div className="space-y-2 md:space-y-3">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-sm md:text-base">
                       Uppgradera till Pro
                     </Button>
-                    <Button variant="outline" className="w-full" onClick={() => router.push('/dashboard')}>
+                    <Button variant="outline" className="w-full text-sm md:text-base" onClick={() => router.push('/dashboard')}>
                       Gå till dashboard
                     </Button>
                   </div>
@@ -167,13 +167,13 @@ function CreateHandbookContent() {
   // Visa lista över befintliga handböcker om användaren väljer att se dem (endast för superadmins)
   if (handbooks.length > 0 && !showCreateForm && !forceNewHandbook && isSuperadmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-16 px-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
               Dina handböcker
             </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
+            <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto px-2">
               Du har {handbooks.length} handbok{handbooks.length > 1 ? 'er' : ''}. Du kan skapa en till eller hantera dina befintliga.
             </p>
           </div>
@@ -217,36 +217,31 @@ function CreateHandbookContent() {
 
   // Visa formulär för att skapa ny handbok som standardläge
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-16 px-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
             Skapa digital handbok
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-xl mx-auto">
+          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto px-2">
             {handbooks.length === 0 
-              ? ""
+              ? "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
               : "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
             }
           </p>
           {handbooks.length > 0 && isSuperadmin && (
-            <Button variant="outline" className="mb-4" onClick={() => router.push('/dashboard')}>
+            <Button variant="outline" className="mb-3 md:mb-4 text-sm md:text-base" onClick={() => router.push('/dashboard')}>
               Visa mina handböcker
             </Button>
           )}
         </div>
         
         <Card className="shadow-lg border-0">
-          <CardContent className="p-8">
+          <CardContent className="p-4 md:p-8">
             {user && <CreateHandbookForm />}
-            <div className="mt-6 text-gray-600 text-sm">
+            <div className="mt-4 md:mt-6 text-gray-600 text-xs md:text-sm space-y-2">
               <p>När din handbok har skapats kommer du automatiskt få administratörsrättigheter och se en "Administrera"-knapp i handboken.</p>
-              <p className="mt-2">Du kan använda denna knapp för att hantera innehåll och medlemmar i din handbok.</p>
-              {handbooks.length === 0 && (
-                <p className="mt-2 font-medium text-blue-600">
-                  
-                </p>
-              )}
+              <p>Du kan använda denna knapp för att hantera innehåll och medlemmar i din handbok.</p>
             </div>
           </CardContent>
         </Card>
