@@ -43,12 +43,42 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(await fileBuffer.arrayBuffer());
 
       if (fileData.file_type === 'application/pdf') {
-        // Dynamisk import för att undvika build-problem
-        const pdf = (await import('pdf-parse')).default;
-        const pdfData = await pdf(buffer);
-        extractedText = pdfData.text;
-        metadata.totalPages = pdfData.numpages;
-        metadata.documentType = 'pdf';
+        try {
+          // Försök först med pdf-parse
+          const pdf = (await import('pdf-parse')).default;
+          const pdfData = await pdf(buffer);
+          extractedText = pdfData.text;
+          metadata.totalPages = pdfData.numpages;
+          metadata.documentType = 'pdf';
+        } catch (pdfError) {
+          console.error('PDF parsing with pdf-parse failed:', pdfError);
+          
+          try {
+            // Backup: använd pdfjs-dist
+            const pdfjsLib = await import('pdfjs-dist');
+            const pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+            metadata.totalPages = pdfDoc.numPages;
+            
+            let fullText = '';
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+              const page = await pdfDoc.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items
+                .map((item: any) => item.str)
+                .join(' ');
+              fullText += pageText + '\n';
+            }
+            
+            extractedText = fullText;
+            metadata.documentType = 'pdf_pdfjs';
+          } catch (pdfjsError) {
+            console.error('PDF parsing with pdfjs failed:', pdfjsError);
+            // Sista fallback: försök extrahera som text (kommer troligen inte fungera för PDF)
+            extractedText = buffer.toString('utf-8');
+            metadata.documentType = 'pdf_fallback';
+            metadata.totalPages = 1;
+          }
+        }
       } 
       else if (fileData.file_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         // Dynamisk import för att undvika build-problem

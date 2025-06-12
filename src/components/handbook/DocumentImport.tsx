@@ -246,12 +246,19 @@ export function DocumentImport({ onImportComplete, isLoading = false }: Document
                 accept=".pdf,.docx,.doc,.txt"
                 onChange={(e) => e.target.files?.[0] && handleFileSelection(e.target.files[0])}
                 id="file-upload"
+                ref={(input) => {
+                  if (input) {
+                    input.onclick = () => input.value = '';
+                  }
+                }}
               />
-              <label htmlFor="file-upload">
-                <Button variant="outline" className="cursor-pointer">
-                  Välj fil
-                </Button>
-              </label>
+              <Button 
+                variant="outline" 
+                className="cursor-pointer"
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
+                Välj fil
+              </Button>
               
               <div className="text-xs text-muted-foreground">
                 Stöder PDF, Word (.docx), och textfiler upp till 10MB
