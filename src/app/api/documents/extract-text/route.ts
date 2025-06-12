@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import pdf from 'pdf-parse';
-import mammoth from 'mammoth';
 
 // Initiera Supabase client med service role för server-side operationer
 const supabase = createClient(
@@ -45,12 +43,16 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(await fileBuffer.arrayBuffer());
 
       if (fileData.file_type === 'application/pdf') {
+        // Dynamisk import för att undvika build-problem
+        const pdf = (await import('pdf-parse')).default;
         const pdfData = await pdf(buffer);
         extractedText = pdfData.text;
         metadata.totalPages = pdfData.numpages;
         metadata.documentType = 'pdf';
       } 
       else if (fileData.file_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        // Dynamisk import för att undvika build-problem
+        const mammoth = await import('mammoth');
         const docxData = await mammoth.extractRawText({ buffer });
         extractedText = docxData.value;
         metadata.documentType = 'docx';
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
       else if (fileData.file_type === 'application/msword') {
         // För .doc filer - försök med mammoth ändå
         try {
+          const mammoth = await import('mammoth');
           const docData = await mammoth.extractRawText({ buffer });
           extractedText = docData.value;
           metadata.documentType = 'doc';
