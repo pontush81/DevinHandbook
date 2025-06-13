@@ -121,10 +121,12 @@ KRITISKA JSON-FORMATERINGSREGLER:
 KRITISKA FORMATERINGSREGLER för content-fältet:
 
 🚫 ABSOLUT FÖRBJUDET - Upprepa ALDRIG sektionstiteln i content-fältet:
-- Om title är "§ 1 Firma, ändamål och säte" - börja INTE content med "§ 1" eller "Firma, ändamål och säte"
+- Om title är "§ 1 Firma, ändamål och säte" - börja INTE content med "§ 1" eller "Firma" eller "ändamål" eller "säte"
 - Om title är "Stadgar" - börja INTE content med "Stadgar" eller "Dessa stadgar"
 - Om title är "Kontaktuppgifter" - börja INTE content med "Kontaktuppgifter"
+- Om title är "Aktivitetsrum" - börja INTE content med "Aktivitetsrum" eller "Ett aktivitetsrum"
 - Titeln visas redan separat som rubrik - börja direkt med innehållet!
+- VIKTIGT: Börja content med det första substantiella ordet som INTE finns i titeln!
 
 ✅ KORREKT FORMATERING:
 - Använd dubbla radbrytningar (\\n\\n) mellan stycken för bättre läsbarhet
@@ -140,6 +142,10 @@ EXEMPEL PÅ KORREKT ANVÄNDNING:
 Title: "§ 1 Firma, ändamål och säte"
 Content: "Föreningens firma är Riksbyggen Bostadsrättsförening Segerstaden. Föreningen har till ändamål att främja medlemmarnas ekonomiska intressen genom att i föreningens hus, mot ersättning, till föreningens medlemmar upplåta bostadslägenheter för permanent boende, och i förekommande fall lokaler, till nyttjande utan begränsning i tiden. Föreningen ska i sin verksamhet främja de kooperativa principerna såsom de kommer till uttryck i dessa stadgar och verka för en socialt, ekonomiskt och miljömässigt hållbar utveckling. Föreningens styrelse ska ha sitt säte i Växjö kommun."
 
+✅ RÄTT (aktivitetsrum exempel):
+Title: "Aktivitetsrum"
+Content: "Ett stort bord med 10 stolar finns att använda med dimbar belysning ovanför. Darttavla med belysning ovanför är installerad. För att tända den belysningen så sker det direkt på armaturen på högersida."
+
 ✅ RÄTT (komplett sektion):
 Title: "Styrelse och förvaltning"
 Content: "Styrelsen består av minst tre och högst sju ledamöter som väljs av föreningsstämman för en mandatperiod om ett år. Ordföranden leder styrelsens arbete och representerar föreningen utåt. Sekreteraren ansvarar för protokollföring och korrespondens. Styrelsen sammanträder minst fyra gånger per år och är beslutsför när minst hälften av ledamöterna är närvarande."
@@ -147,6 +153,19 @@ Content: "Styrelsen består av minst tre och högst sju ledamöter som väljs av
 🚫 FEL (upprepar titeln):
 Title: "§ 1 Firma, ändamål och säte"
 Content: "§ 1 Firma, ändamål och säte - Föreningen främjar..."
+
+🚫 FEL (upprepar paragrafnummer):
+Title: "§ 50 Sammanträden"
+Content: "§ 50 Ordföranden ska se till att sammanträde hålls..."
+
+🚫 FEL (upprepar delar av titeln):
+Title: "Styrelse och förvaltning"
+Content: "Styrelse och förvaltning består av..."
+
+🚫 FEL (upprepar första ordet från titeln):
+Title: "Aktivitetsrum"
+Content: "Ett stort bord med 10 stolar finns att använda..."
+PROBLEM: "Ett" är OK, men "Aktivitetsrum" får ALDRIG upprepas!
 
 VIKTIGA REGLER:
 - Skapa EN sektion för varje huvudavsnitt/kapitel i dokumentet
@@ -317,25 +336,37 @@ ${text}`;
           let cleanContent = section.content.trim();
           const title = section.title.trim();
           
-          // Ta bort titelupprepningar från början av content
-          // Hantera olika varianter av titelupprepning
-          const titleVariants = [
-            title, // Exakt titel
-            title.replace(/^§\s*\d+\s*/, ''), // Titel utan paragrafnummer
-            title.replace(/^§\s*\d+\s*/, '').replace(/^\w+,?\s*/, ''), // Bara slutdelen av titeln
-          ];
+          // AGGRESSIV titelrensning - ta bort ALLA varianter av titelupprepning
+          const originalContent = cleanContent;
           
-          for (const variant of titleVariants) {
-            if (variant && cleanContent.toLowerCase().startsWith(variant.toLowerCase())) {
-              cleanContent = cleanContent.substring(variant.length).trim();
-              // Ta bort eventuella inledande bindestreck, kolon eller punkter
-              cleanContent = cleanContent.replace(/^[-:.\s]+/, '').trim();
-              break;
-            }
+          // Steg 1: Ta bort exakt titel (case-insensitive)
+          const exactTitleRegex = new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+          cleanContent = cleanContent.replace(exactTitleRegex, '').trim();
+          
+          // Steg 2: Ta bort paragrafnummer från början
+          cleanContent = cleanContent.replace(/^§\s*\d+\s*[-:.\s]*/, '').trim();
+          
+          // Steg 3: Ta bort titel utan paragrafnummer
+          const titleWithoutParagraph = title.replace(/^§\s*\d+\s*/, '').trim();
+          if (titleWithoutParagraph) {
+            const titleWithoutParRegex = new RegExp(`^${titleWithoutParagraph.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+            cleanContent = cleanContent.replace(titleWithoutParRegex, '').trim();
           }
           
-          // Extra säkerhet: ta bort paragrafnummer från början om det finns kvar
-          cleanContent = cleanContent.replace(/^§\s*\d+\s*[^\w]*/, '').trim();
+          // Steg 4: Ta bort första ordet/frasen från titeln
+          const firstWord = titleWithoutParagraph.split(/[,\s]+/)[0];
+          if (firstWord && firstWord.length > 3) {
+            const firstWordRegex = new RegExp(`^${firstWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+            cleanContent = cleanContent.replace(firstWordRegex, '').trim();
+          }
+          
+          // Steg 5: Ta bort alla kvarvarande separatorer från början
+          cleanContent = cleanContent.replace(/^[-:.\s§\d\s,]*/, '').trim();
+          
+          // Steg 6: Om content blev för kort eller tom, behåll original men ta bara bort paragrafnummer
+          if (cleanContent.length < 20 && originalContent.length > 50) {
+            cleanContent = originalContent.replace(/^§\s*\d+\s*[-:.\s]*/, '').trim();
+          }
           
           return {
             title: title,
@@ -352,6 +383,107 @@ ${text}`;
         }, { status: 400 });
       }
 
+      // EXTRA SÄKERHETSÅTGÄRD: Dubbelkolla att inga titlar upprepas i content
+      const finalSections = validSections.map((section: any) => {
+        let content = section.content;
+        const title = section.title;
+        
+        console.log(`🔧 Post-processing section: "${title}"`);
+        console.log(`🔧 Original content start: "${content.substring(0, 100)}..."`);
+        
+        // SUPER AGGRESSIV TITELRENSNING - Flera strategier
+        
+        // Strategi 1: Ta bort exakt titel från början (case-insensitive)
+        const titleClean = title.replace(/^§\s*\d+\s*/, '').trim();
+        const exactTitleRegex = new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+        content = content.replace(exactTitleRegex, '').trim();
+        
+        // Strategi 2: Ta bort titel utan paragrafnummer
+        if (titleClean) {
+          const titleRegex = new RegExp(`^${titleClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+          content = content.replace(titleRegex, '').trim();
+        }
+        
+        // Strategi 3: Ord-för-ord analys med separatorer
+        const titleWords = titleClean.toLowerCase().split(/\s+/).filter((word: string) => word.length > 2);
+        let contentWords = content.split(/\s+/);
+        let wordsToRemove = 0;
+        
+        for (let i = 0; i < Math.min(titleWords.length, contentWords.length); i++) {
+          const titleWord = titleWords[i].replace(/[^\w]/g, '');
+          const contentWord = contentWords[i].replace(/[^\w]/g, '').toLowerCase();
+          
+          if (titleWord === contentWord || 
+              (titleWord.length > 3 && contentWord.length > 3 && 
+               (titleWord.includes(contentWord) || contentWord.includes(titleWord)))) {
+            wordsToRemove = i + 1;
+            console.log(`🔧 Word match found: "${titleWord}" ≈ "${contentWord}"`);
+          } else if (contentWord.match(/^[-:.\s§\d,()]*$/)) {
+            // Hoppa över separatorer och fortsätt söka
+            wordsToRemove = i + 1;
+            console.log(`🔧 Separator found: "${contentWord}"`);
+          } else {
+            break;
+          }
+        }
+        
+        // Ta bort matchande ord
+        if (wordsToRemove > 0) {
+          contentWords = contentWords.slice(wordsToRemove);
+          content = contentWords.join(' ');
+          console.log(`🔧 Removed ${wordsToRemove} words from start`);
+        }
+        
+        // Strategi 4: Ta bort kvarvarande separatorer från början
+        content = content.replace(/^[-:.\s§\d\s,()]*/, '').trim();
+        
+        // Strategi 5: Ta bort första meningen om den innehåller delar av titeln
+        const sentences = content.split(/[.!?]+/);
+        if (sentences.length > 1) {
+          const firstSentence = sentences[0].toLowerCase().trim();
+          const titleLower = titleClean.toLowerCase();
+          
+          // Kolla om första meningen innehåller mer än 50% av titelns ord
+                     const titleWordsInSentence = titleWords.filter((word: string) => 
+             firstSentence.includes(word.toLowerCase())
+           );
+          
+          if (titleWordsInSentence.length > titleWords.length * 0.5) {
+            content = sentences.slice(1).join('.').trim();
+            if (content.startsWith('.')) content = content.substring(1).trim();
+            console.log(`🔧 Removed first sentence containing title words`);
+          }
+        }
+        
+        // Strategi 6: Om content blev för kort, försök mindre aggressiv approach
+        if (content.length < 50 && section.content.length > 100) {
+          console.log(`🔧 Content too short (${content.length}), trying fallback`);
+          content = section.content;
+          
+          // Bara ta bort paragrafnummer och första ord om det matchar titeln
+          content = content.replace(/^§\s*\d+\s*[-:.\s]*/, '').trim();
+          const firstWord = content.split(/\s+/)[0];
+          const titleFirstWord = titleClean.split(/\s+/)[0];
+          
+          if (firstWord && titleFirstWord && 
+              firstWord.toLowerCase().includes(titleFirstWord.toLowerCase())) {
+            content = content.split(/\s+/).slice(1).join(' ').trim();
+          }
+        }
+        
+        // Säkerställ att content börjar med stor bokstav
+        if (content.length > 0) {
+          content = content.charAt(0).toUpperCase() + content.slice(1);
+        }
+        
+        console.log(`🔧 Final content start: "${content.substring(0, 100)}..."`);
+        
+        return {
+          ...section,
+          content: content
+        };
+      });
+
       // Spara analysen i databasen
       const { data: analysisData, error: analysisError } = await supabase
         .from('document_analyses')
@@ -361,13 +493,13 @@ ${text}`;
             ...metadata,
             analysis_time: new Date().toISOString(),
             model: "gpt-4o-mini",
-            prompt_version: "2.5"
+            prompt_version: "2.6"
           },
           analysis_result: {
-            sections: validSections,
+            sections: finalSections,
             summary: {
-              total_sections: validSections.length,
-              avg_confidence: validSections.reduce((sum: number, s: any) => sum + s.confidence, 0) / validSections.length,
+              total_sections: finalSections.length,
+              avg_confidence: finalSections.reduce((sum: number, s: any) => sum + s.confidence, 0) / finalSections.length,
               template_type: templateType
             }
           },
@@ -383,10 +515,10 @@ ${text}`;
 
       return NextResponse.json({
         success: true,
-        sections: validSections,
+        sections: finalSections,
         summary: {
-          total_sections: validSections.length,
-          avg_confidence: validSections.reduce((sum: number, s: any) => sum + s.confidence, 0) / validSections.length,
+          total_sections: finalSections.length,
+          avg_confidence: finalSections.reduce((sum: number, s: any) => sum + s.confidence, 0) / finalSections.length,
           template_type: templateType
         },
         analysis_id: analysisData?.id

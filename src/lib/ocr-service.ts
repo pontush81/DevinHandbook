@@ -213,8 +213,49 @@ export class OCRService {
     return wordCount > 0 ? totalConfidence / wordCount : 0.5;
   }
 
+  async extractTextFromImage(buffer: Buffer): Promise<{ text: string; confidence: number }> {
+    if (!this.isConfigured || !this.client) {
+      throw new Error('OCR-tjänsten är inte konfigurerad');
+    }
+
+    try {
+      console.log('🔍 Startar OCR-bearbetning av bild med Google Cloud Vision...');
+      
+      // Extrahera text från bilden direkt
+      const [result] = await this.client.documentTextDetection({
+        image: {
+          content: buffer.toString('base64')
+        }
+      });
+
+      const fullTextAnnotation = result.fullTextAnnotation;
+      
+      if (fullTextAnnotation && fullTextAnnotation.text) {
+        const text = fullTextAnnotation.text.trim();
+        const confidence = this.calculateAverageConfidence(fullTextAnnotation);
+        
+        console.log(`✅ Bild-OCR slutförd: ${text.length} tecken, confidence: ${confidence.toFixed(2)}`);
+        
+        return {
+          text: text,
+          confidence: confidence
+        };
+      } else {
+        console.log('⚠️ Ingen text hittades i bilden');
+        return {
+          text: '',
+          confidence: 0
+        };
+      }
+
+    } catch (error) {
+      console.error('❌ Bild-OCR fel:', error);
+      throw new Error(`Bild-OCR misslyckades: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+    }
+  }
+
   isAvailable(): boolean {
-    return this.isConfigured;
+    return this.isConfigured && this.client !== null;
   }
 
   async testConnection(): Promise<boolean> {

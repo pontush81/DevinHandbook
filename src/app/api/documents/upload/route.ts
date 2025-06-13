@@ -22,12 +22,17 @@ export async function POST(request: NextRequest) {
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
-      'text/plain'
+      'text/plain',
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/gif',
+      'image/webp'
     ];
 
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ 
-        error: 'Filtypen stöds inte. Endast PDF, Word och textfiler är tillåtna.' 
+        error: 'Filtypen stöds inte. Tillåtna filtyper: PDF, Word, textfiler och bilder (JPG, PNG, GIF, WebP).' 
       }, { status: 400 });
     }
 

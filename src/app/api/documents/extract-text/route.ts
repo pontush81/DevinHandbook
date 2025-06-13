@@ -156,17 +156,80 @@ async function extractTextFromPlainText(buffer: Buffer): Promise<{ text: string;
   };
 }
 
+// Extrahera text från bilder med OCR
+async function extractTextFromImage(buffer: Buffer): Promise<{ text: string; pages: number }> {
+  if (!ocrService.isAvailable()) {
+    return {
+      text: `Detta är en bildfil som innehåller text. För att kunna analysera detta dokument behöver du:
+
+1. Konfigurera Google Cloud Vision API för automatisk OCR
+2. Eller konvertera bilden till text manuellt
+3. Eller använda online OCR-verktyg som ocr.space
+
+Filtyp: Bildfil
+OCR: Inte konfigurerat`,
+      pages: 1
+    };
+  }
+
+  try {
+    console.log('🤖 Försöker automatisk OCR på bild med Google Cloud Vision...');
+    const ocrResult = await ocrService.extractTextFromImage(buffer);
+    
+    if (ocrResult.text && ocrResult.text.trim().length > 10) {
+      console.log(`✅ Bild-OCR lyckades: ${ocrResult.text.length} tecken`);
+      return {
+        text: ocrResult.text,
+        pages: 1
+      };
+    } else {
+      return {
+        text: `Ingen text kunde hittas i denna bild. Kontrollera att:
+
+1. Bilden innehåller tydlig text
+2. Texten är läsbar och inte för suddig
+3. Bilden har tillräcklig upplösning
+
+Försök med en tydligare bild eller konvertera texten manuellt.`,
+        pages: 1
+      };
+    }
+  } catch (ocrError) {
+    console.error('❌ Bild-OCR misslyckades:', ocrError);
+    return {
+      text: `OCR-bearbetning av bilden misslyckades. Fel: ${ocrError instanceof Error ? ocrError.message : 'Okänt fel'}
+
+För att analysera denna bild kan du:
+1. Kontrollera Google Cloud Vision API-konfigurationen
+2. Försök med en tydligare bild
+3. Konvertera texten manuellt`,
+      pages: 1
+    };
+  }
+}
+
 // Extrahera text från andra filtyper
 async function extractTextFromFile(buffer: Buffer, mimeType: string): Promise<{ text: string; pages?: number }> {
   if (mimeType === 'application/pdf') {
     return await extractTextFromPDF(buffer);
   }
   
-  if (mimeType.startsWith('text/')) {
-    return {
-      text: buffer.toString('utf-8'),
-      pages: 1
-    };
+  if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+      mimeType === 'application/msword') {
+    return await extractTextFromWord(buffer);
+  }
+  
+  if (mimeType.startsWith('image/') || 
+      mimeType === 'image/jpeg' || 
+      mimeType === 'image/jpg' || 
+      mimeType === 'image/png' || 
+      mimeType === 'image/gif' || 
+      mimeType === 'image/webp') {
+    return await extractTextFromImage(buffer);
+  }
+  
+  if (mimeType.startsWith('text/') || mimeType === 'text/plain') {
+    return await extractTextFromPlainText(buffer);
   }
   
   throw new Error(`Filtyp ${mimeType} stöds inte för textextraktion`);

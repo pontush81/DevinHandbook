@@ -66,13 +66,26 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && !analysisResult && analysisResultRef.current) {
-        console.log('Återställer analysresultat efter fönsterbyte');
+        console.log('🔄 Återställer analysresultat efter fönsterbyte');
+        setAnalysisResult(analysisResultRef.current);
+      }
+    };
+    
+    const handleFocus = () => {
+      // Återställ även vid focus-event för extra säkerhet
+      if (!analysisResult && analysisResultRef.current) {
+        console.log('🔄 Återställer analysresultat efter focus');
         setAnalysisResult(analysisResultRef.current);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [analysisResult]);
 
   // Rapportera status-ändringar till parent
@@ -111,11 +124,16 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
-      'text/plain'
+      'text/plain',
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/gif',
+      'image/webp'
     ];
     
     if (!supportedFileTypes.includes(file.type)) {
-      return `${file.name}: Filtypen stöds inte. Endast PDF, Word och textfiler är tillåtna.`;
+      return `${file.name}: Filtypen stöds inte. Tillåtna filtyper: PDF, Word, textfiler och bilder (JPG, PNG, GIF, WebP).`;
     }
 
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
@@ -222,7 +240,7 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
         };
 
         // Steg 3: AI-analys (längre steg med mer tid)
-        setAnalysisStep(`🤖 AI analyserar struktur och innehåll för ${file.name}...`);
+        setAnalysisStep(`🤖 AI analyserar ${file.name}...`);
         setAnalysisProgress((i / files.length) * 100 * 0.1 + 30); // Startar vid 30% istället för 50%
 
         const analysisResponse = await fetch('/api/documents/analyze-structure', {
@@ -476,7 +494,7 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
               </div>
               
               <div className="text-xs text-muted-foreground text-center px-2">
-                Stöder PDF (inklusive scannade dokument med OCR), Word (.docx), och textfiler upp till 10MB per fil
+                Stöder PDF (inklusive scannade dokument med OCR), Word (.docx), textfiler och bilder (JPG, PNG, GIF, WebP) upp till 10MB per fil
               </div>
             </div>
           </div>
@@ -512,7 +530,7 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
                       <span className="text-sm font-medium text-blue-900 block">{analysisStep}</span>
                       <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                         <Brain className="h-3 w-3" />
-                        AI analyserar ditt dokument...
+                        Bearbetar innehåll...
                       </div>
                     </div>
                   </div>
