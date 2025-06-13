@@ -62,126 +62,57 @@ export class OCRService {
       throw new Error('OCR-tjänsten är inte konfigurerad');
     }
 
-    const execAsync = promisify(exec);
-    let tempPdfPath: string | null = null;
-    let tempImagePath: string | null = null;
-
-    // Kontrollera och skapa temp-mapp om den inte finns
-    const tempDir = path.join(os.tmpdir(), 'handbok-ocr-temp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
     try {
-      console.log('🔍 Startar OCR-bearbetning med Google Cloud Vision...');
-      
-      // Skapa temporära filer
-      const timestamp = Date.now();
-      tempPdfPath = path.join(tempDir, `pdf_${timestamp}.pdf`);
-      tempImagePath = path.join(tempDir, `page_${timestamp}.png`);
-      
-      // Spara PDF till temporär fil
-      console.log('📄 Sparar PDF till temporär fil...');
-      fs.writeFileSync(tempPdfPath, buffer);
-      
-      // Konvertera alla sidor med ImageMagick direkt
-      console.log('🖼️ Konverterar alla PDF-sidor till bilder med ImageMagick...');
-      const magickCommand = `magick "${tempPdfPath}" -density 200 -quality 100 "${tempDir}/page_${timestamp}_%d.png"`;
-      console.log('🔧 ImageMagick kommando:', magickCommand);
-      
-      await execAsync(magickCommand);
-      
-      // Hitta alla skapade bilder
-      const imageFiles = fs.readdirSync(tempDir)
-        .filter(file => file.startsWith(`page_${timestamp}_`) && file.endsWith('.png'))
-        .sort((a, b) => {
-          const numA = parseInt(a.match(/page_\d+_(\d+)\.png/)?.[1] || '0');
-          const numB = parseInt(b.match(/page_\d+_(\d+)\.png/)?.[1] || '0');
-          return numA - numB;
-        });
-      
-      console.log(`📄 Hittade ${imageFiles.length} sidor att bearbeta`);
-      
-      if (imageFiles.length === 0) {
-        throw new Error('ImageMagick kunde inte skapa några bildfiler');
-      }
+      console.log('🔍 Startar OCR-bearbetning av PDF med Google Cloud Vision (direkt på PDF)...');
 
-      // Bearbeta alla sidor med OCR
+      // Skicka PDF direkt till Google Vision API
+      const [operation] = await this.client.asyncBatchAnnotateFiles({
+        requests: [
+          {
+            inputConfig: {
+              content: buffer.toString('base64'),
+              mimeType: 'application/pdf',
+            },
+            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+            outputConfig: {
+              gcsDestination: {
+                uri: `gs://${process.env.GOOGLE_CLOUD_VISION_BUCKET}/ocr-output-${Date.now()}/`,
+              },
+              batchSize: 5,
+            },
+          },
+        ],
+      });
+
+      // Vänta på att operationen är klar
+      const [filesResponse] = await operation.promise();
+      const responses = filesResponse.responses || [];
       let allText = '';
       let totalConfidence = 0;
       let processedPages = 0;
-      
-      for (let i = 0; i < imageFiles.length; i++) {
-        const imageFile = imageFiles[i];
-        const imagePath = path.join(tempDir, imageFile);
-        
-        console.log(`🔍 Bearbetar sida ${i + 1}/${imageFiles.length}: ${imageFile}`);
-        
-        try {
-          const imageBuffer = fs.readFileSync(imagePath);
-          
-          // Extrahera text från bilden
-          const [result] = await this.client.documentTextDetection({
-            image: {
-              content: imageBuffer.toString('base64')
-            }
-          });
 
-          const fullTextAnnotation = result.fullTextAnnotation;
-          
-          if (fullTextAnnotation && fullTextAnnotation.text) {
-            const pageText = fullTextAnnotation.text.trim();
-            if (pageText.length > 0) {
-              allText += (allText ? '\n\n--- Sida ' + (i + 1) + ' ---\n\n' : '') + pageText;
-              totalConfidence += this.calculateAverageConfidence(fullTextAnnotation);
-              processedPages++;
-            }
+      for (const response of responses) {
+        if (response.fullTextAnnotation && response.fullTextAnnotation.text) {
+          const pageText = response.fullTextAnnotation.text.trim();
+          if (pageText.length > 0) {
+            allText += (allText ? '\n\n--- Sida ' + (processedPages + 1) + ' ---\n\n' : '') + pageText;
+            totalConfidence += this.calculateAverageConfidence(response.fullTextAnnotation);
+            processedPages++;
           }
-          
-          // Rensa bildfil direkt efter bearbetning
-          fs.unlinkSync(imagePath);
-          
-        } catch (pageError) {
-          console.warn(`⚠️ Kunde inte bearbeta sida ${i + 1}:`, pageError);
         }
       }
-      
+
       const averageConfidence = processedPages > 0 ? totalConfidence / processedPages : 0;
-      
       console.log(`✅ OCR slutförd: ${allText.length} tecken från ${processedPages} sidor, confidence: ${averageConfidence.toFixed(2)}`);
 
       return {
         text: allText,
         confidence: averageConfidence,
-        pages: processedPages
+        pages: processedPages,
       };
-
     } catch (error) {
       console.error('❌ OCR-fel:', error);
       throw new Error(`OCR-bearbetning misslyckades: ${error instanceof Error ? error.message : 'Okänt fel'}`);
-    } finally {
-      // Rensa temporära filer
-      try {
-        if (tempPdfPath && fs.existsSync(tempPdfPath)) {
-          fs.unlinkSync(tempPdfPath);
-        }
-        
-        // Rensa eventuella kvarvarande bildfiler
-        if (fs.existsSync(tempDir)) {
-          const remainingFiles = fs.readdirSync(tempDir)
-            .filter(file => file.includes(`${Date.now()}`) || file.startsWith('page_'));
-          
-          for (const file of remainingFiles) {
-            try {
-              fs.unlinkSync(path.join(tempDir, file));
-            } catch (fileError) {
-              // Ignorera fel för enskilda filer
-            }
-          }
-        }
-      } catch (cleanupError) {
-        console.warn('⚠️ Kunde inte rensa temporära filer:', cleanupError);
-      }
     }
   }
 
