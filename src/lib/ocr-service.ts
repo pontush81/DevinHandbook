@@ -65,15 +65,16 @@ export class OCRService {
     let tempPdfPath: string | null = null;
     let tempImagePath: string | null = null;
 
+    // Kontrollera och skapa temp-mapp om den inte finns
+    const tempDir = './temp';
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
     try {
       console.log('🔍 Startar OCR-bearbetning med Google Cloud Vision...');
       
       // Skapa temporära filer
-      const tempDir = './temp';
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
-      
       const timestamp = Date.now();
       tempPdfPath = path.join(tempDir, `pdf_${timestamp}.pdf`);
       tempImagePath = path.join(tempDir, `page_${timestamp}.png`);
