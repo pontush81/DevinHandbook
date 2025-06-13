@@ -595,13 +595,16 @@ export function AllSectionsView({
                                   autoFocus
                                 />
                               ) : (
-                                <h4 
-                                  className={`text-sm font-semibold text-gray-900 mb-1 ${isEditMode ? 'cursor-pointer hover:text-green-600' : ''}`}
-                                  onClick={isEditMode ? () => startEditingPageTitle(page.id, page.title) : undefined}
-                                  title={isEditMode ? "Klicka för att redigera titeln" : undefined}
-                                >
-                                  {page.title}
-                                </h4>
+                                // Only show page title if it's different from section title
+                                page.title !== section.title && (
+                                  <h4 
+                                    className={`text-sm font-semibold text-gray-900 mb-1 ${isEditMode ? 'cursor-pointer hover:text-green-600' : ''}`}
+                                    onClick={isEditMode ? () => startEditingPageTitle(page.id, page.title) : undefined}
+                                    title={isEditMode ? "Klicka för att redigera titeln" : undefined}
+                                  >
+                                    {page.title}
+                                  </h4>
+                                )
                               )}
                               {page.subtitle && (
                                 <p className="text-xs text-gray-500 mb-2">{page.subtitle}</p>

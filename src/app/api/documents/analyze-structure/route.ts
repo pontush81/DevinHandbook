@@ -387,93 +387,121 @@ ${text}`;
       const finalSections = validSections.map((section: any) => {
         let content = section.content;
         const title = section.title;
+        const originalContent = content;
         
         console.log(`🔧 Post-processing section: "${title}"`);
         console.log(`🔧 Original content start: "${content.substring(0, 100)}..."`);
         
-        // SUPER AGGRESSIV TITELRENSNING - Flera strategier
+        // SYSTEMATISK TITELRENSNING - Kör alla strategier i ordning
         
-        // Strategi 1: Ta bort exakt titel från början (case-insensitive)
+        // Förbered titel för matchning
         const titleClean = title.replace(/^§\s*\d+\s*/, '').trim();
-        const exactTitleRegex = new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
-        content = content.replace(exactTitleRegex, '').trim();
+        const titleWords = titleClean.toLowerCase().split(/\s+/).filter((word: string) => word.length > 2);
         
-        // Strategi 2: Ta bort titel utan paragrafnummer
-        if (titleClean) {
-          const titleRegex = new RegExp(`^${titleClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+        // STRATEGI 1: Exakt titelrensning (hela titeln)
+        const exactTitleRegex = new RegExp(`^\\s*${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+        content = content.replace(exactTitleRegex, '').trim();
+        console.log(`🔧 After exact title removal: "${content.substring(0, 50)}..."`);
+        
+        // STRATEGI 2: Titel utan paragrafnummer
+        if (titleClean && titleClean !== title) {
+          const titleRegex = new RegExp(`^\\s*${titleClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
           content = content.replace(titleRegex, '').trim();
+          console.log(`🔧 After clean title removal: "${content.substring(0, 50)}..."`);
         }
         
-        // Strategi 3: Ord-för-ord analys med separatorer
-        const titleWords = titleClean.toLowerCase().split(/\s+/).filter((word: string) => word.length > 2);
+        // STRATEGI 3: Första ordet från titeln
+        if (titleWords.length > 0) {
+          const firstTitleWord = titleWords[0];
+          const firstWordRegex = new RegExp(`^\\s*${firstTitleWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[-:.\s]*`, 'i');
+          content = content.replace(firstWordRegex, '').trim();
+          console.log(`🔧 After first word removal: "${content.substring(0, 50)}..."`);
+        }
+        
+        // STRATEGI 4: Ord-för-ord från början
         let contentWords = content.split(/\s+/);
         let wordsToRemove = 0;
         
         for (let i = 0; i < Math.min(titleWords.length, contentWords.length); i++) {
-          const titleWord = titleWords[i].replace(/[^\w]/g, '');
+          const titleWord = titleWords[i].replace(/[^\w]/g, '').toLowerCase();
           const contentWord = contentWords[i].replace(/[^\w]/g, '').toLowerCase();
           
           if (titleWord === contentWord || 
               (titleWord.length > 3 && contentWord.length > 3 && 
                (titleWord.includes(contentWord) || contentWord.includes(titleWord)))) {
             wordsToRemove = i + 1;
-            console.log(`🔧 Word match found: "${titleWord}" ≈ "${contentWord}"`);
+            console.log(`🔧 Word match: "${titleWord}" ≈ "${contentWord}"`);
           } else if (contentWord.match(/^[-:.\s§\d,()]*$/)) {
-            // Hoppa över separatorer och fortsätt söka
             wordsToRemove = i + 1;
-            console.log(`🔧 Separator found: "${contentWord}"`);
+            console.log(`🔧 Separator: "${contentWord}"`);
           } else {
             break;
           }
         }
         
-        // Ta bort matchande ord
         if (wordsToRemove > 0) {
           contentWords = contentWords.slice(wordsToRemove);
           content = contentWords.join(' ');
-          console.log(`🔧 Removed ${wordsToRemove} words from start`);
+          console.log(`🔧 After word-by-word removal: "${content.substring(0, 50)}..."`);
         }
         
-        // Strategi 4: Ta bort kvarvarande separatorer från början
-        content = content.replace(/^[-:.\s§\d\s,()]*/, '').trim();
+        // STRATEGI 5: Ta bort separatorer från början
+        content = content.replace(/^[-:.\s§\d\s,()•\-]*/, '').trim();
+        console.log(`🔧 After separator removal: "${content.substring(0, 50)}..."`);
         
-        // Strategi 5: Ta bort första meningen om den innehåller delar av titeln
+        // STRATEGI 6: Första meningen innehåller titelord
         const sentences = content.split(/[.!?]+/);
         if (sentences.length > 1) {
           const firstSentence = sentences[0].toLowerCase().trim();
-          const titleLower = titleClean.toLowerCase();
           
-          // Kolla om första meningen innehåller mer än 50% av titelns ord
-                     const titleWordsInSentence = titleWords.filter((word: string) => 
-             firstSentence.includes(word.toLowerCase())
-           );
+          // Räkna hur många titelord som finns i första meningen
+          const titleWordsInSentence = titleWords.filter((word: string) => 
+            firstSentence.includes(word.toLowerCase())
+          );
           
-          if (titleWordsInSentence.length > titleWords.length * 0.5) {
+          if (titleWordsInSentence.length >= Math.min(2, titleWords.length)) {
             content = sentences.slice(1).join('.').trim();
             if (content.startsWith('.')) content = content.substring(1).trim();
-            console.log(`🔧 Removed first sentence containing title words`);
+            console.log(`🔧 Removed first sentence with ${titleWordsInSentence.length} title words`);
           }
         }
         
-        // Strategi 6: Om content blev för kort, försök mindre aggressiv approach
-        if (content.length < 50 && section.content.length > 100) {
-          console.log(`🔧 Content too short (${content.length}), trying fallback`);
-          content = section.content;
+        // STRATEGI 7: Fallback om content blev för kort
+        if (content.length < 30 && originalContent.length > 100) {
+          console.log(`🔧 Content too short (${content.length}), using fallback`);
+          content = originalContent;
           
-          // Bara ta bort paragrafnummer och första ord om det matchar titeln
+          // Enkel rensning: bara paragrafnummer och första ord om det matchar
           content = content.replace(/^§\s*\d+\s*[-:.\s]*/, '').trim();
-          const firstWord = content.split(/\s+/)[0];
-          const titleFirstWord = titleClean.split(/\s+/)[0];
           
-          if (firstWord && titleFirstWord && 
-              firstWord.toLowerCase().includes(titleFirstWord.toLowerCase())) {
-            content = content.split(/\s+/).slice(1).join(' ').trim();
+          const words = content.split(/\s+/);
+          if (words.length > 1 && titleWords.length > 0) {
+            const firstWord = words[0].toLowerCase().replace(/[^\w]/g, '');
+            const firstTitleWord = titleWords[0].toLowerCase().replace(/[^\w]/g, '');
+            
+            if (firstWord === firstTitleWord || 
+                (firstWord.length > 3 && firstTitleWord.length > 3 && 
+                 (firstWord.includes(firstTitleWord) || firstTitleWord.includes(firstWord)))) {
+              content = words.slice(1).join(' ').trim();
+              console.log(`🔧 Fallback: removed first word "${words[0]}"`);
+            }
           }
         }
+        
+        // SLUTLIG RENSNING
+        content = content.replace(/^[-:.\s§\d\s,()•\-]*/, '').trim();
         
         // Säkerställ att content börjar med stor bokstav
         if (content.length > 0) {
           content = content.charAt(0).toUpperCase() + content.slice(1);
+        }
+        
+        // Om content fortfarande är för kort, använd original utan paragrafnummer
+        if (content.length < 20 && originalContent.length > 50) {
+          content = originalContent.replace(/^§\s*\d+\s*[-:.\s]*/, '').trim();
+          if (content.length > 0) {
+            content = content.charAt(0).toUpperCase() + content.slice(1);
+          }
         }
         
         console.log(`🔧 Final content start: "${content.substring(0, 100)}..."`);
