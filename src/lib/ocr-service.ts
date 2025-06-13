@@ -6,6 +6,14 @@ import { promisify } from 'util';
 import os from 'os';
 import { Storage } from '@google-cloud/storage';
 
+// Gör Google credentials tillgängliga i serverless-miljöer (t.ex. Vercel)
+if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
+  const fs = require('fs');
+  const credsPath = '/tmp/gcloud-key.json';
+  fs.writeFileSync(credsPath, process.env.GOOGLE_CLOUD_CREDENTIALS);
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
+}
+
 // OCR Service för automatisk textextraktion från scannade dokument
 export class OCRService {
   private client: ImageAnnotatorClient | null = null;
