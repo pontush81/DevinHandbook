@@ -4,6 +4,7 @@ import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import os from 'os';
+import { Storage } from '@google-cloud/storage';
 
 // OCR Service för automatisk textextraktion från scannade dokument
 export class OCRService {
@@ -62,48 +63,74 @@ export class OCRService {
       throw new Error('OCR-tjänsten är inte konfigurerad');
     }
 
-    try {
-      console.log('🔍 Startar OCR-bearbetning av PDF med Google Cloud Vision (direkt på PDF)...');
+    const bucketName = process.env.GOOGLE_CLOUD_VISION_BUCKET!;
+    const storage = new Storage();
+    const inputPrefix = `ocr-input/${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    const outputPrefix = `ocr-output-${Date.now()}-${Math.floor(Math.random()*10000)}`;
+    const gcsPdfPath = `${inputPrefix}.pdf`;
+    const gcsPdfUri = `gs://${bucketName}/${gcsPdfPath}`;
+    const gcsOutputUri = `gs://${bucketName}/${outputPrefix}/`;
 
-      // Skicka PDF direkt till Google Vision API
+    try {
+      // 1. Ladda upp PDF till GCS
+      await storage.bucket(bucketName).file(gcsPdfPath).save(buffer);
+      console.log('✅ PDF uppladdad till GCS:', gcsPdfUri);
+
+      // 2. Anropa Vision API med GcsSource
       const [operation] = await this.client.asyncBatchAnnotateFiles({
         requests: [
           {
             inputConfig: {
-              content: buffer.toString('base64'),
+              gcsSource: { uri: gcsPdfUri },
               mimeType: 'application/pdf',
             },
             features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
             outputConfig: {
-              gcsDestination: {
-                uri: `gs://${process.env.GOOGLE_CLOUD_VISION_BUCKET}/ocr-output-${Date.now()}/`,
-              },
+              gcsDestination: { uri: gcsOutputUri },
               batchSize: 5,
             },
           },
         ],
       });
-
-      // Vänta på att operationen är klar
+      console.log('⏳ Väntar på Vision API-operation...');
       const [filesResponse] = await operation.promise();
-      const responses = filesResponse.responses || [];
+      console.log('✅ Vision API-operation klar.');
+
+      // 3. Hämta OCR-resultat från GCS (JSON-filer)
+      const [files] = await storage.bucket(bucketName).getFiles({ prefix: outputPrefix });
       let allText = '';
       let totalConfidence = 0;
       let processedPages = 0;
 
-      for (const response of responses) {
-        if (response.fullTextAnnotation && response.fullTextAnnotation.text) {
-          const pageText = response.fullTextAnnotation.text.trim();
-          if (pageText.length > 0) {
-            allText += (allText ? '\n\n--- Sida ' + (processedPages + 1) + ' ---\n\n' : '') + pageText;
-            totalConfidence += this.calculateAverageConfidence(response.fullTextAnnotation);
-            processedPages++;
+      for (const file of files) {
+        if (!file.name.endsWith('.json')) continue;
+        const contents = (await file.download())[0].toString('utf8');
+        const json = JSON.parse(contents);
+        const responses = json.responses || [];
+        for (const response of responses) {
+          if (response.fullTextAnnotation && response.fullTextAnnotation.text) {
+            const pageText = response.fullTextAnnotation.text.trim();
+            if (pageText.length > 0) {
+              allText += (allText ? '\n\n--- Sida ' + (processedPages + 1) + ' ---\n\n' : '') + pageText;
+              totalConfidence += this.calculateAverageConfidence(response.fullTextAnnotation);
+              processedPages++;
+            }
           }
         }
       }
 
       const averageConfidence = processedPages > 0 ? totalConfidence / processedPages : 0;
       console.log(`✅ OCR slutförd: ${allText.length} tecken från ${processedPages} sidor, confidence: ${averageConfidence.toFixed(2)}`);
+
+      // (Valfritt) Rensa input/output-filer från bucketen
+      try {
+        await storage.bucket(bucketName).file(gcsPdfPath).delete();
+        for (const file of files) {
+          await file.delete();
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ Kunde inte rensa temporära filer i GCS:', cleanupError);
+      }
 
       return {
         text: allText,
