@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import os from 'os';
 
 // OCR Service för automatisk textextraktion från scannade dokument
 export class OCRService {
@@ -66,7 +67,7 @@ export class OCRService {
     let tempImagePath: string | null = null;
 
     // Kontrollera och skapa temp-mapp om den inte finns
-    const tempDir = './temp';
+    const tempDir = path.join(os.tmpdir(), 'handbok-ocr-temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
@@ -166,13 +167,13 @@ export class OCRService {
         }
         
         // Rensa eventuella kvarvarande bildfiler
-        if (fs.existsSync('./temp')) {
-          const remainingFiles = fs.readdirSync('./temp')
+        if (fs.existsSync(tempDir)) {
+          const remainingFiles = fs.readdirSync(tempDir)
             .filter(file => file.includes(`${Date.now()}`) || file.startsWith('page_'));
           
           for (const file of remainingFiles) {
             try {
-              fs.unlinkSync(path.join('./temp', file));
+              fs.unlinkSync(path.join(tempDir, file));
             } catch (fileError) {
               // Ignorera fel för enskilda filer
             }
