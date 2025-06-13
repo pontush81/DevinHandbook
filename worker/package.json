@@ -1,0 +1,15 @@
+{
+  "name": "ocr-worker",
+  "version": "1.0.0",
+  "main": "ocr-worker.js",
+  "type": "module",
+  "scripts": {
+    "start": "node ocr-worker.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.7",
+    "@google-cloud/vision": "^5.2.0",
+    "@google-cloud/storage": "^7.16.0",
+    "uuid": "^10.0.0"
+  }
+} 
