@@ -614,38 +614,44 @@ export function CreateHandbookForm() {
 
         {/* Grundläggande information först */}
         <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
-          <div className="space-y-2">
-            <label htmlFor="name" className="block text-sm font-semibold text-gray-900">
-              Handbokens namn
-            </label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="T.ex. Brf Solgläntan"
-              className="w-full h-10 md:h-12 text-sm md:text-base border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="subdomain" className="block text-sm font-semibold text-gray-900">
-              Adressen till din handbok blir:
-            </label>
-            <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-              <span className="text-gray-500 px-2 md:px-3 text-sm md:text-base font-medium">handbok.org/</span>
+          {/* Grundläggande information i grid på desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            <div className="space-y-2">
+              <label htmlFor="name" className="block text-sm font-semibold text-gray-900">
+                Handbokens namn
+              </label>
               <Input
-                id="subdomain"
+                id="name"
                 type="text"
-                value={subdomain}
-                onChange={handleSubdomainChange}
-                placeholder="solgläntan"
-                className={`flex-1 h-10 md:h-12 text-sm md:text-base border-0 bg-transparent focus:ring-0 ${isSubdomainAvailable === true ? 'text-green-600' : isSubdomainAvailable === false ? 'text-red-600' : ''}`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="T.ex. Brf Solgläntan"
+                className="w-full h-10 md:h-12 text-sm md:text-base border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isLoading}
               />
             </div>
-            
+
+            <div className="space-y-2">
+              <label htmlFor="subdomain" className="block text-sm font-semibold text-gray-900">
+                Adressen till din handbok blir:
+              </label>
+              <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                <span className="text-gray-500 px-2 md:px-3 text-sm md:text-base font-medium">handbok.org/</span>
+                <Input
+                  id="subdomain"
+                  type="text"
+                  value={subdomain}
+                  onChange={handleSubdomainChange}
+                  placeholder="solgläntan"
+                  className={`flex-1 h-10 md:h-12 text-sm md:text-base border-0 bg-transparent focus:ring-0 ${isSubdomainAvailable === true ? 'text-green-600' : isSubdomainAvailable === false ? 'text-red-600' : ''}`}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Subdomain status - full width */}
+          <div className="lg:col-span-2">
             <div className="mt-3">
               {isCheckingSubdomain ? (
                 <div className="flex items-center text-sm text-blue-600 bg-blue-50 border border-blue-200 p-3 rounded-lg">
@@ -669,6 +675,7 @@ export function CreateHandbookForm() {
               ) : null}
             </div>
           </div>
+
 
           {/* Innehållsval sektion */}
           <div className="space-y-4">
@@ -767,7 +774,7 @@ export function CreateHandbookForm() {
 
               {/* Import sektion */}
               {activeTab === 'import' && (
-                <div className="border border-gray-200 rounded-xl p-4 md:p-6 bg-gray-50">
+                <div className="border border-gray-200 rounded-xl p-4 md:p-6 lg:p-8 bg-gray-50">
                   <DocumentImport 
                     onImportComplete={handleImportComplete}
                     onImportStatusChange={handleImportStatusChange}
@@ -788,36 +795,7 @@ export function CreateHandbookForm() {
           )}
 
           {/* Visa hjälptext när användaren är i import-flödet men inte har slutfört det */}
-          {activeTab === 'import' && importedSections.length === 0 && (
-            <div className="pt-3 md:pt-4">
-              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-center">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <Brain className="h-6 w-6 text-amber-600" />
-                  <span className="font-bold text-amber-900 text-lg">
-                    {importStatus.isAnalyzing ? '🤖 AI analyserar ditt dokument...' : '📄 Ladda upp och analysera ditt dokument'}
-                  </span>
-                </div>
-                <p className="text-sm text-amber-800 mb-3">
-                  {importStatus.isAnalyzing 
-                    ? 'AI:n läser igenom ditt dokument och skapar automatiskt sektioner för din handbok.'
-                    : importStatus.hasFile
-                      ? 'Klicka på "Analysera dokument" för att låta AI:n skapa sektioner från ditt dokument.'
-                      : 'Ladda först upp din PDF eller Word-fil, sedan analyserar AI:n innehållet automatiskt.'
-                  }
-                </p>
-                {!importStatus.hasFile && (
-                  <p className="text-xs text-amber-700 font-medium">
-                    ⬆️ Använd "Välj fil" knappen ovan för att ladda upp ditt dokument
-                  </p>
-                )}
-                {importStatus.hasFile && !importStatus.isAnalyzing && (
-                  <p className="text-xs text-amber-700 font-medium">
-                    🔍 Använd "Analysera dokument" knappen för att fortsätta
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+
 
           {/* Submit knapp - alltid synlig men korrekt disabled */}
           <div className="pt-3 md:pt-4">

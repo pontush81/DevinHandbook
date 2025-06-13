@@ -50,34 +50,126 @@ export function sanitizeEditorJSData(data: any): OutputData {
 }
 
 /**
- * Converts plain text to EditorJS paragraph blocks
+ * Converts plain text with markdown-like formatting to EditorJS blocks
  */
 function convertPlainTextToEditorJS(text: string): OutputData {
-  // Split text into paragraphs (by double newlines or single newlines)
+  // Split text into paragraphs (by double newlines)
   const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
   
-  // If no double newlines, split by single newlines
+  // If no double newlines, split by single newlines but be more conservative
   const finalParagraphs = paragraphs.length === 1 
-    ? text.split('\n').filter(p => p.trim().length > 0)
+    ? [text.trim()] // Keep as single block if no clear paragraph breaks
     : paragraphs;
 
-  const blocks = finalParagraphs.map((paragraph, index) => ({
-    id: `block_${index}`,
-    type: 'paragraph',
-    data: {
-      text: paragraph.trim()
+  const blocks: any[] = [];
+  let blockIndex = 0;
+
+  finalParagraphs.forEach((paragraph) => {
+    const trimmedParagraph = paragraph.trim();
+    if (!trimmedParagraph) return;
+
+    // Check for headers (lines starting with **text**)
+    const headerMatch = trimmedParagraph.match(/^\*\*(.*?)\*\*$/);
+    if (headerMatch) {
+      blocks.push({
+        id: `block_${blockIndex++}`,
+        type: 'header',
+        data: {
+          text: headerMatch[1].trim(),
+          level: 2
+        }
+      });
+      return;
     }
-  }));
+
+    // Check for bullet lists (lines with • or -)
+    const listItems = trimmedParagraph.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('• ') || trimmed.startsWith('- ');
+    });
+
+    if (listItems.length > 0 && listItems.length === trimmedParagraph.split('\n').length) {
+      // This paragraph is entirely a list
+      blocks.push({
+        id: `block_${blockIndex++}`,
+        type: 'list',
+        data: {
+          style: 'unordered',
+          items: listItems.map(item => item.replace(/^[•-]\s*/, '').trim())
+        }
+      });
+      return;
+    }
+
+    // Check for mixed content (text with some list items)
+    const lines = trimmedParagraph.split('\n');
+    let currentTextLines: string[] = [];
+    
+    lines.forEach((line) => {
+      const trimmedLine = line.trim();
+      
+      if (trimmedLine.startsWith('• ') || trimmedLine.startsWith('- ')) {
+        // If we have accumulated text, create a paragraph block first
+        if (currentTextLines.length > 0) {
+          const textContent = currentTextLines.join('\n').trim();
+          if (textContent) {
+            blocks.push({
+              id: `block_${blockIndex++}`,
+              type: 'paragraph',
+              data: {
+                text: processInlineFormatting(textContent)
+              }
+            });
+          }
+          currentTextLines = [];
+        }
+        
+        // Create a single-item list for this line
+        blocks.push({
+          id: `block_${blockIndex++}`,
+          type: 'list',
+          data: {
+            style: 'unordered',
+            items: [trimmedLine.replace(/^[•-]\s*/, '').trim()]
+          }
+        });
+      } else if (trimmedLine) {
+        currentTextLines.push(trimmedLine);
+      }
+    });
+
+    // Add any remaining text as a paragraph
+    if (currentTextLines.length > 0) {
+      const textContent = currentTextLines.join('\n').trim();
+      if (textContent) {
+        blocks.push({
+          id: `block_${blockIndex++}`,
+          type: 'paragraph',
+          data: {
+            text: processInlineFormatting(textContent)
+          }
+        });
+      }
+    }
+  });
 
   return {
     time: Date.now(),
     blocks: blocks.length > 0 ? blocks : [{
       id: 'block_0',
       type: 'paragraph',
-      data: { text: text.trim() }
+      data: { text: processInlineFormatting(text.trim()) }
     }],
     version: '2.28.2'
   };
+}
+
+/**
+ * Processes inline formatting like **bold** text
+ */
+function processInlineFormatting(text: string): string {
+  // Convert **text** to <b>text</b> for EditorJS
+  return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
 }
 
 /**

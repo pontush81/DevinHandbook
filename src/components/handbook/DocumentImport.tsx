@@ -16,6 +16,7 @@ import {
   Info
 } from 'lucide-react';
 import { showToast } from '@/components/ui/use-toast';
+import { DEFAULT_HANDBOOK_TEMPLATE } from '@/lib/handbook-templates';
 
 interface ImportedSection {
   title: string;
@@ -42,13 +43,14 @@ interface AnalysisResult {
 
 // Memoize the component to prevent unnecessary re-renders
 export const DocumentImport = memo(function DocumentImport({ onImportComplete, onImportStatusChange, isLoading = false }: DocumentImportProps) {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState('');
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
   
   // Använd useRef för att förhindra onödiga re-renders
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,12 +79,12 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
   useEffect(() => {
     if (onImportStatusChange) {
       onImportStatusChange({
-        hasFile: !!file,
+        hasFile: files.length > 0,
         isAnalyzing,
         hasResults: !!analysisResult
       });
     }
-  }, [file, isAnalyzing, analysisResult, onImportStatusChange]);
+  }, [files, isAnalyzing, analysisResult, onImportStatusChange]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -99,16 +101,12 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
     e.stopPropagation();
     setDragActive(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelection(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleMultipleFileSelection(Array.from(e.dataTransfer.files));
     }
   }, []);
 
-  const handleFileSelection = useCallback((selectedFile: File) => {
-    // Förhindra dubbelbearbetning
-    if (isProcessingRef.current) return;
-    
-    // Kontrollera filtyp
+  const validateFile = useCallback((file: File): string | null => {
     const supportedFileTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -116,120 +114,245 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
       'text/plain'
     ];
     
-    if (!supportedFileTypes.includes(selectedFile.type)) {
-      setError('Filtypen stöds inte. Vänligen välj en PDF, Word-dokument eller textfil.');
-      return;
+    if (!supportedFileTypes.includes(file.type)) {
+      return `${file.name}: Filtypen stöds inte. Endast PDF, Word och textfiler är tillåtna.`;
     }
 
-    if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
-      setError('Filen är för stor. Maximal filstorlek är 10MB.');
-      return;
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      return `${file.name}: Filen är för stor. Maximal filstorlek är 10MB.`;
     }
     
-    setFile(selectedFile);
-    setError(null);
-    setAnalysisResult(null);
+    return null;
   }, []);
 
+  const handleMultipleFileSelection = useCallback((selectedFiles: File[]) => {
+    // Förhindra dubbelbearbetning
+    if (isProcessingRef.current) return;
+    
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+    
+    selectedFiles.forEach(file => {
+      const error = validateFile(file);
+      if (error) {
+        errors.push(error);
+      } else {
+        validFiles.push(file);
+      }
+    });
+    
+    if (errors.length > 0) {
+      setError(errors.join('\n'));
+      if (validFiles.length === 0) return;
+    } else {
+      setError(null);
+    }
+    
+    setFiles(validFiles);
+    setAnalysisResult(null);
+    setCurrentFileIndex(0);
+  }, [validateFile]);
+
+  const handleFileSelection = useCallback((selectedFile: File) => {
+    handleMultipleFileSelection([selectedFile]);
+  }, [handleMultipleFileSelection]);
+
   const analyzeDocument = useCallback(async () => {
-    if (!file || isAnalyzing || isProcessingRef.current) return;
+    if (files.length === 0 || isAnalyzing || isProcessingRef.current) return;
     
     isProcessingRef.current = true;
     setIsAnalyzing(true);
     setError(null);
     setAnalysisProgress(0);
+    setCurrentFileIndex(0);
 
     try {
-      // Steg 1: Ladda upp fil
-      setAnalysisStep('Laddar upp dokument...');
-      setAnalysisProgress(20);
+      const allSections: ImportedSection[] = [];
+      let combinedMetadata: any = null;
 
-      const formData = new FormData();
-      formData.append('file', file);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setCurrentFileIndex(i);
+        
+        // Steg 1: Ladda upp fil (snabbt steg)
+        setAnalysisStep(`Laddar upp dokument ${i + 1}/${files.length}: ${file.name}...`);
+        setAnalysisProgress((i / files.length) * 100 * 0.1); // Minska från 30% till 10%
 
-      const uploadResponse = await fetch('/api/documents/upload', {
-        method: 'POST',
-        body: formData,
-      });
+        const formData = new FormData();
+        formData.append('file', file);
 
-      if (!uploadResponse.ok) {
-        throw new Error('Misslyckades med att ladda upp filen');
-      }
+        const uploadResponse = await fetch('/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-      const { fileId } = await uploadResponse.json();
-
-      // Steg 2: Extrahera text
-      setAnalysisStep('Extraherar text från dokument...');
-      setAnalysisProgress(50);
-
-      const extractResponse = await fetch('/api/documents/extract-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileId }),
-      });
-
-      if (!extractResponse.ok) {
-        throw new Error('Misslyckades med textextraktion');
-      }
-
-      const { text, metadata } = await extractResponse.json();
-
-      // Steg 3: AI-analys
-      setAnalysisStep('Analyserar struktur med AI...');
-      setAnalysisProgress(70);
-
-      const analysisResponse = await fetch('/api/documents/analyze-structure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text, 
-          metadata,
-          templateType: 'brf' // Specificera att vi vill ha BRF-mappning
-        }),
-      });
-
-      if (!analysisResponse.ok) {
-        const errorData = await analysisResponse.json();
-        if (errorData.fallback) {
-          // Speciell hantering för fallback-fall
-          throw new Error(errorData.error);
+        if (!uploadResponse.ok) {
+          throw new Error(`Misslyckades med att ladda upp ${file.name}`);
         }
-        throw new Error('Misslyckades med AI-analys');
+
+        const { fileId } = await uploadResponse.json();
+
+        // Steg 2: Extrahera text
+        setAnalysisStep(`Extraherar text från ${file.name}... (OCR för scannade dokument kan ta längre tid)`);
+        setAnalysisProgress((i / files.length) * 100 * 0.1 + 15); // Justerad timing
+
+        const extractFormData = new FormData();
+        extractFormData.append('fileId', fileId);
+        
+        const extractResponse = await fetch('/api/documents/extract-text', {
+          method: 'POST',
+          body: extractFormData,
+        });
+
+        if (!extractResponse.ok) {
+          const errorData = await extractResponse.json();
+          if (errorData.error && errorData.error.includes('scannad PDF')) {
+            throw new Error(`${file.name} verkar vara en scannad PDF. OCR-bearbetning misslyckades. Försök med en PDF som innehåller text eller ett Word-dokument.`);
+          }
+          throw new Error(`Misslyckades med textextraktion för ${file.name}: ${errorData.error || 'Okänt fel'}`);
+        }
+
+        const extractResult = await extractResponse.json();
+        const text = extractResult.extractedText || extractResult.text || '';
+        const metadata = {
+          title: file.name,
+          pages: extractResult.pages || 1,
+          textLength: extractResult.textLength || text.length,
+          extractionMethod: extractResult.success ? 'success' : 'fallback'
+        };
+
+        // Steg 3: AI-analys (längre steg med mer tid)
+        setAnalysisStep(`🤖 AI analyserar struktur och innehåll för ${file.name}...`);
+        setAnalysisProgress((i / files.length) * 100 * 0.1 + 30); // Startar vid 30% istället för 50%
+
+        const analysisResponse = await fetch('/api/documents/analyze-structure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            text, 
+            metadata: {
+              ...metadata,
+              title: `${metadata?.title || file.name} (Dokument ${i + 1})`
+            },
+            templateType: 'brf'
+          }),
+        });
+
+        if (!analysisResponse.ok) {
+          const errorData = await analysisResponse.json();
+          console.error(`❌ [DocumentImport] Analysis failed for ${file.name}:`, errorData);
+          
+          // Hantera scannade PDF:er och andra fall där text inte kunde extraheras
+          if (errorData.error?.includes('Inga giltiga sektioner') || 
+              errorData.error?.includes('scannad PDF') ||
+              errorData.error?.includes('Detta verkar vara en scannad PDF')) {
+            console.log(`📄 [DocumentImport] Detected scanned PDF: ${file.name}, creating placeholder sections`);
+            
+            // Skapa placeholder-sektioner för scannade dokument
+            const placeholderSections = DEFAULT_HANDBOOK_TEMPLATE.map(section => ({
+              content: `📄 **Scannad PDF-fil:** ${file.name}
+
+Detta dokument verkar vara en scannad PDF som innehåller bilder istället för text. 
+
+**För att lägga till innehåll från detta dokument:**
+
+1. **OCR-konvertering:** Använd Adobe Acrobat Pro eller liknande för att konvertera till sökbar text
+2. **Google Drive:** Ladda upp PDF:en till Google Drive - den konverteras automatiskt
+3. **Online OCR:** Använd verktyg som ocr.space eller onlineocr.net
+4. **Manuell kopiering:** Kopiera texten manuellt från dokumentet
+
+**Redigera denna sektion** för att lägga till det faktiska innehållet när du har konverterat dokumentet.`,
+              title: files.length > 1 ? `${section.title} (${file.name})` : section.title,
+              confidence: 0.2 // Låg confidence för placeholder
+            }));
+            
+            allSections.push(...placeholderSections);
+            console.log(`📄 [DocumentImport] Added ${placeholderSections.length} placeholder sections for scanned PDF: ${file.name}`);
+            continue; // Fortsätt med nästa fil
+          }
+          
+          if (errorData.fallback) {
+            console.warn(`⚠️ [DocumentImport] Using fallback for ${file.name}: ${errorData.error}`);
+            // Även med fallback, försök att extrahera något användbart
+            if (errorData.sections && errorData.sections.length > 0) {
+              const fallbackSections = errorData.sections.map((section: ImportedSection) => ({
+                ...section,
+                title: files.length > 1 ? `${section.title} (${file.name})` : section.title,
+                confidence: 0.3 // Låg confidence för fallback
+              }));
+              allSections.push(...fallbackSections);
+              console.log(`🔄 [DocumentImport] Added ${fallbackSections.length} fallback sections from ${file.name}`);
+            }
+            continue; // Hoppa över denna fil och fortsätt med nästa
+          }
+          throw new Error(`Misslyckades med AI-analys för ${file.name}: ${errorData.error || 'Okänt fel'}`);
+        }
+
+        const result = await analysisResponse.json();
+        
+        // Lägg till sektioner från denna fil
+        if (result.sections && result.sections.length > 0) {
+          console.log(`🔍 [DocumentImport] File ${i + 1}/${files.length} (${file.name}) produced ${result.sections.length} sections`);
+          // Lägg till filnamn som prefix till sektionstitlar för att undvika konflikter
+          const sectionsWithPrefix = result.sections.map((section: ImportedSection) => ({
+            ...section,
+            title: files.length > 1 ? `${section.title} (${file.name})` : section.title
+          }));
+          allSections.push(...sectionsWithPrefix);
+          console.log(`🔍 [DocumentImport] Total sections so far: ${allSections.length}`);
+        } else {
+          console.warn(`⚠️ [DocumentImport] File ${file.name} produced no sections`);
+        }
+
+        // Spara metadata från första filen
+        if (i === 0) {
+          combinedMetadata = metadata;
+        }
       }
 
-      const result: AnalysisResult = await analysisResponse.json();
+      // Skapa kombinerat resultat
+      const combinedResult: AnalysisResult = {
+        sections: allSections,
+        metadata: {
+          ...combinedMetadata,
+          title: files.length > 1 ? `Kombinerat dokument (${files.length} filer)` : combinedMetadata?.title || files[0]?.name || 'Okänt dokument',
+          totalPages: files.length, // Använd antal filer som "sidor"
+          documentType: 'combined'
+        }
+      };
 
       // Steg 4: Slutför
       setAnalysisStep('Förbereder import...');
       setAnalysisProgress(100);
 
-      setAnalysisResult(result);
+      setAnalysisResult(combinedResult);
 
       showToast({
         title: "Analys slutförd",
-        description: `Hittade ${result.sections.length} sektioner i dokumentet.`,
+        description: `Hittade ${allSections.length} sektioner från ${files.length} dokument.`,
       });
 
       // Automatiskt anropa onImportComplete när analysen är klar
-      // Detta eliminerar behovet av en extra knapp-klick
-      console.log('🎯 [DocumentImport] Auto-importing sections after analysis completion');
-      onImportComplete(result.sections);
+      console.log(`🎯 [DocumentImport] Auto-importing ${allSections.length} sections from ${files.length} files after analysis completion`);
+      console.log('🎯 [DocumentImport] Final sections:', allSections.map(s => s.title));
+      onImportComplete(allSections);
 
     } catch (err) {
       console.error('Fel vid dokumentanalys:', err);
       setError(err instanceof Error ? err.message : 'Ett oväntat fel inträffade');
       showToast({
         title: "Fel vid analys",
-        description: "Kunde inte analysera dokumentet. Försök igen.",
+        description: "Kunde inte analysera dokumenten. Försök igen.",
         variant: "destructive",
       });
     } finally {
       setIsAnalyzing(false);
       setAnalysisStep('');
       setAnalysisProgress(0);
+      setCurrentFileIndex(0);
       isProcessingRef.current = false;
     }
-  }, [file, isAnalyzing, onImportComplete]);
+  }, [files, isAnalyzing, onImportComplete]);
 
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'bg-green-100 text-green-800';
@@ -246,16 +369,17 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
             Smart handboksimport
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Ladda upp din befintliga handbok så analyserar AI:n innehållet och skapar automatiskt sektioner enligt vår mall.
+            Ladda upp en eller flera dokument så analyserar AI:n innehållet och skapar automatiskt sektioner enligt vår mall.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 lg:space-y-6">
           {/* File Upload Area */}
           <div
             className={`
-              border-2 border-dashed rounded-lg p-4 md:p-6 text-center transition-colors
-              ${dragActive ? 'border-primary bg-primary/5' : 'border-gray-300'}
-              ${file ? 'border-green-500 bg-green-50' : ''}
+              border-2 border-dashed rounded-lg p-4 md:p-6 text-center transition-all duration-300 ease-in-out
+              ${dragActive ? 'border-primary bg-primary/10 scale-[1.02] shadow-lg transform' : 'border-gray-300'}
+              ${files.length > 0 ? 'border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 shadow-sm' : ''}
+              hover:border-gray-400 hover:bg-gray-50/50
             `}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -263,25 +387,52 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
             onDrop={handleDrop}
           >
             <div className="flex flex-col items-center space-y-3">
-              {file ? (
+              {files.length > 0 ? (
                 <>
-                  <FileText className="h-10 w-10 md:h-12 md:w-12 text-green-600" />
-                  <div className="text-center">
-                    <p className="font-medium text-sm md:text-base break-all px-2">{file.name}</p>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                  <div className="relative">
+                    <FileText className="h-10 w-10 md:h-12 md:w-12 text-green-600 animate-in zoom-in-50 duration-300" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center animate-in zoom-in-75 duration-300 delay-150">
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="font-medium text-sm md:text-base">
+                      {files.length === 1 ? files[0].name : `${files.length} filer valda`}
                     </p>
+                    {files.length === 1 ? (
+                      <p className="text-xs md:text-sm text-muted-foreground">
+                        {(files[0].size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-xs md:text-sm text-muted-foreground">
+                          Total storlek: {(files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        <div className="max-h-20 overflow-y-auto text-xs text-muted-foreground">
+                          {files.map((file, index) => (
+                            <div key={index} className="truncate">
+                              {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
                 <>
-                  <Upload className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+                  <div className="relative">
+                    <Upload className="h-10 w-10 md:h-12 md:w-12 text-gray-400 transition-all duration-300 hover:text-gray-600 hover:scale-110" />
+                    {dragActive && (
+                      <div className="absolute inset-0 border-2 border-primary border-dashed rounded-full animate-ping"></div>
+                    )}
+                  </div>
                   <div className="text-center">
                     <p className="text-base md:text-lg font-medium">
-                      Dra och släpp din handbok här
+                      Dra och släpp dina dokument här
                     </p>
                     <p className="text-xs md:text-sm text-muted-foreground">
-                      Eller klicka för att välja fil
+                      Eller klicka för att välja filer (flera filer tillåtna)
                     </p>
                   </div>
                 </>
@@ -292,21 +443,40 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
                 type="file"
                 className="hidden"
                 accept=".pdf,.docx,.doc,.txt"
-                onChange={(e) => e.target.files?.[0] && handleFileSelection(e.target.files[0])}
+                multiple
+                onChange={(e) => e.target.files && handleMultipleFileSelection(Array.from(e.target.files))}
                 id="file-upload"
               />
-              <Button 
-                type="button"
-                variant="outline" 
-                className="cursor-pointer text-sm md:text-base"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isAnalyzing || isLoading}
-              >
-                Välj fil
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  className="cursor-pointer text-sm md:text-base"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isAnalyzing || isLoading}
+                >
+                  {files.length > 0 ? 'Välj fler filer' : 'Välj filer'}
+                </Button>
+                {files.length > 0 && (
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    size="sm"
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() => {
+                      setFiles([]);
+                      setAnalysisResult(null);
+                      setError(null);
+                    }}
+                    disabled={isAnalyzing || isLoading}
+                  >
+                    Rensa alla
+                  </Button>
+                )}
+              </div>
               
               <div className="text-xs text-muted-foreground text-center px-2">
-                Stöder PDF, Word (.docx), och textfiler upp till 10MB
+                Stöder PDF (inklusive scannade dokument med OCR), Word (.docx), och textfiler upp till 10MB per fil
               </div>
             </div>
           </div>
@@ -320,14 +490,112 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
 
           {/* Analysis Progress */}
           {isAnalyzing && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardContent className="pt-4 pb-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm font-medium">{analysisStep}</span>
+            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+              {/* Animated background particles */}
+              <div className="absolute inset-0 opacity-20">
+                <div className="absolute top-4 left-8 w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '2s' }}></div>
+                <div className="absolute top-8 right-12 w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2.5s' }}></div>
+                <div className="absolute bottom-6 left-16 w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.2s' }}></div>
+                <div className="absolute bottom-4 right-8 w-1 h-1 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '2.8s' }}></div>
+                <div className="absolute top-12 left-1/3 w-1 h-1 bg-indigo-300 rounded-full animate-bounce" style={{ animationDelay: '0.8s', animationDuration: '2.3s' }}></div>
+              </div>
+              
+              <CardContent className="pt-6 pb-6 relative z-10">
+                <div className="space-y-5">
+                  {/* Main status with enhanced animation */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                      <div className="absolute inset-0 h-6 w-6 border-2 border-blue-200 rounded-full animate-ping"></div>
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-blue-900 block">{analysisStep}</span>
+                      <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                        <Brain className="h-3 w-3" />
+                        AI analyserar ditt dokument...
+                      </div>
+                    </div>
                   </div>
-                  <Progress value={analysisProgress} className="w-full" />
+                  
+                  {/* Enhanced progress bar with gradient and glow */}
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Progress 
+                        value={analysisProgress} 
+                        className="w-full h-3 bg-gradient-to-r from-blue-100 to-indigo-100" 
+                      />
+                      <div 
+                        className="absolute top-0 left-0 h-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out shadow-lg"
+                        style={{ 
+                          width: `${analysisProgress}%`,
+                          boxShadow: '0 0 10px rgba(79, 70, 229, 0.4)'
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-blue-600 font-medium">{Math.round(analysisProgress)}%</span>
+                      <span className="text-blue-500">
+                        {analysisProgress < 15 ? '📄 Laddar upp...' : 
+                         analysisProgress < 25 ? '📝 Läser dokument...' : 
+                         analysisProgress < 85 ? '🧠 AI analyserar djupt...' : 
+                         '✨ Skapar sektioner...'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Multi-file indicator */}
+                  {files.length > 1 && (
+                    <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
+                      <div className="flex items-center gap-2 text-xs text-blue-700">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium">
+                          Bearbetar fil {currentFileIndex + 1} av {files.length}
+                        </span>
+                      </div>
+                      {/* File progress indicator */}
+                      <div className="mt-2 flex gap-1">
+                        {Array.from({ length: files.length }).map((_, index) => (
+                          <div
+                            key={index}
+                            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                              index < currentFileIndex ? 'bg-green-400' :
+                              index === currentFileIndex ? 'bg-blue-500 animate-pulse' :
+                              'bg-gray-200'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Processing steps visualization */}
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className={`p-2 rounded-lg transition-all duration-500 ${analysisProgress > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
+                      <Upload className={`h-4 w-4 mx-auto mb-1 ${analysisProgress > 0 && analysisProgress < 15 ? 'animate-bounce' : ''}`} />
+                      <div className="text-xs font-medium">Upload</div>
+                    </div>
+                    <div className={`p-2 rounded-lg transition-all duration-500 ${analysisProgress > 15 ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}>
+                      <Brain className={`h-4 w-4 mx-auto mb-1 ${analysisProgress > 15 && analysisProgress < 85 ? 'animate-pulse' : ''}`} />
+                      <div className="text-xs font-medium">AI-analys</div>
+                    </div>
+                    <div className={`p-2 rounded-lg transition-all duration-500 ${analysisProgress > 85 ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>
+                      <CheckCircle className={`h-4 w-4 mx-auto mb-1 ${analysisProgress > 85 ? 'animate-bounce' : ''}`} />
+                      <div className="text-xs font-medium">Klar</div>
+                    </div>
+                  </div>
+                  
+                  {/* Fun loading messages */}
+                  <div className="text-center">
+                    <div className="text-xs text-blue-600 font-medium animate-pulse">
+                      {analysisProgress < 20 ? '🔍 Läser igenom ditt dokument...' :
+                       analysisProgress < 40 ? '📝 Extraherar text och struktur...' :
+                       analysisProgress < 60 ? '🤖 AI:n analyserar innehållet...' :
+                       analysisProgress < 80 ? '🎯 Identifierar sektioner...' :
+                       '🎉 Snart klar!'}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -335,11 +603,24 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
 
           {/* Analysis Results */}
           {analysisResult && !isAnalyzing && (
-            <Card className="border-green-200 bg-green-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-green-800 text-lg">
-                  <CheckCircle className="h-5 w-5" />
-                  Analys slutförd
+            <Card className="border-green-200 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 relative overflow-hidden animate-in slide-in-from-top-4 duration-500">
+              {/* Success celebration particles */}
+              <div className="absolute inset-0 opacity-30">
+                <div className="absolute top-4 left-8 w-2 h-2 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '0s' }}></div>
+                <div className="absolute top-6 right-12 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" style={{ animationDelay: '0.3s' }}></div>
+                <div className="absolute bottom-8 left-16 w-1 h-1 bg-teal-400 rounded-full animate-ping" style={{ animationDelay: '0.6s' }}></div>
+                <div className="absolute bottom-4 right-8 w-2 h-2 bg-green-300 rounded-full animate-ping" style={{ animationDelay: '0.9s' }}></div>
+              </div>
+              
+              <CardHeader className="pb-3 relative z-10">
+                <CardTitle className="flex items-center gap-3 text-green-800 text-lg">
+                  <div className="relative">
+                    <CheckCircle className="h-6 w-6 animate-in zoom-in-50 duration-300" />
+                    <div className="absolute inset-0 h-6 w-6 bg-green-400 rounded-full animate-ping opacity-50"></div>
+                  </div>
+                  <span className="animate-in slide-in-from-left-2 duration-300 delay-150">
+                    ✨ Analys slutförd
+                  </span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -387,7 +668,7 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-2 justify-end">
-            {file && !analysisResult && !isAnalyzing && (
+            {files.length > 0 && !analysisResult && !isAnalyzing && (
               <Button 
                 type="button"
                 onClick={analyzeDocument} 
@@ -396,7 +677,12 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
                 size="lg"
               >
                 <Brain className="h-5 w-5" />
-                🤖 Analysera dokument
+                ✨ Skapa handbok med AI
+                {files.length > 1 && (
+                  <span className="ml-1 text-xs bg-white/20 px-2 py-1 rounded">
+                    {files.length} filer
+                  </span>
+                )}
               </Button>
             )}
           </div>

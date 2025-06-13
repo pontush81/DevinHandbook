@@ -10,6 +10,38 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // Get admin client for database operations
 const supabaseAdmin = getAdminClient();
 
+// Helper function to generate unique slug
+async function generateUniqueSlug(baseSlug: string): Promise<string> {
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (true) {
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('handbooks')
+      .select('id')
+      .eq('slug', slug)
+      .single();
+
+    if (checkError && checkError.code === 'PGRST116') {
+      // No existing handbook found, slug is available
+      return slug;
+    }
+    
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw new Error(`Database error when checking slug: ${checkError.message}`);
+    }
+    
+    // Slug exists, try with counter
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+    
+    // Safety check to prevent infinite loop
+    if (counter > 100) {
+      throw new Error('Unable to generate unique slug after 100 attempts');
+    }
+  }
+}
+
 export async function createHandbook(
   name: string,
   slug: string,
@@ -25,25 +57,10 @@ export async function createHandbook(
     throw new Error('Name and slug are required');
   }
 
-  // Check if slug already exists
-  console.log('[Handbook] Checking if slug already exists:', slug);
-  const { data: existing, error: checkError } = await supabaseAdmin
-    .from('handbooks')
-    .select('id, title, slug')
-    .eq('slug', slug)
-    .single();
-
-  if (checkError && checkError.code !== 'PGRST116') {
-    console.error('[Handbook] Error checking existing slug:', checkError);
-    throw new Error(`Database error when checking slug: ${checkError.message}`);
-  }
-
-  if (existing) {
-    console.error('[Handbook] Slug already exists:', existing);
-    throw new Error(`Slug "${slug}" already exists with handbook ID: ${existing.id}`);
-  }
-
-  console.log('[Handbook] Slug is available, proceeding with handbook creation');
+  // Generate unique slug
+  console.log('[Handbook] Generating unique slug from base:', slug);
+  const uniqueSlug = await generateUniqueSlug(slug);
+  console.log('[Handbook] Using unique slug:', uniqueSlug);
 
   // Calculate trial end date - 30 days from now
   const trialEndDate = new Date();
@@ -52,7 +69,7 @@ export async function createHandbook(
   // Create the handbook
   const handbookData = {
     title: name,
-    slug,
+    slug: uniqueSlug,
     description: `Handbok för ${name}`,
     published: true,
     owner_id: userId || null,

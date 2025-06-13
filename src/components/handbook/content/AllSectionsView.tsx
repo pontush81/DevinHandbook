@@ -23,9 +23,11 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
         switch (block.type) {
           case 'paragraph':
             return (
-              <p key={block.id || index} className="mb-3 leading-relaxed break-words">
-                {block.data?.text || ''}
-              </p>
+              <p 
+                key={block.id || index} 
+                className="mb-3 leading-relaxed break-words"
+                dangerouslySetInnerHTML={{ __html: block.data?.text || '' }}
+              />
             );
           case 'header':
             const level = block.data?.level || 1;
@@ -35,9 +37,9 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
               headerTag,
               {
                 key: block.id || index,
-                className: "font-semibold text-gray-900 mb-3 mt-4"
-              },
-              block.data?.text || ''
+                className: "font-semibold text-gray-900 mb-3 mt-4",
+                dangerouslySetInnerHTML: { __html: block.data?.text || '' }
+              }
             );
           case 'list':
             const items = block.data?.items || [];
@@ -45,7 +47,11 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
               return (
                 <ol key={block.id || index} className="list-decimal list-inside mb-3 space-y-2 ml-4">
                   {items.map((item: any, itemIndex: number) => (
-                    <li key={itemIndex} className="text-gray-700 leading-relaxed">{item.content || item}</li>
+                    <li 
+                      key={itemIndex} 
+                      className="text-gray-700 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: item.content || item }}
+                    />
                   ))}
                 </ol>
               );
@@ -53,16 +59,22 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
               return (
                 <ul key={block.id || index} className="list-disc list-inside mb-3 space-y-2 ml-4">
                   {items.map((item: any, itemIndex: number) => (
-                    <li key={itemIndex} className="text-gray-700 leading-relaxed">{item.content || item}</li>
+                    <li 
+                      key={itemIndex} 
+                      className="text-gray-700 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: item.content || item }}
+                    />
                   ))}
                 </ul>
               );
             }
           case 'quote':
             return (
-              <blockquote key={block.id || index} className="border-l-4 border-gray-300 pl-4 mb-3 italic text-gray-600 bg-gray-50 py-2 rounded-r">
-                {block.data?.text || ''}
-              </blockquote>
+              <blockquote 
+                key={block.id || index} 
+                className="border-l-4 border-gray-300 pl-4 mb-3 italic text-gray-600 bg-gray-50 py-2 rounded-r"
+                dangerouslySetInnerHTML={{ __html: block.data?.text || '' }}
+              />
             );
           case 'image':
             return (
@@ -103,9 +115,11 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
             // Fallback for unknown block types - don't show JSON!
             if (block.data?.text) {
               return (
-                <p key={block.id || index} className="mb-3 text-gray-600 leading-relaxed">
-                  {block.data.text}
-                </p>
+                <p 
+                  key={block.id || index} 
+                  className="mb-3 text-gray-600 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: block.data.text }}
+                />
               );
             }
             return null;

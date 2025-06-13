@@ -260,12 +260,12 @@ function CreateHandbookContent() {
   // Visa formulär för att skapa ny handbok som standardläge
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
             Skapa digital handbok
           </h1>
-          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto px-2">
+          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-2xl mx-auto px-2">
             {handbooks.length === 0 
               ? "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
               : "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
@@ -279,7 +279,7 @@ function CreateHandbookContent() {
         </div>
         
         <Card className="shadow-lg border-0">
-          <CardContent className="p-4 md:p-8">
+          <CardContent className="p-4 md:p-8 lg:p-12">
             {user && <CreateHandbookForm />}
             <div className="mt-4 md:mt-6 text-gray-600 text-xs md:text-sm space-y-2">
               <p>När din handbok har skapats kommer du automatiskt få administratörsrättigheter och se en "Administrera"-knapp i handboken.</p>
