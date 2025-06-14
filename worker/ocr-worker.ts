@@ -1,3 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log('SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY);
+console.log('GOOGLE_CLOUD_VISION_BUCKET:', process.env.GOOGLE_CLOUD_VISION_BUCKET);
+console.log('SUPABASE_STORAGE_BUCKET:', process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET);
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { Storage } from '@google-cloud/storage';
