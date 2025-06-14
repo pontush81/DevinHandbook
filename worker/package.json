@@ -4,7 +4,7 @@
   "main": "ocr-worker.ts",
   "type": "module",
   "scripts": {
-    "start": "npx ts-node ocr-worker.ts"
+    "start": "npx ts-node --loader ts-node/esm ocr-worker.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.7",
