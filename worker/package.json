@@ -1,15 +1,16 @@
 {
   "name": "ocr-worker",
   "version": "1.0.0",
-  "main": "ocr-worker.js",
+  "main": "ocr-worker.ts",
   "type": "module",
   "scripts": {
-    "start": "node ocr-worker.js"
+    "start": "npx ts-node ocr-worker.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.7",
     "@google-cloud/vision": "^5.2.0",
     "@google-cloud/storage": "^7.16.0",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "ts-node": "^10.9.1"
   }
 } 
