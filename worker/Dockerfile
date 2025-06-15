@@ -9,6 +9,6 @@ COPY . .
 
 RUN ls -l /app/tsconfig.json
 
-RUN tsc -p tsconfig.json
+RUN npx tsc -p tsconfig.json
 
 CMD ["node", "dist/analyze-worker.js"] 
