@@ -1,11 +1,11 @@
 {
   "name": "ocr-worker",
   "version": "1.0.0",
-  "main": "ocr-worker.ts",
+  "main": "dist/ocr-worker.js",
   "type": "module",
   "scripts": {
     "build": "tsc -p .",
-    "start": "node dist/analyze-worker.js"
+    "start": "node dist/ocr-worker.js"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.16.0",
