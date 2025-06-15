@@ -4,7 +4,7 @@
   "main": "ocr-worker.ts",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p .",
     "start": "node dist/analyze-worker.js"
   },
   "dependencies": {

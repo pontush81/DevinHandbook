@@ -7,6 +7,8 @@ RUN npm install
 
 COPY . .
 
+WORKDIR /app/worker
+
 RUN npm run build
 
 CMD ["node", "dist/analyze-worker.js"] 
