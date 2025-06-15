@@ -319,6 +319,191 @@ export async function toggleHandbookPublished(id: string, published: boolean) {
   }
 }
 
+// Helper function to convert text to well-structured EditorJS format
+function convertTextToEditorJS(text: string): any {
+  const blocks: any[] = [];
+  const lines = text.split('\n');
+  let currentParagraph = '';
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Skip empty lines but finish current paragraph if exists
+    if (!line) {
+      if (currentParagraph) {
+        blocks.push({
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'paragraph',
+          data: { text: currentParagraph.trim() }
+        });
+        currentParagraph = '';
+      }
+      continue;
+    }
+    
+    // Detect main headers (common BRF section names)
+    const isMainHeader = (
+      line.match(/^(Skötselplan|Ellagården|Soprum|Lägenheter|Korridor|Källare|Tvättstuga|Fasad|Bilparkering|Brandskydd|Styrelse|Gästlägenhet|Aktivitetsrum|Grillregler|Sophantering)/i) ||
+      (line.length < 50 && line.length > 3 && line === line.charAt(0).toUpperCase() + line.slice(1) && !line.includes('(') && !line.includes('-'))
+    );
+    
+    // Detect sub-headers (shorter descriptive lines)
+    const isSubHeader = (
+      !isMainHeader &&
+      line.length < 60 && 
+      line.length > 5 &&
+      !line.includes('(B)') &&
+      !line.includes('(BRF)') &&
+      !line.match(/^[•\-\*]/) &&
+      !line.match(/^\d+\./) &&
+      line.charAt(0) === line.charAt(0).toUpperCase() &&
+      i < lines.length - 1 &&
+      lines[i + 1].trim().length > 0
+    );
+    
+    // Detect list items (including BRF-specific patterns)
+    const isListItem = (
+      line.match(/^[•\-\*]\s/) ||
+      line.match(/^\d+\.\s/) ||
+      line.match(/^[a-zA-Z]\)\s/) ||
+      line.startsWith('- ') ||
+      line.startsWith('• ') ||
+      line.includes('(B)') ||
+      line.includes('(BRF)') ||
+      (line.length > 10 && (line.includes(' - ') || line.includes(' – ')))
+    );
+    
+    if (isMainHeader) {
+      // Finish current paragraph
+      if (currentParagraph) {
+        blocks.push({
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'paragraph',
+          data: { text: currentParagraph.trim() }
+        });
+        currentParagraph = '';
+      }
+      
+      // Add main header
+      blocks.push({
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'header',
+        data: { text: line, level: 1 }
+      });
+    } else if (isSubHeader) {
+      // Finish current paragraph
+      if (currentParagraph) {
+        blocks.push({
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'paragraph',
+          data: { text: currentParagraph.trim() }
+        });
+        currentParagraph = '';
+      }
+      
+      // Add sub header
+      blocks.push({
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'header',
+        data: { text: line, level: 2 }
+      });
+    } else if (isListItem) {
+      // Finish current paragraph
+      if (currentParagraph) {
+        blocks.push({
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'paragraph',
+          data: { text: currentParagraph.trim() }
+        });
+        currentParagraph = '';
+      }
+      
+      // Collect consecutive list items
+      const listItems = [];
+      let j = i;
+      
+      while (j < lines.length) {
+        const listLine = lines[j].trim();
+        if (!listLine) {
+          j++;
+          continue;
+        }
+        
+        const isCurrentListItem = (
+          listLine.match(/^[•\-\*]\s/) ||
+          listLine.match(/^\d+\.\s/) ||
+          listLine.match(/^[a-zA-Z]\)\s/) ||
+          listLine.startsWith('- ') ||
+          listLine.startsWith('• ') ||
+          listLine.includes('(B)') ||
+          listLine.includes('(BRF)') ||
+          (listLine.length > 10 && (listLine.includes(' - ') || listLine.includes(' – ')))
+        );
+        
+        if (isCurrentListItem) {
+          // Clean the list item text but preserve responsibility codes
+          let itemText = listLine.replace(/^[•\-\*]\s/, '')
+                                .replace(/^\d+\.\s/, '')
+                                .replace(/^[a-zA-Z]\)\s/, '')
+                                .replace(/^-\s/, '')
+                                .replace(/^•\s/, '');
+          
+          // If the line doesn't start with a bullet but contains responsibility codes, keep it as is
+          if (!listLine.match(/^[•\-\*\d]/) && (listLine.includes('(B)') || listLine.includes('(BRF)'))) {
+            itemText = listLine;
+          }
+          
+          listItems.push(itemText);
+          j++;
+        } else {
+          break;
+        }
+      }
+      
+      if (listItems.length > 0) {
+        blocks.push({
+          id: Math.random().toString(36).substr(2, 9),
+          type: 'list',
+          data: {
+            style: 'unordered',
+            items: listItems
+          }
+        });
+      }
+      
+      // Skip the lines we've processed
+      i = j - 1;
+    } else {
+      // Regular text - add to current paragraph
+      currentParagraph += (currentParagraph ? ' ' : '') + line;
+    }
+  }
+  
+  // Add final paragraph if exists
+  if (currentParagraph) {
+    blocks.push({
+      id: Math.random().toString(36).substr(2, 9),
+      type: 'paragraph',
+      data: { text: currentParagraph.trim() }
+    });
+  }
+  
+  // If no blocks were created, create a single paragraph with all text
+  if (blocks.length === 0) {
+    blocks.push({
+      id: Math.random().toString(36).substr(2, 9),
+      type: 'paragraph',
+      data: { text: text.trim() }
+    });
+  }
+  
+  return {
+    time: Date.now(),
+    blocks: blocks,
+    version: '2.28.2'
+  };
+}
+
 // Helper function to create sections from custom template (AI-imported data)
 async function createSectionsFromTemplate(handbookId: string, templateSections: any[]) {
   console.log('[createSectionsFromTemplate] Creating sections from custom template for handbook:', handbookId);
@@ -352,11 +537,14 @@ async function createSectionsFromTemplate(handbookId: string, templateSections: 
       for (const templatePage of templateSection.pages) {
         console.log('[createSectionsFromTemplate] Creating page:', templatePage.title, 'in section:', section.id);
         
+        // Convert markdown content to EditorJS format
+        const editorJSContent = convertTextToEditorJS(templatePage.content || '');
+        
         const { error: pageError } = await supabaseAdmin
           .from('pages')
           .insert({
             title: templatePage.title,
-            content: templatePage.content,
+            content: JSON.stringify(editorJSContent),
             slug: templatePage.slug,
             order_index: templatePage.order || 1,
             section_id: section.id,
@@ -371,11 +559,14 @@ async function createSectionsFromTemplate(handbookId: string, templateSections: 
       // If no pages provided, create a single page with the section content
       console.log('[createSectionsFromTemplate] Creating single page for section:', section.id);
       
+      // Convert markdown content to EditorJS format
+      const editorJSContent = convertTextToEditorJS(templateSection.content || 'Innehåll kommer snart...');
+      
       const { error: pageError } = await supabaseAdmin
         .from('pages')
         .insert({
           title: templateSection.title,
-          content: templateSection.content || 'Innehåll kommer snart...',
+          content: JSON.stringify(editorJSContent),
           slug: templateSection.title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
           order_index: 1,
           section_id: section.id,
