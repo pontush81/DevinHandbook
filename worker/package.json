@@ -2,7 +2,6 @@
   "name": "ocr-worker",
   "version": "1.0.0",
   "main": "dist/ocr-worker.js",
-  "type": "module",
   "scripts": {
     "build": "tsc -p .",
     "start": "node dist/ocr-worker.js"
