@@ -8,8 +8,15 @@ import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { Storage } from '@google-cloud/storage';
 import vision from '@google-cloud/vision';
-import fs from 'fs';
-import path from 'path';
+import * as fs from "fs";
+import * as path from "path";
+
+// Skriv credentials till en temporär fil om variabeln finns
+if (process.env.GOOGLE_CREDENTIALS_JSON) {
+  const credsPath = path.join("/tmp", "google-credentials.json");
+  fs.writeFileSync(credsPath, process.env.GOOGLE_CREDENTIALS_JSON);
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
