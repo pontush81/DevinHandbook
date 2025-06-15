@@ -3,7 +3,9 @@
   "compilerOptions": {
     "target": "ES2017",
     "outDir": "dist",
-    "noEmit": false
+    "noEmit": false,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
   },
   "include": ["*.ts"]
 } 
