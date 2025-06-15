@@ -7,9 +7,7 @@ RUN npm install
 
 COPY . .
 
-WORKDIR /app/worker
-
-RUN ls -l /app/worker/tsconfig.json
+RUN ls -l /app/tsconfig.json
 
 RUN npm run build
 
