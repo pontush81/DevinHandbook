@@ -4,12 +4,14 @@
   "main": "ocr-worker.ts",
   "type": "module",
   "scripts": {
-    "start": "npx ts-node --loader ts-node/esm ocr-worker.ts"
+    "build": "tsc analyze-worker.ts --outDir dist",
+    "start": "node dist/analyze-worker.js"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.16.0",
     "@google-cloud/vision": "^5.2.0",
     "@supabase/supabase-js": "^2.49.7",
+    "dotenv": "^16.5.0",
     "ts-node": "^10.9.2",
     "typescript": "^4.9.5",
     "uuid": "^10.0.0"
