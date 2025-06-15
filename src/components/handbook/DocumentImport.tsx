@@ -243,6 +243,17 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
         setAnalysisStep(`🤖 AI analyserar ${file.name}...`);
         setAnalysisProgress((i / files.length) * 100 * 0.1 + 30); // Startar vid 30% istället för 50%
 
+        // Lägg till loggning för att visa vilket documentId som skickas
+        console.log('[DocumentImport] Skickar analyze-structure-anrop:', {
+          text,
+          metadata: {
+            ...metadata,
+            title: `${metadata?.title || file.name} (Dokument ${i + 1})`
+          },
+          templateType: 'brf',
+          documentId: fileId
+        });
+
         const analysisResponse = await fetch('/api/documents/analyze-structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -252,7 +263,8 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
               ...metadata,
               title: `${metadata?.title || file.name} (Dokument ${i + 1})`
             },
-            templateType: 'brf'
+            templateType: 'brf',
+            documentId: fileId // <-- Skicka alltid med documentId!
           }),
         });
 
