@@ -27,6 +27,7 @@ const gcsBucket = process.env.GOOGLE_CLOUD_VISION_BUCKET!;
 const supabaseStorageBucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || 'documents';
 
 async function pollAndProcessJobs() {
+  console.log('[OCR Worker] Startar pollAndProcessJobs-loop');
   while (true) {
     try {
       // Hämta första pending-jobbet
@@ -38,6 +39,7 @@ async function pollAndProcessJobs() {
         .limit(1);
       if (error) throw error;
       if (!jobs || jobs.length === 0) {
+        console.log('[OCR Worker] Inga pending-jobb, väntar...');
         await sleep(5000);
         continue;
       }
@@ -96,6 +98,8 @@ async function pollAndProcessJobs() {
       await sleep(10000);
     }
   }
+  // (Denna rad nås aldrig, men logga om loopen skulle brytas)
+  console.log('[OCR Worker] pollAndProcessJobs-loop avslutas');
 }
 
 function sleep(ms: number) {
