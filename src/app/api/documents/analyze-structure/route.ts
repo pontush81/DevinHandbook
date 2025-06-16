@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Kunde inte skapa analyze-jobb', details: jobError.message }, { status: 500 });
     }
 
-    // Chunking-funktion för att hantera långa texter
-    function chunkText(text: string, maxChunkSize: number = 2500): string[] {
+    // Chunking-funktion för att hantera långa texter (optimerad för snabbare bearbetning)
+    function chunkText(text: string, maxChunkSize: number = 8000): string[] {
       const chunks: string[] = [];
       const lines = text.split('\n');
       let currentChunk = '';
@@ -155,15 +155,19 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Dela upp texten i chunks och analysera varje del
+    // Dela upp texten i chunks och analysera varje del (parallell bearbetning för snabbare analys)
     const textChunks = chunkText(text);
     console.log(`[analyze-structure] Delar upp text i ${textChunks.length} delar`);
     
-    let allSections: any[] = [];
+    // För mycket stora dokument (>10 chunks), använd endast de första 8 delarna för snabbare analys
+    const chunksToProcess = textChunks.length > 10 ? textChunks.slice(0, 8) : textChunks;
+    if (textChunks.length > 10) {
+      console.log(`[analyze-structure] Stort dokument upptäckt (${textChunks.length} delar), analyserar endast de första 8 delarna för snabbare bearbetning`);
+    }
     
-    for (let i = 0; i < textChunks.length; i++) {
-      const chunk = textChunks[i];
-      console.log(`[analyze-structure] Analyserar del ${i + 1}/${textChunks.length} (${chunk.length} tecken)`);
+    // Parallell bearbetning av alla chunks för snabbare analys
+    const chunkPromises = chunksToProcess.map(async (chunk, i) => {
+      console.log(`[analyze-structure] Analyserar del ${i + 1}/${chunksToProcess.length} (${chunk.length} tecken)`);
       
       try {
         const completion = await openai.chat.completions.create({
@@ -175,7 +179,7 @@ export async function POST(request: NextRequest) {
               role: 'system',
               content: `Du är en expert på UX-design och dokumentstrukturering som skapar professionella, användarvänliga handböcker.
               
-              UPPDRAG: Analysera denna del av dokumentet och skapa en PROFESSIONELL, UX-OPTIMERAD struktur. Detta är del ${i + 1} av ${textChunks.length}.
+              UPPDRAG: Analysera denna del av dokumentet och skapa en PROFESSIONELL, UX-OPTIMERAD struktur. Detta är del ${i + 1} av ${chunksToProcess.length}.
               
               VIKTIGT - FELHANTERING:
               - Om texten innehåller felmeddelanden om "scannad PDF" eller "OCR-problem", returnera en tom array: {"sections": []}
@@ -256,22 +260,27 @@ export async function POST(request: NextRequest) {
         console.log(`[analyze-structure] Del ${i + 1} OpenAI response:`, chunkResponse.substring(0, 200) + '...');
         
         // Parsa JSON för denna chunk
-        let chunkSections;
         try {
-          chunkSections = JSON.parse(chunkResponse);
+          const chunkSections = JSON.parse(chunkResponse);
           const sections = chunkSections?.sections || chunkSections || [];
           if (Array.isArray(sections)) {
-            allSections.push(...sections);
             console.log(`[analyze-structure] Del ${i + 1} gav ${sections.length} sektioner`);
+            return sections;
           }
         } catch (parseError) {
           console.error(`[analyze-structure] Kunde inte parsa JSON för del ${i + 1}:`, parseError);
         }
         
+        return [];
       } catch (chunkError) {
         console.error(`[analyze-structure] Fel vid analys av del ${i + 1}:`, chunkError);
+        return [];
       }
-    }
+    });
+
+    // Vänta på alla parallella anrop och samla resultaten
+    const chunkResults = await Promise.all(chunkPromises);
+    const allSections = chunkResults.flat();
 
     console.log(`[analyze-structure] Totalt ${allSections.length} sektioner från alla delar`);
     
