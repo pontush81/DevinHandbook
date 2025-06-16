@@ -504,6 +504,81 @@ function convertTextToEditorJS(text: string): any {
   };
 }
 
+/**
+ * Converts AI-generated content to EditorJS format
+ * This function is specifically designed for AI-generated content and always creates paragraph blocks
+ * to avoid the header detection logic that can cause entire sections to appear in bold
+ */
+function convertAIContentToEditorJS(text: string): any {
+  if (!text || text.trim() === '') {
+    return {
+      time: Date.now(),
+      blocks: [{
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'paragraph',
+        data: { text: 'Innehåll kommer snart...' }
+      }],
+      version: '2.28.2'
+    };
+  }
+
+  // Split text into paragraphs (by double newlines or single newlines)
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  
+  // If no double newlines found, treat as single paragraph
+  const finalParagraphs = paragraphs.length === 1 ? [text.trim()] : paragraphs;
+
+  const blocks: any[] = [];
+
+  finalParagraphs.forEach((paragraph, index) => {
+    const trimmedParagraph = paragraph.trim();
+    if (!trimmedParagraph) return;
+
+    // Check for bullet lists (lines with • or -)
+    const lines = trimmedParagraph.split('\n');
+    const listItems = lines.filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.match(/^\d+\.\s/);
+    });
+
+    if (listItems.length > 0 && listItems.length === lines.length) {
+      // This paragraph is entirely a list
+      blocks.push({
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'list',
+        data: {
+          style: listItems[0].trim().match(/^\d+\./) ? 'ordered' : 'unordered',
+          items: listItems.map(item => 
+            item.replace(/^[•\-]\s*/, '').replace(/^\d+\.\s*/, '').trim()
+          )
+        }
+      });
+    } else {
+      // Always create paragraph blocks for AI content to avoid bold headers
+      blocks.push({
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'paragraph',
+        data: { text: trimmedParagraph }
+      });
+    }
+  });
+
+  // If no blocks were created, create a single paragraph
+  if (blocks.length === 0) {
+    blocks.push({
+      id: Math.random().toString(36).substr(2, 9),
+      type: 'paragraph',
+      data: { text: text.trim() }
+    });
+  }
+
+  return {
+    time: Date.now(),
+    blocks: blocks,
+    version: '2.28.2'
+  };
+}
+
 // Helper function to create sections from custom template (AI-imported data)
 async function createSectionsFromTemplate(handbookId: string, templateSections: any[]) {
   console.log('[createSectionsFromTemplate] Creating sections from custom template for handbook:', handbookId);
@@ -537,8 +612,8 @@ async function createSectionsFromTemplate(handbookId: string, templateSections: 
       for (const templatePage of templateSection.pages) {
         console.log('[createSectionsFromTemplate] Creating page:', templatePage.title, 'in section:', section.id);
         
-        // Convert markdown content to EditorJS format
-        const editorJSContent = convertTextToEditorJS(templatePage.content || '');
+        // Use AI-specific conversion function to avoid header detection issues
+        const editorJSContent = convertAIContentToEditorJS(templatePage.content || '');
         
         const { error: pageError } = await supabaseAdmin
           .from('pages')
@@ -559,8 +634,8 @@ async function createSectionsFromTemplate(handbookId: string, templateSections: 
       // If no pages provided, create a single page with the section content
       console.log('[createSectionsFromTemplate] Creating single page for section:', section.id);
       
-      // Convert markdown content to EditorJS format
-      const editorJSContent = convertTextToEditorJS(templateSection.content || 'Innehåll kommer snart...');
+      // Use AI-specific conversion function to avoid header detection issues
+      const editorJSContent = convertAIContentToEditorJS(templateSection.content || 'Innehåll kommer snart...');
       
       const { error: pageError } = await supabaseAdmin
         .from('pages')
