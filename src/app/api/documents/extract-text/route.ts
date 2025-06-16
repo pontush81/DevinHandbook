@@ -88,23 +88,36 @@ async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pages
       } catch (ocrError) {
         console.error('❌ OCR misslyckades:', ocrError);
       }
+    } else {
+      console.log('⚠️ OCR inte tillgängligt - Google Cloud Vision API inte konfigurerat');
     }
     
     // Fallback: returnera hjälptext för scannad PDF
+    const ocrStatus = ocrService.isAvailable() ? 'konfigurerat men misslyckades' : 'inte konfigurerat';
+    
     return {
-      text: `Detta verkar vara en scannad PDF-fil som innehåller bilder istället för text. För att kunna analysera detta dokument behöver du:
+      text: `⚠️ SCANNAD PDF UPPTÄCKT - Textextraktion misslyckades
 
-1. Konvertera PDF:en till en textbaserad version med hjälp av OCR-programvara
-2. Eller kopiera texten manuellt från dokumentet  
-3. Eller använda en annan version av dokumentet som innehåller sökbar text
+Detta verkar vara en scannad PDF-fil som innehåller bilder istället för text.
 
-Vanliga OCR-verktyg:
-- Adobe Acrobat Pro (OCR-funktion)
-- Google Drive (ladda upp PDF:en, den konverteras automatiskt)
-- Online OCR-verktyg som ocr.space eller onlineocr.net
+🔧 OCR-status: ${ocrStatus}
+
+📋 För att analysera detta dokument kan du:
+
+1. 🤖 Konfigurera automatisk OCR (rekommenderat):
+   - Sätt upp Google Cloud Vision API
+   - Lägg till GOOGLE_CLOUD_VISION_BUCKET i .env
+
+2. 📄 Manuella alternativ:
+   - Adobe Acrobat Pro (OCR-funktion)
+   - Google Drive (ladda upp PDF:en, konverteras automatiskt)
+   - Online OCR-verktyg: ocr.space eller onlineocr.net
+
+3. 📁 Använd en textbaserad version av dokumentet
 
 Filnamn: Uppladdad PDF
-Antal sidor: ${result.pages}`,
+Antal sidor: ${result.pages}
+Status: Scannad PDF, kräver OCR-behandling`,
       pages: result.pages
     };
     

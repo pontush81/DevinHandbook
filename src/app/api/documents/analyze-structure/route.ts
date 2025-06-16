@@ -138,6 +138,23 @@ export async function POST(request: NextRequest) {
       return chunks;
     }
 
+    // Kontrollera om texten innehåller felmeddelanden
+    const isErrorMessage = text.includes('SCANNAD PDF UPPTÄCKT') || 
+                           text.includes('OCR-status:') ||
+                           text.includes('Textextraktion misslyckades') ||
+                           text.length < 100;
+    
+    if (isErrorMessage) {
+      console.log('[analyze-structure] Upptäckte felmeddelande eller för kort text, returnerar fel');
+      return NextResponse.json({ 
+        error: 'Dokumentet kunde inte analyseras. Texten verkar vara en scannad PDF som kräver OCR-behandling.',
+        details: 'Konfigurera Google Cloud Vision API för automatisk OCR eller använd en textbaserad version av dokumentet.',
+        sections: [],
+        jobId: jobData.id,
+        async: false 
+      }, { status: 400 });
+    }
+
     // Dela upp texten i chunks och analysera varje del
     const textChunks = chunkText(text);
     console.log(`[analyze-structure] Delar upp text i ${textChunks.length} delar`);
@@ -159,6 +176,11 @@ export async function POST(request: NextRequest) {
               content: `Du är en expert på UX-design och dokumentstrukturering som skapar professionella, användarvänliga handböcker.
               
               UPPDRAG: Analysera denna del av dokumentet och skapa en PROFESSIONELL, UX-OPTIMERAD struktur. Detta är del ${i + 1} av ${textChunks.length}.
+              
+              VIKTIGT - FELHANTERING:
+              - Om texten innehåller felmeddelanden om "scannad PDF" eller "OCR-problem", returnera en tom array: {"sections": []}
+              - Om texten är för kort eller innehåller bara tekniska felmeddelanden, returnera: {"sections": []}
+              - Analysera ENDAST faktiskt dokumentinnehåll, inte systemmeddelanden
               
               GRUNDPRINCIPER:
               - EXTRAHERA all data och information (hoppa inte över något)
