@@ -20,7 +20,7 @@ module.exports = {
   // Förhindra att Jest behandlar Next.js interna filer
   transformIgnorePatterns: [
     '/node_modules/(?!.*.mjs$)',
-    "/node_modules/(?!(react-markdown|remark-gfm|unified|bail|trough|vfile|micromark|mdast-util-to-string)/)"
+    "/node_modules/(?!(unified|bail|trough|vfile|micromark|mdast-util-to-string)/)"
   ],
   // Ignorera Next.js specifika filer i tester
   modulePathIgnorePatterns: [

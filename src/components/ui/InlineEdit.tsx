@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './button';
 import { Input } from './input';
 import { Textarea } from './textarea';
-import { MarkdownEditor } from './MarkdownEditor';
+// Removed MarkdownEditor import as we're using EditorJS
 import { Check, X, Edit3, Edit2 } from 'lucide-react';
 
 interface InlineEditProps {
@@ -18,7 +18,7 @@ interface InlineEditProps {
   rows?: number;
   disabled?: boolean;
   showEditIcon?: boolean;
-  useMarkdownEditor?: boolean;
+  // useMarkdownEditor removed - we use EditorJS
 }
 
 export const InlineEdit: React.FC<InlineEditProps> = ({
@@ -34,7 +34,7 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
   rows = 3,
   disabled = false,
   showEditIcon = true,
-  useMarkdownEditor = false
+  // useMarkdownEditor removed
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { safeLocalStorage } from '@/lib/safe-storage';
 
 interface Handbook {
   id: string;
@@ -122,13 +123,9 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
       let joinProcessStarted = null;
       
       // Safe localStorage access
-      try {
-        joiningFlag = localStorage.getItem('joining_handbook_via_code');
-        pendingJoinCode = localStorage.getItem('pending_join_code');
-        joinProcessStarted = localStorage.getItem('join_process_started');
-      } catch (e) {
-        console.warn('[Smart Redirect] Cannot access localStorage:', e);
-      }
+      joiningFlag = safeLocalStorage.getItem('joining_handbook_via_code');
+      pendingJoinCode = safeLocalStorage.getItem('pending_join_code');
+      joinProcessStarted = safeLocalStorage.getItem('join_process_started');
       
       const windowJoiningFlag = (window as any).__joining_handbook;
       
@@ -146,13 +143,9 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
           const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
           if (startTime < fiveMinutesAgo && !windowJoiningFlag) {
             console.log('[Smart Redirect] Join process is stale, clearing flags and continuing');
-            try {
-              localStorage.removeItem('joining_handbook_via_code');
-              localStorage.removeItem('pending_join_code');
-              localStorage.removeItem('join_process_started');
-            } catch (e) {
-              console.warn('[Smart Redirect] Cannot clear localStorage flags:', e);
-            }
+            safeLocalStorage.removeItem('joining_handbook_via_code');
+            safeLocalStorage.removeItem('pending_join_code');
+            safeLocalStorage.removeItem('join_process_started');
             delete (window as any).__joining_handbook;
           } else {
             console.log('[Smart Redirect] User is joining handbook via code, skipping redirect');
@@ -291,12 +284,8 @@ export async function smartRedirectWithPolling(
         let pendingJoinCode = null;
         
         // Safe localStorage access
-        try {
-          joiningFlag = localStorage.getItem('joining_handbook_via_code');
-          pendingJoinCode = localStorage.getItem('pending_join_code');
-        } catch (e) {
-          console.warn('[Smart Redirect Polling] Cannot access localStorage:', e);
-        }
+        joiningFlag = safeLocalStorage.getItem('joining_handbook_via_code');
+        pendingJoinCode = safeLocalStorage.getItem('pending_join_code');
         
         const windowJoiningFlag = (window as any).__joining_handbook;
         

@@ -50,7 +50,7 @@ export function sanitizeEditorJSData(data: any): OutputData {
 }
 
 /**
- * Converts plain text with markdown-like formatting to EditorJS blocks
+ * Converts plain text to EditorJS blocks
  */
 function convertPlainTextToEditorJS(text: string): OutputData {
   // Split text into paragraphs (by double newlines)

@@ -121,11 +121,7 @@ export interface EditorConfiguration {
   onReady?: () => void;
 }
 
-// Conversion types
-export interface MarkdownConverter {
-  toMarkdown: (data: EditorContent) => string;
-  fromMarkdown: (markdown: string) => EditorContent;
-}
+// Conversion types (removed MarkdownConverter - using pure EditorJS)
 
 // Tool configuration interfaces
 export interface HeaderToolConfig {

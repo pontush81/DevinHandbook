@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, RefreshCw, AlertTriangle } from "lucide-react";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 export default function ClearAuthPage() {
   const [isClearing, setIsClearing] = useState(false);
@@ -31,7 +32,7 @@ export default function ClearAuthPage() {
         }
         
         console.log('🗑️ Rensar nycklar:', keysToRemove);
-        keysToRemove.forEach(key => localStorage.removeItem(key));
+        keysToRemove.forEach(key => safeLocalStorage.removeItem(key));
         
         // 2. Rensa sessionStorage
         const sessionKeysToRemove = [];
@@ -59,7 +60,7 @@ export default function ClearAuthPage() {
         });
         
         // 4. Sätt logout-flagga
-        localStorage.setItem('__logout_flag__', Date.now().toString());
+        safeLocalStorage.setItem('__logout_flag__', Date.now().toString());
         
         console.log('✅ All auth-data rensad');
         setIsCleared(true);

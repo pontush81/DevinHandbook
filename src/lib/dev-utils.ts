@@ -1,6 +1,7 @@
 /**
  * Development utilities for debugging and fixing auth issues
  */
+import { safeLocalStorage } from '@/lib/safe-storage';
 
 /**
  * Force clears all authentication data from browser storage
@@ -12,18 +13,29 @@ export function forceLogout() {
   console.log('🚨 Force logout initiated - clearing all auth data');
   
   try {
-    // Clear localStorage
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-        keysToRemove.push(key);
+    // Clear localStorage with safe access
+    if (safeLocalStorage.isAvailable()) {
+      try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => {
+          const success = safeLocalStorage.removeItem(key);
+          if (success) {
+            console.log(`🗑️ Removed localStorage key: ${key}`);
+          }
+        });
+      } catch (e) {
+        console.warn('Could not iterate localStorage keys, using fallback cleanup', e);
+        // Fallback: try to remove known keys
+        const knownKeys = ['sb-auth-token', 'sb-kjsquvjzctdwgjypcjrg-auth-token', 'sb-auth'];
+        knownKeys.forEach(key => safeLocalStorage.removeItem(key));
       }
     }
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-      console.log(`🗑️ Removed localStorage key: ${key}`);
-    });
     
     // Clear sessionStorage
     for (let i = 0; i < sessionStorage.length; i++) {
@@ -51,7 +63,7 @@ export function forceLogout() {
     });
     
     // Set logout flag
-    localStorage.setItem('__logout_flag__', Date.now().toString());
+    safeLocalStorage.setItem('__logout_flag__', Date.now().toString());
     
     console.log('✅ Force logout completed - please refresh the page');
     

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, CheckCircle2, Trash2, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 export default function DeleteUserPage() {
   const [email, setEmail] = useState("");
@@ -18,12 +19,21 @@ export default function DeleteUserPage() {
       await supabase.auth.signOut();
       // Aggressiv rensning av auth data
       if (typeof window !== 'undefined') {
-        // Rensa localStorage
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
-            localStorage.removeItem(key);
+        // Rensa localStorage with safe access
+        if (safeLocalStorage.isAvailable()) {
+          try {
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+                safeLocalStorage.removeItem(key);
+              }
+            }
+          } catch (e) {
+            console.warn('localStorage iteration failed, using fallback', e);
+            const knownKeys = ['sb-auth-token', 'sb-kjsquvjzctdwgjypcjrg-auth-token', 'sb-auth'];
+            knownKeys.forEach(key => safeLocalStorage.removeItem(key));
           }
-        });
+        }
         
         // Rensa cookies
         document.cookie.split(";").forEach(cookie => {
@@ -36,7 +46,7 @@ export default function DeleteUserPage() {
         });
         
         // Sätt logout-flagga
-        localStorage.setItem('__logout_flag__', Date.now().toString());
+        safeLocalStorage.setItem('__logout_flag__', Date.now().toString());
       }
       
       // Omdirigera med en kort fördröjning

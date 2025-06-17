@@ -379,9 +379,9 @@ export function AllSectionsView({
                 {/* Section Header */}
                 <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border-b border-gray-200">
                   <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-start gap-2">
                       {/* Section Icon */}
-                      <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2 mt-1">
                         <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-green-600 flex-shrink-0" />
                         {isEditMode && (
                           <span className="hidden sm:inline text-xs font-medium text-green-600 uppercase tracking-wide">SEKTION</span>
@@ -567,10 +567,12 @@ export function AllSectionsView({
                       <div key={page.id} className="border-t border-gray-100 p-4">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0">
                           <div className="flex items-start gap-3 flex-1">
-                            <div className="flex items-center gap-2 mt-1">
-                              <FileText className="h-4 w-4 text-green-600" />
+                            <div className="flex items-start gap-2">
+                              <div className="mt-1">
+                                <FileText className="h-4 w-4 text-green-600" />
+                              </div>
                               {isEditMode && (
-                                <span className="hidden sm:inline text-xs font-medium text-green-600 uppercase tracking-wide">SIDA</span>
+                                <span className="hidden sm:inline text-xs font-medium text-green-600 uppercase tracking-wide mt-1">SIDA</span>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">

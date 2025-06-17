@@ -265,11 +265,8 @@ function CreateHandbookContent() {
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
             Skapa digital handbok
           </h1>
-          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-2xl mx-auto px-2">
-            {handbooks.length === 0 
-              ? "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
-              : "Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening."
-            }
+          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-2xl mx-auto px-2 text-center">
+            Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.
           </p>
           {handbooks.length > 0 && isSuperadmin && (
             <Button variant="outline" className="mb-3 md:mb-4 text-sm md:text-base" onClick={() => router.push('/dashboard')}>

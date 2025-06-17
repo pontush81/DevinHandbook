@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
+import { safeLocalStorage } from '@/lib/safe-storage';
 
 // Ensure SUPABASE_URL has https:// prefix
 const ensureHttpsPrefix = (url: string) => {
@@ -169,9 +170,8 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
               // Rensa all auth-data
               const authKeys = ['sb-auth-token', 'sb-kjsquvjzctdwgjypcjrg-auth-token', 'sb-auth'];
               authKeys.forEach(key => {
-                localStorage.removeItem(key);
+                safeLocalStorage.removeItem(key);
                 sessionStorage.removeItem(key);
-                customStorage.removeItem(key);
               });
               
               // Rensa cookies
@@ -513,9 +513,13 @@ export async function diagnoseAuthIssues() {
     } else {
       // Safe test without throwing errors
       const testKey = '__diag_test__';
-      window.localStorage.setItem(testKey, 'test');
-      window.localStorage.removeItem(testKey);
-      diagnostics.localStorage = 'accessible';
+      const success = safeLocalStorage.setItem(testKey, 'test');
+      if (success) {
+        safeLocalStorage.removeItem(testKey);
+        diagnostics.localStorage = 'accessible';
+      } else {
+        diagnostics.localStorage = 'blocked: safe storage failed';
+      }
     }
   } catch (e) {
     diagnostics.localStorage = `blocked: ${e.message}`;

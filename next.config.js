@@ -25,14 +25,29 @@ const nextConfig = {
       };
     }
     
-    // Optimize for development
-    if (dev) {
-      // Reduce webpack noise and improve error reporting
-      config.stats = 'errors-warnings';
-      config.infrastructureLogging = {
-        level: 'error',
-      };
-    }
+      // Optimize for development
+  if (dev) {
+    // Reduce webpack noise and improve error reporting
+    config.stats = 'errors-warnings';
+    config.infrastructureLogging = {
+      level: 'error',
+    };
+    
+    // Fast Refresh optimizations
+    config.watchOptions = {
+      poll: 1000,
+      aggregateTimeout: 300,
+      ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
+    };
+    
+    // Reduce build time in development
+    config.optimization = {
+      ...config.optimization,
+      removeAvailableModules: false,
+      removeEmptyChunks: false,
+      splitChunks: false,
+    };
+  }
     
     return config;
   },

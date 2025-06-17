@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { showToast } from '@/components/ui/use-toast';
 import { DEFAULT_HANDBOOK_TEMPLATE } from '@/lib/handbook-templates';
+import { handbookStorage } from '@/lib/safe-storage';
 
 interface ImportedSection {
   title: string;
@@ -52,22 +53,77 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
   const [error, setError] = useState<string | null>(null);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   
-  // Använd useRef för att förhindra onödiga re-renders
+  // Använd useRef för att förhindra onödiga re-renders och bevara state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isProcessingRef = useRef(false);
   const analysisResultRef = useRef<AnalysisResult | null>(null);
+  const filesRef = useRef<File[]>([]);
   
-  // Synkronisera state med ref för att förhindra förlust vid re-renders
+  // Synkronisera state med refs för att bevara vid fönsterbyte
   useEffect(() => {
     analysisResultRef.current = analysisResult;
   }, [analysisResult]);
   
-  // Återställ analysisResult från ref om det försvinner vid fönsterbyte
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+  
+  // Spara state till localStorage när det ändras
+  useEffect(() => {
+    if (analysisResult) {
+      const success = handbookStorage.saveDocumentImportState(analysisResult);
+      if (success) {
+        console.log('💾 Sparar document import state till localStorage');
+      }
+    }
+  }, [analysisResult]);
+  
+  // Återställ state från localStorage vid komponentstart
+  useEffect(() => {
+    const savedData = handbookStorage.getDocumentImportState();
+    if (savedData) {
+      const { analysisResult: savedAnalysisResult, timestamp } = savedData;
+      const now = Date.now();
+      const fifteenMinutes = 15 * 60 * 1000; // 15 minuter i millisekunder
+      
+      // Återställ endast om det är mindre än 15 minuter sedan
+      if (now - timestamp < fifteenMinutes && savedAnalysisResult) {
+        console.log('🔄 Återställer document import state från localStorage');
+        setAnalysisResult(savedAnalysisResult);
+        analysisResultRef.current = savedAnalysisResult;
+        
+        // Meddela parent om återställd status
+        if (onImportStatusChange) {
+          onImportStatusChange({
+            hasFile: true,
+            isAnalyzing: false,
+            hasResults: true
+          });
+        }
+        
+        // Trigga onImportComplete om det finns sektioner
+        if (savedAnalysisResult.sections && savedAnalysisResult.sections.length > 0) {
+          onImportComplete(savedAnalysisResult.sections);
+        }
+      }
+    }
+  }, [onImportComplete, onImportStatusChange]);
+  
+  // Återställ state vid fönsterbyte
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && !analysisResult && analysisResultRef.current) {
-        console.log('🔄 Återställer analysresultat efter fönsterbyte');
-        setAnalysisResult(analysisResultRef.current);
+      if (!document.hidden) {
+        // Återställ analysisResult från ref om det försvunnit
+        if (!analysisResult && analysisResultRef.current) {
+          console.log('🔄 Återställer analysresultat efter fönsterbyte');
+          setAnalysisResult(analysisResultRef.current);
+        }
+        
+        // Återställ filer från ref om de försvunnit
+        if (files.length === 0 && filesRef.current.length > 0) {
+          console.log('🔄 Återställer filer efter fönsterbyte');
+          setFiles(filesRef.current);
+        }
       }
     };
     
@@ -86,7 +142,7 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [analysisResult]);
+  }, [analysisResult, files]);
 
   // Rapportera status-ändringar till parent
   useEffect(() => {
@@ -98,6 +154,24 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
       });
     }
   }, [files, isAnalyzing, analysisResult, onImportStatusChange]);
+
+  // Cleanup-funktion för att rensa localStorage
+  const clearImportState = useCallback(() => {
+    const success = handbookStorage.clearFormState();
+    if (success) {
+      console.log('🧹 Rensade document import state från localStorage');
+    }
+  }, []);
+
+  // Exponera cleanup-funktionen för parent-komponenter
+  useEffect(() => {
+    // Lägg till cleanup-funktionen på window-objektet så andra komponenter kan använda den
+    (window as any).clearDocumentImportState = clearImportState;
+    
+    return () => {
+      delete (window as any).clearDocumentImportState;
+    };
+  }, [clearImportState]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -243,16 +317,15 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
         setAnalysisStep(`🤖 AI analyserar ${file.name}...`);
         setAnalysisProgress((i / files.length) * 100 * 0.1 + 30); // Startar vid 30% istället för 50%
 
-        // Lägg till loggning för att visa vilket documentId som skickas
-        console.log('[DocumentImport] Skickar analyze-structure-anrop:', {
-          text,
-          metadata: {
-            ...metadata,
-            title: `${metadata?.title || file.name} (Dokument ${i + 1})`
-          },
-          templateType: 'brf',
-          documentId: fileId
-        });
+        // Reduce logging frequency to prevent render loops  
+        if (i === 0 || i === files.length - 1) { // Only log first and last file
+          console.log('[DocumentImport] Skickar analyze-structure-anrop:', {
+            fileIndex: i + 1,
+            totalFiles: files.length,
+            fileName: file.name,
+            documentId: fileId
+          });
+        }
 
         const analysisResponse = await fetch('/api/documents/analyze-structure', {
           method: 'POST',

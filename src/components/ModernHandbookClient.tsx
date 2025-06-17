@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { HandbookHeader } from './handbook/HandbookHeader';
 import { ModernSidebar, SidebarTrigger } from './handbook/ModernSidebar';
 import { ContentArea } from './handbook/ContentArea';
@@ -8,6 +8,8 @@ import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbo
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { StableProvider } from '@/components/ui/StableProvider';
+import { ClearCacheButton } from '@/components/ui/ClearCacheButton';
 import { MainFooter } from '@/components/layout/MainFooter';
 import { MembersManager } from '@/components/handbook/MembersManager';
 import { TrialStatusBar } from '@/components/trial/TrialStatusBar';
@@ -33,6 +35,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   initialData,
   defaultEditMode = false
 }) => {
+  // Remove debounce render - it was causing hooks order issues
+  
   const { user, isLoading: authLoading } = useAuth();
   const [handbookData, setHandbookData] = useState(initialData);
   const [currentPageId, setCurrentPageId] = useState<string>('');
@@ -50,19 +54,60 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
   // Hydration fix - vänta tills komponenten är mounted på klienten
   useEffect(() => {
-    setMounted(true);
-    setIsLoading(false);
+    // Use requestAnimationFrame to ensure DOM is ready
+    const timer = requestAnimationFrame(() => {
+      setMounted(true);
+      setIsLoading(false);
+    });
+
+    return () => cancelAnimationFrame(timer);
   }, []);
 
-  console.log('🎯 ModernHandbookClient render state:', {
-    user: !!user,
-    authLoading,
-    canEdit,
-    isEditMode,
-    handbookId: initialData.id,
-    mounted,
-    timestamp: new Date().toISOString() // Cache buster for deployment
-  });
+  // Add a backup timer to prevent infinite loading
+  useEffect(() => {
+    const backupTimer = setTimeout(() => {
+      if (!mounted) {
+        console.log('⏰ [ModernHandbookClient] Backup mount timer triggered');
+        setMounted(true);
+        setIsLoading(false);
+      }
+    }, 1500); // Reduced from 2 seconds
+
+    return () => clearTimeout(backupTimer);
+  }, [mounted]);
+
+  // Reduce logging frequency to prevent render loops
+  const logRef = useRef<number>(0);
+  const logState = useRef<string>('');
+  useEffect(() => {
+    const currentState = JSON.stringify({
+      user: !!user,
+      authLoading,
+      canEdit,
+      isEditMode,
+      mounted,
+      isLoading
+    });
+    
+    // Only log if state actually changed
+    if (logState.current !== currentState) {
+      logRef.current++;
+      logState.current = currentState;
+      
+      if (logRef.current % 5 === 1) { // Only log every 5th actual state change
+        console.log('🎯 ModernHandbookClient state change:', {
+          user: !!user,
+          authLoading,
+          canEdit,
+          isEditMode,
+          handbookId: initialData.id,
+          mounted,
+          isLoading,
+          changeCount: logRef.current
+        });
+      }
+    }
+  }, [user, authLoading, canEdit, isEditMode, mounted, isLoading, initialData.id]);
 
   // Check if user can edit this handbook and if they are admin
   useEffect(() => {
@@ -76,14 +121,20 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         timestamp: new Date().toISOString()
       });
       
+      // Require mounted state first
+      if (!mounted) {
+        console.log('⏳ [ModernHandbookClient] Not mounted yet, waiting...');
+        return;
+      }
+      
       if (authLoading) {
         console.log('⏳ [ModernHandbookClient] Auth is still loading, waiting...');
         return;
       }
       
-      // Require user to be logged in
+      // Don't require user to be logged in - allow anonymous access
       if (!user) {
-        console.log('❌ [ModernHandbookClient] No user found, setting canEdit and isAdmin to false');
+        console.log('👤 [ModernHandbookClient] No user found, setting permissions for anonymous user');
         setCanEdit(false);
         setIsAdmin(false);
         setIsLoading(false);
@@ -142,18 +193,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
     checkEditPermissions();
     
-    // Backup timeout: If auth is still loading after 5 seconds, assume no auth and proceed
+    // Backup timeout: If auth is still loading after 3 seconds, assume no auth and proceed
     const timeoutId = setTimeout(() => {
-      if (authLoading) {
-        console.log('⏰ [ModernHandbookClient] Auth loading timeout');
+      if (authLoading || !mounted) {
+        console.log('⏰ [ModernHandbookClient] Auth loading timeout, proceeding without auth');
         setCanEdit(false);
         setIsAdmin(false);
         setIsLoading(false);
+        setMounted(true);
       }
-    }, 5000);
+    }, 3000); // Reduced from 5 to 3 seconds
 
     return () => clearTimeout(timeoutId);
-  }, [user, authLoading, initialData.id]);
+  }, [user, authLoading, initialData.id, mounted]);
 
   // Handle page selection from search results via URL hash
   useEffect(() => {
@@ -983,7 +1035,16 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     </div>
   ) : null;
 
-  if (isLoading || authLoading || !mounted) {
+  // Even more lenient loading condition - avoid loading screen when possible
+  const shouldShowLoading = useMemo(() => {
+    // Only show loading if we're genuinely waiting for critical data
+    const isGenuinelyLoading = isLoading && !mounted;
+    const isAuthLoadingCritical = authLoading && !user && !mounted;
+    
+    return isGenuinelyLoading || isAuthLoadingCritical;
+  }, [isLoading, authLoading, mounted, user]);
+
+  if (shouldShowLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
         <div className="text-center">
@@ -1011,10 +1072,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     );
   }
 
+  // No more render debouncing to avoid hooks issues
+
   return (
-    <SidebarProvider defaultOpen={true}>
-      {/* Full viewport container with mobile-friendly layout */}
-      <div className="h-screen w-full flex flex-col md:h-screen mobile-natural-flow">
+    <StableProvider values={{ 
+      handbookId: handbookData.id,
+      isEditMode,
+      canEdit,
+      isAdmin,
+      mounted 
+    }}>
+      <SidebarProvider defaultOpen={true}>
+        {/* Full viewport container with mobile-friendly layout */}
+        <div className="h-screen w-full flex flex-col md:h-screen mobile-natural-flow">
         {/* Header - Using new HandbookHeader with edit functionality */}
         <HandbookHeader 
           handbookTitle={handbookData.title}
@@ -1104,6 +1174,10 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           </SidebarInset>
         </div>
       </div>
+      
+      {/* Debug tools - endast i development */}
+      <ClearCacheButton />
     </SidebarProvider>
+    </StableProvider>
   );
 }; 

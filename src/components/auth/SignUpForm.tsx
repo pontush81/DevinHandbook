@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { safeLocalStorage } from "@/lib/safe-storage";
 import Link from "next/link";
 import { CheckCircle2, Mail as MailIcon, Info as InfoIcon, Key } from "lucide-react";
 
@@ -46,8 +47,8 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
     try {
               // Store join code in localStorage for persistence across redirects
         if (joinCode) {
-          localStorage.setItem('pending_join_code', joinCode);
-          localStorage.setItem('join_process_started', Date.now().toString());
+          safeLocalStorage.setItem('pending_join_code', joinCode);
+          safeLocalStorage.setItem('join_process_started', Date.now().toString());
           console.log('[SignUpForm] Stored join code in localStorage:', joinCode);
         }
 

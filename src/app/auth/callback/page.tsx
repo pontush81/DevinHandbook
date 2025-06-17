@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { safeLocalStorage } from "@/lib/safe-storage";
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -41,7 +42,7 @@ function AuthCallbackContent() {
             joinCode = data.user.user_metadata.join_code;
             console.log('[Auth Callback] Found join code in user metadata:', joinCode);
           } else if (!joinCode) {
-            joinCode = localStorage.getItem('pending_join_code');
+            joinCode = safeLocalStorage.getItem('pending_join_code');
             if (joinCode) {
               console.log('[Auth Callback] Found join code in localStorage:', joinCode);
             }
@@ -60,9 +61,9 @@ function AuthCallbackContent() {
             
             // Set flags in localStorage to prevent smartRedirect from interfering
             console.log('[Auth Callback] Setting joining_handbook_via_code flag to true');
-            localStorage.setItem('joining_handbook_via_code', 'true');
-            localStorage.setItem('pending_join_code', joinCode);
-            localStorage.setItem('join_process_started', Date.now().toString());
+            safeLocalStorage.setItem('joining_handbook_via_code', 'true');
+            safeLocalStorage.setItem('pending_join_code', joinCode);
+            safeLocalStorage.setItem('join_process_started', Date.now().toString());
             
             // Add a small delay to ensure session is properly established
             setTimeout(async () => {
@@ -79,9 +80,9 @@ function AuthCallbackContent() {
                   setMessage(`E-post bekräftad och gått med i ${joinData.handbook.title}! Du dirigeras dit nu...`);
                   // Clear all join-related flags before redirecting
                   console.log('[Auth Callback] Clearing join flags - join successful');
-                  localStorage.removeItem('joining_handbook_via_code');
-                  localStorage.removeItem('pending_join_code');
-                  localStorage.removeItem('join_process_started');
+                  safeLocalStorage.removeItem('joining_handbook_via_code');
+                  safeLocalStorage.removeItem('pending_join_code');
+                  safeLocalStorage.removeItem('join_process_started');
                   if (typeof window !== 'undefined') {
                     delete (window as any).__joining_handbook;
                   }
@@ -91,9 +92,9 @@ function AuthCallbackContent() {
                 } else {
                   console.error('[Auth Callback] Join failed:', joinData);
                   // Clear all join-related flags on failure
-                  localStorage.removeItem('joining_handbook_via_code');
-                  localStorage.removeItem('pending_join_code');
-                  localStorage.removeItem('join_process_started');
+                  safeLocalStorage.removeItem('joining_handbook_via_code');
+                  safeLocalStorage.removeItem('pending_join_code');
+                  safeLocalStorage.removeItem('join_process_started');
                   if (typeof window !== 'undefined') {
                     delete (window as any).__joining_handbook;
                   }
@@ -106,9 +107,9 @@ function AuthCallbackContent() {
               } catch (error) {
                 console.error('Error joining handbook:', error);
                 // Clear all join-related flags on error
-                localStorage.removeItem('joining_handbook_via_code');
-                localStorage.removeItem('pending_join_code');
-                localStorage.removeItem('join_process_started');
+                safeLocalStorage.removeItem('joining_handbook_via_code');
+                safeLocalStorage.removeItem('pending_join_code');
+                safeLocalStorage.removeItem('join_process_started');
                 if (typeof window !== 'undefined') {
                   delete (window as any).__joining_handbook;
                 }

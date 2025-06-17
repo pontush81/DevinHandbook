@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AlertCircle, CheckCircle2, Loader2, Gift, Upload, Brain } from "lucide-react";
 import { DocumentImport } from "@/components/handbook/DocumentImport";
 import { createTemplateFromImportedSections, getDefaultTemplate } from "@/lib/handbook-templates";
+import { handbookStorage } from "@/lib/safe-storage";
 
 
 export function CreateHandbookForm() {
@@ -84,52 +85,39 @@ export function CreateHandbookForm() {
 
   // Återställ från localStorage vid komponentstart
   useEffect(() => {
-    try {
-      const savedState = localStorage.getItem('handbook-form-state');
-      const savedTimestamp = localStorage.getItem('handbook-form-timestamp');
+    const savedData = handbookStorage.getFormState();
+    
+    if (savedData) {
+      const { state, timestamp } = savedData;
+      const now = Date.now();
+      const tenMinutes = 10 * 60 * 1000; // 10 minuter i millisekunder
       
-      if (savedState && savedTimestamp) {
-        const timestamp = parseInt(savedTimestamp);
-        const now = Date.now();
-        const tenMinutes = 10 * 60 * 1000; // 10 minuter i millisekunder
+      // Återställ endast om det är mindre än 10 minuter sedan
+      if (now - timestamp < tenMinutes) {
+        console.log('🔄 Återställer formulärstate från localStorage:', state);
         
-        // Återställ endast om det är mindre än 10 minuter sedan
-        if (now - timestamp < tenMinutes) {
-          const state = JSON.parse(savedState);
-          console.log('🔄 Återställer formulärstate från localStorage:', state);
-          
-          setIsRestoringState(true);
-          
-          // Återställ alla fält
-          if (state.name) setName(state.name);
-          if (state.subdomain) setSubdomain(state.subdomain);
-          if (state.activeTab) setActiveTab(state.activeTab);
-          if (state.importedSections && state.importedSections.length > 0) {
-            setImportedSections(state.importedSections);
-          }
-          
-          // Kontrollera subdomain-tillgänglighet om det finns en subdomain
-          if (state.subdomain && state.subdomain.length >= 2) {
-            setTimeout(() => {
-              checkSubdomainAvailability(state.subdomain);
-            }, 500);
-          }
-          
-          // Dölj återställningsindikator efter en kort stund
-          setTimeout(() => {
-            setIsRestoringState(false);
-          }, 2000);
-        } else {
-          // Rensa gamla data
-          localStorage.removeItem('handbook-form-state');
-          localStorage.removeItem('handbook-form-timestamp');
-          // Rensa även gamla format
-          localStorage.removeItem('handbook-import-sections');
-          localStorage.removeItem('handbook-import-timestamp');
+        setIsRestoringState(true);
+        
+        // Återställ alla fält
+        if (state.name) setName(state.name);
+        if (state.subdomain) setSubdomain(state.subdomain);
+        if (state.activeTab) setActiveTab(state.activeTab);
+        if (state.importedSections && state.importedSections.length > 0) {
+          setImportedSections(state.importedSections);
         }
+        
+        // Kontrollera subdomain-tillgänglighet om det finns en subdomain
+        if (state.subdomain && state.subdomain.length >= 2) {
+          setTimeout(() => {
+            checkSubdomainAvailability(state.subdomain);
+          }, 500);
+        }
+        
+        // Dölj återställningsindikator efter en kort stund
+        setTimeout(() => {
+          setIsRestoringState(false);
+        }, 2000);
       }
-    } catch (error) {
-      console.warn('Kunde inte återställa från localStorage:', error);
     }
   }, []);
 
@@ -286,8 +274,7 @@ export function CreateHandbookForm() {
           timestamp: Date.now()
         };
         
-        localStorage.setItem('handbook-form-state', JSON.stringify(formState));
-        localStorage.setItem('handbook-form-timestamp', Date.now().toString());
+        handbookStorage.saveFormState(formState);
         
         console.log('💾 [IMPORT] Sparar formulärstate efter import:', {
           sectionsCount: formState.importedSections.length,
@@ -315,10 +302,11 @@ export function CreateHandbookForm() {
         timestamp: Date.now()
       };
       
-      localStorage.setItem('handbook-form-state', JSON.stringify(formState));
-      localStorage.setItem('handbook-form-timestamp', Date.now().toString());
+      const success = handbookStorage.saveFormState(formState);
       
-      console.log('💾 Sparar formulärstate:', formState);
+      if (success) {
+        console.log('💾 Sparar formulärstate:', formState);
+      }
     } catch (error) {
       console.warn('Kunde inte spara formulärstate:', error);
     }
@@ -338,14 +326,19 @@ export function CreateHandbookForm() {
             timestamp: Date.now()
           };
           
-          localStorage.setItem('handbook-form-state', JSON.stringify(formState));
-          localStorage.setItem('handbook-form-timestamp', Date.now().toString());
+          const success = handbookStorage.saveFormState(formState);
           
-          console.log('💾 Sparar formulärstate:', formState);
+          if (success && (name || importedSections.length > 0)) {
+            console.log('💾 Form state saved:', { 
+              name: name || 'unnamed', 
+              sectionsCount: importedSections.length, 
+              activeTab 
+            });
+          }
         } catch (error) {
           console.warn('Kunde inte spara formulärstate:', error);
         }
-      }, 1000); // Debounce med 1 sekund
+      }, 2000); // Debounce med 2 sekunder för mindre frekventa uppdateringar
       
       return () => clearTimeout(timeoutId);
     }
@@ -385,16 +378,13 @@ export function CreateHandbookForm() {
       });
       
       // Debug: Kontrollera localStorage också
-      try {
-        const savedState = localStorage.getItem('handbook-form-state');
-        if (savedState) {
-          const parsed = JSON.parse(savedState);
-          console.log('🔍 [SUBMIT] LocalStorage state:', {
-            importedSectionsCount: parsed.importedSections?.length || 0,
-            activeTab: parsed.activeTab
-          });
-        }
-      } catch (e) {
+      const savedData = handbookStorage.getFormState();
+      if (savedData) {
+        console.log('🔍 [SUBMIT] LocalStorage state:', {
+          importedSectionsCount: savedData.state.importedSections?.length || 0,
+          activeTab: savedData.state.activeTab
+        });
+      } else {
         console.log('🔍 [SUBMIT] No localStorage state found');
       }
 
@@ -471,14 +461,14 @@ export function CreateHandbookForm() {
         const result = await response.json();
         
         // Rensa localStorage när handboken skapas framgångsrikt
-        try {
-          localStorage.removeItem('handbook-form-state');
-          localStorage.removeItem('handbook-form-timestamp');
-          // Rensa även gamla format
-          localStorage.removeItem('handbook-import-sections');
-          localStorage.removeItem('handbook-import-timestamp');
-        } catch (error) {
-          console.warn('Kunde inte rensa localStorage:', error);
+        const success = handbookStorage.clearFormState();
+        if (success) {
+          console.log('🧹 Rensade localStorage efter framgångsrik skapelse');
+        }
+        
+        // Anropa cleanup-funktionen om den finns
+        if ((window as any).clearDocumentImportState) {
+          (window as any).clearDocumentImportState();
         }
         
         // Redirect till den nya handboken
@@ -501,14 +491,14 @@ export function CreateHandbookForm() {
       const { url } = await response.json();
       
       // Rensa localStorage innan redirect till Stripe
-      try {
-        localStorage.removeItem('handbook-form-state');
-        localStorage.removeItem('handbook-form-timestamp');
-        // Rensa även gamla format
-        localStorage.removeItem('handbook-import-sections');
-        localStorage.removeItem('handbook-import-timestamp');
-      } catch (error) {
-        console.warn('Kunde inte rensa localStorage:', error);
+      const success = handbookStorage.clearFormState();
+      if (success) {
+        console.log('🧹 Rensade localStorage innan Stripe redirect');
+      }
+      
+      // Anropa cleanup-funktionen om den finns
+      if ((window as any).clearDocumentImportState) {
+        (window as any).clearDocumentImportState();
       }
       
       // Redirect to Stripe Checkout
@@ -705,12 +695,9 @@ export function CreateHandbookForm() {
                     console.log('🔄 [UI] Cleared imported sections - switching to standard template');
                     
                     // Rensa även localStorage för att förhindra återställning
-                    try {
-                      localStorage.removeItem('handbook-form-state');
-                      localStorage.removeItem('handbook-form-timestamp');
+                    const success = handbookStorage.clearFormState();
+                    if (success) {
                       console.log('🔄 [UI] Cleared localStorage to prevent restoration of imported sections');
-                    } catch (error) {
-                      console.warn('Could not clear localStorage:', error);
                     }
                   }
                   console.log('🔄 [UI] After clearing - activeTab will be: manual, importedSections will be: 0');

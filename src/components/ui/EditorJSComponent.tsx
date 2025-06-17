@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Save, HelpCircle } from 'lucide-react';
 import { sanitizeEditorJSData, isValidEditorJSData } from '@/lib/utils/editorjs';
+import { safeLocalStorage } from '@/lib/safe-storage';
+// Removed useDebounceRender to avoid hooks order issues
 
 interface OutputData {
   time?: number;
@@ -63,6 +65,8 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
   readOnly = false,
   handbookId
 }) => {
+  // Removed render debouncing to prevent hooks order issues
+  
   const [isClient, setIsClient] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -298,19 +302,9 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
         }
 
         // Check for storage access before initializing EditorJS
-        let hasStorageAccess = false;
-        try {
-          // Test localStorage access with more comprehensive check
-          const testKey = '__editorjs_storage_test__';
-          if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem(testKey, 'test');
-            const testValue = localStorage.getItem(testKey);
-            localStorage.removeItem(testKey);
-            hasStorageAccess = testValue === 'test';
-          }
-        } catch (storageError) {
-          console.warn('localStorage access limited, EditorJS will use memory storage:', storageError);
-          hasStorageAccess = false;
+        const hasStorageAccess = safeLocalStorage.isAvailable();
+        if (!hasStorageAccess) {
+          console.warn('localStorage access limited, EditorJS will use memory storage');
         }
 
         // Dynamic imports with error handling
@@ -823,6 +817,8 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
       alert('Det gick inte att konvertera blocken. Försök igen.');
     }
   };
+
+  // Removed render guard to prevent hooks order issues
 
   // Show loading state on server side
   if (!isClient) {

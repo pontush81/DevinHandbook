@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useLayoutEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { safeLocalStorage } from "@/lib/safe-storage";
 import { useRouter, useSearchParams } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import Link from "next/link";
@@ -70,9 +71,9 @@ export default function SignupClient() {
     // If we have a join code, set the joining flag immediately to prevent smartRedirect
     if (joinParam) {
       console.log('[useLayoutEffect] Setting joining flags immediately for join code:', joinParam);
-      localStorage.setItem('joining_handbook_via_code', 'true');
-      localStorage.setItem('pending_join_code', joinParam);
-      localStorage.setItem('join_process_started', Date.now().toString());
+      safeLocalStorage.setItem('joining_handbook_via_code', 'true');
+      safeLocalStorage.setItem('pending_join_code', joinParam);
+      safeLocalStorage.setItem('join_process_started', Date.now().toString());
       
       // Set a flag to indicate we're in join mode
       window.__joining_handbook = true;
@@ -84,13 +85,13 @@ export default function SignupClient() {
   useEffect(() => {
     console.log('[UseEffect-JoinCode] Running with searchParams:', searchParams.toString());
     const joinParam = searchParams.get('join');
-    const storedJoinCode = localStorage.getItem('pending_join_code');
+    const storedJoinCode = safeLocalStorage.getItem('pending_join_code');
     console.log('[UseEffect-JoinCode] joinParam value:', joinParam, 'stored:', storedJoinCode);
     
     if (joinParam) {
       console.log('[UseEffect-JoinCode] Found join code in URL:', joinParam);
       // Store it in localStorage for persistence
-      localStorage.setItem('pending_join_code', joinParam);
+      safeLocalStorage.setItem('pending_join_code', joinParam);
       setJoinCode(joinParam);
       validateJoinCode(joinParam);
     } else if (storedJoinCode) {
@@ -272,7 +273,7 @@ export default function SignupClient() {
             console.log('[UseEffect] No join code (confirmed), checking if joining handbook via code...');
             
             // Check if user is currently joining a handbook via code - if so, don't redirect
-            const joiningFlag = localStorage.getItem('joining_handbook_via_code');
+            const joiningFlag = safeLocalStorage.getItem('joining_handbook_via_code');
             console.log('[UseEffect] Joining flag:', joiningFlag);
             
             if (joiningFlag === 'true') {

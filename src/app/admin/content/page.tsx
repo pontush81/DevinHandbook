@@ -26,7 +26,9 @@ import {
   CheckCircle
 } from "lucide-react";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
+import { EditorJSComponent } from "@/components/ui/EditorJSComponent";
+import { parseEditorJSContent, stringifyEditorJSContent } from "@/lib/utils/editorjs";
+import { OutputData } from "@editorjs/editorjs";
 
 interface Handbook {
   id: string;
@@ -180,8 +182,9 @@ export default function ContentManagementPage() {
   }, [selectedPage, editingContent, editingTitle, isSaving]);
 
   // Handle content changes with auto-save
-  const handleContentChange = (value: string) => {
-    setEditingContent(value);
+  const handleContentChange = (data: OutputData) => {
+    const content = stringifyEditorJSContent(data);
+    setEditingContent(content);
     
     // Clear existing timeout
     if (autoSaveTimeout) {
@@ -231,7 +234,23 @@ export default function ContentManagementPage() {
         .from("pages")
         .insert({
           title: newPageTitle,
-          content: "# " + newPageTitle + "\n\nSkriv ditt innehåll här...",
+          content: stringifyEditorJSContent({
+            blocks: [
+              {
+                type: 'header',
+                data: {
+                  text: newPageTitle,
+                  level: 1
+                }
+              },
+              {
+                type: 'paragraph',
+                data: {
+                  text: 'Skriv ditt innehåll här...'
+                }
+              }
+            ]
+          }),
           order_index: selectedSection.pages.length,
           section_id: selectedSection.id
         })
@@ -796,19 +815,24 @@ export default function ContentManagementPage() {
                     </TabsList>
                     
                     <TabsContent value="edit" className="mt-4">
-                      <Textarea
-                        placeholder="Skriv ditt innehåll här... (Markdown stöds)"
-                        value={editingContent}
-                        onChange={(e) => handleContentChange(e.target.value)}
-                        className="min-h-[500px] font-mono"
-                      />
+                      <div className="border rounded-md min-h-[500px] bg-white">
+                        <EditorJSComponent
+                          content={parseEditorJSContent(editingContent)}
+                          onChange={handleContentChange}
+                          placeholder="Skriv ditt innehåll här..."
+                          className="min-h-[500px]"
+                        />
+                      </div>
                     </TabsContent>
                     
                     <TabsContent value="preview" className="mt-4">
                       <div className="border rounded-md p-4 min-h-[500px] bg-white">
-                        <ReactMarkdown className="prose max-w-none">
-                          {editingContent || "*Inget innehåll att visa*"}
-                        </ReactMarkdown>
+                        <EditorJSComponent
+                          content={parseEditorJSContent(editingContent)}
+                          onChange={() => {}} // Read-only
+                          readOnly={true}
+                          className="min-h-[500px]"
+                        />
                       </div>
                     </TabsContent>
                   </Tabs>

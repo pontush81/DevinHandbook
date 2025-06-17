@@ -172,21 +172,21 @@ describe('EditorJSComponent', () => {
   });
 
   describe('Content conversion', () => {
-    it('converts markdown headers to EditorJS format', () => {
+    it('converts plain text headers to EditorJS format', () => {
       render(<EditorJSComponent {...defaultProps} content="# Header 1\n## Header 2" />);
       
       // Should render without throwing errors
       expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
     });
 
-    it('converts markdown lists to EditorJS format', () => {
+    it('converts plain text lists to EditorJS format', () => {
       render(<EditorJSComponent {...defaultProps} content="- Item 1\n- Item 2\n1. Numbered item" />);
       
       // Should render without throwing errors
       expect(screen.getByText(/laddar wysiwyg editor/i)).toBeInTheDocument();
     });
 
-    it('converts markdown quotes to EditorJS format', () => {
+    it('converts plain text quotes to EditorJS format', () => {
       render(<EditorJSComponent {...defaultProps} content="> This is a quote" />);
       
       // Should render without throwing errors

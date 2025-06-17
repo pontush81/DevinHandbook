@@ -48,11 +48,27 @@ export function TrialStatusCard({ userId, className = '' }: TrialStatusCardProps
     );
   }
 
-  if (error || !trialStatus) {
-    return null; // Dölj komponenten om det finns fel
+  if (error) {
+    // Only hide on real errors, not just missing data
+    console.warn('TrialStatusCard error:', error);
+    return null;
+  }
+  
+  if (!trialStatus) {
+    // Show a minimal placeholder instead of hiding completely
+    return (
+      <Card className={`border-0 shadow-sm bg-blue-50 ${className}`}>
+        <CardContent className="p-4">
+          <div className="flex items-center text-blue-600">
+            <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+            <span className="text-sm">Kontrollerar prenumerationsstatus...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
-  // Om användaren inte är i trial och inte har använt trial, visa ingenting
+  // Only hide if user explicitly has no trial and no subscription
   if (!trialStatus.isInTrial && !trialStatus.hasUsedTrial && trialStatus.subscriptionStatus === 'none') {
     return null;
   }
