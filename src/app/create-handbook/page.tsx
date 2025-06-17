@@ -259,14 +259,14 @@ function CreateHandbookContent() {
 
   // Visa formulär för att skapa ny handbok som standardläge
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8 md:py-16 px-6 md:px-6">
       <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col items-center justify-center mb-6 md:mb-8 w-full">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4 text-center">
+        <div className="flex flex-col items-center justify-center mb-8 md:mb-12 w-full">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
             Skapa digital handbok
           </h1>
-          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-2xl px-2 text-center">
-            Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.
+          <p className="text-lg md:text-xl text-gray-600 max-w-xl px-4 text-center">
+            AI-driven handbok på 2 minuter
           </p>
           {handbooks.length > 0 && isSuperadmin && (
             <Button variant="outline" className="mb-3 md:mb-4 text-sm md:text-base" onClick={() => router.push('/dashboard')}>
@@ -276,11 +276,12 @@ function CreateHandbookContent() {
         </div>
         
         <Card className="shadow-lg border-0">
-          <CardContent className="p-4 md:p-8 lg:p-12">
+          <CardContent className="p-6 md:p-8 lg:p-12">
             {user && <CreateHandbookForm />}
-            <div className="mt-4 md:mt-6 text-gray-600 text-xs md:text-sm space-y-2">
-              <p>När din handbok har skapats kommer du automatiskt få administratörsrättigheter och se en "Administrera"-knapp i handboken.</p>
-              <p>Du kan använda denna knapp för att hantera innehåll och medlemmar i din handbok.</p>
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-500">
+                🎯 Du blir automatiskt admin när handboken är klar
+              </p>
             </div>
           </CardContent>
         </Card>

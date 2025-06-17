@@ -472,7 +472,7 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
             Smart handboksimport
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Ladda upp en eller flera dokument så analyserar AI:n innehållet och skapar automatiskt sektioner enligt vår mall.
+            Ladda upp dokument → AI skapar sektioner automatiskt
           </p>
         </CardHeader>
         <CardContent className="space-y-4 lg:space-y-6">
@@ -532,10 +532,10 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
                   </div>
                   <div className="text-center">
                     <p className="text-base md:text-lg font-medium">
-                      Dra och släpp dina dokument här
+                      Dra filer hit eller klicka
                     </p>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Eller klicka för att välja filer (flera filer tillåtna)
+                    <p className="text-xs md:text-sm text-muted-foreground hidden md:block">
+                      Flera filer tillåtna
                     </p>
                   </div>
                 </>
@@ -579,7 +579,8 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
               </div>
               
               <div className="text-xs text-muted-foreground text-center px-2">
-                Stöder PDF (inklusive scannade dokument med OCR), Word (.docx), textfiler och bilder (JPG, PNG, GIF, WebP) upp till 10MB per fil
+                <span className="block md:hidden">PDF, Word, bilder upp till 10MB</span>
+                <span className="hidden md:block">Stöder PDF (inklusive scannade dokument med OCR), Word (.docx), textfiler och bilder (JPG, PNG, GIF, WebP) upp till 10MB per fil</span>
               </div>
             </div>
           </div>
