@@ -316,30 +316,29 @@ p {
   position: relative !important;
 }
 
-/* Add space for toolbar so text doesn't overlap */
-.ce-block .ce-block__content {
+/* Add space for toolbar ONLY when EditorJS is actively being edited */
+/* Only apply margins when the editor has focus or is actively being used */
+.codex-editor:focus-within .ce-block .ce-block__content,
+.codex-editor.ce-block--focused .ce-block .ce-block__content,
+.codex-editor[contenteditable="true"] .ce-block .ce-block__content {
   margin-left: 50px !important;
   padding-left: 10px !important;
 }
 
-/* More specific targeting for EditorJS content */
-.codex-editor .ce-block .ce-block__content {
-  margin-left: 50px !important;
-  padding-left: 10px !important;
-}
-
-/* Target specific content types */
-.ce-paragraph,
-.ce-header {
-  margin-left: 50px !important;
-  padding-left: 10px !important;
-}
-
-/* Force space for toolbar with highest specificity */
-.notion-section-card .codex-editor .ce-block .ce-block__content,
-.notion-section-card .codex-editor .ce-block .ce-paragraph,
-.notion-section-card .codex-editor .ce-block .ce-header {
+/* More specific targeting for active EditorJS content when editing */
+.notion-section-card .codex-editor:focus-within .ce-block .ce-block__content,
+.notion-section-card .codex-editor:focus-within .ce-block .ce-paragraph,
+.notion-section-card .codex-editor:focus-within .ce-block .ce-header,
+.notion-section-card .codex-editor.ce-block--focused .ce-block .ce-block__content,
+.notion-section-card .codex-editor.ce-block--focused .ce-block .ce-paragraph,
+.notion-section-card .codex-editor.ce-block--focused .ce-block .ce-header {
   margin-left: 60px !important;
+  padding-left: 0 !important;
+}
+
+/* Ensure read-only content has no margins */
+.codex-editor .ce-block .ce-block__content {
+  margin-left: 0 !important;
   padding-left: 0 !important;
 }
 
