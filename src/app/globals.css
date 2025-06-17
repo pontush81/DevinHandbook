@@ -234,27 +234,162 @@ p {
 }
 
 /* ==============================================
-   EDITOR.JS STYLING - FORCE INDENTATION FIX
+   EDITOR.JS STYLING - FORCE INDENTATION FIX & Z-INDEX
    ============================================== */
 
-/* Higher specificity to override EditorJS default styles */
-.codex-editor .ce-block .ce-paragraph {
-  margin-left: -35px !important;
-  padding-left: 15px !important;
+/* Clean EditorJS styling - removed conflicting margin rules */
+
+/* Fix for EditorJS in handbook sections - ensure no parent container clips toolbars */
+.notion-section-card .codex-editor {
+  overflow: visible !important;
 }
 
-.codex-editor .ce-block .ce-header {
-  margin-left: -35px !important;
-  padding-left: 15px !important;
+.notion-section-card .codex-editor .ce-block {
+  overflow: visible !important;
 }
 
-/* Also target the content container with higher specificity */
-.codex-editor .ce-block__content .ce-paragraph {
-  margin-left: -35px !important;
-  padding-left: 15px !important;
+/* Ensure EditorJS containers don't have overflow hidden */
+.bg-gray-50 .codex-editor,
+.rounded-md .codex-editor {
+  overflow: visible !important;
 }
 
-.codex-editor .ce-block__content .ce-header {
-  margin-left: -35px !important;
-  padding-left: 15px !important;
+/* Fix for EditorJS container and all parent containers */
+.editor-js-container {
+  overflow: visible !important;
+}
+
+.bg-gray-50 .editor-js-container,
+.rounded-md .editor-js-container {
+  overflow: visible !important;
+}
+
+/* Ensure parent containers in handbook sections don't clip EditorJS */
+.notion-section-card .bg-gray-50,
+.notion-section-card .rounded-md,
+.notion-section-card .p-3 {
+  overflow: visible !important;
+}
+
+/* Editor.js - Clean and simple positioning fixes */
+.ce-toolbar {
+  z-index: 100 !important;
+}
+
+.ce-inline-toolbar {
+  z-index: 110 !important;
+}
+
+.ce-toolbox {
+  z-index: 120 !important;
+}
+
+.ce-popover {
+  z-index: 130 !important;
+}
+
+.ce-settings {
+  z-index: 140 !important;
+}
+
+.ce-toolbar__plus {
+  z-index: 105 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+}
+
+.ce-toolbar__settings-btn {
+  z-index: 105 !important;
+}
+
+.ce-conversion-toolbar {
+  z-index: 115 !important;
+}
+
+.ce-link-input {
+  z-index: 125 !important;
+}
+
+/* Simple block positioning - let EditorJS handle its own positioning */
+.ce-block {
+  position: relative !important;
+}
+
+/* Add space for toolbar so text doesn't overlap */
+.ce-block .ce-block__content {
+  margin-left: 50px !important;
+  padding-left: 10px !important;
+}
+
+/* More specific targeting for EditorJS content */
+.codex-editor .ce-block .ce-block__content {
+  margin-left: 50px !important;
+  padding-left: 10px !important;
+}
+
+/* Target specific content types */
+.ce-paragraph,
+.ce-header {
+  margin-left: 50px !important;
+  padding-left: 10px !important;
+}
+
+/* Force space for toolbar with highest specificity */
+.notion-section-card .codex-editor .ce-block .ce-block__content,
+.notion-section-card .codex-editor .ce-block .ce-paragraph,
+.notion-section-card .codex-editor .ce-block .ce-header {
+  margin-left: 60px !important;
+  padding-left: 0 !important;
+}
+
+/* ==============================================
+   EDITOR.JS TOOLBAR Z-INDEX FIXES
+   ============================================== */
+
+/* Ensure EditorJS toolbars appear above content */
+.ce-toolbar {
+  z-index: 100 !important;
+}
+
+.ce-inline-toolbar,
+.ce-inline-toolbar * {
+  z-index: 110 !important;
+}
+
+.ce-toolbox,
+.ce-toolbox * {
+  z-index: 120 !important;
+}
+
+.ce-popover,
+.ce-popover * {
+  z-index: 130 !important;
+}
+
+.ce-settings,
+.ce-settings * {
+  z-index: 140 !important;
+}
+
+/* Plus button should also be above content */
+.ce-toolbar__plus {
+  z-index: 105 !important;
+}
+
+/* Settings button */
+.ce-toolbar__settings-btn {
+  z-index: 105 !important;
+}
+
+/* Make sure conversion toolbar is visible */
+.ce-conversion-toolbar,
+.ce-conversion-toolbar * {
+  z-index: 125 !important;
+}
+
+/* Link input toolbar */
+.cdx-input,
+.cdx-input * {
+  z-index: 115 !important;
 } 

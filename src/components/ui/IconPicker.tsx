@@ -192,7 +192,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
       <div className={`grid gap-2 ${
         compact 
           ? "grid-cols-6 max-h-32" 
-          : "grid-cols-4 sm:grid-cols-6 md:grid-cols-8 max-h-64"
+          : "grid-cols-4 sm:grid-cols-6 md:grid-cols-8 max-h-80"
       } overflow-y-auto border rounded-lg p-3 bg-gray-50`}>
         {filteredIcons.map((iconItem) => {
           const IconComponent = iconItem.icon;

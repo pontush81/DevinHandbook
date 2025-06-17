@@ -716,6 +716,86 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
     }
   };
 
+  // Bulk conversion function
+  const handleBulkConvertToText = async () => {
+    if (!editorRef.current || disabled) return;
+    
+    try {
+      const outputData = await editorRef.current.save();
+      
+      if (!outputData.blocks || outputData.blocks.length === 0) {
+        alert('Inga block att konvertera.');
+        return;
+      }
+
+      // Convert all non-paragraph blocks to paragraph blocks
+      const convertedBlocks = outputData.blocks.map((block: any) => {
+        if (block.type === 'paragraph') {
+          return block; // Already a paragraph, keep as is
+        }
+        
+        // Extract text content from different block types
+        let textContent = '';
+        
+        switch (block.type) {
+          case 'header':
+            textContent = block.data.text || '';
+            break;
+          case 'list':
+            if (block.data.items && Array.isArray(block.data.items)) {
+              textContent = block.data.items.join(' ');
+            }
+            break;
+          case 'quote':
+            textContent = `${block.data.text || ''} ${block.data.caption ? '— ' + block.data.caption : ''}`;
+            break;
+          case 'code':
+            textContent = block.data.code || '';
+            break;
+          case 'warning':
+            textContent = `${block.data.title || ''} ${block.data.message || ''}`;
+            break;
+          case 'checklist':
+            if (block.data.items && Array.isArray(block.data.items)) {
+              textContent = block.data.items.map((item: any) => 
+                `${item.checked ? '✓' : '○'} ${item.text || ''}`
+              ).join(' ');
+            }
+            break;
+          default:
+            // For unknown types, try to extract text from common properties
+            textContent = block.data.text || block.data.content || JSON.stringify(block.data);
+        }
+        
+        // Return as paragraph block
+        return {
+          id: block.id,
+          type: 'paragraph',
+          data: {
+            text: textContent
+          }
+        };
+      });
+
+      // Render the converted content
+      const convertedData = {
+        ...outputData,
+        blocks: convertedBlocks
+      };
+
+      await safeRenderContent(convertedData);
+      
+      // Update the content
+      onChange(convertedData);
+      
+      alert(`Konverterade ${convertedBlocks.length} block till text!`);
+      
+    } catch (error) {
+      console.error('Error in bulk conversion:', error);
+      alert('Det gick inte att konvertera blocken. Försök igen.');
+    }
+  };
+
   // Show loading state on server side
   if (!isClient) {
     return (
@@ -743,6 +823,17 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleBulkConvertToText}
+              className="flex items-center gap-1 h-8 px-2 sm:px-3 text-xs"
+              title="Konvertera alla block till vanlig text"
+            >
+              <span>📝</span>
+              <span className="hidden sm:inline">Konvertera till text</span>
+            </Button>
             <Button
               type="button"
               variant="ghost"

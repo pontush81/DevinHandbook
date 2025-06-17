@@ -1,6 +1,6 @@
 import React, { useState, useCallback, createElement } from 'react';
 import { HandbookSection as Section, HandbookPage as Page } from '@/types/handbook';
-import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen, Trash2, FileText, ChevronUp } from 'lucide-react';
+import { Calendar, Clock, Edit, Save, Plus, ChevronDown, ChevronRight, AlertCircle, BookOpen, Trash2, FileText, ChevronUp, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -375,16 +375,16 @@ export function AllSectionsView({
             const IconComponent = getIconComponent(section.icon);
             
             return (
-              <div key={section.id} id={`section-${section.id}`} className="notion-section-card border border-gray-200 rounded-lg overflow-hidden">
+              <div key={section.id} id={`section-${section.id}`} className="notion-section-card border border-gray-200 rounded-lg overflow-visible">
                 {/* Section Header */}
                 <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border-b border-gray-200">
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mt-1">
                       {/* Section Icon */}
                       <div className="flex items-center gap-1 sm:gap-2">
-                        <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600 flex-shrink-0" />
+                        <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-green-600 flex-shrink-0" />
                         {isEditMode && (
-                          <span className="hidden sm:inline text-xs font-medium text-blue-600 uppercase tracking-wide">SEKTION</span>
+                          <span className="hidden sm:inline text-xs font-medium text-green-600 uppercase tracking-wide">SEKTION</span>
                         )}
                       </div>
                     </div>
@@ -529,9 +529,9 @@ export function AllSectionsView({
                         size="sm"
                         onClick={() => toggleIconEdit(section.id)}
                         className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-7 w-7 sm:h-8 sm:w-8 p-0"
-                        title="Ändra ikon"
+                        title="Välj ikon för sektionen"
                       >
-                        🎨
+                        <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
@@ -553,8 +553,9 @@ export function AllSectionsView({
                     <IconPicker
                       selectedIcon={section.icon || 'BookOpen'}
                       onIconSelect={(icon) => handleIconSelect(section.id, icon)}
-                      compact={true}
+                      compact={false}
                       size="sm"
+                      className="max-w-2xl"
                     />
                   </div>
                 )}
