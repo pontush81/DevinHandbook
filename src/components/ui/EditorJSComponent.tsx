@@ -68,6 +68,8 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [blocksToConvert, setBlocksToConvert] = useState(0);
   
   const editorRef = useRef<any>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -728,6 +730,30 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
         return;
       }
 
+      // Count non-paragraph blocks that will be converted
+      const nonParagraphBlocks = outputData.blocks.filter((block: any) => block.type !== 'paragraph');
+      
+      if (nonParagraphBlocks.length === 0) {
+        alert('Alla block är redan text-block. Ingen konvertering behövs.');
+        return;
+      }
+
+      // Show custom modal instead of browser confirm
+      setBlocksToConvert(nonParagraphBlocks.length);
+      setShowConvertModal(true);
+    } catch (error) {
+      console.error('Error preparing bulk conversion:', error);
+      alert('Det gick inte att förbereda konverteringen. Försök igen.');
+    }
+  };
+
+  // Actual conversion function called after confirmation
+  const performBulkConversion = async () => {
+    if (!editorRef.current || disabled) return;
+    
+    try {
+      const outputData = await editorRef.current.save();
+
       // Convert all non-paragraph blocks to paragraph blocks
       const convertedBlocks = outputData.blocks.map((block: any) => {
         if (block.type === 'paragraph') {
@@ -788,10 +814,12 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
       // Update the content
       onChange(convertedData);
       
-      alert(`Konverterade ${convertedBlocks.length} block till text!`);
+      // Close modal - no need for alert since user already confirmed
+      setShowConvertModal(false);
       
     } catch (error) {
       console.error('Error in bulk conversion:', error);
+      setShowConvertModal(false);
       alert('Det gick inte att konvertera blocken. Försök igen.');
     }
   };
@@ -871,6 +899,54 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
           </div>
         )}
       </div>
+
+      {/* Convert to Text Confirmation Modal */}
+      {showConvertModal && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 border">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                  <span className="text-yellow-600 text-xl">⚠️</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Konvertera till text
+                </h3>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-600 mb-3">
+                  Är du säker på att du vill konvertera <strong>{blocksToConvert} block</strong> till vanlig text?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-red-700 text-sm">
+                    <strong>Varning:</strong> Detta kommer att ta bort all formatering (rubriker, listor, citat, etc.) och kan inte ångras.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowConvertModal(false)}
+                  className="px-4 py-2"
+                >
+                  Avbryt
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={performBulkConversion}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Konvertera till text
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

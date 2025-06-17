@@ -316,30 +316,37 @@ p {
   position: relative !important;
 }
 
-/* Add space for toolbar ONLY when EditorJS is actively being edited */
-/* Only apply margins when the editor has focus or is actively being used */
-.codex-editor:focus-within .ce-block .ce-block__content,
-.codex-editor.ce-block--focused .ce-block .ce-block__content,
-.codex-editor[contenteditable="true"] .ce-block .ce-block__content {
+/* Always add space for toolbar so plus button doesn't hide behind text */
+.codex-editor .ce-block .ce-block__content {
   margin-left: 50px !important;
   padding-left: 10px !important;
 }
 
-/* More specific targeting for active EditorJS content when editing */
-.notion-section-card .codex-editor:focus-within .ce-block .ce-block__content,
-.notion-section-card .codex-editor:focus-within .ce-block .ce-paragraph,
-.notion-section-card .codex-editor:focus-within .ce-block .ce-header,
-.notion-section-card .codex-editor.ce-block--focused .ce-block .ce-block__content,
-.notion-section-card .codex-editor.ce-block--focused .ce-block .ce-paragraph,
-.notion-section-card .codex-editor.ce-block--focused .ce-block .ce-header {
+/* More specific targeting for EditorJS content in handbook sections */
+.notion-section-card .codex-editor .ce-block .ce-block__content,
+.notion-section-card .codex-editor .ce-block .ce-paragraph,
+.notion-section-card .codex-editor .ce-block .ce-header {
   margin-left: 60px !important;
   padding-left: 0 !important;
 }
 
-/* Ensure read-only content has no margins */
-.codex-editor .ce-block .ce-block__content {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
+/* Ensure toolbar buttons are always visible above content */
+.ce-toolbar__plus {
+  position: absolute !important;
+  left: 0 !important;
+  z-index: 105 !important;
+  background: white !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+.ce-toolbar__settings-btn {
+  position: absolute !important;
+  right: 0 !important;
+  z-index: 105 !important;
+  background: white !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
 }
 
 /* ==============================================
