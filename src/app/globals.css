@@ -25,6 +25,22 @@ html, body {
   text-size-adjust: 100%;
 }
 
+/* Cache-busting fix for text-center issues */
+.text-center {
+  text-align: center !important;
+}
+
+/* Force center alignment for create handbook page */
+.create-handbook-header,
+.create-handbook-header h1,
+.create-handbook-header p {
+  text-align: center !important;
+  width: 100% !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
 * {
   box-sizing: border-box;
 }

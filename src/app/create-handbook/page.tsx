@@ -261,11 +261,11 @@ function CreateHandbookContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
+        <div className="flex flex-col items-center justify-center mb-6 md:mb-8 w-full">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4 text-center">
             Skapa digital handbok
           </h1>
-          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-2xl mx-auto px-2 text-center">
+          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-2xl px-2 text-center">
             Följ stegen nedan för att skapa en skräddarsydd digital handbok för din förening.
           </p>
           {handbooks.length > 0 && isSuperadmin && (
