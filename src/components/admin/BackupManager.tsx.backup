@@ -45,6 +45,7 @@ interface BackupOptions {
   lastBackupDate?: string;
 }
 
+// Add new types for backup schedules
 interface BackupSchedule {
   id: string;
   frequency: 'daily' | 'weekly' | 'monthly';
@@ -61,6 +62,7 @@ export default function BackupManager() {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   
+  // Backup-alternativ
   const [backupOptions, setBackupOptions] = useState<BackupOptions>({
     includeUserData: false,
     includeTrialData: false,
@@ -70,15 +72,19 @@ export default function BackupManager() {
     lastBackupDate: undefined
   });
 
+  // Email-konfiguration
   const [emailConfig, setEmailConfig] = useState({
+    sendEmail: true,
     emailTo: 'pontus.hberg@gmail.com',
     emailSubject: 'Databas-backup'
   });
 
+  // Återställning
   const [restoreData, setRestoreData] = useState<string>('');
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Add state for schedules
   const [schedules, setSchedules] = useState<BackupSchedule[]>([]);
   const [newSchedule, setNewSchedule] = useState<Omit<BackupSchedule, 'id' | 'last_run' | 'next_run'>>({
     frequency: 'daily',
@@ -87,12 +93,13 @@ export default function BackupManager() {
     enabled: true,
   });
 
+  // Hämta backup-statistik vid laddning
   useEffect(() => {
     loadBackupStats();
     loadSchedules();
   }, []);
 
-  const loadBackupStats = async (showMessage = false) => {
+  const loadBackupStats = async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/admin/backup/stats');
@@ -100,9 +107,7 @@ export default function BackupManager() {
       
       if (result.success) {
         setStats(result.stats);
-        if (showMessage) {
-          setMessage({ type: 'success', text: 'Statistik uppdaterad!' });
-        }
+        setMessage({ type: 'success', text: 'Statistik uppdaterad!' });
       } else {
         setMessage({ type: 'error', text: result.error || 'Fel vid hämtning av statistik' });
       }
@@ -119,6 +124,7 @@ export default function BackupManager() {
     setMessage(null);
 
     try {
+      // Simulera progress
       const progressInterval = setInterval(() => {
         setProgress(prev => Math.min(prev + 10, 90));
       }, 500);
@@ -145,6 +151,7 @@ export default function BackupManager() {
         setMessage({ type: 'success', text: 'Backup skapad framgångsrikt!' });
         
         try {
+          // Ladda ner backup-filen
           const backupJson = JSON.stringify(result.backup, null, 2);
           const blob = new Blob([backupJson], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
@@ -156,20 +163,9 @@ export default function BackupManager() {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
 
+          // Uppdatera statistik efter en kort fördröjning för att säkerställa att databasen har uppdaterats
           setTimeout(async () => {
-            // Ladda statistik utan att visa meddelande
-            setLoading(true);
-            try {
-              const response = await fetch('/api/admin/backup/stats');
-              const result = await response.json();
-              if (result.success) {
-                setStats(result.stats);
-              }
-            } catch (error) {
-              console.error('Fel vid hämtning av statistik:', error);
-            } finally {
-              setLoading(false);
-            }
+            await loadBackupStats();
           }, 1000);
         } catch (downloadError) {
           console.error('Fel vid nedladdning av backup:', downloadError);
@@ -204,31 +200,30 @@ export default function BackupManager() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          options: backupOptions,
-          emailTo: emailConfig.emailTo,
-          emailSubject: emailConfig.emailSubject,
-          sendEmail: true
+          ...backupOptions,
+          ...emailConfig
         })
       });
 
       const result = await response.json();
       
-      console.log('🔄 Restore API response:', result);
-      console.log('📊 Response status:', response.status);
-      
       if (result.success) {
-        setMessage({ type: 'success', text: 'Email skickat.' });
-        await loadBackupStats(false);
+        setMessage({ 
+          type: 'success', 
+          text: emailConfig.sendEmail ? 'Email skickat.' : 'Schemalagd backup skapad!' 
+        });
+        await loadBackupStats();
       } else {
-        console.error('❌ Återställning misslyckades:', result.error);
-        setMessage({ type: 'error', text: result.error || 'Fel vid skapande av schemalagd backup' });
+        setMessage({ type: 'error', text: result.error || 'Fel vid schemalagd backup' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Fel vid skapande av schemalagd backup' });
+      setMessage({ type: 'error', text: 'Fel vid schemalagd backup' });
     } finally {
       setLoading(false);
     }
   };
+
+
 
   const restoreFromBackup = async () => {
     setLoading(true);
@@ -237,29 +232,16 @@ export default function BackupManager() {
     try {
       let backupDataString = restoreData.trim();
       
-      // Om restoreData är tom men vi har en fil, läs filen först
+      // Om restoreData är tom men vi har en selectedFile, läs från filen
       if (!backupDataString && selectedFile) {
-        console.log('🔄 RestoreData är tom, läser fil automatiskt:', selectedFile.name);
-        setMessage({ type: 'info', text: 'Läser backup-fil...' });
-        
         try {
           backupDataString = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => {
-              const content = e.target?.result as string;
-              console.log('📄 Fil inläst automatiskt, längd:', content.length);
-              resolve(content);
-            };
+            reader.onload = (e) => resolve(e.target?.result as string);
             reader.onerror = () => reject(new Error('Fel vid filläsning'));
             reader.readAsText(selectedFile);
           });
-          
-          // Uppdatera restoreData för framtida användning
-          setRestoreData(backupDataString);
-          console.log('✅ RestoreData uppdaterad med filinnehåll');
-          
         } catch (error) {
-          console.error('❌ Fel vid automatisk filläsning:', error);
           setMessage({ type: 'error', text: 'Fel vid läsning av backup-fil' });
           setLoading(false);
           return;
@@ -267,40 +249,12 @@ export default function BackupManager() {
       }
       
       if (!backupDataString) {
-        console.error('❌ Ingen backup-data tillgänglig');
-        setMessage({ type: 'error', text: 'Ingen backup-data angiven. Välj en backup-fil först.' });
+        setMessage({ type: 'error', text: 'Ingen backup-data angiven' });
         setLoading(false);
         return;
       }
 
-      console.log('🔍 Validerar backup-data...');
-      setMessage({ type: 'info', text: 'Validerar backup-data...' });
-
-      let backupData;
-      try {
-        backupData = JSON.parse(backupDataString);
-        console.log('✅ JSON parsing lyckades');
-      } catch (jsonError) {
-        console.error('❌ JSON parsing misslyckades:', jsonError);
-        setMessage({ type: 'error', text: 'Ogiltig JSON-format i backup-filen' });
-        setLoading(false);
-        return;
-      }
-
-      // Validera backup-struktur
-      if (!backupData.metadata || !backupData.data || !backupData.schema) {
-        console.error('❌ Ogiltig backup-struktur:', { 
-          hasMetadata: !!backupData.metadata, 
-          hasData: !!backupData.data, 
-          hasSchema: !!backupData.schema 
-        });
-        setMessage({ type: 'error', text: 'Ogiltig backup-struktur. Kontrollera att filen är en korrekt backup.' });
-        setLoading(false);
-        return;
-      }
-
-      console.log('✅ Backup-struktur validerad');
-      setMessage({ type: 'info', text: 'Påbörjar databasåterställning...' });
+      const backupData = JSON.parse(backupDataString);
       
       const response = await fetch('/api/admin/backup/restore', {
         method: 'POST',
@@ -337,6 +291,7 @@ export default function BackupManager() {
     }
   };
 
+  // Add function to load schedules
   const loadSchedules = async () => {
     try {
       const response = await fetch('/api/admin/backup/schedules');
@@ -352,6 +307,7 @@ export default function BackupManager() {
     }
   };
 
+  // Add function to create schedule
   const createSchedule = async () => {
     setLoading(true);
     setMessage(null);
@@ -370,6 +326,7 @@ export default function BackupManager() {
       if (result.success) {
         setMessage({ type: 'success', text: 'Backup-schema skapat!' });
         await loadSchedules();
+        // Reset form
         setNewSchedule({
           frequency: 'daily',
           time: '12:00',
@@ -386,6 +343,7 @@ export default function BackupManager() {
     }
   };
 
+  // Add function to toggle schedule
   const toggleSchedule = async (id: string, enabled: boolean) => {
     try {
       const response = await fetch(`/api/admin/backup/schedules/${id}`, {
@@ -408,6 +366,7 @@ export default function BackupManager() {
     }
   };
 
+  // Add function to delete schedule
   const deleteSchedule = async (id: string) => {
     if (!confirm('Är du säker på att du vill ta bort detta backup-schema?')) {
       return;
@@ -433,6 +392,7 @@ export default function BackupManager() {
 
   return (
     <div className="space-y-6">
+      {/* Meddelanden */}
       {message && (
         <Alert className={message.type === 'error' ? 'border-red-500' : message.type === 'success' ? 'border-green-500' : 'border-blue-500'}>
           {message.type === 'error' && <AlertTriangle className="h-4 w-4" />}
@@ -442,6 +402,7 @@ export default function BackupManager() {
         </Alert>
       )}
 
+      {/* Progress bar */}
       {loading && progress > 0 && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
@@ -452,6 +413,7 @@ export default function BackupManager() {
         </div>
       )}
 
+      {/* Snabbåtgärder */}
       <Card className="border-blue-200 bg-blue-50/30">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-blue-700">
@@ -463,35 +425,51 @@ export default function BackupManager() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
+          {/* Email-konfiguration */}
           <div className="space-y-3 p-4 bg-white rounded-lg border border-blue-100">
-            <Label className="text-sm font-medium">Email-inställningar</Label>
-            
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="emailTo" className="text-xs">Email-adress</Label>
-                <Input
-                  id="emailTo"
-                  type="email"
-                  placeholder="admin@handbok.org"
-                  value={emailConfig.emailTo}
-                  onChange={(e) => setEmailConfig(prev => ({ ...prev, emailTo: e.target.value }))}
-                  className="h-8 text-sm"
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Email-inställningar</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="sendEmail"
+                  checked={emailConfig.sendEmail}
+                  onCheckedChange={(checked) => 
+                    setEmailConfig(prev => ({ ...prev, sendEmail: !!checked }))
+                  }
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="emailSubject" className="text-xs">Ämne</Label>
-                <Input
-                  id="emailSubject"
-                  placeholder="Databas-backup"
-                  value={emailConfig.emailSubject}
-                  onChange={(e) => setEmailConfig(prev => ({ ...prev, emailSubject: e.target.value }))}
-                  className="h-8 text-sm"
-                />
+                <Label htmlFor="sendEmail" className="text-sm">Skicka via email</Label>
               </div>
             </div>
+
+            {emailConfig.sendEmail && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="emailTo" className="text-xs">Email-adress</Label>
+                  <Input
+                    id="emailTo"
+                    type="email"
+                    placeholder="admin@handbok.org"
+                    value={emailConfig.emailTo}
+                    onChange={(e) => setEmailConfig(prev => ({ ...prev, emailTo: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="emailSubject" className="text-xs">Ämne</Label>
+                  <Input
+                    id="emailSubject"
+                    placeholder="Databas-backup"
+                    value={emailConfig.emailSubject}
+                    onChange={(e) => setEmailConfig(prev => ({ ...prev, emailSubject: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Knappar */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               onClick={createManualBackup} 
@@ -533,6 +511,7 @@ export default function BackupManager() {
         </CardContent>
       </Card>
 
+      {/* Databas-statistik */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -576,7 +555,7 @@ export default function BackupManager() {
           )}
 
           <Button 
-            onClick={() => loadBackupStats(true)} 
+            onClick={loadBackupStats} 
             variant="outline" 
             size="sm" 
             className="mt-4"
@@ -588,16 +567,88 @@ export default function BackupManager() {
         </CardContent>
       </Card>
 
+      {/* Backup-alternativ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Backup-alternativ</CardTitle>
+          <CardDescription>
+            Konfigurera vad som ska inkluderas i backup
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="includeUserData"
+              checked={backupOptions.includeUserData}
+              onCheckedChange={(checked) => 
+                setBackupOptions(prev => ({ ...prev, includeUserData: !!checked }))
+              }
+            />
+            <Label htmlFor="includeUserData">Inkludera användardata</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="includeTrialData"
+              checked={backupOptions.includeTrialData}
+              onCheckedChange={(checked) => 
+                setBackupOptions(prev => ({ ...prev, includeTrialData: !!checked }))
+              }
+            />
+            <Label htmlFor="includeTrialData">Inkludera trial-data</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="compression"
+              checked={backupOptions.compression}
+              onCheckedChange={(checked) => 
+                setBackupOptions(prev => ({ ...prev, compression: !!checked }))
+              }
+            />
+            <Label htmlFor="compression">GZIP-komprimering (rekommenderat)</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="incremental"
+              checked={backupOptions.incremental}
+              onCheckedChange={(checked) => {
+                const isChecked = !!checked;
+                setBackupOptions(prev => ({ 
+                  ...prev, 
+                  incremental: isChecked,
+                  lastBackupDate: isChecked && stats?.lastBackupDate ? stats.lastBackupDate : undefined
+                }));
+              }}
+            />
+            <Label htmlFor="incremental">Inkrementell backup (endast ändringar)</Label>
+          </div>
+
+          {backupOptions.incremental && (
+            <div className="ml-6 p-3 bg-blue-50 rounded-md">
+              <p className="text-sm text-blue-700">
+                {stats?.lastBackupDate 
+                  ? `Endast ändringar sedan: ${new Date(stats.lastBackupDate).toLocaleString('sv-SE')}`
+                  : 'Ingen tidigare backup hittad - kommer att skapa fullständig backup'
+                }
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
 
+
+      {/* Återställning */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             Återställ från backup
           </CardTitle>
-          <CardDescription className="text-red-600">
-            <strong>VARNING:</strong> Detta kommer att ersätta ALL data i databasen!
+          <CardDescription>
+            <span className="text-red-600 font-semibold">VARNING:</span> Detta kommer att ersätta ALL data i databasen!
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -614,29 +665,34 @@ export default function BackupManager() {
                 />
                 <Button
                   onClick={() => {
+                    console.log('Läs in-knapp klickad, selectedFile:', selectedFile);
                     if (selectedFile) {
-                      console.log('Läs in-knapp klickad, selectedFile:', selectedFile);
                       setMessage({ type: 'info', text: 'Läser in backup-fil...' });
-                      
                       const reader = new FileReader();
                       reader.onload = (e) => {
-                        const content = e.target?.result as string;
-                        console.log('Fil inläst, innehåll längd:', content.length);
-                        
                         try {
+                          const content = e.target?.result as string;
+                          console.log('Fil inläst, innehåll längd:', content.length);
+                          
+                          // Testa att parsa JSON för att se om det är giltigt
                           JSON.parse(content);
+                          
                           setRestoreData(content);
                           console.log('setRestoreData kallad med innehåll längd:', content.length);
                           setMessage({ type: 'success', text: `Backup-fil "${selectedFile.name}" laddad framgångsrikt!` });
                           console.log('setMessage kallad med success-meddelande');
                         } catch (error) {
-                          setMessage({ type: 'error', text: 'Ogiltig JSON-fil' });
+                          console.error('Fel vid parsing av JSON:', error);
+                          setMessage({ type: 'error', text: 'Ogiltig backup-fil: Inte giltig JSON' });
                         }
                       };
-                      reader.onerror = () => {
+                      reader.onerror = (error) => {
+                        console.error('FileReader fel:', error);
                         setMessage({ type: 'error', text: 'Fel vid läsning av backup-fil' });
                       };
                       reader.readAsText(selectedFile);
+                    } else {
+                      setMessage({ type: 'error', text: 'Ingen fil vald' });
                     }
                   }}
                   disabled={!selectedFile || loading}
@@ -650,12 +706,14 @@ export default function BackupManager() {
                   Vald fil: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                 </p>
               )}
-              {restoreData.length > 0 && (
+              {restoreData && (
                 <p className="text-sm text-green-600 mt-1">
                   ✓ Backup-data inläst och redo för återställning
                 </p>
               )}
             </div>
+
+
 
             {(restoreData.trim() || selectedFile) && (
               <Button
@@ -673,8 +731,7 @@ export default function BackupManager() {
                 Rensa
               </Button>
             )}
-          </div>
-
+          
           {!showRestoreConfirm ? (
             <Button 
               onClick={() => {
@@ -735,6 +792,7 @@ export default function BackupManager() {
         </CardContent>
       </Card>
 
+      {/* Add new Scheduled Backups card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -746,6 +804,7 @@ export default function BackupManager() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* New schedule form */}
           <div className="space-y-4 border rounded-lg p-4">
             <h3 className="font-medium">Skapa nytt backup-schema</h3>
             
@@ -810,6 +869,7 @@ export default function BackupManager() {
             </Button>
           </div>
 
+          {/* Existing schedules */}
           <div className="space-y-4">
             <h3 className="font-medium">Aktiva scheman</h3>
             

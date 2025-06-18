@@ -11,6 +11,15 @@ export async function GET() {
     if (error) {
       throw error;
     }
+
+    // Hämta alla profiler för superadmin-status
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, is_superadmin');
+    
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+    }
     
     // Hämta alla handbok-medlemskap med handbok-information
     const { data: memberships, error: membershipError } = await supabase
@@ -32,6 +41,9 @@ export async function GET() {
     
     // Bygg upp användare med deras handbok-information
     const users = data.users.map(user => {
+      // Hitta profil för superadmin-status
+      const profile = profiles?.find(p => p.id === user.id);
+      
       // Hitta alla handböcker för denna användare
       const userMemberships = memberships?.filter(m => m.user_id === user.id) || [];
       
@@ -57,8 +69,8 @@ export async function GET() {
         // BRF/Handbok information
         handbooks: handbooks,
         handbook_count: handbooks.length,
-        // Rollsammanfattning
-        is_superadmin: user.app_metadata?.is_superadmin === true,
+        // Rollsammanfattning - använd profiles.is_superadmin istället för app_metadata
+        is_superadmin: profile?.is_superadmin === true,
         is_handbook_admin: isHandbookAdmin,
         is_handbook_editor: isHandbookEditor,
         is_handbook_viewer: isHandbookViewer,

@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic';
 // GET - List all backup schedules
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // Verify auth
     const { data: { session }, error: authError } = await supabase.auth.getSession();
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (profileError || !profile?.is_superadmin) {
+      console.error('Profile error:', profileError);
+      console.log('Profile data:', profile);
       return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
     }
 
@@ -51,7 +54,8 @@ export async function GET(request: NextRequest) {
 // POST - Create a new backup schedule
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // Verify auth
     const { data: { session }, error: authError } = await supabase.auth.getSession();
@@ -67,6 +71,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (profileError || !profile?.is_superadmin) {
+      console.error('Profile error:', profileError);
+      console.log('Profile data:', profile);
+      console.log('User ID:', session.user.id);
       return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
     }
 

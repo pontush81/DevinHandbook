@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseBackupManager, BackupData } from '@/lib/backup';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
@@ -54,8 +55,29 @@ export async function POST(request: NextRequest) {
     console.log('📋 Backup ID:', backupData.metadata?.id);
     console.log('📅 Backup datum:', backupData.metadata?.created_at);
 
-    // Återställ från backup
-    const backupManager = new DatabaseBackupManager();
+    // Kontrollera att service role-nyckel finns
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEY saknas i miljövariabler');
+      return NextResponse.json({ 
+        error: 'Server-konfigurationsfel', 
+        details: 'Service role-nyckel saknas' 
+      }, { status: 500 });
+    }
+
+    // Skapa service role-klient för backup-återställning (bypassa RLS)
+    const serviceSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
+    // Återställ från backup med service role-klient
+    const backupManager = new DatabaseBackupManager(serviceSupabase);
     await backupManager.restoreFromBackup(backupData as BackupData, { force: true });
 
     console.log('✅ Återställning slutförd framgångsrikt');

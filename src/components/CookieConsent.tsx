@@ -65,7 +65,7 @@ export function CookieConsent({ onAccept, onDecline }: CookieConsentProps) {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 p-2 sm:p-4 pb-safe-area-inset-bottom sm:pb-6 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-x-0 bottom-0 z-50 p-2 sm:p-4 pb-2 sm:pb-6 bg-black/50 backdrop-blur-sm">
       <div className="pb-2 sm:pb-0">
         <Card className="max-w-4xl mx-auto shadow-2xl border border-gray-200 bg-white rounded-lg">
         <CardContent className="p-3 sm:p-6">

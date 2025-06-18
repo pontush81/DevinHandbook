@@ -6,16 +6,25 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 import { SupabaseClient } from '@supabase/supabase-js';
+import * as zlib from 'zlib';
+import { promisify } from 'util';
+
+const gzip = promisify(zlib.gzip);
+const gunzip = promisify(zlib.gunzip);
 
 export interface BackupMetadata {
   id: string;
   created_at: string;
   created_by?: string;
-  backup_type: 'manual' | 'scheduled';
+  backup_type: 'manual' | 'scheduled' | 'incremental';
   size_bytes: number;
+  compressed_size_bytes?: number;
+  compression_ratio?: number;
   table_counts: Record<string, number>;
   schema_version: string;
   checksum: string;
+  is_compressed?: boolean;
+  incremental_from?: string;
 }
 
 export interface BackupData {
@@ -40,6 +49,8 @@ export interface BackupOptions {
   includeTrialData?: boolean;
   excludeTables?: string[];
   compression?: boolean;
+  incremental?: boolean;
+  lastBackupDate?: string;
 }
 
 /**
@@ -112,6 +123,79 @@ export class DatabaseBackupManager {
   }
 
   /**
+   * Hämtar ALLA poster från en tabell med paginering (hanterar >1000 rader)
+   */
+  private async getAllRecords(tableName: string, sinceDate?: string): Promise<any[]> {
+    const allRecords: any[] = [];
+    const pageSize = 1000;
+    let from = 0;
+    let hasMore = true;
+
+    console.log(`🔄 Hämtar alla poster från ${tableName}...`);
+
+    while (hasMore) {
+      let query = this.supabase
+        .from(tableName)
+        .select('*')
+        .order('created_at', { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      // Lägg till datum-filter för inkrementell backup
+      if (sinceDate) {
+        query = query.gte('updated_at', sinceDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw new Error(`Fel vid hämtning från ${tableName}: ${error.message}`);
+      }
+
+      if (data && data.length > 0) {
+        allRecords.push(...data);
+        console.log(`📄 ${tableName}: Hämtade ${data.length} poster (totalt ${allRecords.length})`);
+        
+        // Om vi fick färre än pageSize poster, är vi klara
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    console.log(`✅ ${tableName}: Totalt ${allRecords.length} poster hämtade`);
+    return allRecords;
+  }
+
+  /**
+   * Komprimerar backup-data med GZIP
+   */
+  private async compressBackup(data: string): Promise<Buffer> {
+    try {
+      return await gzip(data);
+    } catch (error) {
+      console.error('❌ Fel vid komprimering:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Dekomprimerar backup-data från GZIP
+   */
+  private async decompressBackup(compressedData: Buffer): Promise<string> {
+    try {
+      const decompressed = await gunzip(compressedData);
+      return decompressed.toString('utf8');
+    } catch (error) {
+      console.error('❌ Fel vid dekomprimering:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Skapar en fullständig backup av databasen
    */
   async createBackup(options: BackupOptions = {}, userId?: string): Promise<BackupData> {
@@ -135,81 +219,47 @@ export class DatabaseBackupManager {
         attachments: []
       };
 
-      // Backup av handbooks
+      // Backup av handbooks (med paginering för att hantera >1000 rader)
       console.log('📚 Säkerhetskopierar handbooks...');
-      const { data: handbooks, error: handbooksError } = await this.supabase
-        .from('handbooks')
-        .select('*')
-        .order('created_at', { ascending: true });
+      backupData.handbooks = await this.getAllRecords('handbooks', config.incremental ? options.lastBackupDate : undefined);
+      console.log(`📚 Handbooks: ${backupData.handbooks.length} poster säkerhetskopierade`);
 
-      if (handbooksError) {
-        throw new Error(`Fel vid backup av handbooks: ${handbooksError.message}`);
-      }
-      backupData.handbooks = handbooks || [];
-
-      // Backup av sections
+      // Backup av sections (med paginering)
       console.log('📑 Säkerhetskopierar sections...');
-      const { data: sections, error: sectionsError } = await this.supabase
-        .from('sections')
-        .select('*')
-        .order('created_at', { ascending: true });
+      backupData.sections = await this.getAllRecords('sections', config.incremental ? options.lastBackupDate : undefined);
+      console.log(`📑 Sections: ${backupData.sections.length} poster säkerhetskopierade`);
 
-      if (sectionsError) {
-        throw new Error(`Fel vid backup av sections: ${sectionsError.message}`);
-      }
-      backupData.sections = sections || [];
-
-      // Backup av pages
+      // Backup av pages (med paginering)
       console.log('📄 Säkerhetskopierar pages...');
-      const { data: pages, error: pagesError } = await this.supabase
-        .from('pages')
-        .select('*')
-        .order('created_at', { ascending: true });
+      backupData.pages = await this.getAllRecords('pages', config.incremental ? options.lastBackupDate : undefined);
+      console.log(`📄 Pages: ${backupData.pages.length} poster säkerhetskopierade`);
 
-      if (pagesError) {
-        throw new Error(`Fel vid backup av pages: ${pagesError.message}`);
-      }
-      backupData.pages = pages || [];
-
-      // Backup av attachments
+      // Backup av attachments (med paginering)
       console.log('📎 Säkerhetskopierar attachments...');
-      const { data: attachments, error: attachmentsError } = await this.supabase
-        .from('attachments')
-        .select('*')
-        .order('created_at', { ascending: true });
+      backupData.attachments = await this.getAllRecords('attachments');
+      console.log(`📎 Attachments: ${backupData.attachments.length} poster säkerhetskopierade`);
 
-      if (attachmentsError) {
-        throw new Error(`Fel vid backup av attachments: ${attachmentsError.message}`);
-      }
-      backupData.attachments = attachments || [];
-
-      // Inkludera användardata om begärt
+      // Inkludera användardata om begärt (med paginering)
       if (config.includeUserData) {
         console.log('👤 Säkerhetskopierar användardata...');
-        const { data: profiles, error: profilesError } = await this.supabase
-          .from('user_profiles')
-          .select('*')
-          .order('created_at', { ascending: true });
-
-        if (profilesError) {
-          console.warn(`Varning vid backup av user_profiles: ${profilesError.message}`);
-        } else {
-          backupData.user_profiles = profiles || [];
+        try {
+          backupData.user_profiles = await this.getAllRecords('user_profiles');
+          console.log(`👤 User profiles: ${backupData.user_profiles.length} poster säkerhetskopierade`);
+        } catch (error) {
+          console.warn(`Varning vid backup av user_profiles: ${error}`);
+          backupData.user_profiles = [];
         }
       }
 
-      // Inkludera trial-data om begärt
+      // Inkludera trial-data om begärt (med paginering)
       if (config.includeTrialData) {
         console.log('🧪 Säkerhetskopierar trial-data...');
-        const { data: trialActivities, error: trialError } = await this.supabase
-          .from('trial_activities')
-          .select('*')
-          .order('created_at', { ascending: true });
-
-        if (trialError) {
-          console.warn(`Varning vid backup av trial_activities: ${trialError.message}`);
-        } else {
-          backupData.trial_activities = trialActivities || [];
+        try {
+          backupData.trial_activities = await this.getAllRecords('trial_activities');
+          console.log(`🧪 Trial activities: ${backupData.trial_activities.length} poster säkerhetskopierade`);
+        } catch (error) {
+          console.warn(`Varning vid backup av trial_activities: ${error}`);
+          backupData.trial_activities = [];
         }
       }
 
@@ -245,9 +295,29 @@ export class DatabaseBackupManager {
       metadata.size_bytes = Buffer.byteLength(backupString, 'utf8');
       metadata.checksum = await this.generateChecksum(backupString);
 
+      // Komprimera om begärt
+      if (config.compression) {
+        try {
+          const compressedData = await this.compressBackup(backupString);
+          metadata.compressed_size_bytes = compressedData.length;
+          metadata.compression_ratio = Math.round((1 - compressedData.length / metadata.size_bytes) * 100);
+          metadata.is_compressed = true;
+          
+          console.log('🗜️ Backup komprimerad framgångsrikt!');
+          console.log(`📦 Komprimerad storlek: ${(metadata.compressed_size_bytes / 1024 / 1024).toFixed(2)} MB`);
+          console.log(`📈 Komprimeringsfaktor: ${metadata.compression_ratio}%`);
+        } catch (error) {
+          console.warn('⚠️ Komprimering misslyckades, fortsätter utan komprimering:', error);
+          metadata.is_compressed = false;
+        }
+      }
+
       console.log('✅ Backup skapad framgångsrikt!');
       console.log(`📊 Totalt antal poster: ${Object.values(metadata.table_counts).reduce((a, b) => a + b, 0)}`);
-      console.log(`💾 Storlek: ${(metadata.size_bytes / 1024 / 1024).toFixed(2)} MB`);
+      console.log(`💾 Ursprunglig storlek: ${(metadata.size_bytes / 1024 / 1024).toFixed(2)} MB`);
+      if (metadata.compressed_size_bytes) {
+        console.log(`🗜️ Komprimerad storlek: ${(metadata.compressed_size_bytes / 1024 / 1024).toFixed(2)} MB (${metadata.compression_ratio}% mindre)`);
+      }
 
       // Spara backup-historik
       await this.saveBackupHistory(metadata, userId);
@@ -336,34 +406,47 @@ export class DatabaseBackupManager {
    */
   private async clearAndRestoreTable(tableName: string, data: any[]): Promise<void> {
     try {
-      // Rensa befintlig data (använd service role för att bypassa RLS)
+      console.log(`🔄 Återställer ${tableName} med ${data.length} poster...`);
+      
+      // Rensa befintlig data först
+      console.log(`🗑️ Rensar befintlig data från ${tableName}...`);
       const { error: deleteError } = await this.supabase
         .from(tableName)
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Ta bort alla rader
+        .gte('created_at', '1900-01-01'); // Ta bort alla rader (mer robust än neq)
 
       if (deleteError) {
-        console.warn(`Varning vid rensning av ${tableName}:`, deleteError.message);
+        console.warn(`⚠️ Varning vid rensning av ${tableName}:`, deleteError);
+        // Fortsätt ändå - kanske tabellen var tom
+      } else {
+        console.log(`✅ ${tableName} rensad framgångsrikt`);
       }
 
-      // Sätt in ny data i batches (Supabase har begränsningar)
-      const batchSize = 100;
+      // Sätt in ny data i mindre batches för att undvika timeout
+      const batchSize = 50; // Minska batch-storlek
+      let insertedCount = 0;
+      
       for (let i = 0; i < data.length; i += batchSize) {
         const batch = data.slice(i, i + batchSize);
+        console.log(`📤 Sätter in batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(data.length/batchSize)} för ${tableName}`);
         
         const { error: insertError } = await this.supabase
           .from(tableName)
           .insert(batch);
 
         if (insertError) {
+          console.error(`❌ Fel vid insättning i ${tableName}, batch ${Math.floor(i/batchSize) + 1}:`, insertError);
           throw new Error(`Fel vid insättning i ${tableName}: ${insertError.message}`);
         }
+        
+        insertedCount += batch.length;
+        console.log(`✅ ${tableName}: ${insertedCount}/${data.length} poster insatta`);
       }
 
-      console.log(`✅ ${tableName}: ${data.length} poster återställda`);
+      console.log(`🎉 ${tableName}: Alla ${data.length} poster återställda framgångsrikt!`);
 
     } catch (error) {
-      console.error(`❌ Fel vid återställning av ${tableName}:`, error);
+      console.error(`💥 Kritiskt fel vid återställning av ${tableName}:`, error);
       throw error;
     }
   }

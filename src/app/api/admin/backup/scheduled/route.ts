@@ -42,15 +42,15 @@ export async function POST(request: NextRequest) {
 
     const emailConfig = {
       sendEmail: body.sendEmail ?? true,
-      emailTo: body.emailTo ?? process.env.ADMIN_EMAIL ?? 'admin@handbok.org',
-      emailSubject: body.emailSubject ?? 'Schemalagd databas-backup'
+      emailTo: body.emailTo ?? process.env.ADMIN_EMAIL ?? 'pontus.hberg@gmail.com',
+      emailSubject: body.emailSubject ?? 'Databas-backup'
     };
 
     console.log('📋 Backup-alternativ:', options);
-    console.log('📧 Email-konfiguration:', { ...emailConfig, emailTo: emailConfig.emailTo ? '***' : 'Ingen' });
+    console.log('📧 Email-konfiguration:', emailConfig);
 
     // Skapa backup
-    const backupManager = new DatabaseBackupManager();
+    const backupManager = new DatabaseBackupManager(supabase);
     const backupData = await backupManager.createBackup({
       ...options,
       // Markera som schemalagd backup
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         filename: filename
       },
       email: emailResult,
-      message: 'Schemalagd backup skapad framgångsrikt'
+      message: 'Backup skickad via e-mail'
     });
 
   } catch (error) {
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Hämta information om senaste schemalagda backup
-    const backupManager = new DatabaseBackupManager();
+    const backupManager = new DatabaseBackupManager(supabase);
     const stats = await backupManager.getBackupStatistics();
 
     return NextResponse.json({

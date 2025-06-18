@@ -304,9 +304,6 @@ export default function HomePage() {
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto" asChild>
                   <Link href="/signup">Skapa konto & handbok</Link>
                 </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
-                  <Link href="/login">Logga in</Link>
-                </Button>
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300" asChild>
                   <Link href="#pilot-signup">🚀 Bli pilotkund</Link>
                 </Button>
