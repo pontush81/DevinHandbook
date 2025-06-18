@@ -65,6 +65,13 @@ async function sendAdminAddedEmail({
   try {
     console.log('[Admin Add] About to send email via Resend...');
     
+    // I development, bara skicka till verifierade email-adresser
+    if (process.env.NODE_ENV !== 'production' && email !== 'pontus.hberg@gmail.com') {
+      console.log('[Admin Add] Development mode: Skipping email to', email, '(only sending to verified addresses)');
+      console.log('[Admin Add] Notification email would have been sent to:', email, 'for handbook:', handbookTitle);
+      return;
+    }
+    
     const fromDomain = process.env.NODE_ENV === 'production' 
       ? process.env.RESEND_DOMAIN || 'yourdomain.com'
       : 'onboarding@resend.dev';
@@ -178,6 +185,13 @@ async function sendRoleUpdateEmail({
 
   try {
     console.log('[Role Update] About to send email via Resend...');
+    
+    // I development, bara skicka till verifierade email-adresser
+    if (process.env.NODE_ENV !== 'production' && email !== 'pontus.hberg@gmail.com') {
+      console.log('[Role Update] Development mode: Skipping email to', email, '(only sending to verified addresses)');
+      console.log('[Role Update] Role update email would have been sent to:', email, 'for handbook:', handbookTitle);
+      return;
+    }
     
     const fromDomain = process.env.NODE_ENV === 'production' 
       ? process.env.RESEND_DOMAIN || 'yourdomain.com'
@@ -296,10 +310,9 @@ export async function PATCH(request: NextRequest) {
       : session.user.email || 'En administratör';
 
     // 6. Kontrollera att användaren finns
-    const { data: authUsers } = await supabase.auth.admin.listUsers();
-    const targetUser = authUsers?.users.find(u => u.id === userId);
+    const { data: targetUser, error: userError } = await supabase.auth.admin.getUserById(userId);
     
-    if (!targetUser) {
+    if (userError || !targetUser) {
       return NextResponse.json(
         { success: false, message: "Användaren hittades inte" },
         { status: 404 }
@@ -372,10 +385,10 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      // 10. Skapa notifikationsinställningar för ny medlem
+      // 10. Skapa notifikationsinställningar för ny medlem (använd upsert för att undvika duplicates)
       const { error: notificationError } = await supabase
         .from('user_notification_preferences')
-        .insert({
+        .upsert({
           user_id: userId,
           handbook_id: handbookId,
           email_new_topics: true,
@@ -384,6 +397,8 @@ export async function PATCH(request: NextRequest) {
           app_new_topics: true,
           app_new_replies: true,
           app_mentions: true
+        }, {
+          onConflict: 'user_id,handbook_id'
         });
 
       if (notificationError) {
