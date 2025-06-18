@@ -137,7 +137,10 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       
       setSuccess(`Användaren ${user.email} har tagits bort från systemet`);
       setUserToDelete(null);
-      onDataChange();
+      // Vänta lite för att säkerställa att databasen hinner uppdateras
+      setTimeout(() => {
+        onDataChange();
+      }, 500);
     } catch (err: unknown) {
       console.error("Error deleting user:", err);
       setError(err instanceof Error ? err.message : "Kunde inte ta bort användare");
@@ -209,7 +212,10 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       setSuccess(result.message);
       setSelectedNewHandbook("");
       setSelectedNewRole("viewer");
-      onDataChange();
+      // Vänta lite för att säkerställa att databasen hinner uppdateras
+      setTimeout(() => {
+        onDataChange();
+      }, 500);
       // Uppdatera listan över tillgängliga handböcker
       await fetchAvailableHandbooks(userToEditRoles);
     } catch (err: unknown) {
@@ -240,7 +246,10 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       }
       
       setSuccess(result.message);
-      onDataChange();
+      // Vänta lite för att säkerställa att databasen hinner uppdateras
+      setTimeout(() => {
+        onDataChange();
+      }, 500);
     } catch (err: unknown) {
       console.error("Error updating handbook role:", err);
       setError(err instanceof Error ? err.message : "Kunde inte uppdatera roll");
@@ -269,7 +278,10 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       }
       
       setSuccess(result.message);
-      onDataChange();
+      // Vänta lite för att säkerställa att databasen hinner uppdateras
+      setTimeout(() => {
+        onDataChange();
+      }, 500);
     } catch (err: unknown) {
       console.error("Error removing from handbook:", err);
       setError(err instanceof Error ? err.message : "Kunde inte ta bort från handbok");
@@ -298,7 +310,10 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       }
       
       setSuccess(makeAdmin ? 'Användaren har gjorts till superadmin' : 'Superadmin-status har tagits bort');
-      onDataChange();
+      // Vänta lite för att säkerställa att databasen hinner uppdateras
+      setTimeout(() => {
+        onDataChange();
+      }, 1000);
     } catch (err: unknown) {
       console.error("Error updating system role:", err);
       setError(err instanceof Error ? err.message : "Kunde inte uppdatera systemroll");
@@ -508,14 +523,24 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                   <td className="px-6 py-4">
                     <div className="max-w-xs">
                       {user.handbooks && user.handbooks.length > 0 ? (
-                        <div className="space-y-1">
-                          <div className="flex items-center text-xs text-gray-500 mb-1">
-                            <Building2 className="h-3 w-3 mr-1" />
-                            {user.handbooks.length} handbok{user.handbooks.length !== 1 ? 'er' : ''}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-xs text-gray-500">
+                              <Building2 className="h-3 w-3 mr-1" />
+                              {user.handbooks.length} handbok{user.handbooks.length !== 1 ? 'er' : ''}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditRolesClick(user)}
+                              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              Hantera
+                            </Button>
                           </div>
                           {user.handbooks.slice(0, 2).map((handbook, index) => (
                             <div key={handbook.id} className="flex items-center justify-between">
-                              <span className="text-xs text-gray-700 truncate max-w-[150px]" title={handbook.title}>
+                              <span className="text-xs text-gray-700 truncate max-w-[120px]" title={handbook.title}>
                                 {handbook.title}
                               </span>
                               <Badge 
@@ -533,7 +558,18 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-400 italic">Inga handböcker</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400 italic">Inga handböcker</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditRolesClick(user)}
+                            className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Lägg till
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </td>
@@ -562,38 +598,25 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
                     })}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditRolesClick(user)}
-                        disabled={isProcessing === user.id}
-                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Roller
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteClick(user)}
-                        disabled={isProcessing === user.id}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        {isProcessing === user.id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-2"></div>
-                            Tar bort...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Ta bort
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteClick(user)}
+                      disabled={isProcessing === user.id}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      {isProcessing === user.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-2"></div>
+                          Tar bort...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Ta bort
+                        </>
+                      )}
+                    </Button>
                   </td>
                 </tr>
               ))

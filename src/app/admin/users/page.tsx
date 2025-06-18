@@ -40,8 +40,12 @@ export default function UsersPage() {
       setIsLoading(true);
       setError(null);
       
-      // Använd API direkt istället för att försöka komma åt users-tabellen
-      const response = await fetch('/api/admin/users');
+      // Rensa användarlistan först för att tvinga re-render
+      setUsers([]);
+      
+      // Lägg till cache-busting för att säkerställa att vi får färsk data
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/admin/users?t=${timestamp}`);
       console.log('[Users Page] API response status:', response.status);
       
       if (!response.ok) {
@@ -59,6 +63,7 @@ export default function UsersPage() {
       const authUsers = apiResult.data || [];
       console.log('[Users Page] Setting users:', authUsers.length, 'users found');
       console.log('[Users Page] User emails:', authUsers.map(u => u.email));
+      console.log('[Users Page] Superadmin status:', authUsers.map(u => ({ email: u.email, is_superadmin: u.is_superadmin })));
       setUsers(Array.isArray(authUsers) ? authUsers : []);
     } catch (err) {
       console.error("Error fetching users:", err);
