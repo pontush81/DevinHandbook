@@ -32,9 +32,20 @@ export default function PrivacyPage() {
         </ul>
         
         <h2 className="text-xl font-semibold mt-8 mb-4">3. Cookies</h2>
-        <p>
+        <p className="mb-4">
           Vi använder cookies för att hantera inloggningssessioner och förbättra användarupplevelsen.
-          Genom att använda vår tjänst godkänner du användningen av cookies.
+          Du får välja vilka cookies du vill acceptera när du besöker vår webbplats.
+        </p>
+        
+        <h3 className="text-lg font-medium mt-6 mb-3">Typer av cookies vi använder:</h3>
+        <ul className="list-disc ml-6 mb-4">
+          <li><strong>Nödvändiga cookies:</strong> Krävs för inloggning och grundläggande funktionalitet (kan inte avaktiveras)</li>
+          <li><strong>Funktionella cookies:</strong> Sparar dina preferenser som sidebar-inställningar</li>
+          <li><strong>Inga tracking-cookies:</strong> Vi använder inte cookies för marknadsföring eller spårning av tredje part</li>
+        </ul>
+        
+        <p className="mb-4">
+          Du kan när som helst ändra dina cookie-inställningar genom att rensa din webbläsares cookies och besöka vår webbplats igen.
         </p>
         
         <h2 className="text-xl font-semibold mt-8 mb-4">4. Delning av information</h2>

@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Script from 'next/script';
 import { SessionReconnectHandler } from "@/components/SessionReconnectHandler";
 import { AuthDebugButton } from "@/components/debug/AuthDebugButton";
+import { CookieConsent } from "@/components/CookieConsent";
 // Import dev utils to make forceLogout available globally
 import "@/lib/dev-utils";
 
@@ -251,6 +252,7 @@ export default function RootLayout({
         <AuthProvider>
           <SessionReconnectHandler />
           {children}
+          <CookieConsent />
           <AuthDebugButton />
         </AuthProvider>
       </body>

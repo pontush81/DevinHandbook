@@ -248,9 +248,9 @@ export default function HomePage() {
     },
     {
       question: "Vad kostar tjänsten?",
-      answer: "Tjänsten kostar 2490 kr per år för per handbok.",
+      answer: "Vi håller på att sätta ett rättvist pris som passar alla typer av bostadsrättsföreningar. Priset kommer att meddelas inom kort.",
       category: "Prissättning",
-      keywords: ["pris", "kostnad", "2490 kr", "årskostnad", "obegränsad lagring"],
+              keywords: ["pris", "kostnad", "rättvist pris", "årskostnad", "kommer snart"],
       priority: 3
     },
     {
@@ -476,9 +476,9 @@ export default function HomePage() {
       <section id="pricing" className="py-12 md:py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 md:mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Enkelt och förutsägbart pris</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Transparent och rättvis prissättning</h2>
             <p className="mt-3 md:mt-4 text-base sm:text-lg text-gray-600 text-center">
-              Ingen krånglig prissättning. En fast årskostnad för obegränsad användning.
+              Vi arbetar för att sätta ett pris som fungerar för alla föreningar, stora som små.
             </p>
           </div>
           
@@ -491,11 +491,11 @@ export default function HomePage() {
                   </span>
                 </div>
                 <div className="mt-4 flex justify-center">
-                  <span className="text-5xl font-extrabold text-white">2490 kr</span>
-                  <span className="ml-1 text-xl font-semibold text-blue-100 self-end">/år</span>
+                  <span className="text-5xl font-extrabold text-white">Kommer snart</span>
+                  <span className="ml-1 text-xl font-semibold text-blue-100 self-end"></span>
                 </div>
                 <p className="mt-4 text-lg text-center text-blue-100">
-                  per förening, oavsett storlek
+                  Vi sätter ett rättvist pris som passar alla
                 </p>
               </div>
               <div className="px-6 pt-6 pb-8 bg-white sm:p-10">
@@ -536,7 +536,7 @@ export default function HomePage() {
                     href="/create-handbook"
                     className="w-full flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                   >
-                    Kom igång nu
+                    Testa gratis nu
                   </Link>
                 </div>
               </div>

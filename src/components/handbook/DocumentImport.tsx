@@ -794,4 +794,6 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
       </Card>
     </div>
   );
-}); 
+});
+
+export default DocumentImport; 
