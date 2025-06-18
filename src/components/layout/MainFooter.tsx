@@ -29,6 +29,9 @@ export function MainFooter({ variant = 'landing' }: MainFooterProps) {
               <Link href="/terms" className="text-sm text-gray-600 hover:text-gray-900">
                 Användarvillkor
               </Link>
+              <Link href="/cookie-policy" className="text-sm text-gray-600 hover:text-gray-900">
+                Cookiepolicy
+              </Link>
               <Link href="/cookie-settings" className="text-sm text-gray-600 hover:text-gray-900">
                 Cookie-inställningar
               </Link>
