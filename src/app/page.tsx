@@ -10,6 +10,156 @@ import { ChevronDownIcon } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
+// Pilotkund-formulär komponent
+function PilotRequestForm() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    organization: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/pilot-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ett fel uppstod');
+      }
+
+      setIsSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ett fel uppstod. Försök igen senare.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-green-900 mb-2">Tack för ditt intresse!</h3>
+        <p className="text-green-700">Vi har mottagit din förfrågan och kommer att kontakta dig inom 24 timmar.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 md:p-8 max-w-2xl mx-auto">
+      <h3 className="text-xl font-semibold mb-6 text-gray-900 text-center">Ansök som pilotkund</h3>
+      
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-700 text-sm">{error}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+            Namn *
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Ditt namn"
+          />
+        </div>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            E-post *
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="din@email.se"
+          />
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="organization" className="block text-sm font-medium text-gray-700 mb-2">
+          Organisation/Förening *
+        </label>
+        <input
+          type="text"
+          id="organization"
+          name="organization"
+          required
+          value={formData.organization}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="BRF Solgläntan"
+        />
+      </div>
+
+      <div className="mb-6">
+        <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+          Meddelande (valfritt)
+        </label>
+        <textarea
+          id="message"
+          name="message"
+          rows={4}
+          value={formData.message}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Berätta gärna om era behov och förväntningar..."
+        />
+      </div>
+
+      <Button 
+        type="submit" 
+        disabled={isSubmitting}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
+      >
+        {isSubmitting ? 'Skickar...' : '🚀 Skicka ansökan'}
+      </Button>
+
+      <p className="text-xs text-gray-500 mt-4 text-center">
+        Vi hör av oss inom 24 timmar • Inga förpliktelser
+      </p>
+    </form>
+  );
+}
+
 // SEO-vänlig FAQ-komponent
 function SEOFriendlyFAQ({ faqs }: { 
   faqs: Array<{ 
@@ -121,6 +271,23 @@ export default function HomePage() {
 
   return (
     <MainLayout variant="landing" showHeader={true} noWhiteTop={false}>
+      {/* Under utveckling banner */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+              <span className="text-amber-700 font-medium text-sm">
+                🚧 Under utveckling
+              </span>
+            </div>
+            <span className="text-amber-600 text-sm">
+              • Tjänsten är fortfarande i utvecklingsfas
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Hero section */}
       <section className="pt-8 pb-12 md:pt-12 md:pb-16 lg:pt-16 lg:pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -139,6 +306,9 @@ export default function HomePage() {
                 </Button>
                 <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
                   <Link href="/login">Logga in</Link>
+                </Button>
+                <Button size="lg" variant="secondary" className="w-full sm:w-auto bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300" asChild>
+                  <Link href="#pilot-signup">🚀 Bli pilotkund</Link>
                 </Button>
               </div>
             </div>
@@ -372,6 +542,25 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Pilot Customer Section */}
+      <section className="py-12 md:py-16 bg-gradient-to-br from-blue-50 to-indigo-50" id="pilot-signup">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+              Vill du vara pilotkund?
+            </h2>
+            <div className="flex justify-center">
+              <p className="text-gray-600 text-base md:text-lg max-w-2xl text-center">
+                Som pilotkund får du tillgång till vår plattform i förväg och kan påverka utvecklingen.
+              </p>
+            </div>
+          </div>
+          
+          {/* Pilotkund-formulär */}
+          <PilotRequestForm />
         </div>
       </section>
 
