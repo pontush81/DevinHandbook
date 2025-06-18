@@ -22,20 +22,20 @@ export function MainFooter({ variant = 'landing' }: MainFooterProps) {
           </div>
           
           {variant === 'landing' && (
-            <nav className="flex justify-center md:justify-end space-x-6" aria-label="Sidfotsnavigation">
-              <Link href="/privacy" className="text-sm text-gray-600 hover:text-gray-900">
+            <nav className="flex flex-wrap justify-center md:justify-end gap-x-4 gap-y-2 text-center" aria-label="Sidfotsnavigation">
+              <Link href="/privacy" className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap">
                 Integritetspolicy
               </Link>
-              <Link href="/terms" className="text-sm text-gray-600 hover:text-gray-900">
+              <Link href="/terms" className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap">
                 Användarvillkor
               </Link>
-              <Link href="/cookie-policy" className="text-sm text-gray-600 hover:text-gray-900">
+              <Link href="/cookie-policy" className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap">
                 Cookiepolicy
               </Link>
-              <Link href="/cookie-settings" className="text-sm text-gray-600 hover:text-gray-900">
+              <Link href="/cookie-settings" className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap">
                 Cookie-inställningar
               </Link>
-              <Link href="/contact" className="text-sm text-gray-600 hover:text-gray-900">
+              <Link href="/contact" className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap">
                 Kontakt
               </Link>
             </nav>

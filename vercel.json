@@ -8,6 +8,14 @@
     {
       "path": "/api/cron/backup",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/customer-lifecycle",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-expired-data",
+      "schedule": "0 4 * * *"
     }
   ],
   "redirects": [
