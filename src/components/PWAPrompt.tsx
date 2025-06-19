@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Smartphone, Download } from 'lucide-react';
+import { universalStorage } from '@/lib/safe-storage';
 
 interface PWAPromptProps {
   onClose?: () => void;
@@ -29,9 +30,19 @@ export function PWAPrompt({ onClose }: PWAPromptProps) {
         return;
       }
 
-      // Kontrollera om användaren tidigare avvisat prompten
-      const dismissed = localStorage.getItem('pwa-prompt-dismissed');
-      const lastShown = localStorage.getItem('pwa-prompt-last-shown');
+      // Kontrollera om det är en mobil enhet
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                       window.matchMedia('(max-width: 768px)').matches;
+      
+      // Visa endast prompt på mobila enheter (där PWA är mest värdefullt)
+      if (!isMobile) {
+        return;
+      }
+
+      // Kontrollera om användaren tidigare avvisat prompten (säker localStorage)
+      const dismissed = universalStorage.getItem('pwa-prompt-dismissed');
+      const lastShown = universalStorage.getItem('pwa-prompt-last-shown');
+      
       const now = Date.now();
       const dayInMs = 24 * 60 * 60 * 1000;
 
@@ -48,7 +59,7 @@ export function PWAPrompt({ onClose }: PWAPromptProps) {
       // Vänta lite innan vi visar prompten
       setTimeout(() => {
         setShowPrompt(true);
-        localStorage.setItem('pwa-prompt-last-shown', now.toString());
+        universalStorage.setItem('pwa-prompt-last-shown', now.toString());
       }, 3000);
     };
 
@@ -90,7 +101,7 @@ export function PWAPrompt({ onClose }: PWAPromptProps) {
         setIsInstalled(true);
       } else {
         console.log('PWA: Användaren avvisade installation');
-        localStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
+        universalStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
       }
       
       setShowPrompt(false);
@@ -102,7 +113,7 @@ export function PWAPrompt({ onClose }: PWAPromptProps) {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
+    universalStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
     onClose?.();
   };
 

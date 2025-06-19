@@ -1,26 +1,32 @@
 const CACHE_NAME = 'handbok-pwa-v1';
 const urlsToCache = [
   '/',
-  '/view',
-  '/edit-handbook',
-  '/dashboard',
-  '/static-fallback.html',
-  // Statiska resurser som alltid ska cachas
   '/manifest.json',
   '/icon-192x192.png',
-  '/icon-512x512.png'
+  '/icon-512x512.png',
+  '/apple-touch-icon.png'
 ];
 
 // Installera service worker och cacha viktiga resurser
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('PWA: Cachar grundläggande resurser');
-        return cache.addAll(urlsToCache);
+        
+        // Cacha resurser en i taget för bättre felhantering
+        for (const url of urlsToCache) {
+          try {
+            await cache.add(url);
+            console.log(`PWA: Cachade ${url}`);
+          } catch (error) {
+            console.log(`PWA: Kunde inte cacha ${url}:`, error.message);
+            // Fortsätt med nästa resurs även om en misslyckas
+          }
+        }
       })
       .catch((error) => {
-        console.log('PWA: Fel vid cachning:', error);
+        console.log('PWA: Fel vid öppning av cache:', error);
       })
   );
   // Aktivera omedelbart utan att vänta
@@ -87,9 +93,9 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => {
-            // Om nätverket misslyckas, visa fallback-sida för navigation
+            // Om nätverket misslyckas, försök returnera huvudsidan
             if (request.mode === 'navigate') {
-              return caches.match('/static-fallback.html');
+              return caches.match('/');
             }
           });
       })

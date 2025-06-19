@@ -6,6 +6,7 @@ import { SessionReconnectHandler } from "@/components/SessionReconnectHandler";
 import { AuthDebugButton } from "@/components/debug/AuthDebugButton";
 import { CookieConsent } from "@/components/CookieConsent";
 import { PWAPrompt } from "@/components/PWAPrompt";
+import { PWADesktopIndicator } from "@/components/PWADesktopIndicator";
 // Import dev utils to make forceLogout available globally
 import "@/lib/dev-utils";
 
@@ -133,7 +134,7 @@ export default function RootLayout({
               
               // Override console.error to filter localStorage errors
               console.error = function(...args) {
-                const message = args.join(' ');
+                const message = String(args[0] || '');
                 
                 // Filter out all localStorage-related errors
                 if (message.includes('Access to storage is not allowed') ||
@@ -142,7 +143,8 @@ export default function RootLayout({
                     message.includes('localStorage') && message.includes('blocked') ||
                     message.includes('QuotaExceededError') ||
                     message.includes('storage quota') ||
-                    message.includes('DOM Exception') && message.includes('storage')) {
+                    message.includes('DOM Exception') && message.includes('storage') ||
+                    message.includes('SecurityError') && message.includes('storage')) {
                   return; // Suppress these errors completely
                 }
                 
@@ -152,7 +154,7 @@ export default function RootLayout({
               
               // Override console.warn for localStorage warnings
               console.warn = function(...args) {
-                const message = args.join(' ');
+                const message = String(args[0] || '');
                 
                 if (message.includes('localStorage') ||
                     message.includes('storage') && message.includes('blocked') ||
@@ -166,10 +168,11 @@ export default function RootLayout({
               // Global error handler for unhandled promise rejections
               window.addEventListener('unhandledrejection', function(event) {
                 const reason = event.reason;
-                if (reason && reason.message && 
-                    (reason.message.includes('Access to storage is not allowed') ||
-                     reason.message.includes('localStorage') ||
-                     reason.message.includes('storage is not allowed'))) {
+                const message = String(reason?.message || reason || '');
+                if (message.includes('Access to storage is not allowed') ||
+                    message.includes('localStorage') ||
+                    message.includes('storage is not allowed') ||
+                    message.includes('SecurityError')) {
                   event.preventDefault(); // Prevent error from showing
                   return;
                 }
@@ -177,10 +180,11 @@ export default function RootLayout({
               
               // Global error handler for regular errors
               window.addEventListener('error', function(event) {
-                const message = event.message || '';
+                const message = String(event.message || '');
                 if (message.includes('Access to storage is not allowed') ||
                     message.includes('localStorage') ||
-                    message.includes('storage is not allowed')) {
+                    message.includes('storage is not allowed') ||
+                    message.includes('SecurityError')) {
                   event.preventDefault();
                   return;
                 }
@@ -191,6 +195,8 @@ export default function RootLayout({
                 const originalSetItem = Storage.prototype.setItem;
                 const originalGetItem = Storage.prototype.getItem;
                 const originalRemoveItem = Storage.prototype.removeItem;
+                const originalKey = Storage.prototype.key;
+                const originalClear = Storage.prototype.clear;
                 
                 Storage.prototype.setItem = function(key, value) {
                   try {
@@ -217,6 +223,34 @@ export default function RootLayout({
                     return;
                   }
                 };
+                
+                Storage.prototype.key = function(index) {
+                  try {
+                    return originalKey.call(this, index);
+                  } catch (e) {
+                    return null;
+                  }
+                };
+                
+                Storage.prototype.clear = function() {
+                  try {
+                    return originalClear.call(this);
+                  } catch (e) {
+                    // Completely silent fail
+                    return;
+                  }
+                };
+                
+                // Override length property getter
+                Object.defineProperty(Storage.prototype, 'length', {
+                  get: function() {
+                    try {
+                      return Object.getOwnPropertyDescriptor(Storage.prototype, 'length').get.call(this);
+                    } catch (e) {
+                      return 0;
+                    }
+                  }
+                });
               }
             })();
           `}
@@ -273,6 +307,7 @@ export default function RootLayout({
           {children}
           <CookieConsent />
           <PWAPrompt />
+          <PWADesktopIndicator />
           <AuthDebugButton />
         </AuthProvider>
         

@@ -34,11 +34,16 @@ Din Handbok-applikation är nu en fullständig Progressive Web App (PWA) som ger
 
 ### ✅ Användarupplevelse
 
-1. **Installation Prompt** (`/src/components/PWAPrompt.tsx`)
-   - Smart timing (visas efter 3 sekunder)
-   - Respekterar användarens val
-   - 7-dagars paus om avvisad
-   - Instruktioner för iOS-installation
+1. **Smart Installation Prompts**
+   - **Mobile Prompt** (`/src/components/PWAPrompt.tsx`)
+     - Visas endast på mobila enheter
+     - Smart timing (3 sekunder delay)
+     - 7-dagars paus om avvisad
+     - Instruktioner för iOS-installation
+   - **Desktop Indicator** (`/src/components/PWADesktopIndicator.tsx`)
+     - Diskret notis i övre högra hörnet
+     - Längre delay (10 sekunder)
+     - Mindre påträngande för desktop-användare
 
 2. **PWA Status Component** (`/src/components/PWATest.tsx`)
    - Real-time status för service worker

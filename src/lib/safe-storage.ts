@@ -1,78 +1,102 @@
-// Säker localStorage-hantering som hanterar "Access to storage is not allowed" fel
-export const safeLocalStorage = {
-  setItem: (key: string, value: string): boolean => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(key, value);
-        return true;
-      }
-    } catch (error) {
-      console.warn(`localStorage.setItem('${key}') inte tillgängligt:`, error);
-    }
-    return false;
-  },
+/**
+ * Säker localStorage utility som aldrig kastar fel
+ */
 
+export const safeStorage = {
   getItem: (key: string): string | null => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return localStorage.getItem(key);
-      }
-    } catch (error) {
-      console.warn(`localStorage.getItem('${key}') inte tillgängligt:`, error);
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
     }
-    return null;
+  },
+
+  setItem: (key: string, value: string): boolean => {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
   },
 
   removeItem: (key: string): boolean => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem(key);
-        return true;
-      }
-    } catch (error) {
-      console.warn(`localStorage.removeItem('${key}') inte tillgängligt:`, error);
+      localStorage.removeItem(key);
+      return true;
+    } catch (e) {
+      return false;
     }
-    return false;
   },
 
-  // Hjälpfunktion för att rensa flera nycklar samtidigt
-  removeItems: (keys: string[]): boolean => {
-    let allSuccess = true;
-    keys.forEach(key => {
-      const success = safeLocalStorage.removeItem(key);
-      if (!success) allSuccess = false;
-    });
-    return allSuccess;
+  clear: (): boolean => {
+    try {
+      localStorage.clear();
+      return true;
+    } catch (e) {
+      return false;
+    }
   },
 
-  // Kontrollera om localStorage är tillgängligt
   isAvailable: (): boolean => {
     try {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return false;
-      }
-      // Testa faktisk åtkomst
       const testKey = '__storage_test__';
       localStorage.setItem(testKey, 'test');
       localStorage.removeItem(testKey);
       return true;
-    } catch (error) {
+    } catch (e) {
       return false;
     }
+  }
+};
+
+// Memory fallback för när localStorage inte är tillgängligt
+const memoryStorage: Record<string, string> = {};
+
+export const universalStorage = {
+  getItem: (key: string): string | null => {
+    if (safeStorage.isAvailable()) {
+      return safeStorage.getItem(key);
+    }
+    return memoryStorage[key] || null;
+  },
+
+  setItem: (key: string, value: string): boolean => {
+    if (safeStorage.isAvailable()) {
+      return safeStorage.setItem(key, value);
+    }
+    memoryStorage[key] = value;
+    return true;
+  },
+
+  removeItem: (key: string): boolean => {
+    if (safeStorage.isAvailable()) {
+      return safeStorage.removeItem(key);
+    }
+    delete memoryStorage[key];
+    return true;
+  },
+
+  clear: (): boolean => {
+    if (safeStorage.isAvailable()) {
+      return safeStorage.clear();
+    }
+    Object.keys(memoryStorage).forEach(key => delete memoryStorage[key]);
+    return true;
   }
 };
 
 // Specifika funktioner för handboksdata
 export const handbookStorage = {
   saveFormState: (state: any): boolean => {
-    const success1 = safeLocalStorage.setItem('handbook-form-state', JSON.stringify(state));
-    const success2 = safeLocalStorage.setItem('handbook-form-timestamp', Date.now().toString());
+    const success1 = safeStorage.setItem('handbook-form-state', JSON.stringify(state));
+    const success2 = safeStorage.setItem('handbook-form-timestamp', Date.now().toString());
     return success1 && success2;
   },
 
   getFormState: (): { state: any; timestamp: number } | null => {
-    const savedState = safeLocalStorage.getItem('handbook-form-state');
-    const savedTimestamp = safeLocalStorage.getItem('handbook-form-timestamp');
+    const savedState = safeStorage.getItem('handbook-form-state');
+    const savedTimestamp = safeStorage.getItem('handbook-form-timestamp');
     
     if (savedState && savedTimestamp) {
       try {
@@ -89,13 +113,7 @@ export const handbookStorage = {
   },
 
   clearFormState: (): boolean => {
-    return safeLocalStorage.removeItems([
-      'handbook-form-state',
-      'handbook-form-timestamp',
-      'document-import-state',
-      'handbook-import-sections',
-      'handbook-import-timestamp'
-    ]);
+    return safeStorage.removeItem('handbook-form-state') && safeStorage.removeItem('handbook-form-timestamp');
   },
 
   saveDocumentImportState: (analysisResult: any): boolean => {
@@ -103,17 +121,17 @@ export const handbookStorage = {
       analysisResult,
       timestamp: Date.now()
     };
-    return safeLocalStorage.setItem('document-import-state', JSON.stringify(stateToSave));
+    return safeStorage.setItem('document-import-state', JSON.stringify(stateToSave));
   },
 
   getDocumentImportState: (): { analysisResult: any; timestamp: number } | null => {
-    const savedState = safeLocalStorage.getItem('document-import-state');
+    const savedState = safeStorage.getItem('document-import-state');
     if (savedState) {
       try {
         return JSON.parse(savedState);
       } catch (error) {
         console.warn('Kunde inte parsa sparad document import state:', error);
-        safeLocalStorage.removeItem('document-import-state');
+        safeStorage.removeItem('document-import-state');
       }
     }
     return null;
