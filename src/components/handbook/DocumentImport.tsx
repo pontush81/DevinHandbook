@@ -68,46 +68,65 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
     filesRef.current = files;
   }, [files]);
   
-  // Spara state till localStorage när det ändras
+  // Spara state till localStorage när det ändras - med debounce
   useEffect(() => {
     if (analysisResult) {
-      const success = handbookStorage.saveDocumentImportState(analysisResult);
-      if (success) {
-        console.log('💾 Sparar document import state till localStorage');
-      }
+      const saveTimeout = setTimeout(() => {
+        const success = handbookStorage.saveDocumentImportState(analysisResult);
+        if (success) {
+          // console.log('💾 Sparar document import state till localStorage'); // Commented out to reduce console spam
+        }
+      }, 1000); // 1 sekund debounce för att undvika för många sparningar
+      
+      return () => clearTimeout(saveTimeout);
     }
   }, [analysisResult]);
   
-  // Återställ state från localStorage vid komponentstart
+  // Återställ state från localStorage vid komponentstart (endast en gång)
   useEffect(() => {
-    const savedData = handbookStorage.getDocumentImportState();
-    if (savedData) {
-      const { analysisResult: savedAnalysisResult, timestamp } = savedData;
-      const now = Date.now();
-      const fifteenMinutes = 15 * 60 * 1000; // 15 minuter i millisekunder
+    let hasRestored = false;
+    
+    const restoreState = () => {
+      if (hasRestored) return;
       
-      // Återställ endast om det är mindre än 15 minuter sedan
-      if (now - timestamp < fifteenMinutes && savedAnalysisResult) {
-        console.log('🔄 Återställer document import state från localStorage');
-        setAnalysisResult(savedAnalysisResult);
-        analysisResultRef.current = savedAnalysisResult;
+      const savedData = handbookStorage.getDocumentImportState();
+      if (savedData) {
+        const { analysisResult: savedAnalysisResult, timestamp } = savedData;
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000; // Reducerat från 15 till 5 minuter
         
-        // Meddela parent om återställd status
-        if (onImportStatusChange) {
-          onImportStatusChange({
-            hasFile: true,
-            isAnalyzing: false,
-            hasResults: true
-          });
-        }
-        
-        // Trigga onImportComplete om det finns sektioner
-        if (savedAnalysisResult.sections && savedAnalysisResult.sections.length > 0) {
-          onImportComplete(savedAnalysisResult.sections);
+        // Återställ endast om det är mindre än 5 minuter sedan
+        if (now - timestamp < fiveMinutes && savedAnalysisResult) {
+          console.log('🔄 Återställer document import state från localStorage (ålder:', Math.round((now - timestamp) / 1000 / 60), 'minuter)');
+          setAnalysisResult(savedAnalysisResult);
+          analysisResultRef.current = savedAnalysisResult;
+          hasRestored = true;
+          
+          // Meddela parent om återställd status
+          if (onImportStatusChange) {
+            onImportStatusChange({
+              hasFile: true,
+              isAnalyzing: false,
+              hasResults: true
+            });
+          }
+          
+          // Trigga onImportComplete om det finns sektioner - men bara om det behövs
+          if (savedAnalysisResult.sections && savedAnalysisResult.sections.length > 0) {
+            // Använd setTimeout för att undvika re-render loop
+            setTimeout(() => {
+              onImportComplete(savedAnalysisResult.sections);
+            }, 0);
+          }
+        } else {
+          console.log('🧹 Gammal AI-analys hittad men för gammal (ålder:', Math.round((now - timestamp) / 1000 / 60), 'minuter), rensar...');
+          handbookStorage.clearDocumentImportState();
         }
       }
-    }
-  }, [onImportComplete, onImportStatusChange]);
+    };
+    
+    restoreState();
+  }, []); // Tomma dependencies för att bara köra en gång
   
   // Återställ state vid fönsterbyte
   useEffect(() => {
@@ -144,20 +163,27 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
     };
   }, [analysisResult, files]);
 
-  // Rapportera status-ändringar till parent
+  // Rapportera status-ändringar till parent - med memoization för att undvika onödiga anrop
   useEffect(() => {
     if (onImportStatusChange) {
-      onImportStatusChange({
+      const status = {
         hasFile: files.length > 0,
         isAnalyzing,
         hasResults: !!analysisResult
-      });
+      };
+      
+      // Använd setTimeout för att undvika re-render loops
+      const statusTimeout = setTimeout(() => {
+        onImportStatusChange(status);
+      }, 0);
+      
+      return () => clearTimeout(statusTimeout);
     }
-  }, [files, isAnalyzing, analysisResult, onImportStatusChange]);
+  }, [files.length, isAnalyzing, analysisResult, onImportStatusChange]);
 
   // Cleanup-funktion för att rensa localStorage
   const clearImportState = useCallback(() => {
-    const success = handbookStorage.clearFormState();
+    const success = handbookStorage.clearDocumentImportState();
     if (success) {
       console.log('🧹 Rensade document import state från localStorage');
     }
@@ -243,6 +269,10 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
     setFiles(validFiles);
     setAnalysisResult(null);
     setCurrentFileIndex(0);
+    
+    // Rensa gammal AI-analys från localStorage när nya filer väljs
+    handbookStorage.clearDocumentImportState();
+    console.log('🧹 Rensade gammal AI-analys när nya filer valdes');
   }, [validateFile]);
 
   const handleFileSelection = useCallback((selectedFile: File) => {
@@ -429,11 +459,6 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
       setAnalysisProgress(100);
 
       setAnalysisResult(combinedResult);
-
-      showToast({
-        title: "Analys slutförd",
-        description: `Hittade ${allSections.length} sektioner från ${files.length} dokument.`,
-      });
 
       // Automatiskt anropa onImportComplete när analysen är klar
       console.log(`🎯 [DocumentImport] Auto-importing ${allSections.length} sections from ${files.length} files after analysis completion`);
@@ -699,71 +724,6 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
                        analysisProgress < 80 ? '🎯 Identifierar sektioner...' :
                        '🎉 Snart klar!'}
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Analysis Results */}
-          {analysisResult && !isAnalyzing && (
-            <Card className="border-green-200 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 relative overflow-hidden animate-in slide-in-from-top-4 duration-500">
-              {/* Success celebration particles */}
-              <div className="absolute inset-0 opacity-30">
-                <div className="absolute top-4 left-8 w-2 h-2 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '0s' }}></div>
-                <div className="absolute top-6 right-12 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" style={{ animationDelay: '0.3s' }}></div>
-                <div className="absolute bottom-8 left-16 w-1 h-1 bg-teal-400 rounded-full animate-ping" style={{ animationDelay: '0.6s' }}></div>
-                <div className="absolute bottom-4 right-8 w-2 h-2 bg-green-300 rounded-full animate-ping" style={{ animationDelay: '0.9s' }}></div>
-              </div>
-              
-              <CardHeader className="pb-3 relative z-10">
-                <CardTitle className="flex items-center gap-3 text-green-800 text-lg">
-                  <div className="relative">
-                    <CheckCircle className="h-6 w-6 animate-in zoom-in-50 duration-300" />
-                    <div className="absolute inset-0 h-6 w-6 bg-green-400 rounded-full animate-ping opacity-50"></div>
-                  </div>
-                  <span className="animate-in slide-in-from-left-2 duration-300 delay-150">
-                    ✨ Analys slutförd
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <h4 className="font-medium">Identifierade sektioner ({analysisResult.sections.length}):</h4>
-                    <div className="group relative">
-                      <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                        Procentsatsen visar hur säker AI:n är på identifieringen
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {analysisResult.sections.map((section, index) => (
-                      <div key={index} className="p-4 bg-white rounded-lg border shadow-sm">
-                        <div className="flex items-start justify-between mb-2">
-                          <h5 className="font-medium text-base break-words pr-2">{section.title}</h5>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <Badge variant="outline" className={`${getConfidenceColor(section.confidence)}`}>
-                              {Math.round(section.confidence * 100)}%
-                            </Badge>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
-                          {section.content.length > 200 
-                            ? section.content.substring(0, 200) + '...' 
-                            : section.content
-                          }
-                        </p>
-                        {section.suggestedMapping && (
-                          <div className="flex items-center gap-1 text-sm text-blue-600">
-                            <span>→</span>
-                            <span className="font-medium">{section.suggestedMapping}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
                   </div>
                 </div>
               </CardContent>

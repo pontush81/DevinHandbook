@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Cookie, Shield, Settings, Info } from 'lucide-react';
 import { useCookieConsent } from '@/components/CookieConsent';
+import { safeLocalStorage } from '@/lib/safe-storage';
 import Link from 'next/link';
 
 export default function CookieSettingsPage() {
@@ -21,8 +22,8 @@ export default function CookieSettingsPage() {
 
   const handleResetConsent = () => {
     if (typeof window !== 'undefined' && localStorage) {
-      localStorage.removeItem('cookie_consent');
-      localStorage.removeItem('cookie_consent_date');
+          safeLocalStorage.removeItem('cookie_consent');
+    safeLocalStorage.removeItem('cookie_consent_date');
       window.location.reload();
     }
   };
@@ -56,7 +57,7 @@ export default function CookieSettingsPage() {
                 </p>
                 <p className="text-sm text-gray-600">
                   Inställning sparad: {typeof window !== 'undefined' && localStorage?.getItem('cookie_consent_date') 
-                    ? new Date(localStorage.getItem('cookie_consent_date')!).toLocaleDateString('sv-SE')
+                    ? new Date(safeLocalStorage.getItem('cookie_consent_date')!).toLocaleDateString('sv-SE')
                     : 'Okänt'}
                 </p>
               </div>

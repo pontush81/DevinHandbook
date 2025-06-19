@@ -233,7 +233,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🌐 AuthContext: Running on client, proceeding with auth check');
 
         // Kontrollera logout-flagga först med safe localStorage access
-        const logoutFlag = safeLocalStorage.getItem('__logout_flag__');
+        let logoutFlag = null;
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            logoutFlag = localStorage.getItem('__logout_flag__');
+          }
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+        
         if (logoutFlag) {
           const logoutTime = parseInt(logoutFlag);
           const timeSinceLogout = Date.now() - logoutTime;
@@ -247,12 +255,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           } else {
             // Rensa gamla logout-flaggan
-            safeLocalStorage.removeItem('__logout_flag__');
+            try {
+              if (typeof window !== 'undefined' && window.localStorage) {
+                localStorage.removeItem('__logout_flag__');
+              }
+            } catch (e) {
+              // Ignore localStorage errors
+            }
           }
         }
 
         // Säker kontroll av storage access
-        const hasStorageAccess = safeLocalStorage.isAvailable();
+        let hasStorageAccess = false;
+        try {
+          hasStorageAccess = typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem;
+        } catch (e) {
+          hasStorageAccess = false;
+        }
         if (!hasStorageAccess) {
           console.warn('⚠️ AuthContext: No storage access, using fallback auth');
         }
@@ -278,8 +297,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               await supabase.auth.signOut();
               if (typeof window !== 'undefined') {
-                localStorage.removeItem('supabase.auth.token');
-                sessionStorage.removeItem('supabase.auth.token');
+                try {
+                  if (window.localStorage) {
+                    localStorage.removeItem('supabase.auth.token');
+                  }
+                } catch (e) {
+                  // Ignore localStorage errors
+                }
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          try {
+            sessionStorage.removeItem('supabase.auth.token');
+          } catch (e) {
+            console.warn('Could not remove sessionStorage item:', e);
+          }
+        }
                 // Rensa alla supabase-relaterade cookies
                 document.cookie.split(";").forEach((c) => {
                   const eqPos = c.indexOf("=");
@@ -515,12 +546,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               const keysToRemove = [];
               // Safely iterate through localStorage keys
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
+                      try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
                 if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-                  keysToRemove.push(key);
-                }
-              }
+                              keysToRemove.push(key);
+            }
+          }
+        } catch (e) {
+          // Ignore localStorage access errors
+        }
               keysToRemove.forEach(key => {
                 const success = safeLocalStorage.removeItem(key);
                 if (success) {

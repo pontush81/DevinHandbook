@@ -128,7 +128,8 @@ function CreateHandbookContent() {
     [isLoading, isLoadingHandbooks, user]
   );
 
-  if (isPageLoading) {
+  // Temporary debug: Remove loading block to show tabs
+  if (false && isPageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

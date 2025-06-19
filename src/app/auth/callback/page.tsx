@@ -142,8 +142,8 @@ function AuthCallbackContent() {
         .order("created_at", { ascending: false });
         
       if (!error && data && data.length > 0) {
-        // Om användaren har handböcker, dirigera till den senaste
-        window.location.replace(`https://${data[0].subdomain}.handbok.org`);
+        // Om användaren har handböcker, dirigera till den senaste med path-baserad routing
+        router.replace(`/${data[0].subdomain}`);
       } else {
         // Annars till dashboard (tidigare create-handbook)
         router.replace("/dashboard");

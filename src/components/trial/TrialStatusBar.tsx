@@ -83,7 +83,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
       onUpgrade();
     } else {
       // Fallback: redirect till betalning
-      window.open('/dashboard', '_blank');
+      window.location.href = '/upgrade';
     }
   };
 

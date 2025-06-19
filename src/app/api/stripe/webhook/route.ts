@@ -33,6 +33,10 @@ export async function POST(req: NextRequest) {
         await handlePaymentFailed(event.data.object);
         break;
         
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object);
+        break;
+        
       case 'customer.subscription.updated':
         await handleSubscriptionUpdated(event.data.object);
         break;
@@ -65,8 +69,16 @@ async function handleCheckoutCompleted(session: any) {
   console.log("[Stripe Webhook] Handling checkout.session.completed");
   console.log("[Stripe Webhook] Session metadata:", session.metadata);
   
-  const { subdomain, handbookName, userId } = session.metadata || {};
+  const { subdomain, handbookName, userId, action, type } = session.metadata || {};
   
+  // Hantera trial-uppgraderingar
+  if (action === 'upgrade_from_trial' && type === 'subscription') {
+    console.log(`[Stripe Webhook] Handling trial upgrade for user ${userId}`);
+    await handleTrialUpgrade(userId, session);
+    return;
+  }
+  
+  // Hantera vanlig handbok-skapande
   if (subdomain && handbookName) {
     // Use subdomain directly without test prefix for path-based routing
     const finalSubdomain = subdomain;
@@ -269,6 +281,135 @@ async function handleSubscriptionCancelled(subscription: any) {
   } catch (error) {
     console.error('[Stripe Webhook] Error handling subscription cancelled:', error);
   }
+}
+
+async function handleTrialUpgrade(userId: string, stripeSession: any) {
+  console.log(`[Stripe Webhook] Handling trial upgrade for user ${userId}`);
+  
+  const supabase = getServiceSupabase();
+  
+  try {
+    // Extrahera plan-typ från metadata
+    const planType = stripeSession.metadata?.planType || 'monthly';
+    const subscriptionId = stripeSession.subscription;
+    const customerId = stripeSession.customer;
+    
+    console.log(`[Stripe Webhook] Trial upgrade details:`, {
+      userId,
+      planType,
+      subscriptionId,
+      customerId
+    });
+
+    // 1. Uppdatera trial-status till completed
+    const { error: trialError } = await supabase
+      .from('user_profiles')
+      .update({
+        subscription_status: 'active',
+        trial_used: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (trialError) {
+      console.error('[Stripe Webhook] Error updating trial status:', trialError);
+    }
+
+    // 2. Skapa subscription record med rätt plan-typ
+    const subscriptionData = {
+      user_id: userId,
+      plan_type: planType,
+      status: 'active',
+      started_at: new Date().toISOString(),
+      stripe_subscription_id: subscriptionId,
+      stripe_customer_id: customerId,
+      last_payment_at: new Date().toISOString(),
+      auto_renewal: true,
+      metadata: {
+        stripe_session_id: stripeSession.id,
+        payment_amount: stripeSession.amount_total,
+        currency: stripeSession.currency,
+        plan_type: planType,
+        upgraded_from_trial: true
+      }
+    };
+
+    // Sätt rätt datum baserat på plan-typ
+    if (planType === 'yearly') {
+      subscriptionData.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      subscriptionData.next_payment_due = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    } else {
+      subscriptionData.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      subscriptionData.next_payment_due = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    const { data: subscription, error: subError } = await supabase
+      .from('subscriptions')
+      .insert(subscriptionData)
+      .select()
+      .single();
+
+    if (subError) {
+      console.error('[Stripe Webhook] Error creating subscription:', subError);
+      throw subError;
+    }
+
+    console.log(`[Stripe Webhook] Created ${planType} subscription: ${subscription.id}`);
+
+    // 3. Uppdatera account status
+    const { error: statusError } = await supabase
+      .from('account_status')
+      .upsert({
+        user_id: userId,
+        status: 'active',
+        can_access_handbooks: true,
+        can_create_handbooks: true,
+        max_handbooks: 999, // Obergränsade handböcker
+        suspended_at: null,
+        scheduled_deletion_at: null,
+        warning_sent_at: null,
+        metadata: {
+          subscription_id: subscription.id,
+          activated_via: 'trial_upgrade',
+          plan_type: planType,
+          activation_date: new Date().toISOString()
+        }
+      }, { onConflict: 'user_id' });
+
+    if (statusError) {
+      console.error('[Stripe Webhook] Error updating account status:', statusError);
+    }
+
+    // 4. Logga lifecycle event
+    await supabase
+      .from('customer_lifecycle_events')
+      .insert({
+        user_id: userId,
+        subscription_id: subscription.id,
+        event_type: 'trial_converted',
+        status: 'completed',
+        automated_action: 'subscription_activated',
+        action_completed_at: new Date().toISOString(),
+        metadata: {
+          stripe_session_id: stripeSession.id,
+          plan_type: planType,
+          payment_amount: stripeSession.amount_total,
+          currency: stripeSession.currency,
+          converted_from: 'trial'
+        }
+      });
+
+    console.log(`[Stripe Webhook] Trial upgrade completed successfully for user ${userId}`);
+
+  } catch (error) {
+    console.error('[Stripe Webhook] Error in trial upgrade:', error);
+    throw error;
+  }
+}
+
+async function handleSubscriptionCreated(subscription: any) {
+  console.log("[Stripe Webhook] Handling customer.subscription.created");
+  // Detta kommer att hanteras av checkout.session.completed för vårt fall
 }
 
 async function integrateWithCustomerLifecycle(userId: string, handbookId: string, stripeSession: any) {

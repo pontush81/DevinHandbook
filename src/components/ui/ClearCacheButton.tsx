@@ -8,7 +8,13 @@ export function ClearCacheButton() {
   const clearAllCache = async () => {
     try {
       // Clear localStorage
-      localStorage.clear();
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.clear();
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+      }
       
       // Clear sessionStorage
       sessionStorage.clear();

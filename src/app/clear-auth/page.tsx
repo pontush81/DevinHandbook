@@ -17,8 +17,9 @@ export default function ClearAuthPage() {
       if (typeof window !== 'undefined') {
         // Hitta alla auth-relaterade nycklar
         const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
           if (key && (
             key.startsWith('sb-') || 
             key.includes('supabase') || 
@@ -28,7 +29,10 @@ export default function ClearAuthPage() {
             key.includes('token')
           )) {
             keysToRemove.push(key);
+            }
           }
+        } catch (e) {
+          // Ignore localStorage access errors
         }
         
         console.log('🗑️ Rensar nycklar:', keysToRemove);

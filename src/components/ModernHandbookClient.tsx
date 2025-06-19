@@ -13,6 +13,8 @@ import { ClearCacheButton } from '@/components/ui/ClearCacheButton';
 import { MainFooter } from '@/components/layout/MainFooter';
 import { MembersManager } from '@/components/handbook/MembersManager';
 import { TrialStatusBar } from '@/components/trial/TrialStatusBar';
+import { BlockedAccountScreen } from '@/components/trial/BlockedAccountScreen';
+import { getEnhancedTrialStatus } from '@/lib/trial-service';
 
 interface ModernHandbookClientProps {
   initialData: {
@@ -45,6 +47,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [trialEndedAt, setTrialEndedAt] = useState<string | null>(null);
 
   // Add missing state variables for dialog management
   const [editingSection, setEditingSection] = useState<Section | null>(null);
@@ -206,6 +210,55 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
     return () => clearTimeout(timeoutId);
   }, [user, authLoading, initialData.id, mounted]);
+
+  // Check trial status for users who own handbooks
+  useEffect(() => {
+    const checkTrialStatus = async () => {
+      if (!user || !mounted || authLoading) return;
+      
+      try {
+        // Kontrollera om användaren äger denna handbok
+        const { data: handbookOwner, error: ownerError } = await supabase
+          .from('handbooks')
+          .select('owner_id')
+          .eq('id', initialData.id)
+          .single();
+        
+        if (ownerError) {
+          console.error('Error checking handbook owner:', ownerError);
+          return;
+        }
+        
+        // Om användaren äger handboken, kontrollera trial-status
+        if (handbookOwner?.owner_id === user.id) {
+          const trialStatus = await getEnhancedTrialStatus(user.id);
+          
+          // Blockera om trial har gått ut och ingen aktiv prenumeration
+          const shouldBlock = !trialStatus.isInTrial && 
+                             trialStatus.subscriptionStatus !== 'active' &&
+                             trialStatus.trialEndsAt;
+          
+          console.log('📊 Trial status check:', {
+            userId: user.id,
+            handbookId: initialData.id,
+            isInTrial: trialStatus.isInTrial,
+            subscriptionStatus: trialStatus.subscriptionStatus,
+            shouldBlock,
+            trialEndsAt: trialStatus.trialEndsAt
+          });
+          
+          if (shouldBlock) {
+            setIsBlocked(true);
+            setTrialEndedAt(trialStatus.trialEndsAt);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking trial status:', error);
+      }
+    };
+    
+    checkTrialStatus();
+  }, [user, mounted, authLoading, initialData.id]);
 
   // Handle page selection from search results via URL hash
   useEffect(() => {
@@ -1028,7 +1081,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           className=""
           onUpgrade={() => {
             // Redirect to upgrade page
-            window.open('/dashboard', '_blank');
+            window.location.href = '/upgrade';
           }}
         />
       </div>
@@ -1043,6 +1096,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     
     return isGenuinelyLoading || isAuthLoadingCritical;
   }, [isLoading, authLoading, mounted, user]);
+
+  // Show blocked account screen if trial has expired
+  if (isBlocked && trialEndedAt) {
+    return (
+      <BlockedAccountScreen
+        trialEndedAt={trialEndedAt}
+        handbookName={handbookData.title}
+        onUpgrade={() => {
+          window.location.href = '/upgrade';
+        }}
+      />
+    );
+  }
 
   if (shouldShowLoading) {
     return (

@@ -2,53 +2,74 @@
  * Säker localStorage utility som aldrig kastar fel
  */
 
+// Hjälpfunktion för att kontrollera om vi är på klientsidan och localStorage är tillgängligt
+const isClient = typeof window !== 'undefined';
+const isStorageAvailable = (): boolean => {
+  if (!isClient) return false;
+  try {
+    const storage = window.localStorage;
+    const x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  } catch (e) {
+    // localStorage är inte tillgängligt (t.ex. private browsing, security restrictions)
+    console.warn('localStorage är inte tillgängligt:', e.message);
+    return false;
+  }
+};
+
 export const safeStorage = {
   getItem: (key: string): string | null => {
+    if (!isStorageAvailable()) return null;
     try {
       return localStorage.getItem(key);
     } catch (e) {
+      console.warn(`Kunde inte läsa från localStorage (key: ${key}):`, e.message);
       return null;
     }
   },
 
   setItem: (key: string, value: string): boolean => {
+    if (!isStorageAvailable()) return false;
     try {
       localStorage.setItem(key, value);
       return true;
     } catch (e) {
+      console.warn(`Kunde inte skriva till localStorage (key: ${key}):`, e.message);
       return false;
     }
   },
 
   removeItem: (key: string): boolean => {
+    if (!isStorageAvailable()) return false;
     try {
       localStorage.removeItem(key);
       return true;
     } catch (e) {
+      console.warn(`Kunde inte ta bort från localStorage (key: ${key}):`, e.message);
       return false;
     }
   },
 
   clear: (): boolean => {
+    if (!isStorageAvailable()) return false;
     try {
       localStorage.clear();
       return true;
     } catch (e) {
+      console.warn('Kunde inte rensa localStorage:', e.message);
       return false;
     }
   },
 
   isAvailable: (): boolean => {
-    try {
-      const testKey = '__storage_test__';
-      localStorage.setItem(testKey, 'test');
-      localStorage.removeItem(testKey);
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return isStorageAvailable();
   }
 };
+
+// Alias för bakåtkompatibilitet
+export const safeLocalStorage = safeStorage;
 
 // Memory fallback för när localStorage inte är tillgängligt
 const memoryStorage: Record<string, string> = {};
@@ -135,5 +156,15 @@ export const handbookStorage = {
       }
     }
     return null;
+  },
+
+  clearDocumentImportState: (): boolean => {
+    return safeStorage.removeItem('document-import-state');
+  },
+
+  clearAllStates: (): boolean => {
+    const success1 = handbookStorage.clearFormState();
+    const success2 = handbookStorage.clearDocumentImportState();
+    return success1 && success2;
   }
 }; 

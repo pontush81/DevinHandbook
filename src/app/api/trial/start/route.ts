@@ -39,7 +39,8 @@ export async function POST(req: NextRequest) {
     console.log('[Trial Start] Template data received:', {
       hasTemplate: !!template,
       sectionsCount: template?.sections?.length || 0,
-      sectionTitles: template?.sections?.map((s: any) => s.title) || []
+      sectionTitles: template?.sections?.map((s: any) => s.title) || [],
+      fullTemplate: template // Add full template for debugging
     });
 
     // Kontrollera om användaren är berättigad till trial

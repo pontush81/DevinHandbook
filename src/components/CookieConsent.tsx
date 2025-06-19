@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { X, Cookie, Settings } from 'lucide-react';
 import Link from 'next/link';
+import { safeLocalStorage } from '@/lib/safe-storage';
 
 interface CookieConsentProps {
   onAccept?: () => void;
@@ -17,9 +18,7 @@ export function CookieConsent({ onAccept, onDecline }: CookieConsentProps) {
 
   useEffect(() => {
     // Kontrollera om användaren redan har valt
-    const consent = typeof window !== 'undefined' && localStorage
-      ? localStorage.getItem('cookie_consent')
-      : null;
+    const consent = safeLocalStorage.getItem('cookie_consent');
     
     if (!consent) {
       setIsVisible(true);
@@ -27,33 +26,30 @@ export function CookieConsent({ onAccept, onDecline }: CookieConsentProps) {
   }, []);
 
   const handleAccept = () => {
-    if (typeof window !== 'undefined' && localStorage) {
-      localStorage.setItem('cookie_consent', 'accepted');
-      localStorage.setItem('cookie_consent_date', new Date().toISOString());
-    }
+    safeLocalStorage.setItem('cookie_consent', 'accepted');
+    safeLocalStorage.setItem('cookie_consent_date', new Date().toISOString());
     setIsVisible(false);
     onAccept?.();
   };
 
   const handleDecline = () => {
-    if (typeof window !== 'undefined' && localStorage) {
-      localStorage.setItem('cookie_consent', 'declined');
-      localStorage.setItem('cookie_consent_date', new Date().toISOString());
+    safeLocalStorage.setItem('cookie_consent', 'declined');
+    safeLocalStorage.setItem('cookie_consent_date', new Date().toISOString());
       
-      // Rensa befintliga cookies (förutom nödvändiga)
-      document.cookie.split(';').forEach(cookie => {
-        const eqPos = cookie.indexOf('=');
-        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-        
-        // Behåll endast absolut nödvändiga cookies
-        if (!name.startsWith('__') && name !== 'cookie_consent') {
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-          if (window.location.hostname.includes('handbok.org')) {
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.handbok.org`;
-          }
+    // Rensa befintliga cookies (förutom nödvändiga)
+    document.cookie.split(';').forEach(cookie => {
+      const eqPos = cookie.indexOf('=');
+      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+      
+      // Behåll endast absolut nödvändiga cookies
+      if (!name.startsWith('__') && name !== 'cookie_consent') {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        if (window.location.hostname.includes('handbok.org')) {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.handbok.org`;
         }
-      });
-    }
+      }
+    });
+    
     setIsVisible(false);
     onDecline?.();
   };
@@ -130,24 +126,20 @@ export function useCookieConsent() {
   const [consentType, setConsentType] = useState<'accepted' | 'declined' | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage) {
-      const consent = localStorage.getItem('cookie_consent');
-      if (consent) {
-        setHasConsent(true);
-        setConsentType(consent as 'accepted' | 'declined');
-      } else {
-        setHasConsent(false);
-      }
+    const consent = safeLocalStorage.getItem('cookie_consent');
+    if (consent) {
+      setHasConsent(true);
+      setConsentType(consent as 'accepted' | 'declined');
+    } else {
+      setHasConsent(false);
     }
   }, []);
 
   const updateConsent = (type: 'accepted' | 'declined') => {
-    if (typeof window !== 'undefined' && localStorage) {
-      localStorage.setItem('cookie_consent', type);
-      localStorage.setItem('cookie_consent_date', new Date().toISOString());
-      setHasConsent(true);
-      setConsentType(type);
-    }
+    safeLocalStorage.setItem('cookie_consent', type);
+    safeLocalStorage.setItem('cookie_consent_date', new Date().toISOString());
+    setHasConsent(true);
+    setConsentType(type);
   };
 
   return {

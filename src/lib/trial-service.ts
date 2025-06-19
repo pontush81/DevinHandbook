@@ -1,30 +1,8 @@
-import { supabase } from './supabase';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
-// Service role client för server-side operationer - skapas endast när behövs
-let supabaseAdmin: any = null;
-
-function getSupabaseAdmin() {
-  if (!supabaseAdmin && typeof window === 'undefined') {
-    // Endast på server-sidan
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Missing Supabase environment variables for admin client');
-      throw new Error('Missing Supabase configuration');
-    }
-    
-    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-  }
-  return supabaseAdmin;
-}
-
+/**
+ * Interface för trial-status - FÖRENKLAD
+ */
 export interface TrialStatus {
   isInTrial: boolean;
   trialDaysRemaining: number;
@@ -34,20 +12,22 @@ export interface TrialStatus {
   hasUsedTrial: boolean;
 }
 
-export interface UserProfile {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  email: string | null;
-  full_name: string | null;
-  trial_started_at: string | null;
-  trial_ends_at: string | null;
-  trial_used: boolean;
-  subscription_status: string;
-  subscription_end_date: string | null;
-  stripe_customer_id: string | null;
-  first_handbook_created_at: string | null;
-  total_handbooks_created: number;
+/**
+ * Interface för förbättrad trial-status med mer detaljerad information
+ */
+export interface EnhancedTrialStatus extends TrialStatus {
+  trialPhase: 'early' | 'engagement' | 'conversion';
+  reminders: TrialReminder[];
+  nextAction: string;
+  urgencyLevel: 'low' | 'medium' | 'high';
+}
+
+export interface TrialReminder {
+  type: 'trial_ending' | 'trial_expired' | 'payment_required';
+  message: string;
+  actionText: string;
+  urgency: 'low' | 'medium' | 'high';
+  daysUntilAction: number;
 }
 
 /**
@@ -84,7 +64,7 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus> {
       subscriptionStatus: result?.subscription_status || 'none',
       trialEndsAt: result?.trial_ends_at || null,
       canCreateHandbook: !hasHandbooks || result?.is_in_trial || result?.subscription_status === 'active',
-      hasUsedTrial: hasTrialHandbook
+      hasUsedTrial: hasTrialHandbook,
     };
   } catch (error) {
     console.error('Error in getTrialStatus:', error);
@@ -94,188 +74,84 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus> {
       subscriptionStatus: 'none',
       trialEndsAt: null,
       canCreateHandbook: true, // Default till true för att inte blockera
-      hasUsedTrial: false
+      hasUsedTrial: false,
     };
   }
 }
 
 /**
- * Startar trial för en användare (server-side med admin privileges)
+ * Startar en trial för en användare (server-side med service role)
  */
-export async function startUserTrial(userId: string, userEmail?: string): Promise<UserProfile | null> {
+export async function startUserTrial(userId: string, userEmail?: string) {
+  console.log('[Trial Service] Starting trial for user:', userId);
+  
   try {
-    const { data, error } = await getSupabaseAdmin()
+    // Använd server-side supabase för RPC-anrop
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
+    const { data, error } = await supabaseAdmin
       .rpc('start_user_trial', { 
         user_uuid: userId
       });
 
     if (error) {
-      console.error('Error starting trial:', error);
+      console.error('[Trial Service] Error starting trial:', error);
       throw error;
     }
 
+    console.log('[Trial Service] Trial started successfully:', data);
     return data;
   } catch (error) {
-    console.error('Error in startUserTrial:', error);
+    console.error('[Trial Service] Error in startUserTrial:', error);
     throw error;
   }
 }
 
 /**
- * Hämtar användarprofil (client-side)
- */
-export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  try {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
-      console.error('Error fetching user profile:', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in getUserProfile:', error);
-    return null;
-  }
-}
-
-/**
- * Hämtar användarprofil (server-side med admin privileges)
- */
-export async function getUserProfileAdmin(userId: string): Promise<UserProfile | null> {
-  try {
-    const { data, error } = await getSupabaseAdmin()
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
-      console.error('Error fetching user profile (admin):', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in getUserProfileAdmin:', error);
-    return null;
-  }
-}
-
-/**
- * Uppdaterar användarprofil när första handboken skapas
- */
-export async function markFirstHandbookCreated(userId: string): Promise<void> {
-  try {
-    const { error } = await getSupabaseAdmin()
-      .from('user_profiles')
-      .update({
-        first_handbook_created_at: new Date().toISOString(),
-        total_handbooks_created: 1
-      })
-      .eq('id', userId);
-
-    if (error) {
-      console.error('Error marking first handbook created:', error);
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error in markFirstHandbookCreated:', error);
-    throw error;
-  }
-}
-
-/**
- * Kontrollerar om användaren är berättigad till gratis trial (server-side)
+ * Kontrollerar om en användare är berättigad till trial
  */
 export async function isEligibleForTrial(userId: string): Promise<boolean> {
   try {
-    const profile = await getUserProfileAdmin(userId);
+    const status = await getTrialStatus(userId);
     
-    // Om ingen profil finns - berättigad till trial
-    if (!profile) {
-      return true;
-    }
-
-    // Om trial aldrig använts - berättigad
-    if (!profile.trial_used) {
-      return true;
-    }
-
-    // Om trial använts men inga handböcker skapats - berättigad
-    if (profile.trial_used && profile.total_handbooks_created === 0) {
-      return true;
-    }
-
-    return false;
+    // Berättigad om användaren inte har använt trial än ELLER är i en aktiv trial
+    return !status.hasUsedTrial || status.isInTrial;
   } catch (error) {
     console.error('Error checking trial eligibility:', error);
-    return false;
+    // Default till berättigad vid fel för att inte blockera användare
+    return true;
   }
 }
 
 /**
- * Skapar aktivitetslogg för trial-händelser
- */
-export async function logTrialActivity(
-  userId: string, 
-  activityType: 'trial_started' | 'trial_extended' | 'trial_ended' | 'trial_converted',
-  description: string,
-  metadata?: Record<string, any>
-): Promise<void> {
-  try {
-    const { error } = await getSupabaseAdmin()
-      .from('trial_activities')
-      .insert({
-        user_id: userId,
-        activity_type: activityType,
-        description,
-        metadata: metadata || {}
-      });
-
-    if (error) {
-      console.error('Error logging trial activity:', error);
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error in logTrialActivity:', error);
-    throw error;
-  }
-}
-
-/**
- * Formaterar datum för visning
+ * Hjälpfunktioner för datum och formatering
  */
 export function formatTrialEndDate(trialEndsAt: string | null): string {
-  if (!trialEndsAt) return '';
+  if (!trialEndsAt) return 'Okänt datum';
   
-  const date = new Date(trialEndsAt);
-  return date.toLocaleDateString('sv-SE', {
+  const endDate = new Date(trialEndsAt);
+  return endDate.toLocaleDateString('sv-SE', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    day: 'numeric'
   });
 }
 
-/**
- * Kontrollerar om trial har gått ut
- */
 export function isTrialExpired(trialEndsAt: string | null): boolean {
   if (!trialEndsAt) return false;
-  
-  return new Date(trialEndsAt) < new Date();
+  return new Date() > new Date(trialEndsAt);
 }
 
-/**
- * Räknar ut dagar kvar av trial
- */
 export function getTrialDaysRemaining(trialEndsAt: string | null): number {
   if (!trialEndsAt) return 0;
   
@@ -285,4 +161,104 @@ export function getTrialDaysRemaining(trialEndsAt: string | null): number {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   return Math.max(0, diffDays);
+}
+
+/**
+ * Hämtar förbättrad trial-status med påminnelser och rekommendationer
+ */
+export async function getEnhancedTrialStatus(userId: string): Promise<EnhancedTrialStatus> {
+  const basicStatus = await getTrialStatus(userId);
+  
+  // Bestäm trial-fas
+  const trialPhase = getTrialPhase(basicStatus.trialDaysRemaining);
+  
+  // Generera påminnelser baserat på dagar kvar
+  const reminders = getTrialReminders(basicStatus.trialDaysRemaining, basicStatus.isInTrial);
+  
+  // Bestäm nästa action
+  const nextAction = getNextAction(basicStatus);
+  
+  // Bestäm urgency level
+  const urgencyLevel = getUrgencyLevel(basicStatus.trialDaysRemaining, basicStatus.isInTrial);
+  
+  return {
+    ...basicStatus,
+    trialPhase,
+    reminders,
+    nextAction,
+    urgencyLevel
+  };
+}
+
+/**
+ * Bestämmer vilken fas av trial användaren är i
+ */
+export function getTrialPhase(daysRemaining: number): 'early' | 'engagement' | 'conversion' {
+  if (daysRemaining > 20) return 'early';
+  if (daysRemaining > 7) return 'engagement';
+  return 'conversion';
+}
+
+/**
+ * Genererar påminnelser baserat på trial-status
+ */
+export function getTrialReminders(daysRemaining: number, isInTrial: boolean): TrialReminder[] {
+  const reminders: TrialReminder[] = [];
+  
+  if (!isInTrial) {
+    reminders.push({
+      type: 'trial_expired',
+      message: 'Din trial har gått ut. Uppgradera för att fortsätta använda handbok.org.',
+      actionText: 'Uppgradera nu',
+      urgency: 'high',
+      daysUntilAction: 0
+    });
+  } else if (daysRemaining <= 3) {
+    reminders.push({
+      type: 'trial_ending',
+      message: `Din trial går ut om ${daysRemaining} dag${daysRemaining !== 1 ? 'ar' : ''}. Uppgradera för att behålla åtkomst.`,
+      actionText: 'Uppgradera nu',
+      urgency: 'high',
+      daysUntilAction: daysRemaining
+    });
+  } else if (daysRemaining <= 7) {
+    reminders.push({
+      type: 'trial_ending',
+      message: `Du har ${daysRemaining} dagar kvar av din gratis trial.`,
+      actionText: 'Se prisplaner',
+      urgency: 'medium',
+      daysUntilAction: daysRemaining
+    });
+  }
+  
+  return reminders;
+}
+
+/**
+ * Bestämmer nästa rekommenderade action för användaren
+ */
+function getNextAction(status: TrialStatus): string {
+  if (!status.isInTrial) {
+    return 'Uppgradera till betald plan';
+  }
+  
+  if (status.trialDaysRemaining <= 3) {
+    return 'Uppgradera innan trial går ut';
+  }
+  
+  if (status.trialDaysRemaining <= 7) {
+    return 'Överväg att uppgradera';
+  }
+  
+  return 'Fortsätt utforska funktioner';
+}
+
+/**
+ * Bestämmer urgency level baserat på trial-status
+ */
+function getUrgencyLevel(daysRemaining: number, isInTrial: boolean): 'low' | 'medium' | 'high' {
+  if (!isInTrial) return 'high';
+  if (daysRemaining <= 3) return 'high';
+  if (daysRemaining <= 7) return 'medium';
+  return 'low';
 } 
