@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { SessionReconnectHandler } from "@/components/SessionReconnectHandler";
 import { AuthDebugButton } from "@/components/debug/AuthDebugButton";
 import { CookieConsent } from "@/components/CookieConsent";
+import { PWAPrompt } from "@/components/PWAPrompt";
 // Import dev utils to make forceLogout available globally
 import "@/lib/dev-utils";
 
@@ -51,6 +52,24 @@ export default function RootLayout({
         <meta name="geo.region" content="SE" />
         <meta name="geo.country" content="Sweden" />
         <link rel="canonical" href="https://handbok.org/" />
+        
+        {/* PWA Meta Tags */}
+        <meta name="application-name" content="Handbok" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Handbok" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <meta name="msapplication-TileColor" content="#2563eb" />
+        <meta name="msapplication-tap-highlight" content="no" />
+        <link rel="manifest" href="/manifest.json" />
+        
+        {/* PWA Icons */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icon-16x16.png" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2563eb" />
         
         {/* Structured Data for Organization */}
         <script type="application/ld+json">
@@ -253,8 +272,42 @@ export default function RootLayout({
           <SessionReconnectHandler />
           {children}
           <CookieConsent />
+          <PWAPrompt />
           <AuthDebugButton />
         </AuthProvider>
+        
+        {/* PWA Service Worker Registration */}
+        <Script id="pwa-register" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                  .then(function(registration) {
+                    console.log('PWA: Service Worker registrerad:', registration.scope);
+                    
+                    // Lyssna på uppdateringar
+                    registration.addEventListener('updatefound', () => {
+                      const newWorker = registration.installing;
+                      if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Ny version tillgänglig
+                            if (confirm('En ny version av appen är tillgänglig. Vill du uppdatera?')) {
+                              newWorker.postMessage({ type: 'SKIP_WAITING' });
+                              window.location.reload();
+                            }
+                          }
+                        });
+                      }
+                    });
+                  })
+                  .catch(function(error) {
+                    console.log('PWA: Service Worker registrering misslyckades:', error);
+                  });
+              });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );

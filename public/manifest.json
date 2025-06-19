@@ -1,0 +1,49 @@
+{
+  "name": "Handbok - Digital Personalhandbok",
+  "short_name": "Handbok",
+  "description": "Din digitala personalhandbok - alltid tillgänglig på din enhet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "sv",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity", "reference"],
+  "shortcuts": [
+    {
+      "name": "Visa handbok",
+      "short_name": "Handbok",
+      "description": "Öppna din personalhandbok",
+      "url": "/view",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Redigera",
+      "short_name": "Redigera", 
+      "description": "Redigera handboken",
+      "url": "/edit-handbook",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+} 
