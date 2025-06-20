@@ -138,7 +138,21 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
   try {
     console.log(`[Handbook Service] Getting handbook by slug: ${slug}`);
 
-    const { data: handbook, error } = await (supabase as any)
+    // First, let's check if there are any handbooks with this slug at all (published or not)
+    const { data: allHandbooks, error: debugError } = await (supabase as any)
+      .from('handbooks')
+      .select('id, title, slug, published')
+      .eq('slug', slug);
+
+    if (debugError) {
+      console.error('[Handbook Service] Debug query error:', debugError);
+    } else {
+      console.log(`[Handbook Service] Debug: Found ${allHandbooks?.length || 0} handbooks with slug "${slug}":`, 
+        allHandbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
+      );
+    }
+
+    const { data: handbooks, error } = await (supabase as any)
       .from('handbooks')
       .select(`
         id,
@@ -167,20 +181,28 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
         )
       `)
       .eq('slug', slug)
-      .eq('published', true)
-      .single();
+      .eq('published', true);
 
     if (error) {
       console.error('[Handbook Service] Error getting handbook:', error);
       return null;
     }
 
-    if (!handbook) {
-      console.log('[Handbook Service] No handbook found');
+    if (!handbooks || handbooks.length === 0) {
+      console.log(`[Handbook Service] No published handbook found with slug: ${slug}`);
+      // Check if there's an unpublished version
+      if (allHandbooks && allHandbooks.length > 0) {
+        const unpublished = allHandbooks.find(h => !h.published);
+        if (unpublished) {
+          console.warn(`[Handbook Service] Found unpublished handbook with slug: ${slug} (id: ${unpublished.id})`);
+        }
+      }
       return null;
     }
 
-    console.log(`[Handbook Service] Found handbook: ${handbook.title}`);
+    const handbook = handbooks[0];
+
+    console.log(`[Handbook Service] Found handbook: ${handbook.title} (id: ${handbook.id})`);
     
     return {
       id: handbook.id,
@@ -228,7 +250,7 @@ export async function getHandbookById(id: string) {
     return cached.data;
   }
 
-  const { data: handbookData, error: handbookError } = await supabase
+  const { data: handbookDataArray, error: handbookError } = await supabase
     .from('handbooks')
     .select(`
       id,
@@ -261,18 +283,19 @@ export async function getHandbookById(id: string) {
         )
       )
     `)
-    .eq('id', id)
-    .single();
+    .eq('id', id);
 
   if (handbookError) {
     console.error('[getHandbookById] Error fetching handbook:', handbookError);
     return null;
   }
 
-  if (!handbookData) {
+  if (!handbookDataArray || handbookDataArray.length === 0) {
     console.error('[getHandbookById] No handbook found for id:', id);
     return null;
   }
+
+  const handbookData = handbookDataArray[0];
 
   // Create the handbook object with proper structure
   const handbookObj = {

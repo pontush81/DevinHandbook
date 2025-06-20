@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, syncCookiesToLocalStorage } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
@@ -201,18 +201,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Prevent double initialization with ref for immediate check
+  // Global initialization flag to prevent multiple instances
   const initializationRef = useRef(false);
 
   // Initiera session från Supabase
   useEffect(() => {
-    // Simple single check to prevent double initialization
+    // Kontrollera global flagga för att förhindra dubbel initialisering
+    if (typeof window !== 'undefined' && (window as any).__authInitialized) {
+      console.log('🔄 AuthContext: Already initialized globally, skipping...');
+      return;
+    }
+    
+    // Kontrollera lokal flagga
     if (initializationRef.current) {
-      console.log('🔄 AuthContext: Already initialized, skipping...');
+      console.log('🔄 AuthContext: Already initialized locally, skipping...');
       return;
     }
     
     initializationRef.current = true;
+    if (typeof window !== 'undefined') {
+      (window as any).__authInitialized = true;
+    }
 
     const setData = async () => {
       console.log('🔄 AuthContext: Initializing auth state...');
@@ -227,6 +236,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         console.log('🌐 AuthContext: Running on client, proceeding with auth check');
+
+        // Synkronisera cookies till localStorage om det behövs
+        try {
+          syncCookiesToLocalStorage();
+        } catch (syncError) {
+          console.warn('Cookie sync failed:', syncError);
+        }
 
         // Hämta aktuell session
         console.log('📡 AuthContext: Getting current session from Supabase...');
@@ -325,25 +341,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Separat useEffect för lyssnare för att undvika race conditions
   useEffect(() => {
     // Prevent setting up multiple listeners
-    if (initializationInProgress.current) {
+    if (typeof window !== 'undefined' && (window as any).__authListenerSetup) {
       return;
+    }
+
+    if (typeof window !== 'undefined') {
+      (window as any).__authListenerSetup = true;
     }
 
     // Lyssna på auth-ändringar
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Skip if we're still initializing to prevent race conditions
-      if (initializationInProgress.current) {
-        return;
-      }
-
-      // Reduce auth logging frequency to prevent render loops
-      if (Math.random() < 0.2) { // Only log 20% of auth changes
-        console.log('Auth state change:', event, {
+      // Reduced logging to prevent spam
+      if (Math.random() < 0.1) { // Only log 10% of auth changes
+        console.log('🔄 Auth state change:', event, {
           hasSession: !!session,
-          userId: session?.user?.id,
-          expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none'
+          userId: session?.user?.id
         });
       }
+
+      // Auth state change logging already handled above
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         console.log('User signed in or token refreshed');
@@ -420,6 +436,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Städa upp error-lyssnare
       if (typeof window !== 'undefined') {
         window.removeEventListener('supabase.auth.error', handleAuthError as EventListener);
+        // Rensa globala flaggor vid cleanup
+        delete (window as any).__authListenerSetup;
       }
     };
   }, []);

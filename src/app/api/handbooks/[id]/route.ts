@@ -12,7 +12,7 @@ export async function GET(
     const supabase = getServiceSupabase();
     
     // Fetch handbook with sections and pages
-    const { data: handbook, error: handbookError } = await supabase
+    const { data: handbooks, error: handbookError } = await supabase
       .from('handbooks')
       .select(`
         *,
@@ -36,8 +36,7 @@ export async function GET(
           )
         )
       `)
-      .eq('id', handbookId)
-      .single();
+      .eq('id', handbookId);
 
     if (handbookError) {
       console.error('❌ [API] Error fetching handbook:', handbookError);
@@ -47,12 +46,14 @@ export async function GET(
       );
     }
 
-    if (!handbook) {
+    if (!handbooks || handbooks.length === 0) {
       return NextResponse.json(
         { error: 'Handbook not found' },
         { status: 404 }
       );
     }
+
+    const handbook = handbooks[0];
 
     // Sort sections by order_index
     if (handbook.sections) {

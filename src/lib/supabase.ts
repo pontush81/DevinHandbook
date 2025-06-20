@@ -310,21 +310,58 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   throw detailedError;
 };
 
-// Förenklad storage som använder Supabase's inbyggda cookie-hantering
-const customStorage = {
+// Enkel storage-implementation som läser från både localStorage och cookies
+const hybridStorage = {
   getItem: (key: string): string | null => {
-    // Låt Supabase hantera storage genom cookies
-    return null;
+    try {
+      // Försök localStorage först
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const value = localStorage.getItem(key);
+        if (value) return value;
+      }
+      
+      // Fallback till cookies
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === key && value) {
+            return decodeURIComponent(value);
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn(`Storage getItem error for key ${key}:`, error);
+      return null;
+    }
   },
+  
   setItem: (key: string, value: string): void => {
-    // Låt Supabase hantera storage genom cookies
+    try {
+      // Försök localStorage först
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(key, value);
+      }
+    } catch (error) {
+      console.warn(`Storage setItem error for key ${key}:`, error);
+    }
   },
+  
   removeItem: (key: string): void => {
-    // Låt Supabase hantera storage genom cookies
+    try {
+      // Ta bort från localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.warn(`Storage removeItem error for key ${key}:`, error);
+    }
   }
 };
 
-// Skapa en Supabase-klient för klientsidan med ENDAST cookies
+// Skapa en Supabase-klient för klientsidan
 export const supabase = createClient<Database>(
   supabaseUrl,
   supabaseAnonKey,
@@ -334,22 +371,7 @@ export const supabase = createClient<Database>(
       persistSession: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
-      // Konfigurera cookies för optimal cross-domain kompatibilitet
-      cookieOptions: {
-        name: 'sb-auth',
-        lifetime: 60 * 60 * 24 * 7,
-        // Använd miljövariabel för domän, fallback till automatisk detektion
-        domain: process.env.NODE_ENV === 'production' ? 
-          (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` :
-           (typeof window !== 'undefined' && window.location.hostname.includes('handbok.org') ? '.handbok.org' : undefined)) : 
-          undefined,
-        path: '/',
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: false // Tillåt JavaScript att läsa för att underlätta debugging
-      },
-      // Använd anpassad storage istället för null för att undvika localStorage-fel
-      storage: customStorage
+      storage: hybridStorage
     },
     global: {
       fetch: typeof window !== 'undefined' ? customFetch : undefined,
@@ -357,6 +379,35 @@ export const supabase = createClient<Database>(
     debug: process.env.NODE_ENV !== 'production'
   }
 );
+
+// Hjälpfunktion för att synkronisera cookies till localStorage
+export const syncCookiesToLocalStorage = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  
+  try {
+    const cookies = document.cookie.split(';');
+    let syncedCount = 0;
+    
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name && value && name.startsWith('sb-')) {
+        try {
+          const decodedValue = decodeURIComponent(value);
+          localStorage.setItem(name, decodedValue);
+          syncedCount++;
+        } catch (e) {
+          console.warn(`Could not sync cookie ${name} to localStorage:`, e);
+        }
+      }
+    }
+    
+    if (syncedCount > 0) {
+      console.log(`Synced ${syncedCount} auth cookies to localStorage`);
+    }
+  } catch (error) {
+    console.warn('Error syncing cookies to localStorage:', error);
+  }
+};
 
 // Skapa en Supabase-klient med service role key (endast för server-side)
 export const getServiceSupabase = () => {

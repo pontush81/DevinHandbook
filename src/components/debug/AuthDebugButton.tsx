@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Bug, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, syncCookiesToLocalStorage } from '@/lib/supabase';
 
 export function AuthDebugButton() {
   const { user, session, isLoading, refreshAuth } = useAuth();
@@ -98,6 +98,15 @@ export function AuthDebugButton() {
     setFixResult(null);
     
     try {
+      // Försök först synkronisera cookies
+      try {
+        syncCookiesToLocalStorage();
+        console.log('Cookies synced to localStorage');
+      } catch (syncError) {
+        console.warn('Cookie sync failed:', syncError);
+      }
+      
+      // Sedan försök refresha auth
       const result = await refreshAuth();
       setFixResult(result);
       
