@@ -40,6 +40,14 @@ const nextConfig = {
       ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
     };
     
+    // Development cache optimization
+    config.cache = {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename],
+      },
+    };
+    
     // Reduce build time in development
     config.optimization = {
       ...config.optimization,
@@ -133,6 +141,19 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
           { key: 'Cache-Control', value: 'public, max-age=3600' }
+        ],
+      },
+      // Statiska assets (bilder, ikoner, etc.) med längre cache
+      {
+        source: '/icons/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400, immutable' }
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
         ],
       },
       // PWA-specifika headers
