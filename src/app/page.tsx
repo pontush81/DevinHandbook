@@ -72,7 +72,7 @@ function PilotRequestForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 md:p-8 max-w-2xl mx-auto">
+    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 md:p-8 max-w-2xl mx-auto" suppressHydrationWarning>
       <h3 className="text-xl font-semibold mb-6 text-gray-900 text-center">Ansök som pilotkund</h3>
       
       {error && (

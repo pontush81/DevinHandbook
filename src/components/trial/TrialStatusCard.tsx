@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Gift, Star, AlertTriangle } from 'lucide-react';
 import { getTrialStatus, formatTrialEndDate, isTrialExpired } from '@/lib/trial-service';
 import type { TrialStatus } from '@/lib/trial-service';
+import { getProPricing } from '@/lib/pricing';
 
 interface TrialStatusCardProps {
   userId: string;
@@ -15,6 +16,7 @@ export function TrialStatusCard({ userId, className = '' }: TrialStatusCardProps
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pricing = getProPricing();
 
   useEffect(() => {
     async function fetchTrialStatus() {
@@ -134,8 +136,8 @@ export function TrialStatusCard({ userId, className = '' }: TrialStatusCardProps
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button className="bg-blue-600 hover:bg-blue-700 flex-1">
-                Uppgradera nu (2490 kr/år)
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1">
+                Uppgradera nu ({pricing.yearly})
               </Button>
               <Button variant="outline" className="flex-1">
                 Läs mer om Pro
@@ -192,8 +194,8 @@ export function TrialStatusCard({ userId, className = '' }: TrialStatusCardProps
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button className="bg-blue-600 hover:bg-blue-700 flex-1">
-                Uppgradera nu (2490 kr/år)
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1">
+                Uppgradera nu ({pricing.yearly})
               </Button>
               <Button variant="outline" className="flex-1">
                 Kontakta support

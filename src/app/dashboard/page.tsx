@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { checkIsSuperAdmin } from "@/lib/user-utils";
 import { useToast } from '@/components/ui/use-toast';
-import { TrialStatusCard } from '@/components/trial/TrialStatusCard';
+import { getProPricing } from '@/lib/pricing';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,9 @@ interface Handbook {
   subdomain: string;
   created_at: string;
   published: boolean;
+  owner_id?: string;
+  userRole?: string;
+  handbook_members?: Array<{ role: string }>;
 }
 
 export default function DashboardPage() {
@@ -92,18 +95,49 @@ export default function DashboardPage() {
           .select("id, title, slug, created_at, published")
           .order("created_at", { ascending: false }));
       } else {
-        ({ data, error } = await supabase
+        // Först hämta handböcker som användaren äger
+        const { data: ownedHandbooks, error: ownedError } = await supabase
           .from("handbooks")
-          .select("id, title, slug, created_at, published")
-          .eq("owner_id", user.id as any)
-          .order("created_at", { ascending: false }));
+          .select("id, title, slug, created_at, published, owner_id")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (ownedError) throw ownedError;
+
+        // Sedan hämta handböcker där användaren är medlem (men inte ägare)
+        const { data: memberHandbooks, error: memberError } = await supabase
+          .from("handbooks")
+          .select(`
+            id, 
+            title, 
+            slug, 
+            created_at, 
+            published,
+            owner_id,
+            handbook_members!inner(role)
+          `)
+          .eq("handbook_members.user_id", user.id)
+          .neq("owner_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (memberError) throw memberError;
+
+        // Kombinera resultaten
+        data = [
+          ...(ownedHandbooks || []).map(h => ({ ...h, handbook_members: [{ role: 'admin' }] })),
+          ...(memberHandbooks || [])
+        ];
+        
+        // Sortera efter created_at igen efter sammanslagning
+        data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       }
-      if (error) throw error;
       
-      // Map slug to subdomain for interface compatibility
+      // Map slug to subdomain for interface compatibility and add role info
       const mappedData = (data || []).map(handbook => ({
         ...handbook,
-        subdomain: handbook.slug
+        subdomain: handbook.slug,
+        // Sätt användarens roll - ägare är alltid admin, annars använd rollen från handbook_members
+        userRole: handbook.owner_id === user.id ? 'admin' : handbook.handbook_members?.[0]?.role || 'viewer'
       }));
       
       setHandbooks(mappedData as Handbook[]);
@@ -172,6 +206,58 @@ export default function DashboardPage() {
     setDeleteConfirmation({ isOpen: false, handbookId: '', handbookTitle: '' });
   };
 
+  const handleUpgradeClick = async () => {
+    setIsLoadingHandbooks(true);
+    
+    try {
+      if (!user) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad för att uppgradera.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Skapa Stripe checkout session för årsprenumeration
+      const response = await fetch('/api/stripe/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          planType: 'yearly', // Förvald årsprenumeration för bättre värde
+          successUrl: `${window.location.origin}/dashboard?upgraded=true`,
+          cancelUrl: `${window.location.origin}/dashboard?upgrade_cancelled=true`
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Misslyckades att skapa betalning');
+      }
+
+      // Omdirigera till Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Ingen betalnings-URL mottagen');
+      }
+
+    } catch (error) {
+      console.error('Fel vid uppgradering:', error);
+      toast({
+        title: "Fel vid uppgradering",
+        description: error instanceof Error ? error.message : "Något gick fel. Försök igen senare.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingHandbooks(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -180,6 +266,11 @@ export default function DashboardPage() {
     );
   }
 
+  // Räkna antal handböcker som användaren äger
+  const ownedHandbooks = handbooks.filter(h => h.userRole === 'admin');
+  const memberHandbooks = handbooks.filter(h => h.userRole !== 'admin');
+  const pricing = getProPricing();
+
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12">
@@ -187,20 +278,18 @@ export default function DashboardPage() {
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-12">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Mina handböcker</h1>
-              <p className="text-gray-600 mb-4 md:mb-0">Hantera dina digitala handböcker</p>
+              <p className="text-gray-600 mb-4 md:mb-0">Handböcker du äger eller är medlem i</p>
             </div>
-            {(isSuperadmin || handbooks.length === 0) && (
+            {(isSuperadmin || ownedHandbooks.length === 0) && (
               <Button asChild size="lg" className="shadow-md">
                 <Link href="/create-handbook?new=true">
-                  Skapa ny handbok
+                  {ownedHandbooks.length === 0 && memberHandbooks.length > 0 
+                    ? "Skapa din egen handbok" 
+                    : "Skapa ny handbok"}
                 </Link>
               </Button>
             )}
-            {!isSuperadmin && handbooks.length >= 1 && (
-              <Button size="lg" className="shadow-md bg-blue-600 hover:bg-blue-700">
-                Uppgradera för fler handböcker
-              </Button>
-            )}
+
           </div>
           
           {error && (
@@ -211,10 +300,7 @@ export default function DashboardPage() {
             </Card>
           )}
           
-          {/* Trial Status Card - visa för alla användare som inte är superadmin */}
-          {user && !isSuperadmin && (
-            <TrialStatusCard userId={user.id} className="mb-8" />
-          )}
+
           
           {isLoadingHandbooks ? (
             <div className="flex justify-center py-12">
@@ -248,35 +334,126 @@ export default function DashboardPage() {
             </Card>
           ) : (
             <div className="space-y-6">
-              {/* Informationsruta för användare med en handbok */}
-              {!isSuperadmin && handbooks.length === 1 && (
-                <Card className="border-0 shadow-md bg-gradient-to-r from-blue-50 to-indigo-50">
+
+
+              {/* Informationsruta för användare som bara är medlemmar */}
+              {!isSuperadmin && ownedHandbooks.length === 0 && memberHandbooks.length > 0 && (
+                <Card className="border-0 shadow-md bg-gradient-to-r from-green-50 to-blue-50">
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-2xl">💡</span>
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-2xl">👥</span>
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-2">Vill du skapa fler handböcker?</h3>
+                        <h3 className="font-semibold text-gray-900 mb-2">Vill du skapa din egen handbok?</h3>
                         <p className="text-gray-600 mb-4">
-                          Du har din första handbok! För att skapa fler handböcker och få tillgång till avancerade funktioner, uppgradera till vårt Pro-konto.
+                          Du är medlem i {memberHandbooks.length} handbok{memberHandbooks.length > 1 ? 'er' : ''}. Om du vill skapa och hantera din egen handbok för din förening, kan du komma igång här.
                         </p>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <Button className="bg-blue-600 hover:bg-blue-700">
-                            Uppgradera till Pro
-                          </Button>
-                          <Button variant="outline">
-                            Läs mer om Pro-funktioner
-                          </Button>
-                        </div>
+                                                 <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+                           <Link href="/create-handbook?new=true">
+                             Skapa din egen handbok
+                           </Link>
+                         </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {handbooks.map((handbook) => (
+              {/* Gruppera handböcker efter användarens roll */}
+              {ownedHandbooks.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <span>👑</span> Handböcker du äger
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {ownedHandbooks.map((handbook) => (
+                      <Card 
+                        key={handbook.id} 
+                        className="border-0 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+                      >
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-xl">{handbook.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-gray-500 mb-4">
+                            {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
+                          </p>
+                          <div className="flex items-center gap-2 mb-4">
+                            <Badge variant="default" className={`${handbook.published ? 'bg-green-100 text-green-800 hover:bg-green-100' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}`}>
+                              {handbook.published ? "Publicerad" : "Utkast"}
+                            </Badge>
+                            <Badge 
+                              variant="outline" 
+                              className="border-blue-200 text-blue-800 bg-blue-50"
+                            >
+                              👑 Ägare
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600 mb-4">
+                            <span className="font-medium">URL:</span>{" "}
+                            <p className="text-gray-500 mb-2">
+                              handbok.org/{handbook.subdomain}
+                            </p>
+                          </div>
+                          
+                          {/* Upgrade-knapp för handbok-ägare */}
+                          {!isSuperadmin && ownedHandbooks.length === 1 && (
+                            <div className="mb-4">
+                              <Button 
+                                size="sm" 
+                                className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+                                onClick={handleUpgradeClick}
+                                disabled={isLoadingHandbooks}
+                              >
+                                {isLoadingHandbooks ? "Skapar betalning..." : `Uppgradera (${pricing.yearly})`}
+                              </Button>
+                            </div>
+                          )}
+                          
+                          <div className="flex space-x-2">
+                            <Button 
+                              size="sm"
+                              asChild
+                            >
+                              <Link href={`/${handbook.subdomain}`}>
+                                Hantera
+                              </Link>
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                window.open(`/${handbook.subdomain}`, '_blank');
+                              }}
+                            >
+                              Visa
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => deleteHandbook(handbook.id, handbook.title)}
+                              disabled={deletingId === handbook.id}
+                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 disabled:opacity-50"
+                            >
+                              {deletingId === handbook.id ? "Raderar..." : "Radera"}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Medlemshandböcker */}
+              {memberHandbooks.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <span>👥</span> Handböcker du är medlem i
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {memberHandbooks.map((handbook) => (
                   <Card 
                     key={handbook.id} 
                     className="border-0 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
@@ -288,10 +465,26 @@ export default function DashboardPage() {
                       <p className="text-gray-500 mb-4">
                         {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
                       </p>
-                      <div className="flex items-center mb-4">
+                      <div className="flex items-center gap-2 mb-4">
                         <Badge variant="default" className={`${handbook.published ? 'bg-green-100 text-green-800 hover:bg-green-100' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}`}>
                           {handbook.published ? "Publicerad" : "Utkast"}
                         </Badge>
+                        {handbook.userRole && (
+                          <Badge 
+                            variant="outline" 
+                            className={`${
+                              handbook.userRole === 'admin' 
+                                ? 'border-blue-200 text-blue-800 bg-blue-50' 
+                                : handbook.userRole === 'editor'
+                                ? 'border-yellow-200 text-yellow-800 bg-yellow-50'
+                                : 'border-gray-200 text-gray-600 bg-gray-50'
+                            }`}
+                          >
+                            {handbook.userRole === 'admin' ? '👑 Ägare' : 
+                             handbook.userRole === 'editor' ? '✏️ Redaktör' : 
+                             '👁️ Medlem'}
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-gray-600 mb-6">
                         <span className="font-medium">URL:</span>{" "}
@@ -300,14 +493,16 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <div className="flex space-x-2">
-                        <Button 
-                          size="sm"
-                          asChild
-                        >
-                          <Link href={`/${handbook.subdomain}`}>
-                            Redigera
-                          </Link>
-                        </Button>
+                        {(handbook.userRole === 'admin' || handbook.userRole === 'editor') && (
+                          <Button 
+                            size="sm"
+                            asChild
+                          >
+                            <Link href={`/${handbook.subdomain}`}>
+                              {handbook.userRole === 'admin' ? 'Hantera' : 'Redigera'}
+                            </Link>
+                          </Button>
+                        )}
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -317,20 +512,24 @@ export default function DashboardPage() {
                         >
                           Visa
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => deleteHandbook(handbook.id, handbook.title)}
-                          disabled={deletingId === handbook.id}
-                          className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 disabled:opacity-50"
-                        >
-                          {deletingId === handbook.id ? "Raderar..." : "Radera"}
-                        </Button>
+                        {handbook.userRole === 'admin' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => deleteHandbook(handbook.id, handbook.title)}
+                            disabled={deletingId === handbook.id}
+                            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 disabled:opacity-50"
+                          >
+                            {deletingId === handbook.id ? "Raderar..." : "Radera"}
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </main>
