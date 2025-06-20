@@ -114,6 +114,14 @@ export default function LoginClient() {
     // Kolla om e-posten är verifierad via URL-parametern
     if (verified === "true") {
       setShowVerifiedMessage(true);
+      
+      // Rensa localStorage-flaggor för join-processen eftersom den är klar
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('joining_handbook_via_code');
+        localStorage.removeItem('pending_join_code');
+        console.log('Cleared localStorage flags after email verification');
+      }
+      
       // Automatiskt ta bort meddelandet efter 10 sekunder
       const timer = setTimeout(() => {
         setShowVerifiedMessage(false);
@@ -178,6 +186,13 @@ export default function LoginClient() {
             console.log("Session satt med token från URL");
             const { data: { user: sessionUser } } = await supabase.auth.getUser();
             setUser(sessionUser);
+            
+            // Om användaren precis har registrerat sig, låt dem se registreringsmeddelandet först
+            if (sessionUser && registrationSuccess) {
+              console.log("Användaren är inloggad via tokens men precis registrerad, visar registreringsmeddelande");
+              return;
+            }
+            
             setRedirecting(true);
             
             // If user has join code, handle that first
@@ -229,6 +244,38 @@ export default function LoginClient() {
           // Kontrollera om användaren redan är inloggad
           const { data: { user: currentUser } } = await supabase.auth.getUser();
           setUser(currentUser);
+          
+          // Om användaren är inloggad men precis har registrerat sig, låt dem se registreringsmeddelandet
+          if (currentUser && registrationSuccess) {
+            console.log("Användaren är inloggad men precis registrerad, visar registreringsmeddelande");
+            return;
+          }
+          
+          // Om användaren kommer från e-postbekräftelse och redan är inloggad, omdirigera direkt
+          if (currentUser && verified === "true") {
+            console.log("Användaren är inloggad och kommer från e-postbekräftelse, omdirigerar direkt");
+            setRedirecting(true);
+            
+            // Rensa localStorage-flaggor
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('joining_handbook_via_code');
+              localStorage.removeItem('pending_join_code');
+            }
+            
+            // Om det finns en join-kod, omdirigera till handboken
+            if (joinCode && handbookInfo) {
+              setTimeout(() => {
+                window.location.href = `/${handbookInfo.slug}`;
+              }, 2000);
+              return;
+            } else {
+              // Annars omdirigera till dashboard
+              setTimeout(() => {
+                smartRedirectWithPolling(3, 800);
+              }, 1000);
+              return;
+            }
+          }
           
           if (currentUser) {
             setRedirecting(true);
@@ -331,8 +378,8 @@ export default function LoginClient() {
     );
   }
 
-  // Om användaren är inloggad, visa lämpligt UI
-  if (user) {
+  // Om användaren är inloggad OCH inte precis har registrerat sig, visa lämpligt UI
+  if (user && !registrationSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-6">
         <div className="max-w-md w-full bg-white rounded-lg p-8 shadow-lg border border-gray-100 space-y-6">
@@ -468,7 +515,11 @@ export default function LoginClient() {
               </p>
               <p className="mt-2 font-medium">
                 <span className="text-red-600">VIKTIGT:</span> Du måste klicka på länken i mailet 
-                för att aktivera ditt konto innan du kan logga in.
+                för att aktivera ditt konto innan du kan använda alla funktioner.
+              </p>
+              <p className="mt-2">
+                Även om du kan se denna sida, kommer du inte att kunna komma åt alla funktioner 
+                förrän du har verifierat din e-postadress.
               </p>
               <p className="mt-2 text-xs">
                 Kontrollera din skräppost om du inte hittar mailet i inkorgen. Om du fortfarande inte hittar mailet, 

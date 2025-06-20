@@ -16,6 +16,33 @@ export async function POST(request: NextRequest) {
 
     console.log('[Auth API] Confirming user:', { userId, email, hasJoinCode: !!joinCode });
 
+    // Debug: Try to list users to see if user exists
+    try {
+      console.log('[Auth API] Attempting to fetch user with admin client...');
+      const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 10
+      });
+      
+      if (listError) {
+        console.error('[Auth API] Error listing users:', listError);
+      } else {
+        console.log('[Auth API] Total users in system:', listData.users?.length || 0);
+        const targetUser = listData.users?.find(u => u.id === userId);
+        console.log('[Auth API] Target user found in list:', !!targetUser);
+        if (targetUser) {
+          console.log('[Auth API] Target user details:', {
+            id: targetUser.id,
+            email: targetUser.email,
+            email_confirmed_at: targetUser.email_confirmed_at,
+            created_at: targetUser.created_at
+          });
+        }
+      }
+    } catch (debugError) {
+      console.error('[Auth API] Debug error:', debugError);
+    }
+
     // Double-check token validity server-side for security
     // Check timestamp age (24 hours max)
     const now = Date.now();
@@ -46,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Confirm user with admin privileges (server-side only!)
-    const { data: userData, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
+    let { data: userData, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       {
         email_confirm: true
@@ -54,11 +81,58 @@ export async function POST(request: NextRequest) {
     );
 
     if (confirmError) {
-      console.error('[Auth API] Error confirming user:', confirmError);
-      return NextResponse.json(
-        { error: 'Failed to confirm user account', details: confirmError.message },
-        { status: 500 }
-      );
+      console.error('[Auth API] Error confirming user by ID:', confirmError);
+      
+      // Fallback: Try to find user by email and confirm
+      console.log('[Auth API] Attempting fallback: find user by email...');
+      try {
+        const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (listError) {
+          console.error('[Auth API] Error listing users for fallback:', listError);
+          return NextResponse.json(
+            { error: 'Failed to confirm user account', details: confirmError.message },
+            { status: 500 }
+          );
+        }
+        
+        const userByEmail = listData.users?.find(u => u.email === email);
+        
+        if (!userByEmail) {
+          console.error('[Auth API] User not found by email either');
+          return NextResponse.json(
+            { error: 'User not found in system', details: 'User may not have been created properly' },
+            { status: 404 }
+          );
+        }
+        
+        console.log('[Auth API] Found user by email, attempting to confirm with correct ID...');
+        const { data: fallbackUserData, error: fallbackError } = await supabaseAdmin.auth.admin.updateUserById(
+          userByEmail.id,
+          {
+            email_confirm: true
+          }
+        );
+        
+        if (fallbackError) {
+          console.error('[Auth API] Fallback confirmation also failed:', fallbackError);
+          return NextResponse.json(
+            { error: 'Failed to confirm user account', details: fallbackError.message },
+            { status: 500 }
+          );
+        }
+        
+        console.log('[Auth API] User confirmed successfully via fallback method');
+        // Use the fallback data for the rest of the function
+        userData = fallbackUserData;
+        
+      } catch (fallbackError) {
+        console.error('[Auth API] Fallback method failed:', fallbackError);
+        return NextResponse.json(
+          { error: 'Failed to confirm user account', details: confirmError.message },
+          { status: 500 }
+        );
+      }
     }
 
     if (!userData?.user) {

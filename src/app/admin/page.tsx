@@ -90,16 +90,11 @@ export default function AdminDashboardPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      // Fetch users with detailed time filtering
-      const { data: usersData, error: usersError } = await supabase
-        .from("users")
-        .select("id, email, created_at");
-      
+      // Fetch users via API (since auth.users is not accessible via direct query)
       let allUsers: User[] = [];
       
-      if (usersError) {
-        // Fallback to API if direct access fails
-        console.log("Direct DB access failed, trying API fallback");
+      try {
+        console.log("Fetching users via API...");
         const response = await fetch('/api/admin/users');
         
         if (response.ok) {
@@ -107,17 +102,18 @@ export default function AdminDashboardPage() {
           if (apiResult.data && Array.isArray(apiResult.data)) {
             allUsers = apiResult.data;
             setUsers(allUsers);
+            console.log(`Successfully fetched ${allUsers.length} users`);
           } else {
-            console.error("API returned invalid data format");
+            console.error("API returned invalid data format:", apiResult);
             setUsers([]);
           }
         } else {
-          console.error("API request failed");
+          console.error("API request failed with status:", response.status);
           setUsers([]);
         }
-      } else {
-        allUsers = Array.isArray(usersData) ? usersData : [];
-        setUsers(allUsers);
+      } catch (userError) {
+        console.error("Error fetching users:", userError);
+        setUsers([]);
       }
 
       // Calculate detailed stats
