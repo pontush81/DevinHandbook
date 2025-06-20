@@ -32,9 +32,51 @@ export interface TrialReminder {
 
 /**
  * Kontrollerar trial-status för en användare (client-side)
+ * Kollar både user_profiles och subscriptions tabellerna för korrekt status
  */
 export async function getTrialStatus(userId: string): Promise<TrialStatus> {
   try {
+    // Först, kolla om användaren har en aktiv subscription i subscriptions tabellen
+    const { data: subscriptions, error: subError } = await supabase
+      .from('subscriptions')
+      .select('status, plan_type, expires_at, trial_ends_at')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (subError) {
+      console.error('Error checking subscriptions:', subError);
+    }
+
+    // Om användaren har en aktiv subscription, returnera det
+    if (subscriptions && subscriptions.length > 0) {
+      const subscription = subscriptions[0];
+      
+      // Kontrollera om användaren har handböcker
+      const { data: handbooks, error: handbooksError } = await supabase
+        .from('handbooks')
+        .select('id, created_during_trial')
+        .eq('owner_id', userId);
+
+      if (handbooksError) {
+        console.error('Error fetching handbooks:', handbooksError);
+      }
+
+      const hasHandbooks = handbooks && handbooks.length > 0;
+      const hasTrialHandbook = handbooks?.some(h => h.created_during_trial) || false;
+
+      return {
+        isInTrial: false, // Inte i trial om de har aktiv subscription
+        trialDaysRemaining: 0,
+        subscriptionStatus: 'active',
+        trialEndsAt: subscription.trial_ends_at,
+        canCreateHandbook: true, // Kan skapa handböcker med aktiv subscription
+        hasUsedTrial: hasTrialHandbook,
+      };
+    }
+
+    // Om ingen aktiv subscription, använd den gamla RPC-funktionen för trial-status
     const { data, error } = await supabase
       .rpc('check_trial_status', { user_uuid: userId });
 

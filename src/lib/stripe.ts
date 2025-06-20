@@ -19,6 +19,9 @@ const stripeWebhookSecret = useTestKeys
   ? process.env.STRIPE_WEBHOOK_SECRET_TEST 
   : process.env.STRIPE_WEBHOOK_SECRET;
 
+// Debug logging för webhook secret
+console.log(`[Stripe Config] Webhook secret exists: ${!!stripeWebhookSecret}, Length: ${stripeWebhookSecret ? stripeWebhookSecret.length : 0}`);
+
 // Debug logging för miljövariabler
 console.log(`[Stripe Config] isProduction: ${isProduction}, forceTestMode: ${forceTestMode}, useTestKeys: ${useTestKeys}`);
 console.log(`[Stripe Config] Secret key exists: ${!!stripeSecretKey}, Key prefix: ${stripeSecretKey ? stripeSecretKey.substring(0, 12) + '...' : 'undefined'}`);

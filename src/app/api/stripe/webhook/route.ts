@@ -316,9 +316,11 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
     }
 
     // 2. Skapa subscription record med rätt plan-typ
+    // Konvertera planType till databas-kompatibelt format
+    const dbPlanType = planType === 'yearly' ? 'annual' : 'monthly';
     const subscriptionData = {
       user_id: userId,
-      plan_type: planType,
+      plan_type: dbPlanType,
       status: 'active',
       started_at: new Date().toISOString(),
       stripe_subscription_id: subscriptionId,
@@ -329,7 +331,8 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
         stripe_session_id: stripeSession.id,
         payment_amount: stripeSession.amount_total,
         currency: stripeSession.currency,
-        plan_type: planType,
+        plan_type: dbPlanType,
+        original_plan_type: planType,
         upgraded_from_trial: true
       }
     };
@@ -371,7 +374,8 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
         metadata: {
           subscription_id: subscription.id,
           activated_via: 'trial_upgrade',
-          plan_type: planType,
+          plan_type: dbPlanType,
+          original_plan_type: planType,
           activation_date: new Date().toISOString()
         }
       }, { onConflict: 'user_id' });
@@ -392,7 +396,8 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
         action_completed_at: new Date().toISOString(),
         metadata: {
           stripe_session_id: stripeSession.id,
-          plan_type: planType,
+          plan_type: dbPlanType,
+          original_plan_type: planType,
           payment_amount: stripeSession.amount_total,
           currency: stripeSession.currency,
           converted_from: 'trial'

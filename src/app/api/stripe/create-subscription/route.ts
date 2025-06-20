@@ -25,13 +25,13 @@ export async function POST(req: NextRequest) {
         amount: 14900, // 149 kr i öre
         interval: 'month' as const,
         name: 'Handbok.org - Månadsprenumeration',
-        description: 'Obegränsade handböcker och full funktionalitet'
+        description: 'Digital handbok för din förening med full funktionalitet'
       },
       yearly: {
         amount: 149000, // 1490 kr i öre  
         interval: 'year' as const,
         name: 'Handbok.org - Årsprenumeration',
-        description: 'Obegränsade handböcker och full funktionalitet (spara 20%!)'
+        description: 'Digital handbok för din förening med full funktionalitet (spara 20%!)'
       }
     };
 

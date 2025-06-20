@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { checkIsSuperAdmin } from "@/lib/user-utils";
 import { useToast } from '@/components/ui/use-toast';
 import { getProPricing } from '@/lib/pricing';
+import { getTrialStatus, TrialStatus } from '@/lib/trial-service';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,7 @@ export default function DashboardPage() {
     handbookId: '',
     handbookTitle: ''
   });
+  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -154,6 +156,65 @@ export default function DashboardPage() {
       fetchHandbooks();
     }
   }, [user, fetchHandbooks, isSuperadmin]);
+
+  useEffect(() => {
+    const fetchTrialStatus = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const status = await getTrialStatus(user.id);
+        setTrialStatus(status);
+      } catch (error) {
+        console.error('Error fetching trial status:', error);
+      }
+    };
+
+    if (user) {
+      fetchTrialStatus();
+    }
+  }, [user]);
+
+  // Hantera lyckad uppgradering från URL (webhook borde ha triggats)
+  useEffect(() => {
+    const handleUpgradeSuccess = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const upgraded = urlParams.get('upgraded');
+      
+      if (upgraded === 'true' && user?.id) {
+        console.log('🔄 Detected successful upgrade return, refreshing status...');
+        
+        try {
+          // Vänta lite för att webhook ska hinna köra
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Uppdatera trial status
+          const newStatus = await getTrialStatus(user.id);
+          setTrialStatus(newStatus);
+          
+          if (newStatus.subscriptionStatus === 'active') {
+            toast({
+              title: "Uppgradering lyckades! 🎉",
+              description: "Din handbok är nu aktiv och betald.",
+            });
+          } else {
+            toast({
+              title: "Betalning mottagen",
+              description: "Aktiverar din handbok... Detta kan ta några sekunder.",
+            });
+          }
+          
+          // Rensa URL-parametrar
+          window.history.replaceState({}, '', '/dashboard');
+        } catch (error) {
+          console.error('Error refreshing status:', error);
+        }
+      }
+    };
+
+    if (user && trialStatus) {
+      handleUpgradeSuccess();
+    }
+  }, [user, trialStatus]);
 
   const deleteHandbook = async (handbookId: string, title: string) => {
     // Öppna bekräftelsedialog istället för window.confirm
@@ -397,8 +458,8 @@ export default function DashboardPage() {
                             </p>
                           </div>
                           
-                          {/* Upgrade-knapp för handbok-ägare */}
-                          {!isSuperadmin && ownedHandbooks.length === 1 && (
+                          {/* Upgrade-knapp för handbok-ägare - endast om INTE aktiv subscription */}
+                          {!isSuperadmin && ownedHandbooks.length === 1 && trialStatus && trialStatus.subscriptionStatus !== 'active' && (
                             <div className="mb-4">
                               <Button 
                                 size="sm" 
@@ -408,6 +469,20 @@ export default function DashboardPage() {
                               >
                                 {isLoadingHandbooks ? "Skapar betalning..." : `Uppgradera (${pricing.yearly})`}
                               </Button>
+                            </div>
+                          )}
+
+                          {/* Status för aktiv subscription */}
+                          {!isSuperadmin && trialStatus && trialStatus.subscriptionStatus === 'active' && (
+                            <div className="mb-4">
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div className="flex items-center text-green-800">
+                                  <span className="text-sm font-medium">✅ Aktiv prenumeration</span>
+                                </div>
+                                <p className="text-xs text-green-600 mt-1">
+                                  Din handbok är betald och aktiv
+                                </p>
+                              </div>
                             </div>
                           )}
                           
