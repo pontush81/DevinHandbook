@@ -50,9 +50,9 @@ const menuCategories = {
   welcome: {
     title: "Komma igång",
     icon: Home,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-200",
     keywords: ['välkommen', 'översikt', 'intro', 'start', 'komma igång']
   },
   information: {
@@ -75,8 +75,8 @@ const menuCategories = {
 
 const menuItems = [
   // Welcome/Overview
-  { title: "Välkommen", icon: Home, keywords: ["välkommen", "översikt", "hem", "start"], color: "text-green-600", category: "welcome" },
-  { title: "Översikt", icon: BookOpen, keywords: ["översikt", "snabbfakta", "sammanfattning"], color: "text-green-600", category: "welcome" },
+  { title: "Välkommen", icon: Home, keywords: ["välkommen", "översikt", "hem", "start"], color: "text-blue-600", category: "welcome" },
+  { title: "Översikt", icon: BookOpen, keywords: ["översikt", "snabbfakta", "sammanfattning"], color: "text-blue-600", category: "welcome" },
   
   // Contact & Information  
   { title: "Kontakt", icon: Phone, keywords: ["kontakt", "telefon", "telefonnummer"], color: "text-blue-600", category: "information" },
@@ -89,7 +89,7 @@ const menuItems = [
   { title: "Felanmälan", icon: Wrench, keywords: ["fel", "reparation", "problem", "vaktmästare"], color: "text-orange-600", category: "practical" },
   { title: "Regler", icon: FileText, keywords: ["regler", "trivsel", "ordning", "stadgar"], color: "text-purple-600", category: "practical" },
   { title: "Renovering", icon: Building, keywords: ["renovering", "underhåll", "byggnation"], color: "text-gray-600", category: "practical" },
-  { title: "Sopsortering", icon: Recycle, keywords: ["sopsortering", "återvinning", "avfall"], color: "text-green-600", category: "practical" },
+  { title: "Sopsortering", icon: Recycle, keywords: ["sopsortering", "återvinning", "avfall"], color: "text-purple-600", category: "practical" },
   { title: "Parkering", icon: Car, keywords: ["parkering", "garage", "bil", "fordon"], color: "text-gray-600", category: "practical" },
   { title: "Trivsel", icon: Heart, keywords: ["trivsel", "gemenskap", "grannar"], color: "text-pink-600", category: "practical" },
 ];

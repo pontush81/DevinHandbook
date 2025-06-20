@@ -557,15 +557,12 @@ export function AllSectionsView({
                     {section.pages.map((page) => (
                       <div key={page.id} className="border-t border-gray-100 p-4">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className="flex items-start gap-2">
-                              <div className="mt-1">
-                                <FileText className="h-4 w-4 text-green-600" />
-                              </div>
+                                                      <div className="flex items-start gap-3 flex-1">
                               {isEditMode && (
-                                <span className="hidden sm:inline text-xs font-medium text-green-600 uppercase tracking-wide mt-1">SIDA</span>
+                                <div className="flex items-start gap-2">
+                                  <span className="hidden sm:inline text-xs font-medium text-blue-600 uppercase tracking-wide mt-1">SIDA</span>
+                                </div>
                               )}
-                            </div>
                             <div className="flex-1 min-w-0">
                               {/* Editable Page Title */}
                               {editingPageTitles.has(page.id) && isEditMode ? (
@@ -585,14 +582,14 @@ export function AllSectionsView({
                                       });
                                     }
                                   }}
-                                  className="text-sm font-semibold text-gray-900 bg-white border border-green-300 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-500 mb-1"
+                                  className="text-sm font-semibold text-gray-900 bg-white border border-blue-300 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
                                   autoFocus
                                 />
                               ) : (
                                 // Only show page title if it's different from section title
                                 page.title !== section.title && (
                                   <h4 
-                                    className={`text-sm font-semibold text-gray-900 mb-1 ${isEditMode ? 'cursor-pointer hover:text-green-600' : ''}`}
+                                    className={`text-sm font-semibold text-gray-900 mb-1 ${isEditMode ? 'cursor-pointer hover:text-blue-600' : ''}`}
                                     onClick={isEditMode ? () => startEditingPageTitle(page.id, page.title) : undefined}
                                     title={isEditMode ? "Klicka för att redigera titeln" : undefined}
                                   >
@@ -663,7 +660,7 @@ export function AllSectionsView({
                                     onChange={(e) => {
                                       onUpdatePage?.(page.id, { is_published: e.target.checked });
                                     }}
-                                    className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                    className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                     title={page.is_published !== false ? "Sidan är publicerad och synlig" : "Sidan är ett utkast och dold"}
                                   />
                                   <label 
@@ -697,7 +694,7 @@ export function AllSectionsView({
                           onClick={() => handleAddPage(section.id)}
                           variant="outline"
                           size="sm"
-                          className="w-full border-dashed border-gray-300 text-gray-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50"
+                          className="w-full border-dashed border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Lägg till sida
@@ -720,7 +717,7 @@ export function AllSectionsView({
                           onClick={() => handleAddPage(section.id)}
                           variant="outline"
                           size="sm"
-                          className="border-dashed border-gray-300 text-gray-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50"
+                          className="border-dashed border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Lägg till första sidan
@@ -747,7 +744,7 @@ export function AllSectionsView({
             {isEditMode && (
               <Button
                 onClick={handleAddSection}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Lägg till första sektionen

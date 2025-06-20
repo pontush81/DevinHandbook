@@ -105,7 +105,7 @@ export const HandbookSectionCard: React.FC<{
         return HeroIcon ? <HeroIcon className="text-blue-600" /> : null
       case 'material':
         const MaterialIcon = MaterialIcons[section.id as keyof typeof MaterialIcons]
-        return MaterialIcon ? <MaterialIcon className="text-green-600" /> : null
+        return MaterialIcon ? <MaterialIcon className="text-gray-600" /> : null
       case 'fontawesome':
         const FAIcon = FontAwesomeIcons[section.id as keyof typeof FontAwesomeIcons]
         return FAIcon ? <FAIcon className="text-purple-600" /> : null
