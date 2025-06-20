@@ -78,15 +78,8 @@ export async function POST(req: NextRequest) {
       automatic_tax: {
         enabled: false, // Sätter till false för enkelhets skull
       },
-      // Kunduppgifter
-      customer_creation: 'always',
-      billing_address_collection: 'required',
-      // Lägg till rabatttext för årsprenumeration
-      ...(planType === 'yearly' && {
-        discounts: [{
-          coupon: undefined // Vi visar rabatten i beskrivningen istället
-        }]
-      })
+      // Kunduppgifter - customer skapas automatiskt i subscription mode
+      billing_address_collection: 'required'
     });
 
     console.log(`[Stripe Subscription] Created ${planType} session: ${session.id}`);
