@@ -206,22 +206,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initiera session från Supabase
   useEffect(() => {
-    // Kontrollera global flagga för att förhindra dubbel initialisering
-    if (typeof window !== 'undefined' && (window as any).__authInitialized) {
-      console.log('🔄 AuthContext: Already initialized globally, skipping...');
-      return;
-    }
-    
-    // Kontrollera lokal flagga
+    // Kontrollera lokal flagga för att förhindra dubbel initialisering inom samma komponent
     if (initializationRef.current) {
       console.log('🔄 AuthContext: Already initialized locally, skipping...');
       return;
     }
     
     initializationRef.current = true;
-    if (typeof window !== 'undefined') {
-      (window as any).__authInitialized = true;
-    }
 
     const setData = async () => {
       console.log('🔄 AuthContext: Initializing auth state...');
@@ -340,60 +331,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Separat useEffect för lyssnare för att undvika race conditions
   useEffect(() => {
-    // Prevent setting up multiple listeners
-    if (typeof window !== 'undefined' && (window as any).__authListenerSetup) {
-      return;
-    }
-
-    if (typeof window !== 'undefined') {
-      (window as any).__authListenerSetup = true;
-    }
-
     // Lyssna på auth-ändringar
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Reduced logging to prevent spam
-      if (Math.random() < 0.1) { // Only log 10% of auth changes
-        console.log('🔄 Auth state change:', event, {
-          hasSession: !!session,
-          userId: session?.user?.id
-        });
-      }
+      console.log('🔄 Auth state change:', event, {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        email: session?.user?.email
+      });
 
-      // Auth state change logging already handled above
-      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log('User signed in or token refreshed');
+        console.log('✅ User signed in or token refreshed');
         
         // Återställ failure counter vid lyckad auth
         if (typeof window !== 'undefined' && window.authStorageFallback) {
           window.authStorageFallback.resetFailureCount();
         }
         
-        // Uppdatera state only if different
-        setSession(prevSession => {
-          if (prevSession?.user?.id !== session?.user?.id) {
-            return session;
-          }
-          return prevSession;
-        });
-        setUser(prevUser => {
-          if (prevUser?.id !== session?.user?.id) {
-            return session?.user ?? null;
-          }
-          return prevUser;
-        });
+        // Uppdatera state direkt
+        setSession(session);
+        setUser(session?.user ?? null);
         
-        // Validera sessionscookie (less frequent logging)
-        if (typeof document !== 'undefined' && Math.random() < 0.1) { // Only 10% of the time
-          const cookieInfo = {
-            hasCookies: document.cookie.includes('sb-auth'),
-            cookies: document.cookie.split(';').map(c => c.trim()).filter(c => c.startsWith('sb-')).join(', ')
-          };
-          
-          console.log('Cookie status:', cookieInfo);
-        }
-        
-        // Säkerställ att användarprofilen finns (debounced)
+        // Säkerställ att användarprofilen finns
         if (session?.user?.id && session?.user?.email) {
           createUserProfileIfNeeded(session.user.id, session.user.email).catch(err => {
             console.warn('Profile creation warning:', err);
@@ -402,21 +360,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (event === 'SIGNED_OUT') {
-        console.log('User signed out');
+        console.log('🚪 User signed out');
         setSession(null);
         setUser(null);
       }
       
       // Hantera sessionsfel
       if (event === 'TOKEN_REFRESHED' && !session) {
-        console.warn('Token refresh misslyckades utan session');
+        console.warn('❌ Token refresh misslyckades utan session');
         setSession(null);
         setUser(null);
       }
       
       // Hantera när användarsessionen blir ogiltig
       if (event === 'USER_UPDATED' && !session) {
-        console.warn('Användare uppdaterad men session saknas');
+        console.warn('❌ Användare uppdaterad men session saknas');
         setSession(null);
         setUser(null);
       }
@@ -436,11 +394,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Städa upp error-lyssnare
       if (typeof window !== 'undefined') {
         window.removeEventListener('supabase.auth.error', handleAuthError as EventListener);
-        // Rensa globala flaggor vid cleanup
-        delete (window as any).__authListenerSetup;
       }
     };
-  }, []);
+  }, [createUserProfileIfNeeded]);
 
   // Implementera de olika auth-funktionerna
   const signIn = async (email: string, password: string) => {

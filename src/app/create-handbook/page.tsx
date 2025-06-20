@@ -30,10 +30,10 @@ function CreateHandbookContent() {
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
+  const [hasCheckedHandbooks, setHasCheckedHandbooks] = useState(false);
   
   // Use refs to prevent unnecessary re-renders
   const hasInitialized = useRef(false);
-  const userIdRef = useRef<string | null>(null);
   
   // Memoize search params to prevent unnecessary re-renders
   const forceNewHandbook = useMemo(() => 
@@ -58,78 +58,70 @@ function CreateHandbookContent() {
     }
   }, [user, isLoading, redirectToLogin]);
 
-  // Memoize superadmin check to prevent unnecessary calls
-  const checkSuperadmin = useCallback(async (userId: string) => {
-    try {
-      const isSuperAdmin = await checkIsSuperAdmin(
-        supabase as any, 
-        userId, 
-        user?.email || ''
-      );
-      setIsSuperadmin(isSuperAdmin);
-    } catch (error) {
-      console.error("Error checking superadmin status:", error);
-      setIsSuperadmin(false);
-    }
-  }, [user?.email]);
-
-  // Only check superadmin when user ID actually changes
+  // Check superadmin status when user is available
   useEffect(() => {
-    if (user?.id && userIdRef.current !== user.id) {
-      userIdRef.current = user.id;
-      checkSuperadmin(user.id);
+    if (user?.id) {
+      const checkSuperadmin = async () => {
+        try {
+          const isSuperAdmin = await checkIsSuperAdmin(
+            supabase as any, 
+            user.id, 
+            user.email || ''
+          );
+          setIsSuperadmin(isSuperAdmin);
+        } catch (error) {
+          console.error("Error checking superadmin status:", error);
+          setIsSuperadmin(false);
+        }
+      };
+      checkSuperadmin();
     }
-  }, [user?.id, checkSuperadmin]);
+  }, [user?.id, user?.email]);
 
-  // Memoize handbook fetching to prevent unnecessary calls
-  const fetchHandbooks = useCallback(async (userId: string) => {
-    setIsLoadingHandbooks(true);
-    try {
-      const { data, error } = await (supabase as any)
-        .from("handbooks")
-        .select("id, title, slug, created_at, published")
-        .eq("owner_id", userId)
-        .order("created_at", { ascending: false });
+  // Fetch handbooks when user is available
+  useEffect(() => {
+    if (user?.id && !hasCheckedHandbooks) {
+      const fetchHandbooks = async () => {
+        setIsLoadingHandbooks(true);
+        try {
+          const { data, error } = await (supabase as any)
+            .from("handbooks")
+            .select("id, title, slug, created_at, published")
+            .eq("owner_id", user.id)
+            .order("created_at", { ascending: false });
+          
+          if (data && !error) {
+            const mappedHandbooks: Handbook[] = data.map((item: any) => ({
+              id: item.id,
+              title: item.title,
+              subdomain: item.slug,
+              created_at: item.created_at,
+              published: item.published
+            }));
+            setHandbooks(mappedHandbooks);
+          }
+          setHasCheckedHandbooks(true);
+        } catch (error) {
+          console.error("Error fetching handbooks:", error);
+          setHasCheckedHandbooks(true);
+        } finally {
+          setIsLoadingHandbooks(false);
+        }
+      };
       
-      if (data && !error) {
-        const mappedHandbooks: Handbook[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          subdomain: item.slug,
-          created_at: item.created_at,
-          published: item.published
-        }));
-        setHandbooks(mappedHandbooks);
-      }
-    } catch (error) {
-      console.error("Error fetching handbooks:", error);
-    } finally {
-      setIsLoadingHandbooks(false);
+      fetchHandbooks();
     }
-  }, []);
+  }, [user?.id, hasCheckedHandbooks]);
 
-  // Only fetch handbooks when user ID actually changes
+  // Handle force new handbook parameter
   useEffect(() => {
-    if (user?.id && userIdRef.current === user.id) {
-      fetchHandbooks(user.id);
-    }
-  }, [user?.id, fetchHandbooks]);
-
-  // Handle force new handbook parameter - only set once
-  useEffect(() => {
-    if (forceNewHandbook && !showCreateForm) {
+    if (forceNewHandbook) {
       setShowCreateForm(true);
     }
-  }, [forceNewHandbook]); // Removed showCreateForm from dependencies
+  }, [forceNewHandbook]);
 
-  // Memoize loading state to prevent flicker
-  const isPageLoading = useMemo(() => 
-    isLoading || (user && isLoadingHandbooks), 
-    [isLoading, isLoadingHandbooks, user]
-  );
-
-  // Temporary debug: Remove loading block to show tabs
-  if (false && isPageLoading) {
+  // Show loading state while checking authentication and handbooks
+  if (isLoading || (user && isLoadingHandbooks)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -138,6 +130,11 @@ function CreateHandbookContent() {
         </div>
       </div>
     );
+  }
+
+  // If not logged in, don't show anything (redirect will happen)
+  if (!user) {
+    return null;
   }
 
   // Kontrollera om användaren redan har en handbok (begränsning för nya användare)
