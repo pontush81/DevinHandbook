@@ -310,34 +310,17 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   throw detailedError;
 };
 
-// Anpassad storage-implementering som aldrig använder localStorage
+// Förenklad storage som använder Supabase's inbyggda cookie-hantering
 const customStorage = {
   getItem: (key: string): string | null => {
-    // Använd endast cookies för session-lagring
-    if (typeof document !== 'undefined') {
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === key) {
-          return decodeURIComponent(value);
-        }
-      }
-    }
+    // Låt Supabase hantera storage genom cookies
     return null;
   },
   setItem: (key: string, value: string): void => {
-    // Spara endast i cookies
-    if (typeof document !== 'undefined') {
-      const expires = new Date();
-      expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 dagar
-      document.cookie = `${key}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
-    }
+    // Låt Supabase hantera storage genom cookies
   },
   removeItem: (key: string): void => {
-    // Ta bort från cookies
-    if (typeof document !== 'undefined') {
-      document.cookie = `${key}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    }
+    // Låt Supabase hantera storage genom cookies
   }
 };
 

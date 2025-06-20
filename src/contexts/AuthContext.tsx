@@ -203,27 +203,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Prevent double initialization with ref for immediate check
   const initializationRef = useRef(false);
-  const [initialized, setInitialized] = useState(false);
-  const initializationInProgress = useRef(false);
 
   // Initiera session från Supabase
   useEffect(() => {
-    // Prevent double initialization with multiple checks
-    if (initializationRef.current || initialized || initializationInProgress.current) {
+    // Simple single check to prevent double initialization
+    if (initializationRef.current) {
       console.log('🔄 AuthContext: Already initialized, skipping...');
       return;
     }
     
     initializationRef.current = true;
-    initializationInProgress.current = true;
 
     const setData = async () => {
       console.log('🔄 AuthContext: Initializing auth state...');
       setIsLoading(true);
-      setInitialized(true);
       
       try {
-        // Kontrollera om vi är på klientsidan och har tillgång till storage
+        // Kontrollera om vi är på klientsidan
         if (typeof window === 'undefined') {
           console.log('🖥️ AuthContext: Running on server, skipping session check');
           setIsLoading(false);
@@ -231,50 +227,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         console.log('🌐 AuthContext: Running on client, proceeding with auth check');
-
-        // Kontrollera logout-flagga först med safe localStorage access
-        let logoutFlag = null;
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            logoutFlag = localStorage.getItem('__logout_flag__');
-          }
-        } catch (e) {
-          // Ignore localStorage errors
-        }
-        
-        if (logoutFlag) {
-          const logoutTime = parseInt(logoutFlag);
-          const timeSinceLogout = Date.now() - logoutTime;
-          
-          // Om logout skedde inom senaste 30 sekunderna, respektera det
-          if (timeSinceLogout < 30000) {
-            console.log('🚪 AuthContext: Recent logout detected, skipping session restoration');
-            setSession(null);
-            setUser(null);
-            setIsLoading(false);
-            return;
-          } else {
-            // Rensa gamla logout-flaggan
-            try {
-              if (typeof window !== 'undefined' && window.localStorage) {
-                localStorage.removeItem('__logout_flag__');
-              }
-            } catch (e) {
-              // Ignore localStorage errors
-            }
-          }
-        }
-
-        // Säker kontroll av storage access
-        let hasStorageAccess = false;
-        try {
-          hasStorageAccess = typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem;
-        } catch (e) {
-          hasStorageAccess = false;
-        }
-        if (!hasStorageAccess) {
-          console.warn('⚠️ AuthContext: No storage access, using fallback auth');
-        }
 
         // Hämta aktuell session
         console.log('📡 AuthContext: Getting current session from Supabase...');
@@ -296,30 +248,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('🧹 AuthContext: Clearing corrupted session data...');
             try {
               await supabase.auth.signOut();
-              if (typeof window !== 'undefined') {
-                try {
-                  if (window.localStorage) {
-                    localStorage.removeItem('supabase.auth.token');
-                  }
-                } catch (e) {
-                  // Ignore localStorage errors
-                }
-        if (typeof window !== 'undefined' && window.sessionStorage) {
-          try {
-            sessionStorage.removeItem('supabase.auth.token');
-          } catch (e) {
-            console.warn('Could not remove sessionStorage item:', e);
-          }
-        }
-                // Rensa alla supabase-relaterade cookies
-                document.cookie.split(";").forEach((c) => {
-                  const eqPos = c.indexOf("=");
-                  const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-                  if (name.startsWith('sb-')) {
-                    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-                  }
-                });
-              }
             } catch (cleanupError) {
               console.warn('Warning during cleanup:', cleanupError);
             }
@@ -388,7 +316,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         console.log('🏁 AuthContext: Setting isLoading to false');
         setIsLoading(false);
-        initializationInProgress.current = false;
       }
     };
     
@@ -535,96 +462,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setIsLoading(true);
 
-      // 2. Logga ut från Supabase
+      // 2. Logga ut från Supabase (låter Supabase hantera cookie-rensning)
       await supabase.auth.signOut();
       
-      // 3. Aggressiv rensning av all auth-data
-      if (typeof window !== 'undefined') {
-        try {
-          // Rensa localStorage säkert
-          if (safeLocalStorage.isAvailable()) {
-            try {
-              const keysToRemove = [];
-              // Safely iterate through localStorage keys
-                      try {
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-                if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-                              keysToRemove.push(key);
-            }
-          }
-        } catch (e) {
-          // Ignore localStorage access errors
-        }
-              keysToRemove.forEach(key => {
-                const success = safeLocalStorage.removeItem(key);
-                if (success) {
-                  console.log(`🗑️ Removed localStorage key: ${key}`);
-                } else {
-                  console.warn(`⚠️ Could not remove localStorage key: ${key}`);
-                }
-              });
-            } catch (localStorageError) {
-              console.warn('⚠️ Could not access localStorage for cleanup:', localStorageError);
-            }
-          }
-          
-          // Rensa sessionStorage också
-          for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-              try {
-                sessionStorage.removeItem(key);
-                console.log(`🗑️ Removed sessionStorage key: ${key}`);
-              } catch (e) {
-                console.warn(`⚠️ Could not remove sessionStorage key: ${key}`, e);
-              }
-            }
-          }
-          
-          // Rensa cookies aggressivt med error handling
-          try {
-            document.cookie.split(";").forEach(cookie => {
-              try {
-                const eqPos = cookie.indexOf("=");
-                const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                if (name && (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth'))) {
-                  // Rensa för aktuell domän och path
-                  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-                  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-                  
-                  // För handbok.org domäner
-                  if (window.location.hostname.includes('handbok.org')) {
-                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.handbok.org`;
-                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=handbok.org`;
-                  }
-                  
-                  // För localhost development
-                  if (window.location.hostname === 'localhost') {
-                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=localhost`;
-                  }
-                  
-                  console.log(`🍪 Cleared cookie: ${name}`);
-                }
-              } catch (cookieError) {
-                console.warn(`⚠️ Could not clear individual cookie:`, cookieError);
-              }
-            });
-          } catch (cookiesError) {
-            console.warn(`⚠️ Could not access cookies:`, cookiesError);
-          }
-          
-        } catch (e) {
-          console.warn('⚠️ Error during aggressive auth data cleanup:', e);
-        }
-      }
-      
       console.log('✅ AuthContext: Logout completed successfully');
-      
-      // 4. Sätt en flagga för att förhindra session-restoration
-      if (typeof window !== 'undefined') {
-        safeLocalStorage.setItem('__logout_flag__', Date.now().toString());
-      }
       
     } catch (error) {
       console.error('❌ AuthContext: Error during logout:', error);
@@ -632,11 +473,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
     
-    // 5. Omdirigera till login efter en kort paus
-    setTimeout(() => {
-      console.log('🚀 AuthContext: Redirecting to login page');
-      router.push("/login?logged_out=true");
-    }, 500);
+    // 3. Omdirigera till login direkt
+    router.push("/login?logged_out=true");
   };
 
   const resetPassword = async (email: string) => {
