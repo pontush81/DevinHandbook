@@ -82,13 +82,14 @@ export default function DashboardPage() {
   const fetchHandbooks = useCallback(async () => {
     if (!user?.id) return;
     
+    
     try {
       setIsLoadingHandbooks(true);
       let data, error;
       if (isSuperadmin) {
         ({ data, error } = await supabase
           .from("handbooks")
-          .select("id, title, slug, created_at, published")
+          .select("id, title, slug, created_at, published, owner_id")
           .order("created_at", { ascending: false }));
       } else {
         // Först hämta handböcker som användaren äger
@@ -129,12 +130,15 @@ export default function DashboardPage() {
       }
       
       // Map slug to subdomain for interface compatibility and add role info
-      const mappedData = (data || []).map(handbook => ({
-        ...handbook,
-        subdomain: handbook.slug,
-        // Sätt användarens roll - ägare är alltid admin, annars använd rollen från handbook_members
-        userRole: handbook.owner_id === user.id ? 'admin' : handbook.handbook_members?.[0]?.role || 'viewer'
-      }));
+      const mappedData = (data || []).map(handbook => {
+        const userRole = handbook.owner_id === user.id ? 'admin' : handbook.handbook_members?.[0]?.role || 'viewer';
+        return {
+          ...handbook,
+          subdomain: handbook.slug,
+          // Sätt användarens roll - ägare är alltid admin, annars använd rollen från handbook_members
+          userRole
+        };
+      });
       
       setHandbooks(mappedData as Handbook[]);
     } catch (err: unknown) {
