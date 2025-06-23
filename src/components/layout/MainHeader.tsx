@@ -39,6 +39,9 @@ export function MainHeader({
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
