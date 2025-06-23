@@ -98,6 +98,11 @@ export function AuthDebugButton() {
     setFixResult(null);
     
     try {
+      // Kontrollera om det är ett synkproblem mellan Supabase och AuthContext
+      if (debugInfo?.supabaseSession?.hasSession && debugInfo?.supabaseSession?.hasUser && (!user || !session)) {
+        console.log('🔄 Detected sync problem between Supabase session and AuthContext, forcing refresh...');
+      }
+      
       // Försök först synkronisera cookies
       try {
         syncCookiesToLocalStorage();
@@ -107,11 +112,12 @@ export function AuthDebugButton() {
       }
       
       // Sedan försök refresha auth
+      console.log('🔄 Calling refreshAuth to sync AuthContext with Supabase...');
       const result = await refreshAuth();
       setFixResult(result);
       
       if (result.success) {
-        // Stäng dialog efter lyckad fix
+        // Uppdatera debug info för att reflektera nya state
         setTimeout(() => {
           setIsOpen(false);
           setFixResult(null);
@@ -128,6 +134,11 @@ export function AuthDebugButton() {
   };
 
   const getAuthStatus = () => {
+    // Om Supabase har en session men AuthContext inte - visa varning istället för loading
+    if (debugInfo?.supabaseSession?.hasSession && debugInfo?.supabaseSession?.hasUser && (!user || !session)) {
+      return { status: 'warning', color: 'orange', text: 'Synkproblem' };
+    }
+    
     if (isLoading) return { status: 'loading', color: 'yellow', text: 'Laddar...' };
     if (user && session) return { status: 'ok', color: 'green', text: 'Inloggad' };
     if (!user && !session) return { status: 'error', color: 'red', text: 'Ej inloggad' };
@@ -248,6 +259,19 @@ export function AuthDebugButton() {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Varning för synkproblem */}
+            {debugInfo?.supabaseSession?.hasSession && debugInfo?.supabaseSession?.hasUser && (!user || !session) && (
+              <div className="p-3 bg-orange-100 border border-orange-300 rounded">
+                <div className="flex items-center gap-2 text-orange-700">
+                  <span className="text-sm font-medium">⚠️ Synkproblem upptäckt</span>
+                </div>
+                <p className="text-xs text-orange-600 mt-1">
+                  Supabase har en giltig session men AuthContext är inte synkroniserad. 
+                  Klicka på "Försök åtgärda" för att lösa detta.
+                </p>
               </div>
             )}
 
