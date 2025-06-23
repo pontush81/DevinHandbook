@@ -83,24 +83,26 @@ export default function Head() {
           createFontFace('Geist Mono', 'geist-mono', 400);
           
           // Hantera redirect-loopar för statiska resurser
-          try {
-            // Kontrollera förekomst av redirect-loopar
-            var redirectCount = parseInt(sessionStorage.getItem('resource_redirect_count') || '0');
-            if (redirectCount > 3) {
-              console.warn('För många omdirigeringar detekterade - använder nödläge');
-              // Reset redirect counter
-              sessionStorage.setItem('resource_redirect_count', '0');
-            } else {
-              // Öka räknare vid sidladdning
-              sessionStorage.setItem('resource_redirect_count', (redirectCount + 1).toString());
-              
-              // Återställ efter 3 sekunder om inga problem
-              setTimeout(function() {
+          if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+            try {
+              // Kontrollera förekomst av redirect-loopar
+              var redirectCount = parseInt(sessionStorage.getItem('resource_redirect_count') || '0');
+              if (redirectCount > 3) {
+                console.warn('För många omdirigeringar detekterade - använder nödläge');
+                // Reset redirect counter
                 sessionStorage.setItem('resource_redirect_count', '0');
-              }, 3000);
+              } else {
+                // Öka räknare vid sidladdning
+                sessionStorage.setItem('resource_redirect_count', (redirectCount + 1).toString());
+                
+                // Återställ efter 3 sekunder om inga problem
+                setTimeout(function() {
+                  sessionStorage.setItem('resource_redirect_count', '0');
+                }, 3000);
+              }
+            } catch(e) {
+              console.warn('Kunde inte hantera sessionStorage:', e);
             }
-          } catch(e) {
-            console.warn('Kunde inte hantera sessionStorage:', e);
           }
           
           // Safe localStorage implementation

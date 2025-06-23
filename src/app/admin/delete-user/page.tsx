@@ -36,14 +36,20 @@ export default function DeleteUserPage() {
         }
         
         // Rensa cookies
-        document.cookie.split(";").forEach(cookie => {
-          const eqPos = cookie.indexOf("=");
-          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-          if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+        if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+          try {
+            document.cookie.split(";").forEach(cookie => {
+              const eqPos = cookie.indexOf("=");
+              const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+              if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+              }
+            });
+          } catch (e) {
+            console.warn('Cookie clearing failed:', e);
           }
-        });
+        }
         
         // Sätt logout-flagga
         safeLocalStorage.setItem('__logout_flag__', Date.now().toString());
@@ -51,12 +57,16 @@ export default function DeleteUserPage() {
       
       // Omdirigera med en kort fördröjning
       setTimeout(() => {
-        window.location.href = '/login?logged_out=true';
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?logged_out=true';
+        }
       }, 500);
     } catch (error) {
       console.error('Logout error:', error);
       // Forcera omdirigering även vid fel
-      window.location.href = '/login?logged_out=true';
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?logged_out=true';
+      }
     }
   };
 

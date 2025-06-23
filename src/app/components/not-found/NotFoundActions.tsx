@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 
 export default function NotFoundActions() {
   const handleApplyCorsfix = () => {
-    const script = document.createElement('script');
-    script.src = '/static-resource-fix.js';
-    document.head.appendChild(script);
+    if (typeof document !== 'undefined') {
+      const script = document.createElement('script');
+      script.src = '/static-resource-fix.js';
+      document.head.appendChild(script);
+    }
   };
 
   return (

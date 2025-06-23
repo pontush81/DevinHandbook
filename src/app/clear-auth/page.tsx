@@ -39,29 +39,37 @@ export default function ClearAuthPage() {
         keysToRemove.forEach(key => safeLocalStorage.removeItem(key));
         
         // 2. Rensa sessionStorage
-        const sessionKeysToRemove = [];
-        for (let i = 0; i < sessionStorage.length; i++) {
-          const key = sessionStorage.key(i);
-          if (key && (
-            key.startsWith('sb-') || 
-            key.includes('supabase') || 
-            key.includes('auth')
-          )) {
-            sessionKeysToRemove.push(key);
+        try {
+          const sessionKeysToRemove = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && (
+              key.startsWith('sb-') || 
+              key.includes('supabase') || 
+              key.includes('auth')
+            )) {
+              sessionKeysToRemove.push(key);
+            }
           }
+          sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+        } catch (e) {
+          // Ignore sessionStorage access errors
         }
-        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
         
         // 3. Rensa cookies
-        document.cookie.split(";").forEach(cookie => {
-          const eqPos = cookie.indexOf("=");
-          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-          if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.localhost`;
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=localhost`;
-          }
-        });
+        try {
+          document.cookie.split(";").forEach(cookie => {
+            const eqPos = cookie.indexOf("=");
+            const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.localhost`;
+              document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=localhost`;
+            }
+          });
+        } catch (e) {
+          // Ignore cookie access errors
+        }
         
         // 4. Sätt logout-flagga
         safeLocalStorage.setItem('__logout_flag__', Date.now().toString());
@@ -106,14 +114,22 @@ export default function ClearAuthPage() {
               
               <div className="space-y-3">
                 <Button 
-                  onClick={() => window.location.href = '/login'} 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/login';
+                    }
+                  }} 
                   className="w-full"
                 >
                   Gå till inloggning
                 </Button>
                 
                 <Button 
-                  onClick={() => window.location.href = '/'} 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/';
+                    }
+                  }} 
                   variant="outline"
                   className="w-full"
                 >
