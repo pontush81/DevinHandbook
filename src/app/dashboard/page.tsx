@@ -55,13 +55,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoading && !user) {
       console.log("Ingen användare hittad, omdirigerar till login...");
-      
-      // Enklare och mindre aggressiv omdirigering
-      const timeoutId = setTimeout(() => {
-        router.push("/login");
-      }, 1000); // Ge AuthContext tid att ladda
-      
-      return () => clearTimeout(timeoutId);
+      router.replace("/login"); // Use replace instead of push to avoid history entry
     }
   }, [user, isLoading, router]);
 
@@ -128,7 +122,7 @@ export default function DashboardPage() {
         data = [
           ...(ownedHandbooks || []).map(h => ({ ...h, handbook_members: [{ role: 'admin' }] })),
           ...(memberHandbooks || [])
-        ];
+        ] as any[];
         
         // Sortera efter created_at igen efter sammanslagning
         data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

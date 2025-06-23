@@ -31,11 +31,19 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'tru
   if (typeof window !== 'undefined') {
     console.log('Current hostname:', window.location.hostname);
     console.log('NEXT_PUBLIC_HANDBOOK_DOMAIN:', process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN || 'not set');
-    const cookieDomain = process.env.NODE_ENV === 'production' ? 
-      (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` :
-       (window.location.hostname.includes('handbok.org') ? '.handbok.org' : undefined)) : 
-      undefined;
-    console.log('Cookie domain will be:', cookieDomain || 'undefined');
+    
+    // Fix cookie domain for development
+    let cookieDomain: string | undefined;
+    if (process.env.NODE_ENV === 'production') {
+      cookieDomain = process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? 
+        `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` :
+        (window.location.hostname.includes('handbok.org') ? '.handbok.org' : undefined);
+    } else {
+      // For development, use localhost without domain restrictions
+      cookieDomain = window.location.hostname === 'localhost' ? undefined : window.location.hostname;
+    }
+    
+    console.log('Cookie domain will be:', cookieDomain || 'localhost (no domain restriction)');
   }
 }
 
@@ -310,18 +318,12 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   throw detailedError;
 };
 
-// Enkel storage-implementation som läser från både localStorage och cookies
-const hybridStorage = {
+// Förbättrad storage-implementation som använder cookies som primär källa
+const cookieAwareStorage = {
   getItem: (key: string): string | null => {
     try {
-      // Försök localStorage först
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const value = localStorage.getItem(key);
-        if (value) return value;
-      }
-      
-      // Fallback till cookies
-      if (typeof document !== 'undefined') {
+      // Försök cookies först för auth-tokens
+      if (typeof document !== 'undefined' && key.includes('auth')) {
         const cookies = document.cookie.split(';');
         for (let cookie of cookies) {
           const [name, value] = cookie.trim().split('=');
@@ -329,6 +331,12 @@ const hybridStorage = {
             return decodeURIComponent(value);
           }
         }
+      }
+      
+      // Fallback till localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const value = localStorage.getItem(key);
+        if (value) return value;
       }
       
       return null;
@@ -340,9 +348,35 @@ const hybridStorage = {
   
   setItem: (key: string, value: string): void => {
     try {
-      // Försök localStorage först
+      // Sätt i localStorage först
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem(key, value);
+      }
+      
+      // För auth-tokens, sätt också som cookie för bättre persistens
+      if (typeof document !== 'undefined' && key.includes('auth')) {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const domain = isProduction ? 
+          (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` : 
+           (typeof window !== 'undefined' && window.location.hostname.includes('handbok.org') ? '.handbok.org' : '')) : 
+          '';
+        
+        const cookieOptions = [
+          `${key}=${encodeURIComponent(value)}`,
+          'path=/',
+          'max-age=' + (7 * 24 * 60 * 60), // 7 days
+          'samesite=lax'
+        ];
+        
+        if (domain) {
+          cookieOptions.push(`domain=${domain}`);
+        }
+        
+        if (isProduction) {
+          cookieOptions.push('secure');
+        }
+        
+        document.cookie = cookieOptions.join('; ');
       }
     } catch (error) {
       console.warn(`Storage setItem error for key ${key}:`, error);
@@ -355,30 +389,44 @@ const hybridStorage = {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.removeItem(key);
       }
+      
+      // Ta bort cookie om det finns
+      if (typeof document !== 'undefined') {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const domain = isProduction ? 
+          (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` : 
+           (typeof window !== 'undefined' && window.location.hostname.includes('handbok.org') ? '.handbok.org' : '')) : 
+          '';
+        
+        const cookieOptions = [
+          `${key}=`,
+          'path=/',
+          'expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        ];
+        
+        if (domain) {
+          cookieOptions.push(`domain=${domain}`);
+        }
+        
+        document.cookie = cookieOptions.join('; ');
+      }
     } catch (error) {
       console.warn(`Storage removeItem error for key ${key}:`, error);
     }
   }
 };
 
-// Skapa en Supabase-klient för klientsidan
-export const supabase = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      storage: hybridStorage
-    },
-    global: {
-      fetch: typeof window !== 'undefined' ? customFetch : undefined,
-    },
-    debug: process.env.NODE_ENV !== 'production'
-  }
-);
+// Singleton pattern för Supabase-klient för att förhindra multipla instanser
+// Skapa en Supabase-klient för klientsidan - ANVÄNDER SINGLETON FRÅN supabase-client.ts
+function createSupabaseClient(): SupabaseClient<Database> {
+  // Import and use the singleton from supabase-client.ts to prevent multiple instances
+  const { getSupabaseClient } = require('./supabase-client');
+  console.log('♻️ Supabase: Using singleton from supabase-client');
+  
+  return getSupabaseClient() as SupabaseClient<Database>;
+}
+
+export const supabase = createSupabaseClient();
 
 // Hjälpfunktion för att synkronisera cookies till localStorage
 export const syncCookiesToLocalStorage = () => {

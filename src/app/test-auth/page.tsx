@@ -59,14 +59,12 @@ export default function TestAuthPage() {
     checkAuth();
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleLogin = async () => {
     if (!loginEmail || !loginPassword) {
       toast({
-        title: "Fält saknas",
-        description: "Ange både email och lösenord",
-        variant: "destructive"
+        title: "Fel",
+        description: "E-post och lösenord krävs",
+        variant: "destructive",
       });
       return;
     }
@@ -78,29 +76,29 @@ export default function TestAuthPage() {
         email: loginEmail,
         password: loginPassword
       });
-      
+
       if (error) {
         toast({
           title: "Inloggningsfel",
           description: error.message,
-          variant: "destructive"
+          variant: "destructive",
         });
       } else {
         toast({
-          title: "Inloggning lyckades!",
-          description: "Du är nu inloggad",
-          variant: "success"
+          title: "Framgång",
+          description: "Inloggning lyckades!",
+          variant: "default",
         });
-        setShowLoginForm(false);
-        setLoginEmail('');
-        setLoginPassword('');
-        window.location.reload();
+        
+        // Refresh the page data
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        setSupabaseSession({ session, error: sessionError });
       }
     } catch (err) {
       toast({
-        title: "Oväntat fel",
-        description: "Ett fel uppstod vid inloggning",
-        variant: "destructive"
+        title: "Fel",
+        description: "Ett oväntat fel uppstod",
+        variant: "destructive",
       });
     } finally {
       setIsLoggingIn(false);

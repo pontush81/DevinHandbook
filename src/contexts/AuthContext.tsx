@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import { supabase, syncCookiesToLocalStorage } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
@@ -35,6 +35,9 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Global flag to prevent multiple initializations during Fast Refresh
+let globalAuthInitialized = false;
+
 // Vi använder nu ENDAST cookies för sessionshantering via Supabase
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -43,6 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authErrorShown, setAuthErrorShown] = useState(false);
   const router = useRouter();
+  
+  // Get Supabase client instance
+  const supabase = getSupabaseClient();
 
   // Keep track of profile creation attempts to prevent duplicates
   const profileCreationRef = useRef<Set<string>>(new Set());
@@ -201,18 +207,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Global initialization flag to prevent multiple instances
-  const initializationRef = useRef(false);
-
   // Initiera session från Supabase
   useEffect(() => {
-    // Kontrollera lokal flagga för att förhindra dubbel initialisering inom samma komponent
-    if (initializationRef.current) {
-      console.log('🔄 AuthContext: Already initialized locally, skipping...');
+    // Use global flag to prevent multiple initializations during Fast Refresh
+    if (globalAuthInitialized) {
+      console.log('🔄 AuthContext: Already initialized globally, skipping...');
       return;
     }
     
-    initializationRef.current = true;
+    globalAuthInitialized = true;
+    console.log('✅ AuthContext: First global initialization, proceeding...');
 
     const setData = async () => {
       console.log('🔄 AuthContext: Initializing auth state...');
@@ -227,92 +231,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         console.log('🌐 AuthContext: Running on client, proceeding with auth check');
+        
 
-        // Synkronisera cookies till localStorage om det behövs
-        try {
-          syncCookiesToLocalStorage();
-        } catch (syncError) {
-          console.warn('Cookie sync failed:', syncError);
-        }
+        
+
 
         // Hämta aktuell session
         console.log('📡 AuthContext: Getting current session from Supabase...');
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
-        console.log('📊 AuthContext: Session result:', {
-          hasSession: !!currentSession,
-          hasUser: !!currentSession?.user,
-          error: error?.message,
-          userId: currentSession?.user?.id,
-          email: currentSession?.user?.email
-        });
-        
-        if (error) {
-          console.error('❌ AuthContext: Error getting session:', error);
+        try {
+          const { data: { session: currentSession }, error } = await supabase.auth.getSession();
           
-          // Om det är en auth error, rensa korrupt session data
-          if (error.message?.includes('Invalid') || error.message?.includes('expired') || error.message?.includes('jwt')) {
-            console.log('🧹 AuthContext: Clearing corrupted session data...');
-            try {
-              await supabase.auth.signOut();
-            } catch (cleanupError) {
-              console.warn('Warning during cleanup:', cleanupError);
-            }
-          }
+          console.log('📡 AuthContext: getSession() completed successfully');
           
-          setSession(null);
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
-        
-        if (currentSession) {
-          console.log('✅ AuthContext: Found active session', {
-            userId: currentSession.user?.id,
-            expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
-          });
-          
-          // Kontrollera om sessionen har gått ut
-          if (currentSession.expires_at && currentSession.expires_at * 1000 < Date.now()) {
-            console.log('⏰ AuthContext: Session expired, attempting refresh...');
+          if (error) {
+            console.error('❌ AuthContext: Error getting session:', error);
             
-            try {
-              const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            // Om det är en auth error, rensa korrupt session data
+            if (error.message?.includes('Invalid') || error.message?.includes('expired') || error.message?.includes('jwt')) {
+              console.log('🧹 AuthContext: Clearing corrupted session data...');
+              try {
+                await supabase.auth.signOut();
+              } catch (cleanupError) {
+                console.warn('Warning during cleanup:', cleanupError);
+              }
+            }
+            
+            setSession(null);
+            setUser(null);
+            console.log('❌ AuthContext: Set user and session to null due to error');
+          } else if (currentSession) {
+            console.log('✅ AuthContext: Found active session', {
+              userId: currentSession.user?.id,
+              expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
+            });
+            
+            // Kontrollera om sessionen har gått ut
+            if (currentSession.expires_at && currentSession.expires_at * 1000 < Date.now()) {
+              console.log('⏰ AuthContext: Session expired, attempting refresh...');
               
-              if (!refreshError && refreshedSession) {
-                console.log('✅ AuthContext: Session refreshed successfully');
-                setSession(refreshedSession);
-                setUser(refreshedSession.user);
+              try {
+                const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
                 
-                if (refreshedSession.user.id && refreshedSession.user.email) {
-                  createUserProfileIfNeeded(refreshedSession.user.id, refreshedSession.user.email).catch(err => {
-                    console.warn('Profile creation warning:', err);
-                  });
+                if (!refreshError && refreshedSession) {
+                  console.log('✅ AuthContext: Session refreshed successfully');
+                  setSession(refreshedSession);
+                  setUser(refreshedSession.user);
+                  
+                  if (refreshedSession.user.id && refreshedSession.user.email) {
+                    createUserProfileIfNeeded(refreshedSession.user.id, refreshedSession.user.email).catch(err => {
+                      console.warn('Profile creation warning:', err);
+                    });
+                  }
+                } else {
+                  console.error('❌ AuthContext: Could not refresh session:', refreshError);
+                  setSession(null);
+                  setUser(null);
                 }
-              } else {
-                console.error('❌ AuthContext: Could not refresh session:', refreshError);
+              } catch (refreshErr) {
+                console.error('❌ AuthContext: Error refreshing session:', refreshErr);
                 setSession(null);
                 setUser(null);
               }
-            } catch (refreshErr) {
-              console.error('❌ AuthContext: Error refreshing session:', refreshErr);
-              setSession(null);
-              setUser(null);
+            } else {
+              console.log('✅ AuthContext: Session is valid, setting user state');
+              setSession(currentSession);
+              setUser(currentSession.user);
+              console.log('✅ AuthContext: User and session state updated');
+              
+              // Säkerställ att användarprofilen finns
+              if (currentSession.user.id && currentSession.user.email) {
+                createUserProfileIfNeeded(currentSession.user.id, currentSession.user.email).catch(err => {
+                  console.warn('Profile creation warning:', err);
+                });
+              }
             }
           } else {
-            console.log('✅ AuthContext: Session is valid, setting user state');
-            setSession(currentSession);
-            setUser(currentSession.user);
-            
-            // Säkerställ att användarprofilen finns
-            if (currentSession.user.id && currentSession.user.email) {
-              createUserProfileIfNeeded(currentSession.user.id, currentSession.user.email).catch(err => {
-                console.warn('Profile creation warning:', err);
-              });
-            }
+            console.log('ℹ️ AuthContext: No active session found');
+            setSession(null);
+            setUser(null);
+            console.log('ℹ️ AuthContext: Set user and session to null (no session)');
           }
-        } else {
-          console.log('ℹ️ AuthContext: No active session found');
+        } catch (sessionError) {
+          console.error('❌ AuthContext: Exception during getSession:', sessionError);
           setSession(null);
           setUser(null);
         }
@@ -323,10 +324,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         console.log('🏁 AuthContext: Setting isLoading to false');
         setIsLoading(false);
+        console.log('🏁 AuthContext: Auth initialization completed');
       }
     };
     
-    setData();
+    console.log('🔄 AuthContext: Calling setData function...');
+    setData().catch(error => {
+      console.error('❌ AuthContext: setData promise rejected:', error);
+      setIsLoading(false);
+    });
   }, []); // Removed dependency to prevent re-runs
 
   // Separat useEffect för lyssnare för att undvika race conditions
@@ -363,6 +369,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🚪 User signed out');
         setSession(null);
         setUser(null);
+        // Reset global flag so auth can reinitialize if needed
+        globalAuthInitialized = false;
       }
       
       // Hantera sessionsfel
