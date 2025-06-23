@@ -63,6 +63,9 @@ export default function SignupClient() {
 
   // Set joining flags immediately when component mounts with join code
   useLayoutEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     console.log('[useLayoutEffect] Running immediately on mount');
     console.log('[useLayoutEffect] Current URL:', window.location.href);
     const joinParam = searchParams.get('join');
