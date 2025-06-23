@@ -111,6 +111,37 @@ const ReadOnlyEditorContent = ({ content }: { content: any }) => {
                 </div>
               </div>
             );
+          case 'link':
+            // Ensure the link has a proper protocol
+            const linkUrl = block.data?.link || '#';
+            const normalizedUrl = linkUrl.startsWith('http://') || linkUrl.startsWith('https://') 
+              ? linkUrl 
+              : `https://${linkUrl}`;
+            
+            return (
+              <div key={block.id || index} className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+                <a 
+                  href={normalizedUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block text-decoration-none"
+                >
+                  {block.data?.meta?.title && (
+                    <h4 className="font-semibold text-gray-900 mb-2 hover:text-blue-600 transition-colors">
+                      {block.data.meta.title}
+                    </h4>
+                  )}
+                  {block.data?.meta?.description && (
+                    <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                      {block.data.meta.description}
+                    </p>
+                  )}
+                  <span className="text-blue-600 text-sm hover:underline">
+                    🔗 {normalizedUrl}
+                  </span>
+                </a>
+              </div>
+            );
           default:
             // Fallback for unknown block types - don't show JSON!
             if (block.data?.text) {

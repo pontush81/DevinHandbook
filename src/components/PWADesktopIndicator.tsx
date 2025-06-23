@@ -13,7 +13,8 @@ export function PWADesktopIndicator() {
     const isDesktop = !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) &&
                       !window.matchMedia('(max-width: 768px)').matches;
     
-    if (!isDesktop) return;
+    // Visa inte desktop-prompt alls
+    if (isDesktop) return;
 
     // Kontrollera om redan installerad
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
@@ -65,7 +66,11 @@ export function PWADesktopIndicator() {
     universalStorage.setItem('pwa-desktop-indicator-dismissed', 'true');
   };
 
-  if (!showIndicator) return null;
+  // Returnera null för desktop-enheter - ingen prompt visas
+  const isDesktop = !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) &&
+                    !window.matchMedia('(max-width: 768px)').matches;
+  
+  if (isDesktop || !showIndicator) return null;
 
   return (
     <div className="fixed top-4 right-4 z-40 max-w-xs">
