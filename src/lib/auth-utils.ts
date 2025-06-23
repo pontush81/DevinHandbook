@@ -7,7 +7,16 @@ import { Database } from '@/types/supabase';
  * Hämtar en session för servern baserad på cookies
  */
 export async function getServerSession() {
+  console.log('🔍 [getServerSession] Starting session check...');
+  
   const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+  
+  console.log('🍪 [getServerSession] Found cookies:', { 
+    count: allCookies.length, 
+    names: allCookies.map(c => c.name),
+    supabaseCookies: allCookies.filter(c => c.name.includes('supabase')).map(c => ({ name: c.name, hasValue: !!c.value }))
+  });
   
   // Skapa en Supabase-klient för servern
   const supabase = createServerClient(
@@ -25,8 +34,21 @@ export async function getServerSession() {
     }
   );
 
+  console.log('📡 [getServerSession] Calling supabase.auth.getSession()...');
+  
   // Hämta session
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    console.error('❌ [getServerSession] Session error:', error);
+  }
+  
+  console.log('✅ [getServerSession] Session result:', { 
+    hasSession: !!session, 
+    userId: session?.user?.id || 'no session',
+    expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'no expiry'
+  });
+  
   return session;
 }
 
@@ -34,11 +56,17 @@ export async function getServerSession() {
  * Kontrollerar om en användare är admin för en viss handbok
  */
 export async function isHandbookAdmin(userId: string, handbookId: string): Promise<boolean> {
-  if (!userId || !handbookId) return false;
+  console.log('🔍 [isHandbookAdmin] Checking admin status:', { userId, handbookId });
+  
+  if (!userId || !handbookId) {
+    console.log('❌ [isHandbookAdmin] Missing required parameters:', { userId: !!userId, handbookId: !!handbookId });
+    return false;
+  }
   
   try {
     const supabase = getServiceSupabase();
     
+    console.log('📊 [isHandbookAdmin] Querying handbook_members table...');
     const { data, error } = await supabase
       .from('handbook_members')
       .select('id')
@@ -48,13 +76,16 @@ export async function isHandbookAdmin(userId: string, handbookId: string): Promi
       .maybeSingle();
       
     if (error) {
-      console.error('Fel vid kontroll av handbok admin status:', error);
+      console.error('❌ [isHandbookAdmin] Database error:', error);
       return false;
     }
     
-    return !!data;
+    const isAdmin = !!data;
+    console.log('✅ [isHandbookAdmin] Query result:', { data, isAdmin });
+    
+    return isAdmin;
   } catch (error) {
-    console.error('Oväntat fel vid kontroll av handbok admin status:', error);
+    console.error('❌ [isHandbookAdmin] Unexpected error:', error);
     return false;
   }
 }

@@ -489,11 +489,25 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
                       formData.append('handbook_id', handbookId);
                     }
                     
+                    // Get current session for authorization header
+                    let authHeaders: Record<string, string> = {};
+                    try {
+                      const { supabase } = await import('@/lib/supabase');
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session?.access_token) {
+                        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
+                        console.log('🔑 Added authorization header for image upload');
+                      }
+                    } catch (error) {
+                      console.warn('Could not get session for auth header:', error);
+                    }
+                    
                     try {
                       const response = await fetch('/api/upload-image', {
                         method: 'POST',
                         body: formData,
-                        credentials: 'include' // Include cookies for auth
+                        credentials: 'include', // Include cookies for auth
+                        headers: authHeaders
                       });
                       
                       const result = await response.json();
@@ -536,11 +550,25 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
                       formData.append('handbook_id', handbookId);
                     }
                     
+                    // Get current session for authorization header
+                    let authHeaders: Record<string, string> = {};
+                    try {
+                      const { supabase } = await import('@/lib/supabase');
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session?.access_token) {
+                        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
+                        console.log('🔑 Added authorization header for document upload');
+                      }
+                    } catch (error) {
+                      console.warn('Could not get session for auth header:', error);
+                    }
+                    
                     try {
                       const response = await fetch('/api/upload-document', {
                         method: 'POST',
                         body: formData,
-                        credentials: 'include' // Include cookies for auth
+                        credentials: 'include', // Include cookies for auth
+                        headers: authHeaders
                       });
                       
                       const result = await response.json();
