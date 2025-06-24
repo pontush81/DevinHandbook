@@ -33,7 +33,6 @@ const adminNavItems = [
   { href: '/admin/handbooks', label: 'Handböcker', icon: BookOpen },
   { href: '/admin/users', label: 'Användare', icon: UserCheck },
   { href: '/admin/customers', label: 'Kunder', icon: Users },
-  { href: '/admin/customer-lifecycle', label: 'Kundlivscykel', icon: Users },
   { href: '/admin/content', label: 'Innehåll', icon: FileText },
   { href: '/admin/analytics', label: 'Statistik', icon: BarChart3 },
   { href: '/admin/plans', label: 'Planer', icon: CreditCard },

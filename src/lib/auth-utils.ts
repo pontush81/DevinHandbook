@@ -15,10 +15,40 @@ export async function getServerSession() {
   console.log('🍪 [getServerSession] Found cookies:', { 
     count: allCookies.length, 
     names: allCookies.map(c => c.name),
-    supabaseCookies: allCookies.filter(c => c.name.includes('supabase')).map(c => ({ name: c.name, hasValue: !!c.value }))
+    supabaseCookies: allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-')).map(c => ({ name: c.name, hasValue: !!c.value }))
   });
   
-  // Skapa en Supabase-klient för servern
+  // Look for the specific auth token cookie
+  const authCookie = allCookies.find(c => c.name === 'sb-kjsquvjzctdwgjypcjrg-auth-token');
+  
+  if (authCookie && authCookie.value) {
+    console.log('🔑 [getServerSession] Found auth cookie, parsing session...');
+    
+    try {
+      // Parse the auth token from cookie
+      const authData = JSON.parse(decodeURIComponent(authCookie.value));
+      
+      if (authData && authData.access_token && authData.user) {
+        console.log('✅ [getServerSession] Valid session found in cookie');
+        
+        // Create a mock session object that matches Supabase session format
+        const session = {
+          access_token: authData.access_token,
+          refresh_token: authData.refresh_token,
+          expires_in: authData.expires_in,
+          expires_at: authData.expires_at,
+          token_type: authData.token_type || 'bearer',
+          user: authData.user
+        };
+        
+        return session;
+      }
+    } catch (error) {
+      console.error('❌ [getServerSession] Error parsing auth cookie:', error);
+    }
+  }
+  
+  // Fallback to SSR client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
