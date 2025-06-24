@@ -341,7 +341,7 @@ export default function LoginClient() {
                     }
                     
                     // Don't redirect if user is on create-handbook page
-                    if (currentPath === '/create-handbook') {
+                    if (currentPath === '/create-handbook' || currentPath.startsWith('/create-handbook')) {
                       console.log("User is on create-handbook page, skipping smart redirect");
                       return;
                     }

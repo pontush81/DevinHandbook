@@ -11,7 +11,11 @@ import { createTemplateFromImportedSections, getDefaultTemplate, type HandbookSe
 import { handbookStorage, safeLocalStorage } from "@/lib/safe-storage";
 
 
-export function CreateHandbookForm() {
+interface CreateHandbookFormProps {
+  forceNew?: boolean;
+}
+
+export function CreateHandbookForm({ forceNew = false }: CreateHandbookFormProps) {
   // console.log('🧪 CreateHandbookForm: Component is rendering!'); // Commented out to reduce console spam
   
   const { user } = useAuth();
@@ -77,13 +81,27 @@ export function CreateHandbookForm() {
   }, [name, subdomain, activeTab, importedSections]);
 
   // Återställ sparad state vid mount (endast en gång)
-  useEffect(() => {
+    useEffect(() => {
     let hasRestored = false;
     
     // Rensa gammal AI-analys från föregående handbok för att undvika cache-problem
     const clearSuccess = handbookStorage.clearDocumentImportState();
     if (clearSuccess) {
       console.log('🧹 Rensade gammal AI-analys från localStorage vid komponentstart');
+    }
+    
+    // Om forceNew är true, rensa all localStorage och starta om
+    if (forceNew) {
+      console.log('🆕 [CreateHandbook] forceNew=true, rensar all localStorage cache');
+      handbookStorage.clearFormState();
+      handbookStorage.clearDocumentImportState();
+      // Återställ till defaultvärden
+      setName('');
+      setSubdomain('');
+      setActiveTab('manual');
+      setImportedSections([]);
+      setTemplate(getDefaultTemplate());
+      return;
     }
     
     const restoreFormState = () => {
@@ -114,9 +132,9 @@ export function CreateHandbookForm() {
         }
       }
     };
-    
+
     restoreFormState();
-  }, []); // Kör bara en gång
+  }, [forceNew]); // Lyssna på forceNew-ändringar
 
   // Kontrollera trial-status (förenklad - alla kan skapa)
   useEffect(() => {

@@ -273,6 +273,20 @@ export async function smartRedirectWithPolling(
   
   console.log(`[Smart Redirect Polling] Starting with maxAttempts: ${maxAttempts}, intervalMs: ${intervalMs}, userId: ${userId}, isSuperAdmin: ${isSuperAdmin}`);
   
+  // Global check to prevent redirects when on create-handbook page
+  if (typeof window !== 'undefined') {
+    if (window.location.pathname.startsWith('/create-handbook')) {
+      console.log('[Smart Redirect Polling] GLOBAL BLOCK - User is on create-handbook page, completely blocking redirect');
+      return;
+    }
+    
+    // Also check for global flag set by create-handbook page
+    if ((window as any).__CREATE_HANDBOOK_PAGE) {
+      console.log('[Smart Redirect Polling] GLOBAL BLOCK - Create handbook page flag is set, completely blocking redirect');
+      return;
+    }
+  }
+  
   // Check if user is on upgrade page, create-handbook page, or intended to go to upgrade - if so, don't redirect
   if (typeof window !== 'undefined') {
     const currentPath = window.location.pathname;
@@ -295,6 +309,18 @@ export async function smartRedirectWithPolling(
     // Check if user is on create-handbook page - don't redirect
     if (currentPath === '/create-handbook') {
       console.log('[Smart Redirect Polling] EARLY EXIT - User is on create-handbook page, skipping redirect');
+      return;
+    }
+    
+    // Also check for create-handbook with query parameters
+    if (currentPath.startsWith('/create-handbook')) {
+      console.log('[Smart Redirect Polling] EARLY EXIT - User is on create-handbook page (with params), skipping redirect');
+      return;
+    }
+    
+    // Extra safety check for any create-handbook related URLs
+    if (currentUrl.includes('/create-handbook')) {
+      console.log('[Smart Redirect Polling] EARLY EXIT - URL contains create-handbook, skipping redirect');
       return;
     }
     

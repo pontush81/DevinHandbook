@@ -23,8 +23,8 @@ interface Handbook {
 
 // Wrapper-komponent som använder useSearchParams säkert inom en Suspense-boundary
 function CreateHandbookContent() {
-  const { user, isLoading } = useAuth();
   const router = useRouter();
+  const { user, isLoading } = useAuth();
   const searchParams = useSearchParams();
   
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
@@ -41,33 +41,43 @@ function CreateHandbookContent() {
     [searchParams]
   );
   
-  const [showCreateForm, setShowCreateForm] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(forceNewHandbook);
 
   // Memoize redirect function to prevent re-creation
   const redirectToLogin = useCallback(() => {
     router.push("/login");
   }, [router]);
 
+  // Add a small delay to ensure auth state has fully propagated
+  // Log when auth completes
+  useEffect(() => {
+    if (!isLoading) {
+      console.log('🎯 [CreateHandbook] Auth state ready, user:', !!user);
+    }
+  }, [isLoading, user]);
+
   // Only redirect if user changes from logged in to logged out
   useEffect(() => {
-    if (!isLoading && !user && hasInitialized.current) {
+    if (!user && hasInitialized.current) {
       redirectToLogin();
     }
     if (user) {
       hasInitialized.current = true;
     }
-  }, [user, isLoading, redirectToLogin]);
+  }, [user, redirectToLogin]);
 
   // Check superadmin status when user is available
   useEffect(() => {
     if (user?.id) {
       const checkSuperadmin = async () => {
+        console.log('🎯 [CreateHandbook] Checking superadmin status for user:', user.id);
         try {
           const isSuperAdmin = await checkIsSuperAdmin(
-            supabase as any, 
+            supabase, 
             user.id, 
             user.email || ''
           );
+          console.log('🎯 [CreateHandbook] Superadmin check result:', isSuperAdmin);
           setIsSuperadmin(isSuperAdmin);
         } catch (error) {
           console.error("Error checking superadmin status:", error);
@@ -82,13 +92,16 @@ function CreateHandbookContent() {
   useEffect(() => {
     if (user?.id && !hasCheckedHandbooks) {
       const fetchHandbooks = async () => {
+        console.log('🎯 [CreateHandbook] Starting to fetch handbooks for user:', user.id);
         setIsLoadingHandbooks(true);
         try {
-          const { data, error } = await (supabase as any)
+          const { data, error } = await supabase
             .from("handbooks")
             .select("id, title, slug, created_at, published")
             .eq("owner_id", user.id)
             .order("created_at", { ascending: false });
+          
+          console.log('🎯 [CreateHandbook] Handbooks fetch result:', { data: data?.length, error });
           
           if (data && !error) {
             const mappedHandbooks: Handbook[] = data.map((item: any) => ({
@@ -99,6 +112,7 @@ function CreateHandbookContent() {
               published: item.published
             }));
             setHandbooks(mappedHandbooks);
+            console.log('🎯 [CreateHandbook] Set handbooks:', mappedHandbooks.length);
           }
           setHasCheckedHandbooks(true);
         } catch (error) {
@@ -106,6 +120,7 @@ function CreateHandbookContent() {
           setHasCheckedHandbooks(true);
         } finally {
           setIsLoadingHandbooks(false);
+          console.log('🎯 [CreateHandbook] Finished loading handbooks');
         }
       };
       
@@ -120,10 +135,31 @@ function CreateHandbookContent() {
       console.log('🎯 [CreateHandbook] Setting showCreateForm to true due to forceNewHandbook');
       setShowCreateForm(true);
     }
+    
+    // Set a global flag to prevent redirects while on this page
+    if (typeof window !== 'undefined') {
+      (window as any).__CREATE_HANDBOOK_PAGE = true;
+      console.log('🎯 [CreateHandbook] Set global flag to prevent redirects');
+    }
+    
+    // Cleanup function to remove the flag when leaving the page
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).__CREATE_HANDBOOK_PAGE;
+        console.log('🎯 [CreateHandbook] Removed global flag');
+      }
+    };
   }, [forceNewHandbook]);
 
   // Show loading state while checking authentication and handbooks
-  if (isLoading || (user && isLoadingHandbooks)) {
+  // Wait for auth to be fully ready
+  if (isLoading) {
+    console.log('🎯 [CreateHandbook] Auth still loading:', {
+      isLoading,
+      user: !!user,
+      isLoadingHandbooks,
+      hasCheckedHandbooks
+    });
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -134,8 +170,27 @@ function CreateHandbookContent() {
     );
   }
 
+  // Show handbook loading state only if we have a user and are still loading handbooks
+  if (user && isLoadingHandbooks) {
+    console.log('🎯 [CreateHandbook] Handbooks still loading:', {
+      isLoading,
+      user: !!user,
+      isLoadingHandbooks,
+      hasCheckedHandbooks
+    });
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div>Laddar handböcker...</div>
+        </div>
+      </div>
+    );
+  }
+
   // If not logged in, don't show anything (redirect will happen)
   if (!user) {
+    console.log('🎯 [CreateHandbook] No user, returning null');
     return null;
   }
 
@@ -145,7 +200,9 @@ function CreateHandbookContent() {
     showCreateForm,
     forceNewHandbook,
     isSuperadmin,
-    shouldShowList: handbooks.length > 0 && !showCreateForm && !forceNewHandbook && isSuperadmin
+    shouldShowList: handbooks.length > 0 && !showCreateForm && !forceNewHandbook && isSuperadmin,
+    hasCheckedHandbooks,
+    isLoadingHandbooks
   });
 
   // Visa lista över befintliga handböcker om användaren väljer att se dem (endast för superadmins)
@@ -219,7 +276,7 @@ function CreateHandbookContent() {
         
         <Card className="shadow-lg border-0">
           <CardContent className="p-6 md:p-8 lg:p-12">
-            {user && <CreateHandbookForm />}
+            {user && <CreateHandbookForm forceNew={forceNewHandbook} />}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
                 🎯 Du blir automatiskt admin när handboken är klar

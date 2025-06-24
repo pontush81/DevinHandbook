@@ -345,8 +345,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: session?.user?.email
       });
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log('✅ User signed in or token refreshed');
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        console.log('✅ User signed in, token refreshed, or initial session found');
         
         // Återställ failure counter vid lyckad auth
         if (typeof window !== 'undefined' && window.authStorageFallback) {
@@ -356,6 +356,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Uppdatera state direkt
         setSession(session);
         setUser(session?.user ?? null);
+        setIsLoading(false); // Viktigt: Sätt isLoading till false när användaren är inloggad
+        console.log('🏁 AuthContext: Set isLoading to false after', event);
+        console.log('🏁 AuthContext: Current state after update:', { 
+          hasSession: !!session, 
+          hasUser: !!(session?.user), 
+          isLoading: false 
+        });
         
         // Säkerställ att användarprofilen finns
         if (session?.user?.id && session?.user?.email) {
@@ -369,6 +376,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🚪 User signed out');
         setSession(null);
         setUser(null);
+        setIsLoading(false); // Viktigt: Sätt isLoading till false även när utloggad
         // Reset global flag so auth can reinitialize if needed
         globalAuthInitialized = false;
       }
@@ -378,6 +386,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('❌ Token refresh misslyckades utan session');
         setSession(null);
         setUser(null);
+        setIsLoading(false); // Viktigt: Sätt isLoading till false även vid fel
       }
       
       // Hantera när användarsessionen blir ogiltig
@@ -385,6 +394,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('❌ Användare uppdaterad men session saknas');
         setSession(null);
         setUser(null);
+        setIsLoading(false); // Viktigt: Sätt isLoading till false även vid fel
       }
     });
 
@@ -618,5 +628,13 @@ export const useAuth = () => {
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
+  
+  // Debug logging för att se vad useAuth returnerar
+  console.log('🎯 useAuth returning:', {
+    hasUser: !!context.user,
+    isLoading: context.isLoading,
+    hasSession: !!context.session
+  });
+  
   return context;
 };
