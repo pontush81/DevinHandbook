@@ -2,60 +2,63 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 export function ClearCacheButton() {
-  const clearAllCache = async () => {
-    try {
-      // Clear localStorage
+  const clearAllCache = () => {
+    // Rensa localStorage säkert
+    if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.clear();
-        }
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.warn('Could not remove localStorage item:', key);
+          }
+        });
+        console.log('LocalStorage cleared');
       } catch (e) {
-        // Ignore localStorage errors
+        console.warn('Could not access localStorage');
       }
-      
-      // Clear sessionStorage
-      sessionStorage.clear();
-      
-      // Clear cookies (för denna domain)
-      document.cookie.split(";").forEach((c) => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-      });
-      
-      // Clear service worker cache om det finns
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (let registration of registrations) {
-          await registration.unregister();
-        }
+    }
+
+    // Rensa cookies
+    if (typeof document !== 'undefined') {
+      try {
+        document.cookie.split(";").forEach((c) => {
+          const eqPos = c.indexOf("=");
+          const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        });
+        console.log('Cookies cleared');
+      } catch (e) {
+        console.warn('Could not clear cookies');
       }
-      
-      // Clear cache storage
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(
-          cacheNames.map(cacheName => caches.delete(cacheName))
-        );
+    }
+
+    // Rensa PWA cache via service worker
+    if (typeof window !== 'undefined' && 'clearPWACache' in window) {
+      try {
+        (window as any).clearPWACache();
+        return; // clearPWACache kommer att ladda om sidan
+      } catch (e) {
+        console.warn('Could not clear PWA cache');
       }
-      
-      alert('✅ Cache, cookies och storage rensad! Sidan laddas om...');
-      
-      // Force reload utan cache
+    }
+
+    // Fallback - ladda om sidan
+    if (typeof window !== 'undefined') {
       window.location.reload();
-      
-    } catch (error) {
-      console.error('Error clearing cache:', error);
-      alert('❌ Kunde inte rensa cache. Prova att ladda om sidan manuellt (Ctrl+Shift+R)');
     }
   };
-  
-  const forceReload = () => {
-    // Force hard reload
-    window.location.reload();
+
+  const clearPWACacheOnly = () => {
+    if (typeof window !== 'undefined' && 'clearPWACache' in window) {
+      (window as any).clearPWACache();
+    } else {
+      alert('PWA cache clearing inte tillgänglig');
+    }
   };
 
   // Visa bara i development
@@ -70,21 +73,19 @@ export function ClearCacheButton() {
         variant="destructive"
         size="sm"
         className="shadow-lg"
-        title="Rensa all cache, cookies och storage"
       >
-        <Trash2 className="w-4 h-4 mr-1" />
-        Rensa Cache
+        <RefreshCw className="w-4 h-4 mr-2" />
+        Rensa All Cache
       </Button>
       
       <Button
-        onClick={forceReload}
+        onClick={clearPWACacheOnly}
         variant="outline"
         size="sm"
-        className="shadow-lg"
-        title="Tvångsladdning (Ctrl+Shift+R)"
+        className="shadow-lg bg-white"
       >
-        <RotateCcw className="w-4 h-4 mr-1" />
-        Hard Reload
+        <RefreshCw className="w-4 h-4 mr-2" />
+        Rensa PWA Cache
       </Button>
     </div>
   );

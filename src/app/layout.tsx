@@ -310,26 +310,53 @@ export default function RootLayout({
                   .then(function(registration) {
                     console.log('PWA: Service Worker registrerad:', registration.scope);
                     
+                    // Kontrollera för uppdateringar var 30:e minut
+                    setInterval(() => {
+                      registration.update();
+                    }, 30 * 60 * 1000);
+                    
                     // Lyssna på uppdateringar
                     registration.addEventListener('updatefound', () => {
                       const newWorker = registration.installing;
                       if (newWorker) {
                         newWorker.addEventListener('statechange', () => {
                           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // Ny version tillgänglig
-                            if (confirm('En ny version av appen är tillgänglig. Vill du uppdatera?')) {
+                            // Ny version tillgänglig - rensa cache och ladda om automatiskt
+                            console.log('PWA: Ny version tillgänglig, uppdaterar...');
+                            
+                            // Rensa gammal cache
+                            if (navigator.serviceWorker.controller) {
+                              navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+                            }
+                            
+                            // Vänta lite och ladda sedan om
+                            setTimeout(() => {
                               newWorker.postMessage({ type: 'SKIP_WAITING' });
                               window.location.reload();
-                            }
+                            }, 1000);
                           }
                         });
                       }
+                    });
+                    
+                    // Lyssna på controller change (när ny SW aktiveras)
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                      console.log('PWA: Ny service worker aktiverad');
+                      window.location.reload();
                     });
                   })
                   .catch(function(error) {
                     console.log('PWA: Service Worker registrering misslyckades:', error);
                   });
               });
+              
+              // Lägg till en global funktion för att manuellt rensa cache
+              window.clearPWACache = function() {
+                if (navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+                  setTimeout(() => window.location.reload(), 500);
+                }
+              };
             }
           `}
         </Script>

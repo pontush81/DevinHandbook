@@ -1,16 +1,20 @@
-const CACHE_NAME = 'handbok-pwa-v1';
+const CACHE_NAME = 'handbok-pwa-v2';
+const STATIC_CACHE = 'handbok-static-v2';
+const DYNAMIC_CACHE = 'handbok-dynamic-v2';
+
 const urlsToCache = [
   '/',
   '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png',
-  '/apple-touch-icon.png'
+  '/apple-touch-icon.png',
+  '/favicon.ico'
 ];
 
 // Installera service worker och cacha viktiga resurser
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(STATIC_CACHE)
       .then(async (cache) => {
         console.log('PWA: Cachar grundläggande resurser');
         
@@ -21,7 +25,6 @@ self.addEventListener('install', (event) => {
             console.log(`PWA: Cachade ${url}`);
           } catch (error) {
             console.log(`PWA: Kunde inte cacha ${url}:`, error.message);
-            // Fortsätt med nästa resurs även om en misslyckas
           }
         }
       })
@@ -29,78 +32,148 @@ self.addEventListener('install', (event) => {
         console.log('PWA: Fel vid öppning av cache:', error);
       })
   );
-  // Aktivera omedelbart utan att vänta
+  // Aktivera omedelbart
   self.skipWaiting();
 });
 
 // Aktivera service worker och rensa gamla cachar
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('PWA: Rensar gammal cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      // Ta kontroll över alla klienter omedelbart
-      return self.clients.claim();
-    })
+    Promise.all([
+      // Rensa gamla cachar
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== STATIC_CACHE && 
+                cacheName !== DYNAMIC_CACHE && 
+                cacheName !== CACHE_NAME) {
+              console.log('PWA: Rensar gammal cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Ta kontroll över alla klienter
+      self.clients.claim()
+    ])
   );
 });
 
-// Hantera nätverksförfrågningar med cache-first strategi för statiska resurser
+// Hantera nätverksförfrågningar
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
   // Skippa cross-origin requests och vissa API-anrop
-  if (url.origin !== location.origin || 
-      request.url.includes('/api/auth/') ||
-      request.url.includes('/_next/static/')) {
+  if (url.origin !== location.origin) {
     return;
   }
 
-  event.respondWith(
-    caches.match(request)
-      .then((response) => {
-        // Returnera cachad version om den finns
-        if (response) {
-          console.log('PWA: Hämtar från cache:', request.url);
-          return response;
-        }
+  // Skippa auth-relaterade API-anrop
+  if (request.url.includes('/api/auth/') || 
+      request.url.includes('/api/stripe/') ||
+      request.url.includes('/api/admin/')) {
+    return;
+  }
 
-        // Annars hämta från nätverk och cacha resultatet
-        return fetch(request)
-          .then((response) => {
-            // Kontrollera att svaret är giltigt
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Cacha endast GET-requests
-            if (request.method === 'GET') {
-              const responseToCache = response.clone();
-              caches.open(CACHE_NAME)
-                .then((cache) => {
-                  cache.put(request, responseToCache);
-                });
-            }
-
-            return response;
-          })
-          .catch(() => {
-            // Om nätverket misslyckas, försök returnera huvudsidan
-            if (request.mode === 'navigate') {
-              return caches.match('/');
-            }
-          });
-      })
-  );
+  event.respondWith(handleRequest(request));
 });
+
+async function handleRequest(request) {
+  const url = new URL(request.url);
+  
+  try {
+    // Hantera Next.js statiska filer med network-first strategi
+    if (url.pathname.startsWith('/_next/static/')) {
+      return await networkFirstStrategy(request, STATIC_CACHE);
+    }
+    
+    // Hantera API-anrop med network-only
+    if (url.pathname.startsWith('/api/')) {
+      return await fetch(request);
+    }
+    
+    // Hantera sidor med network-first, fallback till cache
+    if (request.mode === 'navigate') {
+      return await networkFirstStrategy(request, DYNAMIC_CACHE);
+    }
+    
+    // Hantera andra resurser med cache-first
+    return await cacheFirstStrategy(request, DYNAMIC_CACHE);
+    
+  } catch (error) {
+    console.log('PWA: Fetch error:', error);
+    
+    // Fallback för navigation requests
+    if (request.mode === 'navigate') {
+      const cachedResponse = await caches.match('/');
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+    }
+    
+    // Returnera ett enkelt fel-svar
+    return new Response('Offline - resursen är inte tillgänglig', {
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
+  }
+}
+
+// Network-first strategi: försök nätverk först, fallback till cache
+async function networkFirstStrategy(request, cacheName) {
+  try {
+    // Försök hämta från nätverk först
+    const networkResponse = await fetch(request);
+    
+    // Om framgångsrik, uppdatera cache
+    if (networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+      console.log('PWA: Uppdaterade cache från nätverk:', request.url);
+      return networkResponse;
+    }
+    
+    // Om 404 eller annat fel, försök cache
+    throw new Error(`Network response status: ${networkResponse.status}`);
+    
+  } catch (error) {
+    // Fallback till cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      console.log('PWA: Hämtar från cache (network misslyckades):', request.url);
+      return cachedResponse;
+    }
+    
+    // Om varken nätverk eller cache fungerar
+    throw error;
+  }
+}
+
+// Cache-first strategi: försök cache först, fallback till nätverk
+async function cacheFirstStrategy(request, cacheName) {
+  // Försök cache först
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    console.log('PWA: Hämtar från cache:', request.url);
+    return cachedResponse;
+  }
+  
+  // Fallback till nätverk
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.status === 200 && request.method === 'GET') {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+      console.log('PWA: Cachade från nätverk:', request.url);
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    throw error;
+  }
+}
 
 // Hantera meddelanden från huvudtråden
 self.addEventListener('message', (event) => {
@@ -111,17 +184,30 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'GET_VERSION') {
     event.ports[0].postMessage({ version: CACHE_NAME });
   }
-});
-
-// Background sync för offline actions (om du vill ha det senare)
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'background-sync') {
-    console.log('Background sync triggered');
-    // Implementera background sync logik här
+  
+  // Lägg till möjlighet att rensa cache
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('PWA: Rensar cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      })
+    );
   }
 });
 
-// Push notifications (för framtida funktionalitet)
+// Background sync för offline actions
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    console.log('Background sync triggered');
+  }
+});
+
+// Push notifications
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json();
