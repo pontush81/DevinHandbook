@@ -134,8 +134,29 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
       if (!document.hidden) {
         // Återställ analysisResult från ref om det försvunnit
         if (!analysisResult && analysisResultRef.current) {
-          console.log('🔄 Återställer analysresultat efter fönsterbyte');
+          console.log('🔄 Återställer analysresultat efter fönsterbyte (från ref)');
           setAnalysisResult(analysisResultRef.current);
+        }
+        // Om vi inte har något i ref, försök återställa från localStorage
+        else if (!analysisResult && !analysisResultRef.current) {
+          const savedData = handbookStorage.getDocumentImportState();
+          if (savedData && savedData.analysisResult) {
+            const { analysisResult: savedAnalysisResult, timestamp } = savedData;
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            if (Date.now() - timestamp < fiveMinutes) {
+              console.log('🔄 Återställer analysresultat efter fönsterbyte (från localStorage)');
+              setAnalysisResult(savedAnalysisResult);
+              analysisResultRef.current = savedAnalysisResult;
+              
+              // Trigga onImportComplete om det finns sektioner
+              if (savedAnalysisResult.sections && savedAnalysisResult.sections.length > 0) {
+                setTimeout(() => {
+                  onImportComplete(savedAnalysisResult.sections);
+                }, 0);
+              }
+            }
+          }
         }
         
         // Återställ filer från ref om de försvunnit
@@ -149,8 +170,29 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
     const handleFocus = () => {
       // Återställ även vid focus-event för extra säkerhet
       if (!analysisResult && analysisResultRef.current) {
-        console.log('🔄 Återställer analysresultat efter focus');
+        console.log('🔄 Återställer analysresultat efter focus (från ref)');
         setAnalysisResult(analysisResultRef.current);
+      }
+      // Om vi inte har något i ref, försök återställa från localStorage
+      else if (!analysisResult && !analysisResultRef.current) {
+        const savedData = handbookStorage.getDocumentImportState();
+        if (savedData && savedData.analysisResult) {
+          const { analysisResult: savedAnalysisResult, timestamp } = savedData;
+          const fiveMinutes = 5 * 60 * 1000;
+          
+          if (Date.now() - timestamp < fiveMinutes) {
+            console.log('🔄 Återställer analysresultat efter focus (från localStorage)');
+            setAnalysisResult(savedAnalysisResult);
+            analysisResultRef.current = savedAnalysisResult;
+            
+            // Trigga onImportComplete om det finns sektioner
+            if (savedAnalysisResult.sections && savedAnalysisResult.sections.length > 0) {
+              setTimeout(() => {
+                onImportComplete(savedAnalysisResult.sections);
+              }, 0);
+            }
+          }
+        }
       }
     };
     
@@ -270,9 +312,21 @@ export const DocumentImport = memo(function DocumentImport({ onImportComplete, o
     setAnalysisResult(null);
     setCurrentFileIndex(0);
     
-    // Rensa gammal AI-analys från localStorage när nya filer väljs
-    handbookStorage.clearDocumentImportState();
-    console.log('🧹 Rensade gammal AI-analys när nya filer valdes');
+    // Rensa endast AI-analys om det är helt nya filer (inte samma filnamn)
+    const existingState = handbookStorage.getDocumentImportState();
+    const shouldClearState = !existingState || 
+                           !existingState.analysisResult ||
+                           !existingState.analysisResult.metadata ||
+                           validFiles.some(file => 
+                             !existingState.analysisResult.metadata.title.includes(file.name)
+                           );
+    
+    if (shouldClearState) {
+      handbookStorage.clearDocumentImportState();
+      console.log('🧹 Rensade gammal AI-analys när nya filer valdes');
+    } else {
+      console.log('💾 Behåller befintlig AI-analys (samma filer)');
+    }
   }, [validateFile]);
 
   const handleFileSelection = useCallback((selectedFile: File) => {

@@ -84,17 +84,41 @@ export function CreateHandbookForm({ forceNew = false }: CreateHandbookFormProps
     useEffect(() => {
     let hasRestored = false;
     
-    // Rensa gammal AI-analys från föregående handbok för att undvika cache-problem
-    const clearSuccess = handbookStorage.clearDocumentImportState();
-    if (clearSuccess) {
-      console.log('🧹 Rensade gammal AI-analys från localStorage vid komponentstart');
+    // Skapa en session-identifierare för att undvika att rensa data vid fönsterbyte
+    const currentSession = `${window.location.href}-${Math.floor(Date.now() / (10 * 60 * 1000))}`; // 10 minuter sessions
+    const lastSession = localStorage.getItem('handbook_session_id');
+    const isNewSession = !lastSession || lastSession !== currentSession;
+    
+    // Rensa endast AI-analys om forceNew är true OCH det är en ny session
+    const documentState = handbookStorage.getDocumentImportState();
+    let shouldClearDocumentState = false;
+    
+    if (forceNew && isNewSession) {
+      shouldClearDocumentState = true;
+      localStorage.setItem('handbook_session_id', currentSession);
+      console.log('🆕 Rensar AI-analys eftersom forceNew=true och ny session');
+    } else if (documentState && documentState.timestamp) {
+      const oneHour = 60 * 60 * 1000; // Öka till 1 timme
+      const isOld = Date.now() - documentState.timestamp > oneHour;
+      if (isOld) {
+        shouldClearDocumentState = true;
+        console.log('🕒 Rensar gammal AI-analys (äldre än 1 timme)');
+      }
     }
     
-    // Om forceNew är true, rensa all localStorage och starta om
-    if (forceNew) {
-      console.log('🆕 [CreateHandbook] forceNew=true, rensar all localStorage cache');
+    if (shouldClearDocumentState) {
+      const clearSuccess = handbookStorage.clearDocumentImportState();
+      if (clearSuccess) {
+        console.log('🧹 Rensade AI-analys från localStorage');
+      }
+    } else if (documentState) {
+      console.log('💾 Behåller befintlig AI-analys i localStorage');
+    }
+    
+    // Om forceNew är true OCH det är en ny session, rensa form state
+    if (forceNew && isNewSession) {
+      console.log('🆕 [CreateHandbook] forceNew=true och ny session, rensar form cache');
       handbookStorage.clearFormState();
-      handbookStorage.clearDocumentImportState();
       // Återställ till defaultvärden
       setName('');
       setSubdomain('');
