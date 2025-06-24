@@ -283,19 +283,21 @@ async function handleSubscriptionCancelled(subscription: any) {
   }
 }
 
-async function handleTrialUpgrade(userId: string, stripeSession: any) {
+export async function handleTrialUpgrade(userId: string, stripeSession: any) {
   console.log(`[Stripe Webhook] Handling trial upgrade for user ${userId}`);
   
   const supabase = getServiceSupabase();
   
   try {
-    // Extrahera plan-typ från metadata
+    // Extrahera plan-typ och handbook ID från metadata
     const planType = stripeSession.metadata?.planType || 'monthly';
+    const handbookId = stripeSession.metadata?.handbookId;
     const subscriptionId = stripeSession.subscription;
     const customerId = stripeSession.customer;
     
     console.log(`[Stripe Webhook] Trial upgrade details:`, {
       userId,
+      handbookId,
       planType,
       subscriptionId,
       customerId
@@ -315,11 +317,32 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
       console.error('[Stripe Webhook] Error updating trial status:', trialError);
     }
 
-    // 2. Skapa subscription record med rätt plan-typ
+    // 2. Uppdatera handbok prenumeration om handbookId finns
+    if (handbookId) {
+      console.log(`[Stripe Webhook] Updating handbook ${handbookId} subscription status`);
+      
+      // Sätt handbokens trial_end_date till null för att aktivera prenumeration
+      const { error: handbookError } = await supabase
+        .from('handbooks')
+        .update({
+          trial_end_date: null, // null = aktiv prenumeration
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', handbookId);
+
+      if (handbookError) {
+        console.error('[Stripe Webhook] Error updating handbook trial status:', handbookError);
+      } else {
+        console.log(`[Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
+      }
+    }
+
+    // 3. Skapa subscription record med rätt plan-typ
     // Konvertera planType till databas-kompatibelt format
     const dbPlanType = planType === 'yearly' ? 'annual' : 'monthly';
     const subscriptionData = {
       user_id: userId,
+      handbook_id: handbookId || null, // Lägg till handbook_id om det finns
       plan_type: dbPlanType,
       status: 'active',
       started_at: new Date().toISOString(),
@@ -333,7 +356,8 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
         currency: stripeSession.currency,
         plan_type: dbPlanType,
         original_plan_type: planType,
-        upgraded_from_trial: true
+        upgraded_from_trial: true,
+        handbook_id: handbookId || null
       }
     };
 
@@ -359,7 +383,7 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
 
     console.log(`[Stripe Webhook] Created ${planType} subscription: ${subscription.id}`);
 
-    // 3. Uppdatera account status
+    // 4. Uppdatera account status
     const { error: statusError } = await supabase
       .from('account_status')
       .upsert({
@@ -384,7 +408,7 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
       console.error('[Stripe Webhook] Error updating account status:', statusError);
     }
 
-    // 4. Logga lifecycle event
+    // 5. Logga lifecycle event
     await supabase
       .from('customer_lifecycle_events')
       .insert({
@@ -400,7 +424,8 @@ async function handleTrialUpgrade(userId: string, stripeSession: any) {
           original_plan_type: planType,
           payment_amount: stripeSession.amount_total,
           currency: stripeSession.currency,
-          converted_from: 'trial'
+          converted_from: 'trial',
+          handbook_id: handbookId || null
         }
       });
 

@@ -3,7 +3,7 @@ import { stripe } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, planType, successUrl, cancelUrl } = await req.json();
+    const { userId, handbookId, planType, successUrl, cancelUrl } = await req.json();
 
     if (!userId || !planType || !successUrl || !cancelUrl) {
       return NextResponse.json(
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[Stripe Subscription] Creating ${planType} subscription for user ${userId}`);
+    console.log(`[Stripe Subscription] Creating ${planType} subscription for user ${userId}${handbookId ? ` and handbook ${handbookId}` : ''}`);
 
     // Skapa Stripe checkout session för prenumeration
     const session = await stripe.checkout.sessions.create({
@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
       cancel_url: cancelUrl,
       metadata: {
         userId,
+        handbookId: handbookId || '',
         action: 'upgrade_from_trial',
         type: 'subscription',
         planType: planType

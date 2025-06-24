@@ -273,6 +273,32 @@ export async function smartRedirectWithPolling(
   
   console.log(`[Smart Redirect Polling] Starting with maxAttempts: ${maxAttempts}, intervalMs: ${intervalMs}, userId: ${userId}, isSuperAdmin: ${isSuperAdmin}`);
   
+  // Check if user is on upgrade page or intended to go to upgrade - if so, don't redirect
+  if (typeof window !== 'undefined') {
+    const currentPath = window.location.pathname;
+    const currentUrl = window.location.href;
+    const intendedPage = sessionStorage.getItem('intended_page');
+    
+    console.log(`[Smart Redirect Polling] INITIAL CHECK - Current path: "${currentPath}", Current URL: "${currentUrl}", Intended page: "${intendedPage}"`);
+    
+    if (currentPath === '/upgrade' || intendedPage === '/upgrade') {
+      console.log('[Smart Redirect Polling] EARLY EXIT - User is on upgrade page or intended to go to upgrade, skipping redirect');
+      // If user intended to go to upgrade but is not there, redirect them back
+      if (intendedPage === '/upgrade' && currentPath !== '/upgrade') {
+        console.log('[Smart Redirect Polling] REDIRECTING BACK - Redirecting back to intended upgrade page');
+        sessionStorage.removeItem('intended_page');
+        window.location.href = '/upgrade';
+      }
+      return;
+    }
+    
+    // Also check for any URL that contains upgrade
+    if (currentPath.includes('/upgrade')) {
+      console.log('[Smart Redirect Polling] User is on upgrade-related page, skipping redirect');
+      return;
+    }
+  }
+  
   const attemptRedirect = async (): Promise<void> => {
     attempts++;
     console.log(`[Smart Redirect Polling] Attempt ${attempts}/${maxAttempts}`);

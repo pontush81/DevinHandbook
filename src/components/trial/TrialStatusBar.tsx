@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Clock, AlertTriangle, CreditCard, Gift, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface TrialStatus {
   isInTrial: boolean;
@@ -35,13 +36,61 @@ function formatTrialEndDate(trialEndsAt: string | null): string {
 }
 
 export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }: TrialStatusBarProps) {
+  console.log('🚀🚀🚀 TrialStatusBar: COMPONENT LOADED!!! Props:', { userId, handbookId });
+  
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHandbookOwner, setIsHandbookOwner] = useState<boolean | null>(null);
+
+  // Check if user owns this handbook
+  useEffect(() => {
+    async function checkHandbookOwnership() {
+      if (!userId || !handbookId) {
+        setIsHandbookOwner(false);
+        return;
+      }
+
+      try {
+        const { data: handbookData, error } = await supabase
+          .from('handbooks')
+          .select('owner_id')
+          .eq('id', handbookId)
+          .single();
+
+        if (error) {
+          console.error('❌ TrialStatusBar: Error checking handbook ownership:', error);
+          setIsHandbookOwner(false);
+          return;
+        }
+
+        const isOwner = handbookData.owner_id === userId;
+        setIsHandbookOwner(isOwner);
+        
+        console.log('🔒 TrialStatusBar: Ownership check:', {
+          userId,
+          handbookId,
+          ownerId: handbookData.owner_id,
+          isOwner
+        });
+      } catch (error) {
+        console.error('❌ TrialStatusBar: Exception checking ownership:', error);
+        setIsHandbookOwner(false);
+      }
+    }
+
+    checkHandbookOwnership();
+  }, [userId, handbookId]);
 
   useEffect(() => {
     async function fetchTrialStatus() {
-      if (!userId) return;
+      if (!userId || isHandbookOwner === false) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Wait for ownership check to complete
+      if (isHandbookOwner === null) return;
       
       try {
         setIsLoading(true);
@@ -73,17 +122,20 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
 
     fetchTrialStatus();
     
-    // Uppdatera var 5:e minut
-    const interval = setInterval(fetchTrialStatus, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [userId]);
+    // Only set up interval if user owns the handbook
+    if (isHandbookOwner === true) {
+      const interval = setInterval(fetchTrialStatus, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [userId, isHandbookOwner]);
 
   const handleUpgrade = () => {
     if (onUpgrade) {
       onUpgrade();
     } else {
-      // Fallback: redirect till betalning
-      window.location.href = '/upgrade';
+      // Fallback: redirect till betalning med handbookId
+      const upgradeUrl = handbookId ? `/upgrade?handbookId=${handbookId}` : '/upgrade';
+      window.location.href = upgradeUrl;
     }
   };
 
@@ -96,14 +148,22 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     isLoading,
     trialStatus,
     isVisible,
-    userId
+    userId,
+    isHandbookOwner
   });
 
-  if (isLoading || !trialStatus || !isVisible) {
+  // Don't show if user doesn't own this handbook
+  if (isHandbookOwner === false) {
+    console.log('🚫 TrialStatusBar: Not showing - user does not own this handbook');
+    return null;
+  }
+
+  if (isLoading || !trialStatus || !isVisible || isHandbookOwner === null) {
     return null;
   }
 
   // Visa endast för aktiva trials eller utgångna trials
+  // INTE för aktiva prenumerationer eller användare som inte har trial alls
   if (!trialStatus.isInTrial && trialStatus.subscriptionStatus !== 'expired') {
     console.log('🚫 TrialStatusBar: Not showing - no active trial or expired status');
     return null;

@@ -39,8 +39,27 @@ function UpgradeSuccessContent() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const [countdown, setCountdown] = useState(5);
+  const [handbookSlug, setHandbookSlug] = useState<string | null>(null);
 
   const sessionId = searchParams.get('session_id');
+  const handbookId = searchParams.get('handbookId');
+  const returnTo = searchParams.get('returnTo');
+
+  // Hämta handbok slug om vi har ett handbookId
+  useEffect(() => {
+    if (handbookId && returnTo === 'handbook') {
+      fetch(`/api/handbooks/${handbookId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.slug) {
+            setHandbookSlug(data.slug);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch handbook:', err);
+        });
+    }
+  }, [handbookId, returnTo]);
 
   useEffect(() => {
     // Countdown timer
@@ -48,7 +67,12 @@ function UpgradeSuccessContent() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          router.push('/dashboard');
+          // Redirect till handbok om vi har slug, annars dashboard
+          if (handbookSlug && returnTo === 'handbook') {
+            router.push(`/${handbookSlug}`);
+          } else {
+            router.push('/dashboard');
+          }
           return 0;
         }
         return prev - 1;
@@ -56,10 +80,14 @@ function UpgradeSuccessContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [router]);
+  }, [router, handbookSlug, returnTo]);
 
-  const goToDashboard = () => {
-    router.push('/dashboard');
+  const goToDestination = () => {
+    if (handbookSlug && returnTo === 'handbook') {
+      router.push(`/${handbookSlug}`);
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   return (
@@ -150,11 +178,11 @@ function UpgradeSuccessContent() {
             {/* Action knapp */}
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-lg text-center">
               <Button 
-                onClick={goToDashboard}
+                onClick={goToDestination}
                 className="w-full bg-white text-green-600 hover:bg-gray-50 font-semibold py-3 mb-3"
               >
                 <BookOpen className="w-4 h-4 mr-2" />
-                Gå till din handbok
+                {handbookSlug && returnTo === 'handbook' ? 'Gå till din handbok' : 'Gå till dashboard'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
               <p className="text-green-100 text-sm">

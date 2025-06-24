@@ -5,12 +5,21 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Check, CreditCard } from 'lucide-react';
+import { Shield, Check, CreditCard, Gift, Star } from 'lucide-react';
+import { getProPricing } from '@/lib/pricing';
 
 interface BlockedAccountScreenProps {
   trialEndedAt: string;
   handbookName?: string;
   onUpgrade?: (planType: 'monthly' | 'yearly') => Promise<void>;
+  isUpgrading?: boolean;
+}
+
+interface EarlyUpgradeScreenProps {
+  trialDaysRemaining: number;
+  trialEndsAt: string;
+  handbookName: string;
+  onUpgrade: (planType: 'monthly' | 'yearly') => void;
   isUpgrading?: boolean;
 }
 
@@ -91,7 +100,7 @@ export function BlockedAccountScreen({
                 <span className="font-medium text-green-800">Dina data är säkra</span>
               </div>
               <p className="text-sm text-green-700">
-                All din information sparas säkert och återställs direkt när du uppgraderar.
+                All din information sparas säkert och återställs direkt när du aktiverar din prenumeration.
               </p>
             </div>
 
@@ -176,12 +185,12 @@ export function BlockedAccountScreen({
               {isUpgrading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Förbereder uppgradering...
+                  Förbereder betalning...
                 </>
               ) : (
                 <>
                   <CreditCard className="h-5 w-5 mr-2" />
-                  Uppgradera nu - {pricing[selectedPlan].price} kr{pricing[selectedPlan].period}
+                  Aktivera prenumeration - {pricing[selectedPlan].price} kr{pricing[selectedPlan].period}
                 </>
               )}
             </Button>
@@ -190,6 +199,139 @@ export function BlockedAccountScreen({
             <p className="text-xs text-gray-500 mt-4">
               Säker betalning via Stripe • Avsluta när som helst
             </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export function EarlyUpgradeScreen({ 
+  trialDaysRemaining,
+  trialEndsAt, 
+  handbookName,
+  onUpgrade,
+  isUpgrading = false
+}: EarlyUpgradeScreenProps) {
+  const pricing = getProPricing();
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('sv-SE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
+      <div className="w-full max-w-md mx-auto">
+        <Card className="shadow-xl border-0">
+          <CardContent className="p-8 text-center">
+            {/* Status icon */}
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Gift className="h-8 w-8 text-green-600" />
+            </div>
+
+            {/* Title */}
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Aktivera prenumeration tidigt och spara
+            </h1>
+            
+            {/* Trial status */}
+            <p className="text-gray-600 mb-2">
+              Du har {trialDaysRemaining} dagar kvar av din gratis trial
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Trial slutar {formatDate(trialEndsAt)}
+            </p>
+
+            {/* Benefits of upgrading early */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-center mb-2">
+                <Star className="h-5 w-5 text-blue-600 mr-2" />
+                <span className="font-medium text-blue-800">Fördelar med tidig aktivering</span>
+              </div>
+              <ul className="text-sm text-blue-700 text-left space-y-1">
+                <li>• Säker tillgång till alla funktioner</li>
+                <li>• Inga avbrott när trial slutar</li>
+                <li>• Stöd utvecklingen av plattformen</li>
+                <li>• Prioriterad support</li>
+              </ul>
+            </div>
+
+            {/* Plan selection */}
+            <div className="space-y-3 mb-6">
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-900 mb-3">Välj din plan:</h3>
+                
+                {/* Yearly plan - recommended */}
+                <button
+                  onClick={() => onUpgrade('yearly')}
+                  disabled={isUpgrading}
+                  className="w-full p-4 border-2 border-green-300 rounded-lg hover:border-green-400 transition-colors mb-3 disabled:opacity-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <div className="flex items-center">
+                        <span className="font-semibold text-gray-900">Årlig betalning</span>
+                        <Badge className="ml-2 bg-green-100 text-green-800 text-xs">
+                          Rekommenderas
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {pricing.yearly} - Spara {pricing.yearlySavings}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-gray-900">{pricing.yearlyMonthly}</div>
+                      <div className="text-xs text-gray-500">per månad</div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Monthly plan */}
+                <button
+                  onClick={() => onUpgrade('monthly')}
+                  disabled={isUpgrading}
+                  className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 transition-colors disabled:opacity-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <span className="font-semibold text-gray-900">Månadsvis betalning</span>
+                      <div className="text-sm text-gray-600">Flexibel betalning</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-gray-900">{pricing.monthly}</div>
+                      <div className="text-xs text-gray-500">per månad</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Security note */}
+            <p className="text-xs text-gray-500 mb-4">
+              Säker betalning via Stripe. Avbryt när som helst.
+            </p>
+
+            {/* Loading state */}
+            {isUpgrading && (
+              <div className="flex items-center justify-center py-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                <span className="text-sm text-gray-600">Förbereder betalning...</span>
+              </div>
+            )}
+
+            {/* Continue with trial option */}
+            <div className="pt-4 border-t border-gray-100">
+              <button 
+                onClick={() => window.history.back()}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Fortsätt med trial ({trialDaysRemaining} dagar kvar)
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>

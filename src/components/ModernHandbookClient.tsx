@@ -49,6 +49,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const [mounted, setMounted] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [trialEndedAt, setTrialEndedAt] = useState<string | null>(null);
+  const [isHandbookOwner, setIsHandbookOwner] = useState(false);
 
   // Add missing state variables for dialog management
   const [editingSection, setEditingSection] = useState<Section | null>(null);
@@ -113,144 +114,99 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     }
   }, [user, authLoading, canEdit, isEditMode, mounted, isLoading, initialData.id]);
 
-  // Check if user can edit this handbook and if they are admin
+  // Check edit permissions when user loads
   useEffect(() => {
     const checkEditPermissions = async () => {
-      console.log('🔍 [ModernHandbookClient] Checking edit permissions...', {
-        authLoading,
-        user: !!user,
-        userId: user?.id,
-        userEmail: user?.email,
-        handbookId: initialData.id,
-        timestamp: new Date().toISOString()
-      });
+      if (!mounted || authLoading) return;
       
-      // Require mounted state first
-      if (!mounted) {
-        console.log('⏳ [ModernHandbookClient] Not mounted yet, waiting...');
-        return;
-      }
-      
-      if (authLoading) {
-        console.log('⏳ [ModernHandbookClient] Auth is still loading, waiting...');
-        return;
-      }
-      
-      // Don't require user to be logged in - allow anonymous access
+      // Handle no user case
       if (!user) {
-        console.log('👤 [ModernHandbookClient] No user found, setting permissions for anonymous user');
         setCanEdit(false);
         setIsAdmin(false);
+        setIsHandbookOwner(false);
         setIsLoading(false);
         return;
       }
       
-      console.log('✅ [ModernHandbookClient] User found:', {
-        id: user.id,
-        email: user.email
-      });
-
       try {
-        console.log('🔍 [ModernHandbookClient] Checking handbook member permissions...');
-        // Check user's role for this handbook
-        const { data: memberData, error } = await supabase
+        const { data: handbookMembership, error } = await supabase
           .from('handbook_members')
           .select('role')
           .eq('handbook_id', initialData.id)
           .eq('user_id', user.id)
-          .maybeSingle();
+          .single();
 
-        if (error) {
-          console.error('❌ [ModernHandbookClient] Error checking handbook member permissions:', error);
-          setCanEdit(false);
-          setIsAdmin(false);
-        } else if (memberData) {
-          const userRole = memberData.role;
-          const canEditContent = userRole === 'admin' || userRole === 'editor';
-          const isAdminUser = userRole === 'admin';
-          
-          console.log('📋 [ModernHandbookClient] Handbook member check:', {
-            handbookId: initialData.id,
-            userId: user.id,
-            userRole,
-            canEditContent,
-            isAdminUser,
-            memberData
-          });
-          
-          setCanEdit(canEditContent);
-          setIsAdmin(isAdminUser);
-        } else {
-          console.log('❌ [ModernHandbookClient] User is not a member of this handbook');
-          setCanEdit(false);
-          setIsAdmin(false);
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error checking handbook membership:', error);
+          return;
         }
+
+        // Check if user is owner
+        const { data: handbookData, error: handbookError } = await supabase
+          .from('handbooks')
+          .select('owner_id')
+          .eq('id', initialData.id)
+          .single();
+
+        if (handbookError) {
+          console.error('Error checking handbook owner:', handbookError);
+          return;
+        }
+
+        const isOwner = handbookData.owner_id === user.id;
+        setIsHandbookOwner(isOwner);
+
+        // User can edit if they're the owner or have admin/editor role
+        const isAdmin = isOwner || handbookMembership?.role === 'admin';
+        const canEdit = isOwner || handbookMembership?.role === 'admin' || handbookMembership?.role === 'editor';
+        
+        setIsAdmin(isAdmin);
+        setCanEdit(canEdit);
+        
+        console.log('👤 User permissions:', {
+          userId: user.id,
+          handbookId: initialData.id,
+          role: handbookMembership?.role || 'none',
+          isOwner,
+          isAdmin,
+          canEdit
+        });
       } catch (error) {
-        console.error('❌ [ModernHandbookClient] Error checking edit permissions:', error);
-        setCanEdit(false);
-        setIsAdmin(false);
+        console.error('Error checking permissions:', error);
       } finally {
-        console.log('🏁 [ModernHandbookClient] Setting isLoading to false');
         setIsLoading(false);
       }
     };
 
     checkEditPermissions();
-    
-    // Backup timeout: If auth is still loading after 3 seconds, assume no auth and proceed
-    const timeoutId = setTimeout(() => {
-      if (authLoading || !mounted) {
-        console.log('⏰ [ModernHandbookClient] Auth loading timeout, proceeding without auth');
-        setCanEdit(false);
-        setIsAdmin(false);
-        setIsLoading(false);
-        setMounted(true);
-      }
-    }, 3000); // Reduced from 5 to 3 seconds
-
-    return () => clearTimeout(timeoutId);
   }, [user, authLoading, initialData.id, mounted]);
 
   // Check trial status for users who own handbooks
   useEffect(() => {
     const checkTrialStatus = async () => {
-      if (!user || !mounted || authLoading) return;
+      if (!user || !mounted || authLoading || !isHandbookOwner) return;
       
       try {
-        // Kontrollera om användaren äger denna handbok
-        const { data: handbookOwner, error: ownerError } = await supabase
-          .from('handbooks')
-          .select('owner_id')
-          .eq('id', initialData.id)
-          .single();
+        const trialStatus = await getEnhancedTrialStatus(user.id);
         
-        if (ownerError) {
-          console.error('Error checking handbook owner:', ownerError);
-          return;
-        }
+        // Blockera om trial har gått ut och ingen aktiv prenumeration
+        const shouldBlock = !trialStatus.isInTrial && 
+                           trialStatus.subscriptionStatus !== 'active' &&
+                           trialStatus.trialEndsAt;
         
-        // Om användaren äger handboken, kontrollera trial-status
-        if (handbookOwner?.owner_id === user.id) {
-          const trialStatus = await getEnhancedTrialStatus(user.id);
-          
-          // Blockera om trial har gått ut och ingen aktiv prenumeration
-          const shouldBlock = !trialStatus.isInTrial && 
-                             trialStatus.subscriptionStatus !== 'active' &&
-                             trialStatus.trialEndsAt;
-          
-          console.log('📊 Trial status check:', {
-            userId: user.id,
-            handbookId: initialData.id,
-            isInTrial: trialStatus.isInTrial,
-            subscriptionStatus: trialStatus.subscriptionStatus,
-            shouldBlock,
-            trialEndsAt: trialStatus.trialEndsAt
-          });
-          
-          if (shouldBlock) {
-            setIsBlocked(true);
-            setTrialEndedAt(trialStatus.trialEndsAt);
-          }
+        console.log('📊 Trial status check:', {
+          userId: user.id,
+          handbookId: initialData.id,
+          isHandbookOwner,
+          isInTrial: trialStatus.isInTrial,
+          subscriptionStatus: trialStatus.subscriptionStatus,
+          shouldBlock,
+          trialEndsAt: trialStatus.trialEndsAt
+        });
+        
+        if (shouldBlock) {
+          setIsBlocked(true);
+          setTrialEndedAt(trialStatus.trialEndsAt);
         }
       } catch (error) {
         console.error('Error checking trial status:', error);
@@ -258,7 +214,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     };
     
     checkTrialStatus();
-  }, [user, mounted, authLoading, initialData.id]);
+  }, [user, mounted, authLoading, initialData.id, isHandbookOwner]);
 
   // Handle page selection from search results via URL hash
   useEffect(() => {
@@ -1071,8 +1027,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const primaryColor = handbookData.theme?.primary_color || '#3498db';
   const secondaryColor = handbookData.theme?.secondary_color || '#2c3e50';
 
-  // Create trial status bar component
-  const trialStatusBar = user ? (
+  // Create trial status bar component - only for handbook owners
+  const trialStatusBar = user && isHandbookOwner ? (
     <div className="w-full">
       <div className="max-w-6xl mx-auto p-3">
         <TrialStatusBar 
@@ -1080,8 +1036,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           handbookId={handbookData.id}
           className=""
           onUpgrade={() => {
-            // Redirect to upgrade page
-            window.location.href = '/upgrade';
+            // Redirect to upgrade page with handbook ID
+            window.location.href = `/upgrade?handbookId=${handbookData.id}`;
           }}
         />
       </div>
@@ -1104,7 +1060,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         trialEndedAt={trialEndedAt}
         handbookName={handbookData.title}
         onUpgrade={() => {
-          window.location.href = '/upgrade';
+          window.location.href = `/upgrade?handbookId=${handbookData.id}`;
         }}
       />
     );

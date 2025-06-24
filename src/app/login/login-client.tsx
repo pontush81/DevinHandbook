@@ -214,7 +214,28 @@ export default function LoginClient() {
                 const { data: { session } } = await supabase.auth.getSession();
                 
                 if (session) {
-                  console.log("Session bekräftad, använder smart redirect...");
+                  console.log("Session bekräftad från URL-tokens, kontrollerar intended_page...");
+                  
+                  // Don't redirect if user is on upgrade page or intended to go to upgrade
+                  if (typeof window !== 'undefined') {
+                    const currentPath = window.location.pathname;
+                    const intendedPage = sessionStorage.getItem('intended_page');
+                    
+                    console.log("Login-client (URL-tokens): Checking redirect logic", { currentPath, intendedPage });
+                    
+                    if (currentPath === '/upgrade' || intendedPage === '/upgrade') {
+                      console.log("User is on upgrade page or intended to go to upgrade, skipping smart redirect");
+                      // Clear the intended page flag and redirect to upgrade if not already there
+                      sessionStorage.removeItem('intended_page');
+                      if (currentPath !== '/upgrade') {
+                        console.log("Redirecting back to upgrade page");
+                        window.location.href = '/upgrade';
+                      }
+                      return;
+                    }
+                  }
+                  
+                  console.log("No upgrade intention found, using smart redirect...");
                   smartRedirectWithPolling(3, 800);
                   return;
                 } else if (attempts >= maxAttempts) {
@@ -299,7 +320,28 @@ export default function LoginClient() {
                 const { data: { session } } = await supabase.auth.getSession();
                 
                 if (session) {
-                  console.log("Session bekräftad, använder smart redirect...");
+                  console.log("Session bekräftad, kontrollerar intended_page...");
+                  
+                  // Don't redirect if user is on upgrade page or intended to go to upgrade
+                  if (typeof window !== 'undefined') {
+                    const currentPath = window.location.pathname;
+                    const intendedPage = sessionStorage.getItem('intended_page');
+                    
+                    console.log("Login-client: Checking redirect logic", { currentPath, intendedPage });
+                    
+                    if (currentPath === '/upgrade' || intendedPage === '/upgrade') {
+                      console.log("User is on upgrade page or intended to go to upgrade, skipping smart redirect");
+                      // Clear the intended page flag and redirect to upgrade if not already there
+                      sessionStorage.removeItem('intended_page');
+                      if (currentPath !== '/upgrade') {
+                        console.log("Redirecting back to upgrade page");
+                        window.location.href = '/upgrade';
+                      }
+                      return;
+                    }
+                  }
+                  
+                  console.log("No upgrade intention found, using smart redirect...");
                   smartRedirectWithPolling(3, 800);
                   return;
                 } else if (attempts >= maxAttempts) {
