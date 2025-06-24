@@ -166,8 +166,20 @@ export async function isEligibleForTrial(userId: string): Promise<boolean> {
   try {
     const status = await getTrialStatus(userId);
     
+    console.log('[Trial Service] Checking eligibility for user:', userId);
+    console.log('[Trial Service] Trial status:', {
+      hasUsedTrial: status.hasUsedTrial,
+      isInTrial: status.isInTrial,
+      canCreateHandbook: status.canCreateHandbook,
+      subscriptionStatus: status.subscriptionStatus
+    });
+    
     // Berättigad om användaren inte har använt trial än ELLER är i en aktiv trial
-    return !status.hasUsedTrial || status.isInTrial;
+    const eligible = !status.hasUsedTrial || status.isInTrial;
+    
+    console.log('[Trial Service] Eligibility result:', eligible);
+    
+    return eligible;
   } catch (error) {
     console.error('Error checking trial eligibility:', error);
     // Default till berättigad vid fel för att inte blockera användare

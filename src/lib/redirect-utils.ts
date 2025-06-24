@@ -273,7 +273,7 @@ export async function smartRedirectWithPolling(
   
   console.log(`[Smart Redirect Polling] Starting with maxAttempts: ${maxAttempts}, intervalMs: ${intervalMs}, userId: ${userId}, isSuperAdmin: ${isSuperAdmin}`);
   
-  // Check if user is on upgrade page or intended to go to upgrade - if so, don't redirect
+  // Check if user is on upgrade page, create-handbook page, or intended to go to upgrade - if so, don't redirect
   if (typeof window !== 'undefined') {
     const currentPath = window.location.pathname;
     const currentUrl = window.location.href;
@@ -289,6 +289,12 @@ export async function smartRedirectWithPolling(
         sessionStorage.removeItem('intended_page');
         window.location.href = '/upgrade';
       }
+      return;
+    }
+    
+    // Check if user is on create-handbook page - don't redirect
+    if (currentPath === '/create-handbook') {
+      console.log('[Smart Redirect Polling] EARLY EXIT - User is on create-handbook page, skipping redirect');
       return;
     }
     

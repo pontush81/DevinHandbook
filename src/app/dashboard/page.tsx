@@ -339,15 +339,13 @@ export default function DashboardPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Mina handböcker</h1>
               <p className="text-gray-600 mb-4 md:mb-0">Handböcker du äger eller är medlem i</p>
             </div>
-            {(isSuperadmin || ownedHandbooks.length === 0) && (
-              <Button asChild size="lg" className="shadow-md">
-                <Link href="/create-handbook?new=true">
-                  {ownedHandbooks.length === 0 && memberHandbooks.length > 0 
-                    ? "Skapa din egen handbok" 
-                    : "Skapa ny handbok"}
-                </Link>
-              </Button>
-            )}
+            <Button asChild size="lg" className="shadow-md">
+              <Link href="/create-handbook?new=true">
+                {ownedHandbooks.length === 0 && memberHandbooks.length > 0 
+                  ? "Skapa din egen handbok" 
+                  : "Skapa ny handbok"}
+              </Link>
+            </Button>
 
           </div>
           

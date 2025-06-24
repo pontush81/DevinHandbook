@@ -322,7 +322,7 @@ export default function LoginClient() {
                 if (session) {
                   console.log("Session bekräftad, kontrollerar intended_page...");
                   
-                  // Don't redirect if user is on upgrade page or intended to go to upgrade
+                  // Don't redirect if user is on upgrade page, create-handbook page, or intended to go to upgrade
                   if (typeof window !== 'undefined') {
                     const currentPath = window.location.pathname;
                     const intendedPage = sessionStorage.getItem('intended_page');
@@ -337,6 +337,12 @@ export default function LoginClient() {
                         console.log("Redirecting back to upgrade page");
                         window.location.href = '/upgrade';
                       }
+                      return;
+                    }
+                    
+                    // Don't redirect if user is on create-handbook page
+                    if (currentPath === '/create-handbook') {
+                      console.log("User is on create-handbook page, skipping smart redirect");
                       return;
                     }
                   }

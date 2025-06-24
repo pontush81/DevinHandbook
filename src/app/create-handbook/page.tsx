@@ -115,7 +115,9 @@ function CreateHandbookContent() {
 
   // Handle force new handbook parameter
   useEffect(() => {
+    console.log('🎯 [CreateHandbook] forceNewHandbook:', forceNewHandbook);
     if (forceNewHandbook) {
+      console.log('🎯 [CreateHandbook] Setting showCreateForm to true due to forceNewHandbook');
       setShowCreateForm(true);
     }
   }, [forceNewHandbook]);
@@ -137,72 +139,14 @@ function CreateHandbookContent() {
     return null;
   }
 
-  // Kontrollera om användaren redan har en handbok (begränsning för nya användare)
-  if (handbooks.length >= 1 && !isSuperadmin) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-4">
-              Du har redan en handbok
-            </h1>
-            <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto px-2">
-              Som ny användare kan du skapa en handbok. För att skapa fler handböcker behöver du uppgradera ditt konto.
-            </p>
-          </div>
-          
-          <Card className="shadow-lg border-0 mb-6 md:mb-8">
-            <CardContent className="p-4 md:p-8">
-              <div className="text-center space-y-4 md:space-y-6">
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                  <span className="text-2xl md:text-3xl">📚</span>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg md:text-xl font-semibold mb-2">Din befintliga handbok</h3>
-                  <div className="space-y-3 md:space-y-4">
-                    {handbooks.map(handbook => (
-                      <div key={handbook.id} className="p-3 md:p-4 border rounded-lg">
-                        <h4 className="font-medium text-base md:text-lg">{handbook.title}</h4>
-                        <p className="text-gray-500 mb-3 text-sm md:text-base break-all">handbok.org/{handbook.subdomain}</p>
-                        <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2 sm:space-y-0">
-                          <Button asChild size="sm" className="w-full sm:w-auto">
-                            <a href={`/${handbook.subdomain}`}>
-                              Redigera handbok
-                            </a>
-                          </Button>
-                          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
-                            <a href={`https://www.handbok.org/${handbook.subdomain}`} target="_blank" rel="noopener noreferrer">
-                              Visa handbok
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="border-t pt-4 md:pt-6">
-                  <h4 className="font-semibold mb-2 md:mb-3 text-sm md:text-base">Vill du skapa fler handböcker?</h4>
-                  <p className="text-gray-600 mb-3 md:mb-4 text-sm md:text-base">
-                    Uppgradera till vårt Pro-konto för att skapa obegränsat antal handböcker, få avancerade funktioner och prioriterad support.
-                  </p>
-                  <div className="space-y-2 md:space-y-3">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-sm md:text-base">
-                      Uppgradera till Pro
-                    </Button>
-                    <Button variant="outline" className="w-full text-sm md:text-base" onClick={() => router.push('/dashboard')}>
-                      Gå till dashboard
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Debug logging
+  console.log('🎯 [CreateHandbook] Render decision:', {
+    handbooksLength: handbooks.length,
+    showCreateForm,
+    forceNewHandbook,
+    isSuperadmin,
+    shouldShowList: handbooks.length > 0 && !showCreateForm && !forceNewHandbook && isSuperadmin
+  });
 
   // Visa lista över befintliga handböcker om användaren väljer att se dem (endast för superadmins)
   if (handbooks.length > 0 && !showCreateForm && !forceNewHandbook && isSuperadmin) {

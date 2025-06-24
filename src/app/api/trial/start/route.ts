@@ -43,14 +43,33 @@ export async function POST(req: NextRequest) {
       fullTemplate: template // Add full template for debugging
     });
 
-    // Kontrollera om användaren är berättigad till trial
-    const eligible = await isEligibleForTrial(userId);
+    // Kontrollera om användaren är superadmin
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('is_superadmin')
+      .eq('id', userId)
+      .single();
+
+    const isSuperAdmin = profile?.is_superadmin || false;
     
-    if (!eligible) {
-      return NextResponse.json(
-        { error: 'User is not eligible for trial' },
-        { status: 400 }
-      );
+    console.log('[Trial Start] User check:', {
+      userId,
+      isSuperAdmin,
+      profileError: profileError?.message
+    });
+
+    // Kontrollera om användaren är berättigad till trial (hoppa över för superadmins)
+    if (!isSuperAdmin) {
+      const eligible = await isEligibleForTrial(userId);
+      
+      if (!eligible) {
+        return NextResponse.json(
+          { error: 'User is not eligible for trial' },
+          { status: 400 }
+        );
+      }
+    } else {
+      console.log('[Trial Start] Superadmin detected, skipping trial eligibility check');
     }
 
     // Hämta användarens email från auth.users med service role
@@ -64,31 +83,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Starta trial för användaren
-    const trialProfile = await startUserTrial(userId, user.user?.email);
+    let trialProfile = null;
+    let message = '';
     
-    if (!trialProfile) {
-      return NextResponse.json(
-        { error: 'Failed to start trial' },
-        { status: 500 }
-      );
+    // Starta trial för användaren (hoppa över för superadmins)
+    if (!isSuperAdmin) {
+      trialProfile = await startUserTrial(userId, user.user?.email);
+      
+      if (!trialProfile) {
+        return NextResponse.json(
+          { error: 'Failed to start trial' },
+          { status: 500 }
+        );
+      }
+      message = '30 dagars gratis trial startad! Din handbok har skapats.';
+    } else {
+      message = 'Din handbok har skapats som superadmin.';
+      console.log('[Trial Start] Skipping trial start for superadmin');
     }
 
-    // Skapa handbok med trial-flaggor
+    // Skapa handbok med trial-flaggor (false för superadmins)
     const handbookId = await createHandbookWithSectionsAndPages(
       name,        // name: string
       subdomain,   // slug: string  
       userId,      // userId?: string
-      true,        // isTrialHandbook: boolean = true
+      !isSuperAdmin, // isTrialHandbook: boolean = true (false för superadmins)
       template     // customTemplate?: any - Pass the AI template data
     );
 
     return NextResponse.json({
       success: true,
-      message: '30 dagars gratis trial startad! Din handbok har skapats.',
+      message,
       handbookId,
       subdomain,
-      trialEndsAt: trialProfile.trial_ends_at,
+      trialEndsAt: trialProfile?.trial_ends_at || null,
       redirectUrl: `/${subdomain}`
     });
 
