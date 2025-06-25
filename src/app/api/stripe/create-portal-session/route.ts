@@ -24,42 +24,61 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // Hitta användarens Stripe customer ID från alla prenumerationer (inte bara aktiva)
-    // Vi letar efter den senaste prenumerationen som har ett Stripe customer ID
-    const { data: subscriptions, error } = await supabase
+    // Hitta användarens Stripe customer ID från aktiva prenumerationer
+    // Exkludera prenumerationer som är uppsagda (cancel_at_period_end = true)
+    const { data: subscriptions, error: subError } = await supabase
       .from('subscriptions')
-      .select('stripe_customer_id, status, created_at')
+      .select('stripe_customer_id, status, metadata')
       .eq('user_id', userId)
-      .not('stripe_customer_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(5); // Ta de 5 senaste för att hitta en som fungerar
+      .in('status', ['active', 'cancelled'])
+      .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('[Stripe Portal] Error fetching subscriptions:', error);
+    if (subError) {
+      console.error('[Stripe Portal] Database error:', subError);
       return NextResponse.json(
-        { error: 'Failed to find subscription' },
+        { error: 'Database error occurred' },
         { status: 500 }
       );
     }
 
     if (!subscriptions || subscriptions.length === 0) {
+      console.log('[Stripe Portal] No subscriptions found for user');
       return NextResponse.json(
-        { error: 'No subscription with Stripe customer found' },
+        { error: 'No subscription found for this user' },
         { status: 404 }
       );
     }
 
-    // Försök med varje Customer ID tills vi hittar en som fungerar
-    let portalSession = null;
-    let workingCustomerId = null;
+    console.log(`[Stripe Portal] Found ${subscriptions.length} subscription(s) for user`);
 
-    for (const subscription of subscriptions) {
+    // Filtera bort uppsagda prenumerationer och försök med varje Customer ID
+    const validSubscriptions = subscriptions.filter(sub => {
+      const isActive = sub.status === 'active';
+      const isCancelled = sub.metadata?.cancel_at_period_end === true;
+      const hasCustomerId = sub.stripe_customer_id;
+      
+      console.log(`[Stripe Portal] Subscription check: status=${sub.status}, cancelled=${isCancelled}, hasCustomerId=${!!hasCustomerId}`);
+      
+      return hasCustomerId && isActive && !isCancelled;
+    });
+
+    if (validSubscriptions.length === 0) {
+      console.log('[Stripe Portal] No valid (non-cancelled) subscriptions found');
+      return NextResponse.json(
+        { error: 'Unable to access subscription management. Your subscription may have been fully cancelled. Please contact support if you need assistance.' },
+        { status: 404 }
+      );
+    }
+
+    console.log(`[Stripe Portal] Found ${validSubscriptions.length} valid subscription(s)`);
+
+    // Försök skapa portal session med första giltiga Customer ID
+    for (const subscription of validSubscriptions) {
       const customerId = subscription.stripe_customer_id;
+      console.log(`[Stripe Portal] Trying customer ID: ${customerId} (status: ${subscription.status})`);
       
       try {
-        console.log(`[Stripe Portal] Trying customer ID: ${customerId} (status: ${subscription.status})`);
-        
-        // Först kontrollera att kunden finns i Stripe
+        // Verifiera att customer finns i Stripe innan vi skapar portal session
         const customer = await stripe.customers.retrieve(customerId);
         
         if (customer.deleted) {
@@ -67,43 +86,34 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Skapa Stripe Customer Portal session
-        portalSession = await stripe.billingPortal.sessions.create({
+        // Skapa Stripe customer portal session
+        const portalSession = await stripe.billingPortal.sessions.create({
           customer: customerId,
           return_url: returnUrl,
         });
 
-        workingCustomerId = customerId;
         console.log(`[Stripe Portal] Successfully created portal session: ${portalSession.id} for customer: ${customerId}`);
-        break;
 
-      } catch (customerError: any) {
-        console.warn(`[Stripe Portal] Failed to create portal session for customer ${customerId}:`, customerError.message);
+        return NextResponse.json({
+          url: portalSession.url,
+          sessionId: portalSession.id
+        });
+
+      } catch (stripeError: any) {
+        console.error(`[Stripe Portal] Error with customer ${customerId}:`, stripeError.message);
         
-        // Om kunden inte finns, fortsätt till nästa
-        if (customerError.code === 'resource_missing') {
-          console.log(`[Stripe Portal] Customer ${customerId} not found in Stripe, trying next...`);
-          continue;
+        // Om detta är den sista Customer ID:n, returnera fel
+        if (subscription === validSubscriptions[validSubscriptions.length - 1]) {
+          return NextResponse.json(
+            { error: 'Unable to access subscription management. Your subscription may have been fully cancelled. Please contact support if you need assistance.' },
+            { status: 404 }
+          );
         }
         
-        // För andra fel, logga men fortsätt
-        console.error(`[Stripe Portal] Unexpected error for customer ${customerId}:`, customerError);
+        // Annars fortsätt med nästa Customer ID
         continue;
       }
     }
-
-    // Om ingen Customer ID fungerade
-    if (!portalSession) {
-      console.error('[Stripe Portal] No working Stripe customer found for user');
-      return NextResponse.json(
-        { error: 'Unable to access subscription management. Your subscription may have been fully cancelled. Please contact support if you need assistance.' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      url: portalSession.url
-    });
 
   } catch (error) {
     console.error('[Stripe Portal] Error creating portal session:', error);
