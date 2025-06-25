@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { checkIsSuperAdmin } from "@/lib/user-utils";
 import { useToast } from '@/components/ui/use-toast';
 import { getProPricing } from '@/lib/pricing';
-import { getTrialStatus, TrialStatus } from '@/lib/trial-service';
+import { getTrialStatus, getHandbookTrialStatus, TrialStatus } from '@/lib/trial-service';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ interface Handbook {
   owner_id?: string;
   userRole?: string;
   handbook_members?: Array<{ role: string }>;
+  trialStatus?: TrialStatus;
 }
 
 export default function DashboardPage() {
@@ -50,7 +51,7 @@ export default function DashboardPage() {
     handbookId: '',
     handbookTitle: ''
   });
-  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
+
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -140,7 +141,24 @@ export default function DashboardPage() {
         };
       });
       
-      setHandbooks(mappedData as Handbook[]);
+      // Fetch trial status for each handbook
+      const handbooksWithTrialStatus = await Promise.all(
+        mappedData.map(async (handbook) => {
+          try {
+            // Only fetch trial status for handbooks the user owns or has admin access to
+            if (handbook.userRole === 'admin' || isSuperadmin) {
+              const trialStatus = await getHandbookTrialStatus(user.id, handbook.id);
+              return { ...handbook, trialStatus };
+            }
+            return handbook;
+          } catch (error) {
+            console.error(`Error fetching trial status for handbook ${handbook.id}:`, error);
+            return handbook;
+          }
+        })
+      );
+      
+      setHandbooks(handbooksWithTrialStatus as Handbook[]);
     } catch (err: unknown) {
       console.error("Error fetching handbooks:", err);
       setError("Kunde inte hämta handböcker. Försök igen senare.");
@@ -155,22 +173,7 @@ export default function DashboardPage() {
     }
   }, [user, fetchHandbooks, isSuperadmin]);
 
-  useEffect(() => {
-    const fetchTrialStatus = async () => {
-      if (!user?.id) return;
-      
-      try {
-        const status = await getTrialStatus(user.id);
-        setTrialStatus(status);
-      } catch (error) {
-        console.error('Error fetching trial status:', error);
-      }
-    };
 
-    if (user) {
-      fetchTrialStatus();
-    }
-  }, [user]);
 
   // Hantera lyckad uppgradering från URL (webhook borde ha triggats)
   useEffect(() => {
@@ -185,21 +188,13 @@ export default function DashboardPage() {
           // Vänta lite för att webhook ska hinna köra
           await new Promise(resolve => setTimeout(resolve, 2000));
           
-          // Uppdatera trial status
-          const newStatus = await getTrialStatus(user.id);
-          setTrialStatus(newStatus);
+          // Uppdatera handböcker (som nu inkluderar trial-status)
+          await fetchHandbooks();
           
-          if (newStatus.subscriptionStatus === 'active') {
-            toast({
-              title: "Uppgradering lyckades! 🎉",
-              description: "Din handbok är nu aktiv och betald.",
-            });
-          } else {
-            toast({
-              title: "Betalning mottagen",
-              description: "Aktiverar din handbok... Detta kan ta några sekunder.",
-            });
-          }
+          toast({
+            title: "Uppgradering lyckades! 🎉",
+            description: "Din handbok är nu aktiv och betald.",
+          });
           
           // Rensa URL-parametrar
           window.history.replaceState({}, '', '/dashboard');
@@ -209,10 +204,10 @@ export default function DashboardPage() {
       }
     };
 
-    if (user && trialStatus) {
+    if (user) {
       handleUpgradeSuccess();
     }
-  }, [user, trialStatus]);
+  }, [user, fetchHandbooks, toast]);
 
   const deleteHandbook = async (handbookId: string, title: string) => {
     // Öppna bekräftelsedialog istället för window.confirm
@@ -436,7 +431,7 @@ export default function DashboardPage() {
                           <p className="text-gray-500 mb-4">
                             {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
                           </p>
-                          <div className="flex items-center gap-2 mb-4">
+                          <div className="flex items-center gap-2 mb-4 flex-wrap">
                             <Badge variant="default" className={`${handbook.published ? 'bg-green-100 text-green-800 hover:bg-green-100' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}`}>
                               {handbook.published ? "Publicerad" : "Utkast"}
                             </Badge>
@@ -446,6 +441,25 @@ export default function DashboardPage() {
                             >
                               👑 Ägare
                             </Badge>
+                            {/* Payment Status Badge */}
+                            {handbook.trialStatus && (
+                              <Badge 
+                                variant="outline" 
+                                className={`${
+                                  handbook.trialStatus.subscriptionStatus === 'active' 
+                                    ? 'border-green-200 text-green-800 bg-green-50' 
+                                    : handbook.trialStatus.isInTrial
+                                    ? 'border-orange-200 text-orange-800 bg-orange-50'
+                                    : 'border-red-200 text-red-800 bg-red-50'
+                                }`}
+                              >
+                                {handbook.trialStatus.subscriptionStatus === 'active' 
+                                  ? '💳 Betald' 
+                                  : handbook.trialStatus.isInTrial
+                                  ? `🔄 Trial (${handbook.trialStatus.trialDaysRemaining}d)`
+                                  : '⚠️ Trial utgången'}
+                              </Badge>
+                            )}
                           </div>
                           <div className="text-sm text-gray-600 mb-4">
                             <span className="font-medium">URL:</span>{" "}
@@ -455,28 +469,35 @@ export default function DashboardPage() {
                           </div>
                           
                           {/* Upgrade-knapp för handbok-ägare - endast om INTE aktiv subscription */}
-                          {!isSuperadmin && ownedHandbooks.length === 1 && trialStatus && trialStatus.subscriptionStatus !== 'active' && (
+                          {!isSuperadmin && handbook.trialStatus && handbook.trialStatus.subscriptionStatus !== 'active' && (
                             <div className="mb-4">
                               <Button 
                                 size="sm" 
                                 className="bg-blue-600 hover:bg-blue-700 text-white w-full"
-                                onClick={handleUpgradeClick}
+                                onClick={() => {
+                                  window.location.href = `/upgrade?handbookId=${handbook.id}`;
+                                }}
                                 disabled={isLoadingHandbooks}
                               >
                                 {isLoadingHandbooks ? "Skapar betalning..." : `Uppgradera (${pricing.yearly})`}
                               </Button>
+                              {handbook.trialStatus.isInTrial && (
+                                <p className="text-xs text-gray-600 mt-1 text-center">
+                                  {handbook.trialStatus.trialDaysRemaining} dagar kvar av gratis trial
+                                </p>
+                              )}
                             </div>
                           )}
 
                           {/* Status för aktiv subscription */}
-                          {!isSuperadmin && trialStatus && trialStatus.subscriptionStatus === 'active' && (
+                          {!isSuperadmin && handbook.trialStatus && handbook.trialStatus.subscriptionStatus === 'active' && (
                             <div className="mb-4">
                               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                 <div className="flex items-center text-green-800">
                                   <span className="text-sm font-medium">✅ Aktiv prenumeration</span>
                                 </div>
                                 <p className="text-xs text-green-600 mt-1">
-                                  Din handbok är betald och aktiv
+                                  Denna handbok är betald och aktiv
                                 </p>
                               </div>
                             </div>
@@ -536,7 +557,7 @@ export default function DashboardPage() {
                       <p className="text-gray-500 mb-4">
                         {new Date(handbook.created_at).toLocaleDateString("sv-SE")}
                       </p>
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-2 mb-4 flex-wrap">
                         <Badge variant="default" className={`${handbook.published ? 'bg-green-100 text-green-800 hover:bg-green-100' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'}`}>
                           {handbook.published ? "Publicerad" : "Utkast"}
                         </Badge>
@@ -554,6 +575,25 @@ export default function DashboardPage() {
                             {handbook.userRole === 'admin' ? '👑 Ägare' : 
                              handbook.userRole === 'editor' ? '✏️ Redaktör' : 
                              '👁️ Medlem'}
+                          </Badge>
+                        )}
+                        {/* Payment Status Badge for member handbooks */}
+                        {handbook.trialStatus && (
+                          <Badge 
+                            variant="outline" 
+                            className={`${
+                              handbook.trialStatus.subscriptionStatus === 'active' 
+                                ? 'border-green-200 text-green-800 bg-green-50' 
+                                : handbook.trialStatus.isInTrial
+                                ? 'border-orange-200 text-orange-800 bg-orange-50'
+                                : 'border-red-200 text-red-800 bg-red-50'
+                            }`}
+                          >
+                            {handbook.trialStatus.subscriptionStatus === 'active' 
+                              ? '💳 Betald' 
+                              : handbook.trialStatus.isInTrial
+                              ? `🔄 Trial (${handbook.trialStatus.trialDaysRemaining}d)`
+                              : '⚠️ Trial utgången'}
                           </Badge>
                         )}
                       </div>
