@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const handbookId = params.id;
+    const { id: handbookId } = await params;
 
     if (!userId || !handbookId) {
       return NextResponse.json(

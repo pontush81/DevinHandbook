@@ -1250,7 +1250,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       {/* Debug information */}
       <HandbookDebugInfo 
         handbookId={handbookData.id} 
-        sections={handbookData.sections} 
       />
     </SidebarProvider>
     </StableProvider>

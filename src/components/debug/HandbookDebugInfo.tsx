@@ -1,243 +1,273 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect, useState } from 'react';
 import { getHandbookTrialStatus } from '@/lib/trial-service';
-
-interface DebugInfo {
-  userStatus: string;
-  isAuthenticated: boolean;
-  isOwner: boolean | null;
-  trialStatus: any;
-  shouldShowPaywall: boolean;
-  sections: Array<{
-    title: string;
-    isPublic: boolean;
-    isPublished: boolean;
-    visible: boolean;
-  }>;
-  handbookDbData: any;
-}
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Bug, ChevronDown, ChevronUp, Wrench } from 'lucide-react';
 
 interface HandbookDebugInfoProps {
   handbookId: string;
-  sections: any[];
 }
 
-export function HandbookDebugInfo({ handbookId, sections }: HandbookDebugInfoProps) {
-  const { user, authLoading } = useAuth();
-  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
-  const [isOwner, setIsOwner] = useState<boolean | null>(null);
-  const [isFixing, setIsFixing] = useState(false);
+interface TrialStatus {
+  isInTrial: boolean;
+  trialDaysRemaining: number;
+  subscriptionStatus: string;
+  trialEndsAt: string | null;
+  canCreateHandbook: boolean;
+  hasUsedTrial: boolean;
+}
+
+interface HandbookData {
+  created_at: string;
+  trial_end_date: string | null;
+  created_during_trial: boolean;
+  sections: Array<{
+    id: string;
+    title: string;
+    is_published: boolean;
+  }>;
+}
+
+export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
+  const { user } = useAuth();
+  const [ownershipStatus, setOwnershipStatus] = useState<boolean | null>(null);
+  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
+  const [handbookData, setHandbookData] = useState<HandbookData | null>(null);
+  const [shouldShowPaywall, setShouldShowPaywall] = useState<boolean | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Only show for specific email
+  const isDeveloper = user?.email === 'pontus.hberg@gmail.com';
 
   useEffect(() => {
-    async function gatherDebugInfo() {
+    if (!user || !isDeveloper) return;
+
+    const fetchDebugData = async () => {
       try {
         // Check ownership
-        let ownershipStatus = null;
-        if (user) {
-          const response = await fetch(`/api/handbook/${handbookId}/ownership?userId=${user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            ownershipStatus = data.isOwner;
-            setIsOwner(data.isOwner);
-          }
-        }
+        const ownershipResponse = await fetch(`/api/handbook/${handbookId}/ownership?userId=${user.id}`);
+        const ownershipData = await ownershipResponse.json();
+        setOwnershipStatus(ownershipData.isOwner);
 
-        // Get trial status (handbook-specific)
-        let trialStatus = null;
-        let handbookDbData = null;
-        if (user && ownershipStatus) {
-          // First check what's in the database
-          const response = await fetch(`/api/debug/handbook-data?handbookId=${handbookId}&userId=${user.id}`);
-          if (response.ok) {
-            handbookDbData = await response.json();
-          }
-          
-          trialStatus = await getHandbookTrialStatus(user.id, handbookId);
-        }
+        // Get trial status
+        const trialStatusData = await getHandbookTrialStatus(user.id, handbookId);
+        setTrialStatus(trialStatusData);
 
-        // Determine if paywall should show
-        const shouldShowPaywall = ownershipStatus && trialStatus && 
-          !trialStatus.isInTrial && 
-          trialStatus.subscriptionStatus !== 'active' &&
-          trialStatus.trialEndsAt;
+        // Get handbook data
+        const handbookResponse = await fetch(`/api/debug/handbook-data?handbookId=${handbookId}&userId=${user.id}`);
+        const handbookDebugData = await handbookResponse.json();
+        setHandbookData(handbookDebugData.handbook);
+
+        // Calculate paywall visibility
+        const shouldShow = !trialStatusData.isInTrial && trialStatusData.subscriptionStatus !== 'active';
+        setShouldShowPaywall(shouldShow);
 
         console.log('🐛 Debug Info Details:', {
-          user: user ? { id: user.id, email: user.email } : null,
-          authLoading,
-          ownershipStatus,
-          trialStatus,
-          shouldShowPaywall,
-          handbookId
+          user,
+          authLoading: undefined,
+          ownershipStatus: ownershipData.isOwner,
+          trialStatus: trialStatusData,
+          shouldShowPaywall: shouldShow,
+          handbookData: handbookDebugData.handbook
         });
-
-        const info: DebugInfo = {
-          userStatus: user ? 'logged_in' : 'anonymous',
-          isAuthenticated: !!user,
-          isOwner: ownershipStatus,
-          trialStatus,
-          shouldShowPaywall,
-          sections: sections.map(section => ({
-            title: section.title,
-            isPublic: section.is_public ?? true,
-            isPublished: section.is_published ?? true,
-            visible: true
-          })),
-          handbookDbData
-        };
-
-        setDebugInfo(info);
       } catch (error) {
-        console.error('Error gathering debug info:', error);
+        console.error('Debug info error:', error);
       }
-    }
+    };
 
-    if (!authLoading) {
-      gatherDebugInfo();
-    }
-  }, [user, authLoading, handbookId, sections]);
+    fetchDebugData();
+  }, [user, handbookId, isDeveloper]);
 
-  const fixHandbookTrial = async () => {
-    if (!user || !debugInfo?.isOwner) return;
-    
-    setIsFixing(true);
+  const handleFixTrial = async () => {
     try {
       const response = await fetch('/api/debug/fix-handbook-trial', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          handbookId,
-          userId: user.id
-        })
+        body: JSON.stringify({ handbookId, userId: user?.id }),
       });
-      
+
       if (response.ok) {
-        // Refresh debug info
+        // Refresh data after fix
         window.location.reload();
-      } else {
-        console.error('Failed to fix handbook trial');
       }
     } catch (error) {
-      console.error('Error fixing handbook trial:', error);
-    } finally {
-      setIsFixing(false);
+      console.error('Fix trial error:', error);
     }
   };
 
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
+  // Don't render if not developer
+  if (!isDeveloper) {
     return null;
   }
 
-  if (!debugInfo) {
-    return (
-      <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded-lg text-xs max-w-sm">
-        <div className="font-bold mb-2">🔍 Debug Info</div>
-        <div>Loading...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded-lg text-xs max-w-sm z-50">
-      <div className="font-bold mb-2">🔍 Handbook Debug Info</div>
-      
-      <div className="space-y-1">
-        <div>
-          <span className="text-gray-300">Handbook ID:</span> {handbookId}
-        </div>
-        
-        <div>
-          <span className="text-gray-300">User:</span> {debugInfo.userStatus}
-        </div>
-        
-        <div>
-          <span className="text-gray-300">Is Owner:</span> {debugInfo.isOwner ? 'Yes' : 'No'}
-        </div>
-        
-        <div>
-          <span className="text-gray-300">Paywall:</span> {debugInfo.shouldShowPaywall ? '🔒 Shown' : '✅ Hidden'}
-        </div>
-        
-        {debugInfo.trialStatus && (
-          <>
-            <div>
-              <span className="text-gray-300">Trial:</span> {
-                debugInfo.trialStatus.isInTrial ? 
-                  `🟢 Active (${debugInfo.trialStatus.trialDaysRemaining} days)` : 
-                  '🔴 Expired'
-              }
-            </div>
-            <div>
-              <span className="text-gray-300">Subscription:</span> {debugInfo.trialStatus.subscriptionStatus}
-            </div>
-            <div>
-              <span className="text-gray-300">Trial End:</span> {
-                debugInfo.trialStatus.trialEndsAt ? 
-                  new Date(debugInfo.trialStatus.trialEndsAt).toLocaleDateString('sv-SE') : 
-                  'None'
-              }
-            </div>
-            <div>
-              <span className="text-gray-300">Days Remaining:</span> {debugInfo.trialStatus.trialDaysRemaining}
-            </div>
-            <div>
-              <span className="text-gray-300">Has Used Trial:</span> {debugInfo.trialStatus.hasUsedTrial ? 'Yes' : 'No'}
-            </div>
-          </>
-        )}
-        
-        {debugInfo.handbookDbData && (
-          <>
-            <div className="mt-2 pt-2 border-t border-gray-600">
-              <div className="text-yellow-300 font-bold">📊 Database Data:</div>
-            </div>
-            <div>
-              <span className="text-gray-300">Created:</span> {
-                debugInfo.handbookDbData.created_at ? 
-                  new Date(debugInfo.handbookDbData.created_at).toLocaleDateString('sv-SE') : 
-                  'Unknown'
-              }
-            </div>
-            <div>
-              <span className="text-gray-300">Trial End DB:</span> {
-                debugInfo.handbookDbData.trial_end_date ? 
-                  new Date(debugInfo.handbookDbData.trial_end_date).toLocaleDateString('sv-SE') : 
-                  'NULL'
-              }
-            </div>
-            <div>
-              <span className="text-gray-300">Created During Trial:</span> {debugInfo.handbookDbData.created_during_trial ? 'Yes' : 'No'}
-            </div>
-            
-            {/* Show fix button if trial data is missing */}
-            {debugInfo.handbookDbData.trial_end_date === null && debugInfo.isOwner && (
-              <div className="mt-2">
-                <button 
-                  onClick={fixHandbookTrial}
-                  disabled={isFixing}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-2 py-1 rounded text-xs"
-                >
-                  {isFixing ? 'Fixing...' : '🔧 Fix Trial Data'}
-                </button>
+    <div className="fixed bottom-20 right-4 z-50">
+      {/* Toggle Button */}
+      {!isExpanded && (
+        <Button
+          onClick={() => setIsExpanded(true)}
+          size="sm"
+          variant="outline"
+          className="bg-gray-800 text-white border-gray-600 hover:bg-gray-700 shadow-lg"
+        >
+          <Bug className="h-4 w-4 mr-2" />
+          Debug
+        </Button>
+      )}
+
+      {/* Debug Panel */}
+      {isExpanded && (
+        <Card className="w-96 max-h-96 overflow-y-auto bg-black text-white border-2 border-gray-600 shadow-2xl backdrop-blur-sm">
+          <div className="p-4 bg-black/95">
+            {/* Header with close button */}
+            <div className="flex items-center justify-between mb-3 border-b border-gray-700 pb-2">
+              <div className="flex items-center space-x-2">
+                <Bug className="h-4 w-4 text-green-400" />
+                <h3 className="font-semibold text-sm text-white">Handbook Debug Info</h3>
               </div>
-            )}
-          </>
-        )}
-        
-        <div>
-          <span className="text-gray-300">Sections:</span> {debugInfo.sections.filter(s => s.visible).length}/{debugInfo.sections.length} visible
-        </div>
-        
-        <div className="text-gray-400 text-xs mt-2">
-          {debugInfo.sections.map((section, idx) => (
-            <div key={idx} className="truncate">
-              {section.visible ? '✅' : '❌'} {section.title}
+              <Button
+                onClick={() => setIsExpanded(false)}
+                size="sm"
+                variant="ghost"
+                className="text-gray-400 hover:text-white hover:bg-gray-800 p-1"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
             </div>
-          ))}
-        </div>
-      </div>
+
+            {/* Debug Information */}
+            <div className="space-y-2 text-xs text-gray-100">
+              <div className="bg-gray-800/50 p-2 rounded">
+                <strong className="text-white">Handbook ID:</strong> 
+                <span className="text-gray-300 ml-2 font-mono text-xs">{handbookId}</span>
+              </div>
+              
+              <div className="flex items-center justify-between bg-gray-800/50 p-2 rounded">
+                <strong className="text-white">User:</strong> 
+                <span className="text-green-400">{user ? 'logged_in' : 'not_logged_in'}</span>
+              </div>
+              
+              <div className="flex items-center justify-between bg-gray-800/50 p-2 rounded">
+                <strong className="text-white">Is Owner:</strong> 
+                <span className={ownershipStatus ? 'text-green-400' : 'text-red-400'}>
+                  {ownershipStatus === null ? 'Loading...' : ownershipStatus ? 'Yes' : 'No'}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between bg-gray-800/50 p-2 rounded">
+                <strong className="text-white">Paywall:</strong>
+                {shouldShowPaywall === null ? (
+                  <span className="text-yellow-400">Loading...</span>
+                ) : shouldShowPaywall ? (
+                  <Badge variant="destructive" className="text-xs bg-red-600 text-white">🚫 Visible</Badge>
+                ) : (
+                  <Badge variant="default" className="bg-green-600 text-white text-xs">✅ Hidden</Badge>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between bg-gray-800/50 p-2 rounded">
+                <strong className="text-white">Trial:</strong>
+                {trialStatus ? (
+                  <Badge 
+                    variant={trialStatus.isInTrial ? "default" : "destructive"} 
+                    className={`text-xs ${trialStatus.isInTrial ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}
+                  >
+                    {trialStatus.isInTrial ? `🟢 Active (${trialStatus.trialDaysRemaining} days)` : '🔴 Expired'}
+                  </Badge>
+                ) : (
+                  <span className="text-yellow-400">Loading...</span>
+                )}
+              </div>
+
+              {trialStatus && (
+                <div className="space-y-1 bg-gray-800/30 p-2 rounded">
+                  <div className="flex justify-between">
+                    <strong className="text-white">Subscription:</strong> 
+                    <span className="text-blue-400">{trialStatus.subscriptionStatus}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <strong className="text-white">Trial End:</strong> 
+                    <span className="text-gray-300">{trialStatus.trialEndsAt ? new Date(trialStatus.trialEndsAt).toLocaleDateString('sv-SE') : 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <strong className="text-white">Days Remaining:</strong> 
+                    <span className="text-orange-400 font-bold">{trialStatus.trialDaysRemaining}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <strong className="text-white">Has Used Trial:</strong> 
+                    <span className={trialStatus.hasUsedTrial ? 'text-green-400' : 'text-red-400'}>
+                      {trialStatus.hasUsedTrial ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {handbookData && (
+                <>
+                  <div className="border-t border-gray-600 pt-3 mt-3">
+                    <div className="flex items-center space-x-2 mb-2 bg-gray-800/50 p-2 rounded">
+                      <span>📊</span>
+                      <strong className="text-white">Database Data:</strong>
+                    </div>
+                    <div className="space-y-1 bg-gray-800/30 p-2 rounded text-xs">
+                      <div className="flex justify-between">
+                        <strong className="text-white">Created:</strong> 
+                        <span className="text-gray-300">{new Date(handbookData.created_at).toLocaleDateString('sv-SE')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <strong className="text-white">Trial End DB:</strong> 
+                        <span className="text-gray-300">{handbookData.trial_end_date ? new Date(handbookData.trial_end_date).toLocaleDateString('sv-SE') : 'NULL'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <strong className="text-white">Created During Trial:</strong> 
+                        <span className={handbookData.created_during_trial ? 'text-green-400' : 'text-red-400'}>
+                          {handbookData.created_during_trial ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <strong className="text-white">Sections:</strong> 
+                        <span className="text-blue-400">{handbookData.sections?.filter(s => s.is_published).length || 0}/{handbookData.sections?.length || 0} visible</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {handbookData.sections && (
+                    <div className="space-y-1 bg-gray-800/30 p-2 rounded max-h-32 overflow-y-auto">
+                      <div className="text-white font-semibold text-xs mb-1">Sections:</div>
+                      {handbookData.sections.map((section) => (
+                        <div key={section.id} className="flex items-center space-x-2 text-xs">
+                          <span className={section.is_published ? 'text-green-400' : 'text-red-400'}>
+                            {section.is_published ? '✅' : '❌'}
+                          </span>
+                          <span className="text-gray-300 truncate flex-1">{section.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Fix Trial Button */}
+                  {handbookData.trial_end_date === null && (
+                    <div className="border-t border-gray-600 pt-3 mt-3">
+                      <Button
+                        onClick={handleFixTrial}
+                        size="sm"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                      >
+                        <Wrench className="h-3 w-3 mr-1" />
+                        🔧 Fix Trial Data
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 } 
