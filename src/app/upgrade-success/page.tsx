@@ -40,10 +40,54 @@ function UpgradeSuccessContent() {
   const { user } = useAuth();
   const [countdown, setCountdown] = useState(5);
   const [handbookSlug, setHandbookSlug] = useState<string | null>(null);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<string>('checking');
 
   const sessionId = searchParams.get('session_id');
   const handbookId = searchParams.get('handbookId');
   const returnTo = searchParams.get('returnTo');
+
+  // KRITISK: Verifiera betalning omedelbart när sidan laddas
+  useEffect(() => {
+    async function verifyPayment() {
+      if (!sessionId || !user) return;
+
+      try {
+        console.log('[Upgrade Success] Verifying payment for session:', sessionId);
+        setVerificationStatus('verifying');
+
+        const response = await fetch('/api/stripe/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            userId: user.id,
+            handbookId: handbookId || undefined
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('[Upgrade Success] Payment verification result:', result);
+          setPaymentVerified(true);
+          setVerificationStatus(result.status);
+          
+          if (result.status === 'processed') {
+            console.log('[Upgrade Success] Payment was processed via fallback - webhook had failed');
+          }
+        } else {
+          console.error('[Upgrade Success] Payment verification failed:', result);
+          setVerificationStatus('failed');
+        }
+      } catch (error) {
+        console.error('[Upgrade Success] Error verifying payment:', error);
+        setVerificationStatus('error');
+      }
+    }
+
+    verifyPayment();
+  }, [sessionId, user, handbookId]);
 
   // Hämta handbok slug om vi har ett handbookId
   useEffect(() => {
@@ -102,7 +146,11 @@ function UpgradeSuccessContent() {
             </div>
             <Badge variant="outline" className="mx-auto mb-3 bg-green-100 text-green-800 border-green-300">
               <Sparkles className="w-3 h-3 mr-1" />
-              Betalning genomförd
+              {verificationStatus === 'verifying' ? 'Verifierar betalning...' :
+               verificationStatus === 'processed' ? 'Betalning genomförd (återställd)' :
+               verificationStatus === 'already_processed' ? 'Betalning genomförd' :
+               verificationStatus === 'failed' ? 'Betalning misslyckades' :
+               'Betalning genomförd'}
             </Badge>
             <CardTitle className="text-3xl font-bold text-gray-900">
               Tack för din betalning! 🎉

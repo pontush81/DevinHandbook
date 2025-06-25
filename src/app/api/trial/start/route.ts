@@ -102,12 +102,12 @@ export async function POST(req: NextRequest) {
       console.log('[Trial Start] Skipping trial start for superadmin');
     }
 
-    // Skapa handbok med trial-flaggor (false för superadmins)
+    // Skapa handbok med trial-period för alla användare (även superadmins)
     const handbookId = await createHandbookWithSectionsAndPages(
       name,        // name: string
       subdomain,   // slug: string  
       userId,      // userId?: string
-      !isSuperAdmin, // isTrialHandbook: boolean = true (false för superadmins)
+      true,        // isTrialHandbook: boolean = true (alla får trial)
       template     // customTemplate?: any - Pass the AI template data
     );
 
