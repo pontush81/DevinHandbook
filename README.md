@@ -1,3 +1,11 @@
+# Devin Handbook
+
+Digital handbook platform för bostadsrättsföreningar.
+
+<!-- Deployment trigger: 2024-12-19 - Fixed cancelled subscription portal access -->
+
+## Funktioner
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
