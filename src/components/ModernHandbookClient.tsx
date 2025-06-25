@@ -14,7 +14,8 @@ import { MainFooter } from '@/components/layout/MainFooter';
 import { MembersManager } from '@/components/handbook/MembersManager';
 import { TrialStatusBar } from '@/components/trial/TrialStatusBar';
 import { BlockedAccountScreen } from '@/components/trial/BlockedAccountScreen';
-import { getEnhancedTrialStatus } from '@/lib/trial-service';
+import { getHandbookTrialStatus } from '@/lib/trial-service';
+import { HandbookDebugInfo } from '@/components/debug/HandbookDebugInfo';
 
 interface ModernHandbookClientProps {
   initialData: {
@@ -129,6 +130,34 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }
       
       try {
+        // First check if user is superadmin
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_superadmin')
+          .eq('id', user.id)
+          .single();
+
+        const isSuperAdmin = profile?.is_superadmin || false;
+
+        // If superadmin, give full access immediately
+        if (isSuperAdmin) {
+          console.log('👤 Superadmin detected - granting full access:', {
+            userId: user.id,
+            handbookId: initialData.id,
+            role: 'superadmin',
+            isOwner: false, // Not owner but has access
+            isAdmin: true,
+            canEdit: true
+          });
+          
+          setIsAdmin(true);
+          setCanEdit(true);
+          setIsHandbookOwner(false); // Not owner but has access
+          setIsLoading(false);
+          return;
+        }
+
+        // For non-superadmins, check normal permissions
         const { data: handbookMembership, error } = await supabase
           .from('handbook_members')
           .select('role')
@@ -187,24 +216,42 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       if (!user || !mounted || authLoading || !isHandbookOwner) return;
       
       try {
-        const trialStatus = await getEnhancedTrialStatus(user.id);
+        // Check if user is superadmin first
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_superadmin')
+          .eq('id', user.id)
+          .single();
+
+        const isSuperAdmin = profile?.is_superadmin || false;
+
+        // Skip trial restrictions for superadmins
+        if (isSuperAdmin) {
+          console.log('🔍 Superadmin detected - skipping trial restrictions');
+          return;
+        }
+
+        const trialStatus = await getHandbookTrialStatus(user.id, initialData.id);
+        
+        console.log('🔍 ModernHandbookClient trial check:', {
+          userId: user.id,
+          handbookId: initialData.id,
+          isInTrial: trialStatus.isInTrial,
+          subscriptionStatus: trialStatus.subscriptionStatus,
+          trialEndsAt: trialStatus.trialEndsAt,
+          trialDaysRemaining: trialStatus.trialDaysRemaining,
+          hasTrialEndDate: !!trialStatus.trialEndsAt
+        });
         
         // Blockera om trial har gått ut och ingen aktiv prenumeration
         const shouldBlock = !trialStatus.isInTrial && 
                            trialStatus.subscriptionStatus !== 'active' &&
                            trialStatus.trialEndsAt;
         
-        console.log('📊 Trial status check:', {
-          userId: user.id,
-          handbookId: initialData.id,
-          isHandbookOwner,
-          isInTrial: trialStatus.isInTrial,
-          subscriptionStatus: trialStatus.subscriptionStatus,
-          shouldBlock,
-          trialEndsAt: trialStatus.trialEndsAt
-        });
+        console.log('🔍 Should block user?', shouldBlock);
         
         if (shouldBlock) {
+          console.log('🔒 Blocking user - trial expired');
           setIsBlocked(true);
           setTrialEndedAt(trialStatus.trialEndsAt);
         }
@@ -1027,8 +1074,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const primaryColor = handbookData.theme?.primary_color || '#3498db';
   const secondaryColor = handbookData.theme?.secondary_color || '#2c3e50';
 
-  // Create trial status bar component - only for handbook owners
-  const trialStatusBar = user && isHandbookOwner ? (
+  // Create trial status bar component - for handbook owners AND superadmins
+  const trialStatusBar = user && (isHandbookOwner || isAdmin) ? (
     <div className="w-full">
       <div className="max-w-6xl mx-auto p-3">
         <TrialStatusBar 
@@ -1199,6 +1246,12 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       
       {/* Debug tools - endast i development */}
       <ClearCacheButton />
+      
+      {/* Debug information */}
+      <HandbookDebugInfo 
+        handbookId={handbookData.id} 
+        sections={handbookData.sections} 
+      />
     </SidebarProvider>
     </StableProvider>
   );

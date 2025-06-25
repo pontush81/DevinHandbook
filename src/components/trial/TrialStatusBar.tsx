@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Clock, AlertTriangle, CreditCard, Gift, X } from 'lucide-react';
+import { Clock, AlertTriangle, CreditCard, Gift, X, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface TrialStatus {
@@ -23,25 +23,68 @@ interface TrialStatusBarProps {
 
 // Formaterar datum för visning
 function formatTrialEndDate(trialEndsAt: string | null): string {
-  if (!trialEndsAt) return '';
+  if (!trialEndsAt) return 'Okänt datum';
   
   const date = new Date(trialEndsAt);
+  const now = new Date();
+  
+  // Om datumet är idag
+  if (date.toDateString() === now.toDateString()) {
+    return 'idag';
+  }
+  
+  // Om datumet är imorgon
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (date.toDateString() === tomorrow.toDateString()) {
+    return 'imorgon';
+  }
+  
+  // Annars visa datum
   return date.toLocaleDateString('sv-SE', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    month: 'short',
+    day: 'numeric'
   });
 }
 
 export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }: TrialStatusBarProps) {
-  console.log('🚀🚀🚀 TrialStatusBar: COMPONENT LOADED!!! Props:', { userId, handbookId });
-  
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isHandbookOwner, setIsHandbookOwner] = useState<boolean | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+
+  // Check if user is superadmin
+  useEffect(() => {
+    async function checkSuperAdminStatus() {
+      if (!userId) {
+        setIsSuperAdmin(false);
+        return;
+      }
+
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('is_superadmin')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          console.error('TrialStatusBar: Error checking superadmin status:', error);
+          setIsSuperAdmin(false);
+          return;
+        }
+
+        setIsSuperAdmin(profile?.is_superadmin || false);
+      } catch (error) {
+        console.error('TrialStatusBar: Exception checking superadmin status:', error);
+        setIsSuperAdmin(false);
+      }
+    }
+
+    checkSuperAdminStatus();
+  }, [userId]);
 
   // Check if user owns this handbook
   useEffect(() => {
@@ -59,22 +102,15 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
           .single();
 
         if (error) {
-          console.error('❌ TrialStatusBar: Error checking handbook ownership:', error);
+          console.error('TrialStatusBar: Error checking handbook ownership:', error);
           setIsHandbookOwner(false);
           return;
         }
 
         const isOwner = handbookData.owner_id === userId;
         setIsHandbookOwner(isOwner);
-        
-        console.log('🔒 TrialStatusBar: Ownership check:', {
-          userId,
-          handbookId,
-          ownerId: handbookData.owner_id,
-          isOwner
-        });
       } catch (error) {
-        console.error('❌ TrialStatusBar: Exception checking ownership:', error);
+        console.error('TrialStatusBar: Exception checking ownership:', error);
         setIsHandbookOwner(false);
       }
     }
@@ -85,27 +121,41 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
   useEffect(() => {
     async function fetchTrialStatus() {
       if (!userId || isHandbookOwner === false) {
+        console.log('🚫 TrialStatusBar: Early return - no userId or not owner:', { userId, isHandbookOwner });
         setIsLoading(false);
         return;
       }
       
       // Wait for ownership check to complete
-      if (isHandbookOwner === null) return;
+      if (isHandbookOwner === null) {
+        console.log('🔄 TrialStatusBar: Waiting for ownership check...');
+        return;
+      }
       
       try {
         setIsLoading(true);
-        console.log('🔍 TrialStatusBar: Fetching trial status for userId:', userId);
-        const response = await fetch(`/api/trial/check-status?userId=${userId}`);
+        console.log('🎯 TrialStatusBar: Fetching trial status...', { userId, handbookId, isHandbookOwner });
+        
+        // Use handbook-specific trial status if handbookId is provided
+        let response;
+        if (handbookId) {
+          const url = `/api/handbook/${handbookId}/trial-status?userId=${userId}`;
+          console.log('🎯 TrialStatusBar: Calling handbook-specific API:', url);
+          response = await fetch(url);
+        } else {
+          console.log('🎯 TrialStatusBar: Calling user-level API');
+          response = await fetch(`/api/trial/check-status?userId=${userId}`);
+        }
         
         if (!response.ok) {
           throw new Error('Failed to fetch trial status');
         }
         
         const status = await response.json();
-        console.log('📊 TrialStatusBar: Received trial status:', status);
+        console.log('🎯 TrialStatusBar received status:', status);
         setTrialStatus(status);
       } catch (err) {
-        console.error('❌ TrialStatusBar: Error fetching trial status:', err);
+        console.error('TrialStatusBar: Error fetching trial status:', err);
         // Sätt default värden vid fel
         setTrialStatus({
           isInTrial: false,
@@ -127,7 +177,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
       const interval = setInterval(fetchTrialStatus, 5 * 60 * 1000);
       return () => clearInterval(interval);
     }
-  }, [userId, isHandbookOwner]);
+  }, [userId, isHandbookOwner, handbookId]);
 
   const handleUpgrade = () => {
     if (onUpgrade) {
@@ -143,34 +193,86 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     setIsVisible(false);
   };
 
-  // Debug logging
-  console.log('🎯 TrialStatusBar render state:', {
-    isLoading,
-    trialStatus,
-    isVisible,
-    userId,
-    isHandbookOwner
-  });
-
   // Don't show if user doesn't own this handbook
-  if (isHandbookOwner === false) {
-    console.log('🚫 TrialStatusBar: Not showing - user does not own this handbook');
+  if (isHandbookOwner === false && isSuperAdmin === false) {
+    console.log('🚫 TrialStatusBar hidden: user not owner and not superadmin');
     return null;
   }
 
-  if (isLoading || !trialStatus || !isVisible || isHandbookOwner === null) {
+  if (isLoading || !trialStatus || !isVisible || isHandbookOwner === null || isSuperAdmin === null) {
+    console.log('🚫 TrialStatusBar hidden: loading or missing data:', {
+      isLoading,
+      hasTrialStatus: !!trialStatus,
+      isVisible,
+      isHandbookOwner,
+      isSuperAdmin
+    });
     return null;
   }
 
-  // Visa endast för aktiva trials eller utgångna trials
-  // INTE för aktiva prenumerationer eller användare som inte har trial alls
+  // Visa för aktiva trials ELLER utgångna trials
+  // INTE för aktiva prenumerationer som inte är i trial
+  console.log('🎯 TrialStatusBar visibility check:', {
+    isInTrial: trialStatus.isInTrial,
+    subscriptionStatus: trialStatus.subscriptionStatus,
+    trialDaysRemaining: trialStatus.trialDaysRemaining,
+    shouldShow: trialStatus.isInTrial || (trialStatus.subscriptionStatus === 'expired' && trialStatus.trialEndsAt)
+  });
+  
+  // Visa bannern om:
+  // 1. Användaren är i aktiv trial ELLER
+  // 2. Trial har gått ut men subscriptionen är expired (inte active)
   if (!trialStatus.isInTrial && trialStatus.subscriptionStatus !== 'expired') {
-    console.log('🚫 TrialStatusBar: Not showing - no active trial or expired status');
+    console.log('🚫 TrialStatusBar hidden: trial not active and subscription not expired');
     return null;
   }
+
+  console.log('✅ TrialStatusBar: Should render banner!', {
+    isInTrial: trialStatus.isInTrial,
+    subscriptionStatus: trialStatus.subscriptionStatus,
+    trialDaysRemaining: trialStatus.trialDaysRemaining,
+    isExpired: trialStatus.trialDaysRemaining <= 0
+  });
 
   const isExpired = trialStatus.trialDaysRemaining <= 0;
   const isExpiringSoon = trialStatus.trialDaysRemaining <= 3 && !isExpired;
+
+  // Special banner for superadmins viewing other users' handbooks
+  if (isSuperAdmin === true && isHandbookOwner === false) {
+    return (
+      <Card className={`border-0 shadow-none bg-gradient-to-r from-blue-50 to-indigo-50 relative z-50 ${className}`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 space-y-3 sm:space-y-0">
+          <div className="flex items-start sm:items-center space-x-3 min-w-0 flex-1">
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex-shrink-0">
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                <h3 className="font-semibold text-blue-900 text-sm sm:text-base">Superadmin - Handbok-status</h3>
+                <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100 text-xs w-fit">
+                  {trialStatus.isInTrial ? `${trialStatus.trialDaysRemaining} dagar trial kvar` : 
+                   trialStatus.subscriptionStatus === 'active' ? 'Betald' : 'Trial utgången'}
+                </Badge>
+              </div>
+              <div className="flex items-center text-xs sm:text-sm text-blue-700 mt-1">
+                <Clock className="mr-1 h-3 w-3" />
+                {trialStatus.isInTrial ? 
+                  `Trial slutar ${formatTrialEndDate(trialStatus.trialEndsAt)}` :
+                  trialStatus.subscriptionStatus === 'active' ? 'Aktiv prenumeration' :
+                  `Trial gick ut ${formatTrialEndDate(trialStatus.trialEndsAt)}`
+                }
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 w-full sm:w-auto">
+            <Badge variant="outline" className="text-blue-600 border-blue-300 text-xs">
+              Admin-vy
+            </Badge>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   // Utgången trial
   if (isExpired) {
