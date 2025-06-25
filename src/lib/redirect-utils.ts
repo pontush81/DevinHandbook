@@ -116,6 +116,21 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
   lastRedirectTime = now;
 
   try {
+    // Check if user is on create-handbook page - don't redirect
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      if (currentPath.startsWith('/create-handbook')) {
+        console.log('[Smart Redirect] User is on create-handbook page, skipping redirect');
+        return;
+      }
+      
+      // Also check for global flag set by create-handbook page
+      if ((window as any).__CREATE_HANDBOOK_PAGE) {
+        console.log('[Smart Redirect] Create handbook page flag is set, skipping redirect');
+        return;
+      }
+    }
+
     // Check if user is currently joining a handbook via code - if so, don't interfere
     if (typeof window !== 'undefined') {
       let joiningFlag = null;

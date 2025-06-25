@@ -205,8 +205,8 @@ function CreateHandbookContent() {
     isLoadingHandbooks
   });
 
-  // Visa lista över befintliga handböcker om användaren väljer att se dem (endast för superadmins)
-  if (handbooks.length > 0 && !showCreateForm && !forceNewHandbook && isSuperadmin) {
+  // Visa lista över befintliga handböcker om användaren väljer att se dem
+  if (handbooks.length > 0 && !showCreateForm && !forceNewHandbook) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-4 md:py-16 px-4 md:px-6">
         <div className="max-w-2xl mx-auto">
@@ -226,7 +226,7 @@ function CreateHandbookContent() {
                   <li key={handbook.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center">
                     <div>
                       <h3 className="font-medium text-lg">{handbook.title}</h3>
-                      <p className="text-gray-500">handbok.org/handbook/{handbook.subdomain}</p>
+                      <p className="text-gray-500">handbok.org/{handbook.subdomain}</p>
                     </div>
                     <div className="mt-2 md:mt-0 space-x-2">
                       <Button asChild variant="outline" size="sm">
@@ -235,7 +235,7 @@ function CreateHandbookContent() {
                         </a>
                       </Button>
                       <Button asChild size="sm">
-                        <a href={`/handbook/${handbook.subdomain}`}>
+                        <a href={`/${handbook.subdomain}`}>
                           Redigera
                         </a>
                       </Button>
@@ -267,7 +267,7 @@ function CreateHandbookContent() {
           <p className="text-lg md:text-xl text-gray-600 max-w-xl px-4 text-center">
             AI-driven handbok på 2 minuter
           </p>
-          {handbooks.length > 0 && isSuperadmin && (
+          {handbooks.length > 0 && (
             <Button variant="outline" className="mb-3 md:mb-4 text-sm md:text-base" onClick={() => router.push('/dashboard')}>
               Visa mina handböcker
             </Button>

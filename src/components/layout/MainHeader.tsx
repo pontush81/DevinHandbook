@@ -14,6 +14,7 @@ import {
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Section {
   id: string;
@@ -37,6 +38,7 @@ export function MainHeader({
 }: MainHeaderProps) {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
     // Only run on client side
@@ -136,6 +138,23 @@ export function MainHeader({
                 </SheetHeader>
                 <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
                   <div className="flex flex-col space-y-3">
+                    {user && (
+                      <>
+                        <Link
+                          href="/create-handbook?new=true"
+                          className="text-blue-600 font-medium hover:text-blue-700"
+                        >
+                          🚀 Skapa ny handbok
+                        </Link>
+                        <Link
+                          href="/dashboard"
+                          className="text-foreground/70 transition-colors hover:text-foreground"
+                        >
+                          Dashboard
+                        </Link>
+                        <div className="border-t border-gray-200 my-3"></div>
+                      </>
+                    )}
                     {linksToRender.map((link) => (
                       <Link
                         key={link.href}
@@ -148,6 +167,17 @@ export function MainHeader({
                         {link.label}
                       </Link>
                     ))}
+                    {!user && (
+                      <>
+                        <div className="border-t border-gray-200 my-3"></div>
+                        <Link
+                          href="/login"
+                          className="text-foreground/70 transition-colors hover:text-foreground"
+                        >
+                          Logga in
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </SheetContent>
@@ -189,15 +219,29 @@ export function MainHeader({
         <div className="flex items-center space-x-3">
           {showAuth && (
             <nav className="flex items-center space-x-2">
-              {pathname !== '/login' && pathname !== '/signup' && (
+              {user ? (
                 <>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/create-handbook?new=true" className="text-xs">
+                      + Skapa handbok
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/dashboard" className="text-xs">
+                      <User className="mr-1 h-3 w-3" />
+                      Dashboard
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                pathname !== '/login' && pathname !== '/signup' && (
                   <Button variant="ghost" size="sm" asChild>
                     <Link href="/login" className="text-xs">
                       <User className="mr-1 h-3 w-3" />
                       Logga in
                     </Link>
                   </Button>
-                </>
+                )
               )}
             </nav>
           )}

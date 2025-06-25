@@ -48,28 +48,8 @@ export async function POST(req: NextRequest) {
     const userEmail = userData?.user?.email || "";
     const isSuperAdmin = await checkIsSuperAdmin(supabase, user_id, userEmail);
 
-    // Kontrollera handboksbegränsning för icke-superadmins
-    if (!isSuperAdmin) {
-      const { data: userHandbooks, error: handbooksError } = await supabase
-        .from("handbooks")
-        .select("id")
-        .eq("owner_id", user_id);
-
-      if (handbooksError) {
-        console.error("Fel vid kontroll av användarens handböcker:", handbooksError);
-        return NextResponse.json(
-          { error: "Kunde inte kontrollera befintliga handböcker" },
-          { status: 500 }
-        );
-      }
-
-      if (userHandbooks && userHandbooks.length >= 1) {
-        return NextResponse.json(
-          { error: "Du kan endast skapa en handbok med ditt nuvarande konto. Uppgradera till Pro för fler handböcker." },
-          { status: 403 }
-        );
-      }
-    }
+    // Användare kan skapa flera handböcker - varje handbok har sin egen 30-dagars trial
+    console.log("[Create Handbook API] Användare kan skapa flera handböcker, ingen begränsning");
 
     console.log("[Create Handbook API] Anropar createHandbookWithSectionsAndPages med completeBRFHandbook");
     

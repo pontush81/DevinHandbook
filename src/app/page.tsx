@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import AutoSuggestHandbookSearch from '@/components/AutoSuggestHandbookSearch';
 import { useState } from 'react';
 import { ChevronDownIcon } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const dynamic = 'force-dynamic';
 
@@ -231,6 +232,8 @@ function SEOFriendlyFAQ({ faqs }: {
 }
 
 export default function HomePage() {
+  const { user, isLoading } = useAuth();
+
   const faqs = [
     {
       question: "Vad är en digital bostadsrättsföreningshandbok?",
@@ -241,9 +244,9 @@ export default function HomePage() {
     },
     {
       question: "Hur skapar jag en handbok för min förening?",
-      answer: "Det är enkelt! Klicka på 'Skapa handbok' ovan, följ den guidade processen, ange föreningens namn och välj ett unikt namn som kommer att bli den av din handboks adress. Efter betalning kan du börja fylla din handbok med innehåll.",
+      answer: "Det är enkelt! Klicka på 'Skapa konto & handbok' om du är ny användare, eller 'Skapa ny handbok' om du redan har ett konto. Följ den guidade processen, ange föreningens namn och välj ett unikt namn. Du får 30 dagar gratis trial, sedan kan du välja att betala för att fortsätta.",
       category: "Komma igång",
-      keywords: ["skapa handbok", "registrering", "subdomän", "betalning"],
+      keywords: ["skapa handbok", "registrering", "30 dagar gratis", "trial"],
       priority: 2
     },
     {
@@ -261,11 +264,18 @@ export default function HomePage() {
       priority: 4
     },
     {
+      question: "Kan jag skapa flera handböcker?",
+      answer: "Ja! Du kan skapa så många handböcker du vill. Varje handbok har sin egen 30-dagars trial och betalas separat. Detta är perfekt om du är involverad i flera föreningar eller vill testa olika uppsättningar.",
+      category: "Användning",
+      keywords: ["flera handböcker", "multiple", "separat betalning", "olika föreningar"],
+      priority: 5
+    },
+    {
       question: "Hur kommer medlemmarna åt handboken?",
       answer: "Medlemmarna besöker enkelt handboken via adressen handbok.org/föreningsnamn. Ingen inloggning behövs, men känsligt innehåll kan lösenordsskyddas.",
       category: "Användning",
       keywords: ["tillgång", "URL", "handbok.org", "inloggning", "lösenordsskydd"],
-      priority: 5
+      priority: 6
     }
   ];
 
@@ -302,7 +312,11 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto" asChild>
-                  <Link href="/signup">Skapa konto & handbok</Link>
+                  {user ? (
+                    <Link href="/create-handbook?new=true">🚀 Skapa ny handbok</Link>
+                  ) : (
+                    <Link href="/signup">Skapa konto & handbok</Link>
+                  )}
                 </Button>
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300" asChild>
                   <Link href="#pilot-signup">🚀 Bli pilotkund</Link>
@@ -421,12 +435,14 @@ export default function HomePage() {
           </div>
           
           <div className="text-center mt-8">
-            <p className="text-gray-600 text-sm">
-              Saknas din förening? 
-              <Link href="/create-handbook?new=true" className="text-blue-600 hover:text-blue-700 font-medium hover:underline ml-1">
-                Skapa en handbok här
-              </Link>
+            <p className="text-gray-600 text-sm mb-4">
+              Saknas din förening?
             </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/create-handbook?new=true">
+                🚀 Skapa en handbok här
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
