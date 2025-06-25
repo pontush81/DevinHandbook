@@ -336,13 +336,13 @@ function getUrgencyLevel(daysRemaining: number, isInTrial: boolean): 'low' | 'me
  */
 export async function getHandbookTrialStatus(userId: string, handbookId: string): Promise<TrialStatus> {
   try {
-    // 1. Kolla om det finns en aktiv subscription för just denna handbok
-    const { data: handbookSubscription, error: handbookSubError } = await supabase
+    // 1. Kolla om det finns en prenumeration för just denna handbok (aktiv ELLER uppsagd)
+    const { data: handbookSubscriptions, error: handbookSubError } = await supabase
       .from('subscriptions')
-      .select('status, plan_type, expires_at, trial_ends_at')
+      .select('status, plan_type, expires_at, trial_ends_at, cancelled_at')
       .eq('user_id', userId)
       .eq('handbook_id', handbookId)
-      .eq('status', 'active')
+      .in('status', ['active', 'cancelled'])
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -350,24 +350,40 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
       console.error('Error checking handbook subscription:', handbookSubError);
     }
 
-    // Om det finns en aktiv prenumeration för denna handbok
-    if (handbookSubscription && handbookSubscription.length > 0) {
-      const subscription = handbookSubscription[0];
+    // Om det finns en prenumeration för denna handbok
+    if (handbookSubscriptions && handbookSubscriptions.length > 0) {
+      const subscription = handbookSubscriptions[0];
       
       console.log('🔍 [getHandbookTrialStatus] Found handbook-specific subscription:', {
         handbookId,
-        subscriptionStatus: 'active',
-        trialEndsAt: subscription.trial_ends_at
+        subscriptionStatus: subscription.status,
+        trialEndsAt: subscription.trial_ends_at,
+        cancelledAt: subscription.cancelled_at
       });
 
-      return {
-        isInTrial: false, // Aktiv prenumeration = inte i trial
-        trialDaysRemaining: 0,
-        subscriptionStatus: 'active',
-        trialEndsAt: subscription.trial_ends_at,
-        canCreateHandbook: true,
-        hasUsedTrial: true,
-      };
+      // Om prenumerationen är aktiv
+      if (subscription.status === 'active') {
+        return {
+          isInTrial: false, // Aktiv prenumeration = inte i trial
+          trialDaysRemaining: 0,
+          subscriptionStatus: 'active',
+          trialEndsAt: subscription.trial_ends_at,
+          canCreateHandbook: true,
+          hasUsedTrial: true,
+        };
+      }
+
+      // Om prenumerationen är uppsagd
+      if (subscription.status === 'cancelled') {
+        return {
+          isInTrial: false,
+          trialDaysRemaining: 0,
+          subscriptionStatus: 'cancelled',
+          trialEndsAt: subscription.trial_ends_at,
+          canCreateHandbook: false, // Uppsagd = kan inte skapa nya handböcker
+          hasUsedTrial: true,
+        };
+      }
     }
 
     // 2. Kolla handbokens trial_end_date direkt

@@ -33,7 +33,7 @@ export default function SettingsPageClient({
   const [emailLoading, setEmailLoading] = useState(false);
   const [forumUpdating, setForumUpdating] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [forumEnabled, setForumEnabled] = useState(handbookData.forum_enabled || false);
 
   const isAdmin = userRole === 'admin';
@@ -150,6 +150,16 @@ export default function SettingsPageClient({
       const data = await response.json();
 
       if (!response.ok) {
+        // Hantera specifikt fallet när prenumerationen är helt uppsagd
+        if (response.status === 404 && data.error?.includes('Unable to access subscription management')) {
+          setMessage({
+            type: 'info',
+            text: 'Din prenumeration har sagts upp och kan inte längre hanteras via Stripe. Kontakta support om du har frågor eller vill starta en ny prenumeration.'
+          });
+          setTimeout(() => setMessage(null), 8000);
+          return;
+        }
+        
         throw new Error(data.error || 'Misslyckades att skapa portal-session');
       }
 
@@ -206,8 +216,8 @@ export default function SettingsPageClient({
         
         {/* Status Messages */}
         {message && (
-          <Alert className={`${message.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
-            <AlertDescription className={message.type === 'error' ? 'text-red-700' : 'text-green-700'}>
+          <Alert className={`${message.type === 'error' ? 'border-red-200 bg-red-50' : message.type === 'info' ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'}`}>
+            <AlertDescription className={message.type === 'error' ? 'text-red-700' : message.type === 'info' ? 'text-yellow-700' : 'text-green-700'}>
               {message.text}
             </AlertDescription>
           </Alert>

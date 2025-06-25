@@ -119,6 +119,38 @@ const portalSession = await stripe.billingPortal.sessions.create({
    - 60 dagar: Användaren kan exportera data
    - 90 dagar: All data raderas permanent
 
+### Hantering av uppsagda prenumerationer
+
+**Problem som löstes:**
+- När en prenumeration sägs upp raderas Customer ID:t från Stripe
+- Men det finns kvar i vår databas
+- Detta orsakade fel när användare försökte komma åt Customer Portal
+
+**Lösning:**
+```typescript
+// API försöker med flera Customer IDs och validerar att de finns i Stripe
+for (const subscription of subscriptions) {
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (!customer.deleted) {
+      // Skapa portal session
+    }
+  } catch (error) {
+    // Om Customer ID inte finns, fortsätt till nästa
+  }
+}
+```
+
+**Frontend-hantering:**
+- Uppsagda prenumerationer visas med "❌ Uppsagd" status
+- "Hantera prenumeration"-knappen ersätts med "Förnya"-knapp
+- Användarvänliga felmeddelanden när portal inte kan skapas
+
+**Trial-service uppdateringar:**
+- `getHandbookTrialStatus()` kontrollerar nu både aktiva och uppsagda prenumerationer
+- Returnerar korrekt status: `active`, `cancelled`, `trial`, `expired`
+- Uppsagda prenumerationer tillåter inte skapande av nya handböcker
+
 ## Konfiguration i Stripe Dashboard
 
 ### Customer Portal inställningar:

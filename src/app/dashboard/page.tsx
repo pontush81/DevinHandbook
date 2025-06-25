@@ -340,6 +340,16 @@ export default function DashboardPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Hantera specifikt fallet när prenumerationen är helt uppsagd
+        if (response.status === 404 && data.error?.includes('Unable to access subscription management')) {
+          toast({
+            title: "Prenumeration uppsagd",
+            description: "Din prenumeration har sagts upp och kan inte längre hanteras. Kontakta support om du har frågor.",
+            variant: "default",
+          });
+          return;
+        }
+        
         throw new Error(data.error || 'Misslyckades att skapa portal-session');
       }
 
@@ -498,6 +508,8 @@ export default function DashboardPage() {
                                 className={`${
                                   handbook.trialStatus.subscriptionStatus === 'active' 
                                     ? 'border-green-200 text-green-800 bg-green-50' 
+                                    : handbook.trialStatus.subscriptionStatus === 'cancelled'
+                                    ? 'border-red-200 text-red-800 bg-red-50'
                                     : handbook.trialStatus.isInTrial
                                     ? 'border-orange-200 text-orange-800 bg-orange-50'
                                     : 'border-red-200 text-red-800 bg-red-50'
@@ -505,6 +517,8 @@ export default function DashboardPage() {
                               >
                                 {handbook.trialStatus.subscriptionStatus === 'active' 
                                   ? '💳 Betald' 
+                                  : handbook.trialStatus.subscriptionStatus === 'cancelled'
+                                  ? '❌ Uppsagd'
                                   : handbook.trialStatus.isInTrial
                                   ? `🔄 Trial (${handbook.trialStatus.trialDaysRemaining}d)`
                                   : '⚠️ Trial utgången'}
@@ -560,6 +574,35 @@ export default function DashboardPage() {
                                     disabled={isLoadingHandbooks}
                                   >
                                     {isLoadingHandbooks ? "Laddar..." : "Hantera"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Status för uppsagd subscription */}
+                          {!isSuperadmin && handbook.trialStatus && handbook.trialStatus.subscriptionStatus === 'cancelled' && (
+                            <div className="mb-4">
+                              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="flex items-center text-red-800">
+                                      <span className="text-sm font-medium">❌ Prenumeration uppsagd</span>
+                                    </div>
+                                    <p className="text-xs text-red-600 mt-1">
+                                      Denna prenumeration har sagts upp
+                                    </p>
+                                  </div>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="border-blue-300 text-blue-700 hover:bg-blue-100 text-xs"
+                                    onClick={() => {
+                                      window.location.href = `/upgrade?handbookId=${handbook.id}`;
+                                    }}
+                                    disabled={isLoadingHandbooks}
+                                  >
+                                    {isLoadingHandbooks ? "Laddar..." : "Förnya"}
                                   </Button>
                                 </div>
                               </div>
@@ -647,6 +690,8 @@ export default function DashboardPage() {
                             className={`${
                               handbook.trialStatus.subscriptionStatus === 'active' 
                                 ? 'border-green-200 text-green-800 bg-green-50' 
+                                : handbook.trialStatus.subscriptionStatus === 'cancelled'
+                                ? 'border-red-200 text-red-800 bg-red-50'
                                 : handbook.trialStatus.isInTrial
                                 ? 'border-orange-200 text-orange-800 bg-orange-50'
                                 : 'border-red-200 text-red-800 bg-red-50'
@@ -654,6 +699,8 @@ export default function DashboardPage() {
                           >
                             {handbook.trialStatus.subscriptionStatus === 'active' 
                               ? '💳 Betald' 
+                              : handbook.trialStatus.subscriptionStatus === 'cancelled'
+                              ? '❌ Uppsagd'
                               : handbook.trialStatus.isInTrial
                               ? `🔄 Trial (${handbook.trialStatus.trialDaysRemaining}d)`
                               : '⚠️ Trial utgången'}
