@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/cleanup-expired-data",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/fix-orphaned-trials",
+      "schedule": "0 5 * * *"
     }
   ],
   "redirects": [

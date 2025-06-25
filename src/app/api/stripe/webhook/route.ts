@@ -497,7 +497,7 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
   try {
     // Extrahera plan-typ och handbook ID från metadata
     const planType = stripeSession.metadata?.planType || 'monthly';
-    const handbookId = stripeSession.metadata?.handbookId;
+    let handbookId = stripeSession.metadata?.handbookId;
     const subscriptionId = stripeSession.subscription;
     const customerId = stripeSession.customer;
     
@@ -512,8 +512,31 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
       currency: stripeSession.currency
     });
 
+    // SÄKERHETSÅTGÄRD 1: Om handbookId saknas, hitta användarens senaste trial-handbok
     if (!handbookId) {
-      throw new Error('Missing handbookId in session metadata - cannot process trial upgrade');
+      console.log(`⚠️ [Stripe Webhook] Missing handbookId in metadata, searching for user's trial handbook...`);
+      
+      const { data: trialHandbooks, error: searchError } = await supabase
+        .from('handbooks')
+        .select('id, title, created_at, trial_end_date')
+        .eq('owner_id', userId)
+        .not('trial_end_date', 'is', null) // Handböcker som fortfarande är i trial
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (searchError) {
+        console.error(`❌ [Stripe Webhook] Error searching for trial handbook:`, searchError);
+      } else if (trialHandbooks && trialHandbooks.length > 0) {
+        handbookId = trialHandbooks[0].id;
+        console.log(`✅ [Stripe Webhook] Found trial handbook: ${trialHandbooks[0].title} (${handbookId})`);
+      } else {
+        console.log(`⚠️ [Stripe Webhook] No trial handbook found for user ${userId}`);
+      }
+    }
+
+    // SÄKERHETSÅTGÄRD 2: Om vi fortfarande inte har handbookId, skapa en generell prenumeration
+    if (!handbookId) {
+      console.log(`⚠️ [Stripe Webhook] No handbook found - creating general user subscription`);
     }
 
     // 1. Uppdatera trial-status till completed med retry logic
@@ -533,53 +556,94 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
       }
     }, `Update user profile for ${userId}`);
 
-    // 2. KRITISK: Uppdatera handbok prenumeration - detta är huvudproblemet
-    console.log(`🎯 [Stripe Webhook] CRITICAL: Updating handbook ${handbookId} to paid status`);
-    
-    await retryOperation(async () => {
-      // Först, verifiera att handboken finns
-      const { data: handbook, error: fetchError } = await supabase
+    // 2. KRITISK: Uppdatera handbok prenumeration om vi har en handbookId
+    if (handbookId) {
+      console.log(`🎯 [Stripe Webhook] CRITICAL: Updating handbook ${handbookId} to paid status`);
+      
+      await retryOperation(async () => {
+        // Först, verifiera att handboken finns
+        const { data: handbook, error: fetchError } = await supabase
+          .from('handbooks')
+          .select('id, title, trial_end_date')
+          .eq('id', handbookId)
+          .single();
+
+        if (fetchError || !handbook) {
+          throw new Error(`Handbook ${handbookId} not found: ${fetchError?.message || 'Unknown error'}`);
+        }
+
+        console.log(`📖 [Stripe Webhook] Found handbook: ${handbook.title} (current trial_end_date: ${handbook.trial_end_date})`);
+        
+        // Sätt handbokens trial_end_date till null för att aktivera prenumeration
+        const { error: handbookError } = await supabase
+          .from('handbooks')
+          .update({
+            trial_end_date: null, // null = aktiv prenumeration
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', handbookId);
+
+        if (handbookError) {
+          throw new Error(`Failed to update handbook trial status: ${handbookError.message}`);
+        }
+
+        // Verifiera att uppdateringen lyckades
+        const { data: updatedHandbook, error: verifyError } = await supabase
+          .from('handbooks')
+          .select('trial_end_date')
+          .eq('id', handbookId)
+          .single();
+
+        if (verifyError) {
+          throw new Error(`Failed to verify handbook update: ${verifyError.message}`);
+        }
+
+        if (updatedHandbook.trial_end_date !== null) {
+          throw new Error(`Handbook update verification failed: trial_end_date is still ${updatedHandbook.trial_end_date}`);
+        }
+
+        console.log(`✅ [Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
+      }, `Update handbook ${handbookId} to paid status`, 5, 2000); // More retries and longer delay for critical operation
+    } else {
+      console.log(`⚠️ [Stripe Webhook] Skipping handbook update - no handbookId available`);
+    }
+
+    // SÄKERHETSÅTGÄRD 3: Om ingen specifik handbok, uppdatera ALLA användarens trial-handböcker
+    if (!handbookId) {
+      console.log(`🔄 [Stripe Webhook] No specific handbook - updating ALL user trial handbooks to paid status`);
+      
+      const { data: allTrialHandbooks, error: allTrialError } = await supabase
         .from('handbooks')
         .select('id, title, trial_end_date')
-        .eq('id', handbookId)
-        .single();
+        .eq('owner_id', userId)
+        .not('trial_end_date', 'is', null);
 
-      if (fetchError || !handbook) {
-        throw new Error(`Handbook ${handbookId} not found: ${fetchError?.message || 'Unknown error'}`);
+      if (allTrialError) {
+        console.error(`❌ [Stripe Webhook] Error fetching all trial handbooks:`, allTrialError);
+      } else if (allTrialHandbooks && allTrialHandbooks.length > 0) {
+        console.log(`📚 [Stripe Webhook] Found ${allTrialHandbooks.length} trial handbooks to update`);
+        
+        for (const handbook of allTrialHandbooks) {
+          try {
+            const { error: updateError } = await supabase
+              .from('handbooks')
+              .update({
+                trial_end_date: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', handbook.id);
+
+            if (updateError) {
+              console.error(`❌ [Stripe Webhook] Error updating handbook ${handbook.id}:`, updateError);
+            } else {
+              console.log(`✅ [Stripe Webhook] Updated handbook ${handbook.title} (${handbook.id}) to paid status`);
+            }
+          } catch (error) {
+            console.error(`❌ [Stripe Webhook] Exception updating handbook ${handbook.id}:`, error);
+          }
+        }
       }
-
-      console.log(`📖 [Stripe Webhook] Found handbook: ${handbook.title} (current trial_end_date: ${handbook.trial_end_date})`);
-      
-      // Sätt handbokens trial_end_date till null för att aktivera prenumeration
-      const { error: handbookError } = await supabase
-        .from('handbooks')
-        .update({
-          trial_end_date: null, // null = aktiv prenumeration
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', handbookId);
-
-      if (handbookError) {
-        throw new Error(`Failed to update handbook trial status: ${handbookError.message}`);
-      }
-
-      // Verifiera att uppdateringen lyckades
-      const { data: updatedHandbook, error: verifyError } = await supabase
-        .from('handbooks')
-        .select('trial_end_date')
-        .eq('id', handbookId)
-        .single();
-
-      if (verifyError) {
-        throw new Error(`Failed to verify handbook update: ${verifyError.message}`);
-      }
-
-      if (updatedHandbook.trial_end_date !== null) {
-        throw new Error(`Handbook update verification failed: trial_end_date is still ${updatedHandbook.trial_end_date}`);
-      }
-
-      console.log(`✅ [Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
-    }, `Update handbook ${handbookId} to paid status`, 5, 2000); // More retries and longer delay for critical operation
+    }
 
     // 3. Skapa subscription record med rätt plan-typ
     // Konvertera planType till databas-kompatibelt format
@@ -601,7 +665,8 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
         plan_type: dbPlanType,
         original_plan_type: planType,
         upgraded_from_trial: true,
-        handbook_id: handbookId || null
+        handbook_id: handbookId || null,
+        fallback_used: !stripeSession.metadata?.handbookId // Flagga om vi använde fallback
       }
     };
 
@@ -644,7 +709,9 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
           activated_via: 'trial_upgrade',
           plan_type: dbPlanType,
           original_plan_type: planType,
-          activation_date: new Date().toISOString()
+          activation_date: new Date().toISOString(),
+          handbook_id: handbookId || null,
+          fallback_used: !stripeSession.metadata?.handbookId
         }
       }, { onConflict: 'user_id' });
 
@@ -669,14 +736,16 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
           payment_amount: stripeSession.amount_total,
           currency: stripeSession.currency,
           converted_from: 'trial',
-          handbook_id: handbookId || null
+          handbook_id: handbookId || null,
+          fallback_used: !stripeSession.metadata?.handbookId,
+          security_measures_applied: true
         }
       });
 
-    console.log(`[Stripe Webhook] Trial upgrade completed successfully for user ${userId}`);
+    console.log(`✅ [Stripe Webhook] Trial upgrade completed successfully for user ${userId} with enhanced security measures`);
 
   } catch (error) {
-    console.error('[Stripe Webhook] Error in trial upgrade:', error);
+    console.error('❌ [Stripe Webhook] Error in trial upgrade:', error);
     throw error;
   }
 }
