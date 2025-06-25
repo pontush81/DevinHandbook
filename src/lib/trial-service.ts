@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 /**
  * Interface för trial-status - FÖRENKLAD
@@ -40,7 +40,7 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus> {
     console.log('🔍 [getTrialStatus] Checking user-level trial eligibility for:', userId);
 
     // Använd RPC-funktionen för användarens generella trial-status
-    const { data, error } = await supabase
+    const { data, error } = await getServiceSupabase
       .rpc('check_trial_status', { user_uuid: userId });
 
     if (error) {
@@ -51,7 +51,7 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus> {
     const result = data[0];
     
     // Kontrollera om användaren har skapat handböcker tidigare
-    const { data: handbooks, error: handbooksError } = await supabase
+    const { data: handbooks, error: handbooksError } = await getServiceSupabase
       .from('handbooks')
       .select('id, created_during_trial')
       .eq('owner_id', userId);
@@ -293,8 +293,11 @@ function getUrgencyLevel(daysRemaining: number, isInTrial: boolean): 'low' | 'me
  */
 export async function getHandbookTrialStatus(userId: string, handbookId: string): Promise<TrialStatus> {
   try {
+    console.log('🔧 [DEBUG] getHandbookTrialStatus called with updated code - timestamp:', new Date().toISOString());
+    console.log('🔧 [DEBUG] Using getServiceSupabase for database queries');
+
     // 1. Kolla om det finns en prenumeration för just denna handbok (aktiv ELLER uppsagd)
-    const { data: handbookSubscriptions, error: handbookSubError } = await supabase
+    const { data: handbookSubscriptions, error: handbookSubError } = await getServiceSupabase()
       .from('subscriptions')
       .select('status, plan_type, expires_at, trial_ends_at, cancelled_at')
       .eq('user_id', userId)
@@ -344,7 +347,7 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
     }
 
     // 2. Kolla handbokens trial_end_date direkt
-    const { data: handbook, error: handbookError } = await supabase
+    const { data: handbook, error: handbookError } = await getServiceSupabase()
       .from('handbooks')
       .select('trial_end_date, created_during_trial')
       .eq('id', handbookId)
@@ -359,6 +362,12 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
     if (!handbook) {
       throw new Error('Handbook not found or user is not owner');
     }
+
+    console.log('🔧 [DEBUG] Handbook data from database:', {
+      handbookId,
+      trial_end_date: handbook.trial_end_date,
+      created_during_trial: handbook.created_during_trial
+    });
 
     // Om handboken inte har trial_end_date (null), så är den betald
     if (!handbook.trial_end_date) {

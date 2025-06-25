@@ -22,6 +22,9 @@ export async function GET(
       handbookId
     });
 
+    // Add debug log to see if new code is running
+    console.log('🔧 [DEBUG] trial-status API running with updated code - timestamp:', new Date().toISOString());
+
     const trialStatus = await getHandbookTrialStatus(userId, handbookId);
     
     console.log('🎯 [Handbook Trial Status API] Returning status:', trialStatus);
