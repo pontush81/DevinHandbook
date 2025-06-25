@@ -312,6 +312,56 @@ export default function DashboardPage() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    setIsLoadingHandbooks(true);
+    
+    try {
+      if (!user) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad för att hantera prenumeration.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Skapa Stripe Customer Portal session
+      const response = await fetch('/api/stripe/create-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          returnUrl: `${window.location.origin}/dashboard`
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Misslyckades att skapa portal-session');
+      }
+
+      // Omdirigera till Stripe Customer Portal
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Ingen portal-URL mottagen');
+      }
+
+    } catch (error) {
+      console.error('Fel vid hantering av prenumeration:', error);
+      toast({
+        title: "Fel vid hantering av prenumeration",
+        description: error instanceof Error ? error.message : "Något gick fel. Försök igen senare.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingHandbooks(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -493,12 +543,25 @@ export default function DashboardPage() {
                           {!isSuperadmin && handbook.trialStatus && handbook.trialStatus.subscriptionStatus === 'active' && (
                             <div className="mb-4">
                               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div className="flex items-center text-green-800">
-                                  <span className="text-sm font-medium">✅ Aktiv prenumeration</span>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="flex items-center text-green-800">
+                                      <span className="text-sm font-medium">✅ Aktiv prenumeration</span>
+                                    </div>
+                                    <p className="text-xs text-green-600 mt-1">
+                                      Denna handbok är betald och aktiv
+                                    </p>
+                                  </div>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="border-green-300 text-green-700 hover:bg-green-100 text-xs"
+                                    onClick={() => handleManageSubscription()}
+                                    disabled={isLoadingHandbooks}
+                                  >
+                                    {isLoadingHandbooks ? "Laddar..." : "Hantera"}
+                                  </Button>
                                 </div>
-                                <p className="text-xs text-green-600 mt-1">
-                                  Denna handbok är betald och aktiv
-                                </p>
                               </div>
                             </div>
                           )}

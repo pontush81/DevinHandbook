@@ -80,6 +80,19 @@ export default function TermsPage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">4. Uppsägning och återbetalning</h2>
           
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h3 className="font-semibold mb-2 text-blue-800">Hur du säger upp din prenumeration</h3>
+            <p className="text-sm text-blue-700 mb-2">
+              Du hanterar din prenumeration enkelt via Stripe Customer Portal:
+            </p>
+            <ul className="space-y-1 text-sm text-blue-700">
+              <li>• Logga in på ditt konto på handbok.org</li>
+              <li>• Gå till Dashboard och klicka "Hantera" på din aktiva prenumeration</li>
+              <li>• Du omdirigeras till Stripe's säkra portal där du kan säga upp</li>
+              <li>• Välj om du vill avsluta omedelbart eller vid periodens slut</li>
+            </ul>
+          </div>
+          
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
             <h3 className="font-semibold mb-2 text-red-800">Återbetalningspolicy</h3>
             <ul className="space-y-1 text-sm text-red-700">

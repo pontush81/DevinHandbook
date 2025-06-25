@@ -403,18 +403,36 @@ async function handleSubscriptionUpdated(subscription: any) {
   const supabase = getServiceSupabase();
   
   try {
+    // Säker hantering av datum - kontrollera att current_period_end finns och är giltigt
+    let expiresAt = null;
+    if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
+      try {
+        expiresAt = new Date(subscription.current_period_end * 1000).toISOString();
+      } catch (dateError) {
+        console.warn('[Stripe Webhook] Invalid current_period_end, setting expires_at to null:', subscription.current_period_end);
+        expiresAt = null;
+      }
+    }
+
     // Uppdatera subscription i databasen
+    const updateData = {
+      status: subscription.status,
+      updated_at: new Date().toISOString(),
+      metadata: {
+        stripe_status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        current_period_end: subscription.current_period_end
+      }
+    };
+
+    // Lägg bara till expires_at om vi har ett giltigt datum
+    if (expiresAt) {
+      updateData.expires_at = expiresAt;
+    }
+
     const { error } = await supabase
       .from('subscriptions')
-      .update({
-        status: subscription.status,
-        expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
-        updated_at: new Date().toISOString(),
-        metadata: {
-          stripe_status: subscription.status,
-          cancel_at_period_end: subscription.cancel_at_period_end
-        }
-      })
+      .update(updateData)
       .eq('stripe_subscription_id', subscription.id);
     
     if (error) {
@@ -422,7 +440,7 @@ async function handleSubscriptionUpdated(subscription: any) {
       return;
     }
     
-    console.log(`[Stripe Webhook] Subscription ${subscription.id} updated`);
+    console.log(`[Stripe Webhook] Subscription ${subscription.id} updated - Status: ${subscription.status}, Cancel at period end: ${subscription.cancel_at_period_end}`);
     
   } catch (error) {
     console.error('[Stripe Webhook] Error handling subscription updated:', error);

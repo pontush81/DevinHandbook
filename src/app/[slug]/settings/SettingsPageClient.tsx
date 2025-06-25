@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Settings, MessageSquare, Mail, Users, User, Smartphone } from 'lucide-react';
+import { ArrowLeft, Settings, MessageSquare, Mail, Users, User, Smartphone, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +32,7 @@ export default function SettingsPageClient({
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [forumUpdating, setForumUpdating] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [forumEnabled, setForumEnabled] = useState(handbookData.forum_enabled || false);
 
@@ -127,6 +128,47 @@ export default function SettingsPageClient({
       });
     } finally {
       setForumUpdating(false);
+    }
+  }
+
+  async function handleManageSubscription() {
+    setSubscriptionLoading(true);
+    
+    try {
+      // Skapa Stripe Customer Portal session
+      const response = await fetch('/api/stripe/create-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          returnUrl: `${window.location.origin}/${handbookSlug}/settings`
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Misslyckades att skapa portal-session');
+      }
+
+      // Omdirigera till Stripe Customer Portal
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Ingen portal-URL mottagen');
+      }
+
+    } catch (error) {
+      console.error('Fel vid hantering av prenumeration:', error);
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Något gick fel. Försök igen senare.'
+      });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setSubscriptionLoading(false);
     }
   }
 
@@ -241,6 +283,29 @@ export default function SettingsPageClient({
                 </div>
               )}
 
+              {/* Subscription Management */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-white rounded-lg border border-amber-200 gap-3">
+                <div className="flex items-start gap-3">
+                  <CreditCard className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-medium text-gray-900 text-sm sm:text-base">Prenumerationshantering</h4>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      Hantera betalning, säg upp eller ändra prenumerationsplan
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleManageSubscription}
+                  disabled={subscriptionLoading}
+                  className="self-start sm:self-center"
+                >
+                  <CreditCard className="h-4 w-4 mr-2 sm:hidden" />
+                  {subscriptionLoading ? 'Laddar...' : 'Hantera prenumeration'}
+                </Button>
+              </div>
+
               {/* Member Management */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-white rounded-lg border border-amber-200 gap-3">
                 <div className="flex items-start gap-3">
@@ -317,45 +382,7 @@ export default function SettingsPageClient({
           </CardContent>
         </Card>
 
-        {/* Quick Actions - Mobile optimized */}
-        <Card className="border-gray-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-gray-900 text-base sm:text-lg">Snabblänkar</CardTitle>
-            <CardDescription className="text-sm">
-              Användbara länkar för hantering av handboken
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {forumEnabled && (
-                <Button variant="outline" asChild className="h-auto p-3 text-left">
-                  <Link href={buildUrlWithSource(`/${handbookSlug}/meddelanden`, 'settings')}>
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                      <div>
-                        <div className="font-medium text-sm">Meddelanden</div>
-                        <div className="text-xs text-gray-600">Visa forum och diskussioner</div>
-                      </div>
-                    </div>
-                  </Link>
-                </Button>
-              )}
-              {isAdmin && (
-                <Button variant="outline" asChild className="h-auto p-3 text-left">
-                  <Link href={buildUrlWithSource(`/${handbookSlug}/members`, 'settings')}>
-                    <div className="flex items-center gap-3">
-                      <Users className="h-5 w-5 text-green-600 flex-shrink-0" />
-                      <div>
-                        <div className="font-medium text-sm">Medlemmar</div>
-                        <div className="text-xs text-gray-600">Hantera användare och roller</div>
-                      </div>
-                    </div>
-                  </Link>
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   );
