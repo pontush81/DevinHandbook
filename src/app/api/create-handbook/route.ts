@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
-import { supabase } from "@/lib/supabase";
+import { getServiceSupabase } from "@/lib/supabase";
 import { ensureUserProfile, checkIsSuperAdmin } from "@/lib/user-utils";
 import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 
@@ -18,11 +18,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const supabase = getServiceSupabase();
+
     // Kontrollera om subdomänen redan används
     const { data: existingHandbook, error: checkError } = await supabase
       .from("handbooks")
       .select("id")
-      .eq("subdomain", subdomain)
+      .eq("slug", subdomain) // Använd slug istället för subdomain
       .maybeSingle();
 
     if (checkError) {
@@ -43,23 +45,21 @@ export async function POST(req: NextRequest) {
     // Säkerställ att användaren har en profil först
     await ensureUserProfile(supabase, user_id, "");
 
-    // Kontrollera om användaren är superadmin
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(user_id);
-    const userEmail = userData?.user?.email || "";
-    const isSuperAdmin = await checkIsSuperAdmin(supabase, user_id, userEmail);
-
-    // Användare kan skapa flera handböcker - varje handbok har sin egen 30-dagars trial
     console.log("[Create Handbook API] Användare kan skapa flera handböcker, ingen begränsning");
 
     console.log("[Create Handbook API] Anropar createHandbookWithSectionsAndPages med completeBRFHandbook");
     
     // Använd den rika templaten för att skapa handboken
-    const handbookId = await createHandbookWithSectionsAndPages(
+    // Parametrar: name, slug, userId, isTrialHandbook, customTemplate
+    const handbook = await createHandbookWithSectionsAndPages(
       name, 
       subdomain, 
-      completeBRFHandbook, 
-      user_id
+      user_id,
+      true, // isTrialHandbook = true för nya handböcker
+      completeBRFHandbook
     );
+    
+    const handbookId = handbook.id;
 
     console.log("[Create Handbook API] Handbok skapad med ID:", handbookId);
 

@@ -4,7 +4,77 @@ import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 import { getServiceSupabase } from '@/lib/supabase';
 
+// Webhook processing status tracking
+interface WebhookProcessingResult {
+  success: boolean;
+  eventType: string;
+  eventId: string;
+  processingTimeMs: number;
+  error?: string;
+  retryCount?: number;
+}
+
+// Log webhook processing results for monitoring
+async function logWebhookResult(result: WebhookProcessingResult) {
+  const supabase = getServiceSupabase();
+  
+  try {
+    await supabase
+      .from('webhook_processing_logs')
+      .insert({
+        event_type: result.eventType,
+        event_id: result.eventId,
+        success: result.success,
+        processing_time_ms: result.processingTimeMs,
+        error_message: result.error,
+        retry_count: result.retryCount || 0,
+        processed_at: new Date().toISOString(),
+        test_mode: isTestMode
+      });
+  } catch (error) {
+    console.error('❌ [Webhook Logging] Failed to log webhook result:', error);
+  }
+}
+
+// Enhanced retry logic for critical operations
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 [Retry Logic] ${operationName} - Attempt ${attempt}/${maxRetries}`);
+      const result = await operation();
+      
+      if (attempt > 1) {
+        console.log(`✅ [Retry Logic] ${operationName} succeeded on attempt ${attempt}`);
+      }
+      
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.error(`❌ [Retry Logic] ${operationName} failed on attempt ${attempt}:`, error);
+      
+      if (attempt < maxRetries) {
+        const delay = delayMs * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`⏳ [Retry Logic] Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw new Error(`${operationName} failed after ${maxRetries} attempts. Last error: ${lastError?.message || 'Unknown error'}`);
+}
+
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  let eventType = 'unknown';
+  let eventId = 'unknown';
+  
   try {
     console.log(`🎯 [Stripe Webhook] Starting webhook processing in ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
     
@@ -13,58 +83,164 @@ export async function POST(req: NextRequest) {
 
     console.log(`📦 [Stripe Webhook] Payload length: ${payload.length}, Signature: ${signature ? 'Present' : 'Missing'}`);
 
+    if (!signature) {
+      console.error('❌ [Stripe Webhook] Missing stripe-signature header');
+      return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
+    }
+
     let event;
     try {
       event = await constructEventFromPayload(payload, signature);
-      console.log(`✅ [Stripe Webhook] Event verified successfully: ${event.type}`);
+      eventType = event.type;
+      eventId = event.id;
+      console.log(`✅ [Stripe Webhook] Event verified successfully: ${event.type} (ID: ${event.id})`);
     } catch (err) {
       console.error('❌ [Stripe Webhook] Signature verification failed:', err);
+      
+      // Log failed verification attempt
+      await logWebhookResult({
+        success: false,
+        eventType: 'signature_verification_failed',
+        eventId: 'unknown',
+        processingTimeMs: Date.now() - startTime,
+        error: `Signature verification failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+      });
+      
       return NextResponse.json({ error: 'Webhook signature verification failed.' }, { status: 400 });
     }
 
-    // Hantera olika Stripe events
-    console.log(`🔄 [Stripe Webhook] Processing event type: ${event.type}`);
-    
-    switch (event.type) {
-      case 'checkout.session.completed':
-        console.log(`💳 [Stripe Webhook] Processing checkout.session.completed`);
-        await handleCheckoutCompleted(event.data.object);
-        break;
-        
-      case 'invoice.payment_succeeded':
-        console.log(`💰 [Stripe Webhook] Processing invoice.payment_succeeded`);
-        await handlePaymentSucceeded(event.data.object);
-        break;
-        
-      case 'invoice.payment_failed':
-        console.log(`❌ [Stripe Webhook] Processing invoice.payment_failed`);
-        await handlePaymentFailed(event.data.object);
-        break;
-        
-      case 'customer.subscription.created':
-        console.log(`📝 [Stripe Webhook] Processing customer.subscription.created`);
-        await handleSubscriptionCreated(event.data.object);
-        break;
-        
-      case 'customer.subscription.updated':
-        console.log(`🔄 [Stripe Webhook] Processing customer.subscription.updated`);
-        await handleSubscriptionUpdated(event.data.object);
-        break;
-        
-      case 'customer.subscription.deleted':
-        console.log(`🗑️ [Stripe Webhook] Processing customer.subscription.deleted`);
-        await handleSubscriptionCancelled(event.data.object);
-        break;
-        
-      default:
-        console.log(`⚠️ [Stripe Webhook] Unhandled event type: ${event.type}`);
+    // Check for duplicate event processing
+    const supabase = getServiceSupabase();
+    const { data: existingLog } = await supabase
+      .from('webhook_processing_logs')
+      .select('id, success')
+      .eq('event_id', eventId)
+      .eq('success', true)
+      .limit(1);
+
+    if (existingLog && existingLog.length > 0) {
+      console.log(`⚠️ [Stripe Webhook] Event ${eventId} already processed successfully, skipping`);
+      return NextResponse.json({ 
+        received: true, 
+        eventType: event.type, 
+        processed: false, 
+        reason: 'already_processed' 
+      });
     }
 
-    console.log(`✅ [Stripe Webhook] Event ${event.type} processed successfully`);
-    return NextResponse.json({ received: true, eventType: event.type, processed: true });
+    // Hantera olika Stripe events med retry logic
+    console.log(`🔄 [Stripe Webhook] Processing event type: ${event.type}`);
+    
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          console.log(`💳 [Stripe Webhook] Processing checkout.session.completed`);
+          await retryOperation(
+            () => handleCheckoutCompleted(event.data.object),
+            'handleCheckoutCompleted'
+          );
+          break;
+          
+        case 'invoice.payment_succeeded':
+          console.log(`💰 [Stripe Webhook] Processing invoice.payment_succeeded`);
+          await retryOperation(
+            () => handlePaymentSucceeded(event.data.object),
+            'handlePaymentSucceeded'
+          );
+          break;
+          
+        case 'invoice.payment_failed':
+          console.log(`❌ [Stripe Webhook] Processing invoice.payment_failed`);
+          await retryOperation(
+            () => handlePaymentFailed(event.data.object),
+            'handlePaymentFailed'
+          );
+          break;
+          
+        case 'customer.subscription.created':
+          console.log(`📝 [Stripe Webhook] Processing customer.subscription.created`);
+          await retryOperation(
+            () => handleSubscriptionCreated(event.data.object),
+            'handleSubscriptionCreated'
+          );
+          break;
+          
+        case 'customer.subscription.updated':
+          console.log(`🔄 [Stripe Webhook] Processing customer.subscription.updated`);
+          await retryOperation(
+            () => handleSubscriptionUpdated(event.data.object),
+            'handleSubscriptionUpdated'
+          );
+          break;
+          
+        case 'customer.subscription.deleted':
+          console.log(`🗑️ [Stripe Webhook] Processing customer.subscription.deleted`);
+          await retryOperation(
+            () => handleSubscriptionCancelled(event.data.object),
+            'handleSubscriptionCancelled'
+          );
+          break;
+          
+        default:
+          console.log(`⚠️ [Stripe Webhook] Unhandled event type: ${event.type}`);
+      }
+
+      const processingTime = Date.now() - startTime;
+      console.log(`✅ [Stripe Webhook] Event ${event.type} processed successfully in ${processingTime}ms`);
+      
+      // Log successful processing
+      await logWebhookResult({
+        success: true,
+        eventType: event.type,
+        eventId: event.id,
+        processingTimeMs: processingTime
+      });
+      
+      return NextResponse.json({ 
+        received: true, 
+        eventType: event.type, 
+        processed: true,
+        processingTimeMs: processingTime
+      });
+      
+    } catch (processingError) {
+      console.error(`❌ [Stripe Webhook] Error processing ${event.type}:`, processingError);
+      
+      // Log processing failure
+      await logWebhookResult({
+        success: false,
+        eventType: event.type,
+        eventId: event.id,
+        processingTimeMs: Date.now() - startTime,
+        error: processingError instanceof Error ? processingError.message : 'Unknown processing error'
+      });
+      
+      // Return 500 to trigger Stripe's retry mechanism
+      return NextResponse.json({ 
+        error: 'Event processing failed', 
+        eventType: event.type,
+        eventId: event.id 
+      }, { status: 500 });
+    }
+    
   } catch (error: unknown) {
-    console.error('Error handling webhook:', error);
-    return NextResponse.json({ error: 'Webhook handler failed.' }, { status: 500 });
+    const processingTime = Date.now() - startTime;
+    console.error('❌ [Stripe Webhook] Critical webhook handler error:', error);
+    
+    // Log critical failure
+    await logWebhookResult({
+      success: false,
+      eventType,
+      eventId,
+      processingTimeMs: processingTime,
+      error: `Critical webhook error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    });
+    
+    return NextResponse.json({ 
+      error: 'Webhook handler failed', 
+      eventType,
+      eventId 
+    }, { status: 500 });
   }
 }
 
@@ -296,7 +472,7 @@ async function handleSubscriptionCancelled(subscription: any) {
 }
 
 export async function handleTrialUpgrade(userId: string, stripeSession: any) {
-  console.log(`[Stripe Webhook] Handling trial upgrade for user ${userId}`);
+  console.log(`🔄 [Stripe Webhook] Handling trial upgrade for user ${userId}`);
   
   const supabase = getServiceSupabase();
   
@@ -307,31 +483,54 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
     const subscriptionId = stripeSession.subscription;
     const customerId = stripeSession.customer;
     
-    console.log(`[Stripe Webhook] Trial upgrade details:`, {
+    console.log(`📊 [Stripe Webhook] Trial upgrade details:`, {
       userId,
       handbookId,
       planType,
       subscriptionId,
-      customerId
+      customerId,
+      sessionId: stripeSession.id,
+      amountTotal: stripeSession.amount_total,
+      currency: stripeSession.currency
     });
 
-    // 1. Uppdatera trial-status till completed
-    const { error: trialError } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'active',
-        trial_used: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
-
-    if (trialError) {
-      console.error('[Stripe Webhook] Error updating trial status:', trialError);
+    if (!handbookId) {
+      throw new Error('Missing handbookId in session metadata - cannot process trial upgrade');
     }
 
-    // 2. Uppdatera handbok prenumeration om handbookId finns
-    if (handbookId) {
-      console.log(`[Stripe Webhook] Updating handbook ${handbookId} subscription status`);
+    // 1. Uppdatera trial-status till completed med retry logic
+    console.log(`🔄 [Stripe Webhook] Updating user profile for user ${userId}`);
+    await retryOperation(async () => {
+      const { error: trialError } = await supabase
+        .from('user_profiles')
+        .update({
+          subscription_status: 'active',
+          trial_used: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (trialError) {
+        throw new Error(`Failed to update user profile: ${trialError.message}`);
+      }
+    }, `Update user profile for ${userId}`);
+
+    // 2. KRITISK: Uppdatera handbok prenumeration - detta är huvudproblemet
+    console.log(`🎯 [Stripe Webhook] CRITICAL: Updating handbook ${handbookId} to paid status`);
+    
+    await retryOperation(async () => {
+      // Först, verifiera att handboken finns
+      const { data: handbook, error: fetchError } = await supabase
+        .from('handbooks')
+        .select('id, title, trial_end_date')
+        .eq('id', handbookId)
+        .single();
+
+      if (fetchError || !handbook) {
+        throw new Error(`Handbook ${handbookId} not found: ${fetchError?.message || 'Unknown error'}`);
+      }
+
+      console.log(`📖 [Stripe Webhook] Found handbook: ${handbook.title} (current trial_end_date: ${handbook.trial_end_date})`);
       
       // Sätt handbokens trial_end_date till null för att aktivera prenumeration
       const { error: handbookError } = await supabase
@@ -343,11 +542,26 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
         .eq('id', handbookId);
 
       if (handbookError) {
-        console.error('[Stripe Webhook] Error updating handbook trial status:', handbookError);
-      } else {
-        console.log(`[Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
+        throw new Error(`Failed to update handbook trial status: ${handbookError.message}`);
       }
-    }
+
+      // Verifiera att uppdateringen lyckades
+      const { data: updatedHandbook, error: verifyError } = await supabase
+        .from('handbooks')
+        .select('trial_end_date')
+        .eq('id', handbookId)
+        .single();
+
+      if (verifyError) {
+        throw new Error(`Failed to verify handbook update: ${verifyError.message}`);
+      }
+
+      if (updatedHandbook.trial_end_date !== null) {
+        throw new Error(`Handbook update verification failed: trial_end_date is still ${updatedHandbook.trial_end_date}`);
+      }
+
+      console.log(`✅ [Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
+    }, `Update handbook ${handbookId} to paid status`, 5, 2000); // More retries and longer delay for critical operation
 
     // 3. Skapa subscription record med rätt plan-typ
     // Konvertera planType till databas-kompatibelt format
