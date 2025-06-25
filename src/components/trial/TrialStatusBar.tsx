@@ -136,16 +136,11 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
         setIsLoading(true);
         console.log('🎯 TrialStatusBar: Fetching trial status...', { userId, handbookId, isHandbookOwner });
         
-        // Use handbook-specific trial status if handbookId is provided
-        let response;
-        if (handbookId) {
-          const url = `/api/handbook/${handbookId}/trial-status?userId=${userId}`;
-          console.log('🎯 TrialStatusBar: Calling handbook-specific API:', url);
-          response = await fetch(url);
-        } else {
-          console.log('🎯 TrialStatusBar: Calling user-level API');
-          response = await fetch(`/api/trial/check-status?userId=${userId}`);
-        }
+        // Fetch trial status from handbook-specific API
+        console.log('🎯 TrialStatusBar: Calling handbook-specific API:', `/api/handbook/${handbookId}/trial-status-v2?userId=${userId}`);
+        const url = `/api/handbook/${handbookId}/trial-status-v2?userId=${userId}`;
+        
+        const response = await fetch(url);
         
         if (!response.ok) {
           throw new Error('Failed to fetch trial status');
