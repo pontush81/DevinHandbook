@@ -21,12 +21,25 @@ import {
   X,
   Database,
   UserCheck,
-  CreditCard
+  ExternalLink
 } from "lucide-react";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
+
+// Dynamisk Stripe URL baserat på miljö
+const getStripeProductsUrl = () => {
+  const isProduction = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
+  const forceTestMode = process.env.FORCE_STRIPE_TEST_MODE === 'true';
+  
+  // Använd test-miljö om vi inte är i produktion eller om testläge är påtvingat
+  const useTestMode = !isProduction || forceTestMode;
+  
+  return useTestMode 
+    ? 'https://dashboard.stripe.com/test/products'
+    : 'https://dashboard.stripe.com/products';
+};
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
@@ -35,7 +48,12 @@ const adminNavItems = [
   { href: '/admin/customers', label: 'Kunder', icon: Users },
   { href: '/admin/content', label: 'Innehåll', icon: FileText },
   { href: '/admin/analytics', label: 'Statistik', icon: BarChart3 },
-  { href: '/admin/plans', label: 'Planer', icon: CreditCard },
+  { 
+    href: getStripeProductsUrl(), 
+    label: `Priser (Stripe ${process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' && process.env.FORCE_STRIPE_TEST_MODE !== 'true' ? 'Live' : 'Test'})`, 
+    icon: ExternalLink, 
+    external: true 
+  },
   { href: '/admin/backup', label: 'Backup', icon: Database },
   { href: '/admin/settings', label: 'Inställningar', icon: Settings },
 ];
@@ -125,7 +143,23 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
           <nav className="flex-1 p-4 space-y-2">
             {adminNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href && !item.external;
+              
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setSidebarOpen(false)}
+                    className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </a>
+                );
+              }
               
               return (
                 <Link
