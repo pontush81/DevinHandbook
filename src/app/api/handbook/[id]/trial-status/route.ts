@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getHandbookTrialStatus } from '@/lib/trial-service';
+import { getHandbookStatus, toTrialStatusResponse } from '@/lib/handbook-status';
 
 export async function GET(
   request: NextRequest,
@@ -17,23 +17,19 @@ export async function GET(
       );
     }
 
-    console.log('🎯 [Handbook Trial Status API] Fetching status for:', {
-      userId,
-      handbookId
-    });
+    console.log('🎯 [Trial Status API] Simple check for:', { userId, handbookId });
 
-    // Add debug log to see if new code is running
-    console.log('🔧 [DEBUG] trial-status API running with updated code - timestamp:', new Date().toISOString());
+    // Använd den nya enkla logiken
+    const status = await getHandbookStatus(handbookId, userId);
+    const response = toTrialStatusResponse(status);
 
-    const trialStatus = await getHandbookTrialStatus(userId, handbookId);
-    
-    console.log('🎯 [Handbook Trial Status API] Returning status:', trialStatus);
+    console.log('🎯 [Trial Status API] Response:', response);
+    return NextResponse.json(response);
 
-    return NextResponse.json(trialStatus);
   } catch (error) {
-    console.error('Error in handbook trial status API:', error);
+    console.error('❌ [Trial Status API] Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

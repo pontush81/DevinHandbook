@@ -563,47 +563,9 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
       console.log(`🎯 [Stripe Webhook] CRITICAL: Updating handbook ${handbookId} to paid status`);
       
       await retryOperation(async () => {
-        // Först, verifiera att handboken finns
-        const { data: handbook, error: fetchError } = await supabase
-          .from('handbooks')
-          .select('id, title, trial_end_date')
-          .eq('id', handbookId)
-          .single();
-
-        if (fetchError || !handbook) {
-          throw new Error(`Handbook ${handbookId} not found: ${fetchError?.message || 'Unknown error'}`);
-        }
-
-        console.log(`📖 [Stripe Webhook] Found handbook: ${handbook.title} (current trial_end_date: ${handbook.trial_end_date})`);
-        
-        // Sätt handbokens trial_end_date till null för att aktivera prenumeration
-        const { error: handbookError } = await supabase
-          .from('handbooks')
-          .update({
-            trial_end_date: null, // null = aktiv prenumeration
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', handbookId);
-
-        if (handbookError) {
-          throw new Error(`Failed to update handbook trial status: ${handbookError.message}`);
-        }
-
-        // Verifiera att uppdateringen lyckades
-        const { data: updatedHandbook, error: verifyError } = await supabase
-          .from('handbooks')
-          .select('trial_end_date')
-          .eq('id', handbookId)
-          .single();
-
-        if (verifyError) {
-          throw new Error(`Failed to verify handbook update: ${verifyError.message}`);
-        }
-
-        if (updatedHandbook.trial_end_date !== null) {
-          throw new Error(`Handbook update verification failed: trial_end_date is still ${updatedHandbook.trial_end_date}`);
-        }
-
+        // Använd den nya enkla servicen
+        const { markHandbookAsPaid } = await import('@/lib/handbook-status');
+        await markHandbookAsPaid(handbookId);
         console.log(`✅ [Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
       }, `Update handbook ${handbookId} to paid status`, 5, 2000); // More retries and longer delay for critical operation
     } else {

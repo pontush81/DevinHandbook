@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { markHandbookAsPaid, getHandbookStatus } from '@/lib/handbook-status';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,69 +34,38 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ [Set Handbook Paid] Superadmin verified:', profile.email);
 
-    // Get handbook info before update
-    const { data: handbookBefore } = await supabase
-      .from('handbooks')
-      .select('id, title, trial_end_date, created_during_trial, owner_id')
-      .eq('id', handbookId)
-      .single();
+    // Get status before
+    const statusBefore = await getHandbookStatus(handbookId, userId);
 
-    if (!handbookBefore) {
-      return NextResponse.json(
-        { error: 'Handbook not found' },
-        { status: 404 }
-      );
-    }
+    // Mark as paid using the new simple service
+    await markHandbookAsPaid(handbookId);
 
-    console.log('📖 [Set Handbook Paid] Handbook before:', handbookBefore);
-
-    // Directly set trial_end_date to null (paid status)
-    const { data: updatedHandbook, error: updateError } = await supabase
-      .from('handbooks')
-      .update({ 
-        trial_end_date: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', handbookId)
-      .select('id, title, trial_end_date, created_during_trial, owner_id')
-      .single();
-
-    if (updateError) {
-      console.error('❌ [Set Handbook Paid] Update error:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to update handbook', details: updateError.message },
-        { status: 500 }
-      );
-    }
-
-    console.log('✅ [Set Handbook Paid] Handbook updated:', updatedHandbook);
-
-    // Verify the update worked
-    const { data: verification } = await supabase
-      .from('handbooks')
-      .select('trial_end_date')
-      .eq('id', handbookId)
-      .single();
-
-    console.log('🔍 [Set Handbook Paid] Verification:', verification);
+    // Get status after
+    const statusAfter = await getHandbookStatus(handbookId, userId);
 
     const response = {
       success: true,
-      message: `Handbook "${updatedHandbook.title}" has been marked as paid`,
+      message: `Handbook has been marked as paid`,
       before: {
-        trial_end_date: handbookBefore.trial_end_date,
-        status: handbookBefore.trial_end_date ? 'trial' : 'paid'
+        trial_end_date: statusBefore.trialEndDate,
+        status: statusBefore.isPaid ? 'paid' : 'trial'
       },
       after: {
-        trial_end_date: updatedHandbook.trial_end_date,
-        status: updatedHandbook.trial_end_date ? 'trial' : 'paid'
+        trial_end_date: statusAfter.trialEndDate,
+        status: statusAfter.isPaid ? 'paid' : 'trial'
       },
-      verification: verification,
-      handbook: updatedHandbook
+      verification: {
+        trial_end_date: statusAfter.trialEndDate
+      },
+      handbook: {
+        id: handbookId,
+        trial_end_date: statusAfter.trialEndDate,
+        created_during_trial: true,
+        owner_id: userId
+      }
     };
 
     console.log('🎉 [Set Handbook Paid] Success:', response);
-
     return NextResponse.json(response);
 
   } catch (error) {

@@ -136,9 +136,9 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
         setIsLoading(true);
         console.log('🎯 TrialStatusBar: Fetching trial status...', { userId, handbookId, isHandbookOwner });
         
-        // Fetch trial status from handbook-specific API
-        console.log('🎯 TrialStatusBar: Calling handbook-specific API:', `/api/handbook/${handbookId}/trial-status-v2?userId=${userId}`);
-        const url = `/api/handbook/${handbookId}/trial-status-v2?userId=${userId}`;
+        // Fetch trial status from handbook-specific API (now simplified)
+        console.log('🎯 TrialStatusBar: Calling handbook-specific API:', `/api/handbook/${handbookId}/trial-status?userId=${userId}`);
+        const url = `/api/handbook/${handbookId}/trial-status?userId=${userId}`;
         
         const response = await fetch(url);
         
