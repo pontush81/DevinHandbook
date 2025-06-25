@@ -135,6 +135,8 @@ export default function SettingsPageClient({
     setSubscriptionLoading(true);
     
     try {
+      console.log('[Frontend] Starting subscription management...');
+      
       // Skapa Stripe Customer Portal session
       const response = await fetch('/api/stripe/create-portal-session', {
         method: 'POST',
@@ -147,7 +149,9 @@ export default function SettingsPageClient({
         }),
       });
 
+      console.log('[Frontend] API response status:', response.status);
       const data = await response.json();
+      console.log('[Frontend] API response data:', data);
 
       if (!response.ok) {
         // Hantera specifikt fallet när prenumerationen är helt uppsagd
@@ -165,8 +169,10 @@ export default function SettingsPageClient({
 
       // Omdirigera till Stripe Customer Portal
       if (data.url) {
+        console.log('[Frontend] Redirecting to Stripe portal:', data.url);
         window.location.href = data.url;
       } else {
+        console.error('[Frontend] No URL received in response:', data);
         throw new Error('Ingen portal-URL mottagen');
       }
 
