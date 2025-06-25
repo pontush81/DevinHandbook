@@ -102,13 +102,13 @@ function UpgradeSuccessContent() {
             </div>
             <Badge variant="outline" className="mx-auto mb-3 bg-green-100 text-green-800 border-green-300">
               <Sparkles className="w-3 h-3 mr-1" />
-              Uppgradering lyckad
+              Betalning genomförd
             </Badge>
             <CardTitle className="text-3xl font-bold text-gray-900">
-              Välkommen tillbaka! 🎉
+              Tack för din betalning! 🎉
             </CardTitle>
             <p className="text-gray-600 mt-2">
-              Ditt konto är nu aktiverat och du har full tillgång till alla funktioner.
+              Din handbok är nu betald och aktiverad. Du har full tillgång till alla funktioner.
             </p>
           </CardHeader>
           
@@ -117,7 +117,7 @@ function UpgradeSuccessContent() {
             <div className="bg-white p-6 rounded-lg border border-green-200">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
                 <Sparkles className="w-5 h-5 mr-2 text-yellow-500" />
-                Nu har du tillgång till:
+                Din handbok inkluderar nu:
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex items-center space-x-3">
@@ -182,11 +182,11 @@ function UpgradeSuccessContent() {
                 className="w-full bg-white text-green-600 hover:bg-gray-50 font-semibold py-3 mb-3"
               >
                 <BookOpen className="w-4 h-4 mr-2" />
-                {handbookSlug && returnTo === 'handbook' ? 'Gå till din handbok' : 'Gå till dashboard'}
+                {handbookSlug && returnTo === 'handbook' ? 'Gå till din betalda handbok' : 'Gå till dashboard'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
               <p className="text-green-100 text-sm">
-                Omdirigeras automatiskt om {countdown} sekunder...
+                Du kommer att skickas till din handbok om {countdown} sekunder...
               </p>
             </div>
 

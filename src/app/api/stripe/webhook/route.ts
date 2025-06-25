@@ -6,50 +6,62 @@ import { getServiceSupabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
-    console.log(`Stripe Webhook körs i ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
+    console.log(`🎯 [Stripe Webhook] Starting webhook processing in ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
     
     const payload = await req.text();
     const signature = req.headers.get('stripe-signature') || '';
 
+    console.log(`📦 [Stripe Webhook] Payload length: ${payload.length}, Signature: ${signature ? 'Present' : 'Missing'}`);
+
     let event;
     try {
       event = await constructEventFromPayload(payload, signature);
+      console.log(`✅ [Stripe Webhook] Event verified successfully: ${event.type}`);
     } catch (err) {
-      console.error('Webhook signature verification failed.', err);
+      console.error('❌ [Stripe Webhook] Signature verification failed:', err);
       return NextResponse.json({ error: 'Webhook signature verification failed.' }, { status: 400 });
     }
 
     // Hantera olika Stripe events
+    console.log(`🔄 [Stripe Webhook] Processing event type: ${event.type}`);
+    
     switch (event.type) {
       case 'checkout.session.completed':
+        console.log(`💳 [Stripe Webhook] Processing checkout.session.completed`);
         await handleCheckoutCompleted(event.data.object);
         break;
         
       case 'invoice.payment_succeeded':
+        console.log(`💰 [Stripe Webhook] Processing invoice.payment_succeeded`);
         await handlePaymentSucceeded(event.data.object);
         break;
         
       case 'invoice.payment_failed':
+        console.log(`❌ [Stripe Webhook] Processing invoice.payment_failed`);
         await handlePaymentFailed(event.data.object);
         break;
         
       case 'customer.subscription.created':
+        console.log(`📝 [Stripe Webhook] Processing customer.subscription.created`);
         await handleSubscriptionCreated(event.data.object);
         break;
         
       case 'customer.subscription.updated':
+        console.log(`🔄 [Stripe Webhook] Processing customer.subscription.updated`);
         await handleSubscriptionUpdated(event.data.object);
         break;
         
       case 'customer.subscription.deleted':
+        console.log(`🗑️ [Stripe Webhook] Processing customer.subscription.deleted`);
         await handleSubscriptionCancelled(event.data.object);
         break;
         
       default:
-        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+        console.log(`⚠️ [Stripe Webhook] Unhandled event type: ${event.type}`);
     }
 
-    return NextResponse.json({ received: true });
+    console.log(`✅ [Stripe Webhook] Event ${event.type} processed successfully`);
+    return NextResponse.json({ received: true, eventType: event.type, processed: true });
   } catch (error: unknown) {
     console.error('Error handling webhook:', error);
     return NextResponse.json({ error: 'Webhook handler failed.' }, { status: 500 });

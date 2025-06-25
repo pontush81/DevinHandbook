@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { StableProvider } from '@/components/ui/StableProvider';
-import { ClearCacheButton } from '@/components/ui/ClearCacheButton';
+
 import { MainFooter } from '@/components/layout/MainFooter';
 import { MembersManager } from '@/components/handbook/MembersManager';
 import { TrialStatusBar } from '@/components/trial/TrialStatusBar';
@@ -1245,7 +1245,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       </div>
       
       {/* Debug tools - endast i development */}
-      <ClearCacheButton />
+      
       
       {/* Debug information */}
       <HandbookDebugInfo 

@@ -6,7 +6,7 @@ import { getHandbookTrialStatus } from '@/lib/trial-service';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bug, ChevronDown, ChevronUp, Wrench } from 'lucide-react';
+import { Bug, ChevronDown, ChevronUp, Wrench, RefreshCw } from 'lucide-react';
 
 interface HandbookDebugInfoProps {
   handbookId: string;
@@ -39,9 +39,15 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
   const [handbookData, setHandbookData] = useState<HandbookData | null>(null);
   const [shouldShowPaywall, setShouldShowPaywall] = useState<boolean | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+  const [isExecutingWebhook, setIsExecutingWebhook] = useState(false);
 
-  // Only show for specific email
-  const isDeveloper = user?.email === 'pontus.hberg@gmail.com';
+  // Only show for specific emails
+  const debugEmails = ['pontus.hberg@gmail.com', 'pontusaiagent@gmail.com'];
+  const isDeveloper = user?.email && debugEmails.includes(user.email);
 
   useEffect(() => {
     if (!user || !isDeveloper) return;
@@ -96,6 +102,163 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
       }
     } catch (error) {
       console.error('Fix trial error:', error);
+    }
+  };
+
+  const fixTrialData = async () => {
+    setIsFixing(true);
+    try {
+      await handleFixTrial();
+    } finally {
+      setIsFixing(false);
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/debug/check-payment-status?handbookId=${handbookId}&userId=${user?.id}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to check payment status');
+      }
+      
+      console.log('🔍 [Payment Status Debug] Full data:', data);
+      console.log('📊 [Payment Status Debug] Summary:', data.summary);
+      console.log('📖 [Payment Status Debug] Handbook:', data.handbook.data);
+      console.log('💳 [Payment Status Debug] Handbook Subscriptions:', data.handbookSubscriptions.data);
+      console.log('👤 [Payment Status Debug] User Subscriptions:', data.userSubscriptions.data);
+      console.log('📝 [Payment Status Debug] Lifecycle Events:', data.lifecycleEvents.data);
+      
+      // Show alert with key info
+      alert(`Payment Status Check:\n\n` +
+        `Handbook Trial End Date: ${data.summary.handbookTrialEndDate || 'NULL (PAID)'}\n` +
+        `Created During Trial: ${data.summary.handbookCreatedDuringTrial}\n` +
+        `Active Handbook Subscriptions: ${data.summary.activeHandbookSubscriptions}\n` +
+        `Total User Subscriptions: ${data.summary.totalUserSubscriptions}\n` +
+        `Recent Lifecycle Events: ${data.summary.recentLifecycleEvents}\n\n` +
+        `Check console for full details.`);
+        
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      alert(`Error checking payment status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearAllCache = async () => {
+    setIsClearingCache(true);
+    try {
+      // Rensa localStorage säkert
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              console.warn('Could not remove localStorage item:', key);
+            }
+          });
+          console.log('LocalStorage cleared');
+        } catch (e) {
+          console.warn('Could not access localStorage');
+        }
+      }
+
+      // Rensa cookies
+      if (typeof document !== 'undefined') {
+        try {
+          document.cookie.split(";").forEach((c) => {
+            const eqPos = c.indexOf("=");
+            const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+          });
+          console.log('Cookies cleared');
+        } catch (e) {
+          console.warn('Could not clear cookies');
+        }
+      }
+
+      // Rensa PWA cache via service worker
+      if (typeof window !== 'undefined' && 'clearPWACache' in window) {
+        try {
+          (window as any).clearPWACache();
+          return; // clearPWACache kommer att ladda om sidan
+        } catch (e) {
+          console.warn('Could not clear PWA cache');
+        }
+      }
+
+      // Fallback - ladda om sidan
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      alert(`Error clearing cache: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const markHandbookAsPaid = async () => {
+    setIsMarkingPaid(true);
+    try {
+      const response = await fetch('/api/debug/mark-handbook-paid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handbookId, userId: user?.id }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to mark handbook as paid');
+      }
+      
+      console.log('✅ [Mark as Paid] Success:', data);
+      alert(`Handbook marked as paid successfully!\n\n${data.message}`);
+      
+      // Refresh the page to see updated status
+      window.location.reload();
+        
+    } catch (error) {
+      console.error('Error marking handbook as paid:', error);
+      alert(`Error marking handbook as paid: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsMarkingPaid(false);
+    }
+  };
+
+  const executeWebhookLogic = async () => {
+    setIsExecutingWebhook(true);
+    try {
+      const response = await fetch('/api/debug/force-webhook-execution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handbookId, userId: user?.id, planType: 'monthly' }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to execute webhook logic');
+      }
+      
+      console.log('🔧 [Force Webhook] Success:', data);
+      alert(`Webhook logic executed successfully!\\n\\n${data.message}\\n\\nBefore: ${data.before.status}\\nAfter: ${data.after.status}\\n\\nPage will reload to show updated status.`);
+      
+      // Refresh the page to see updated status
+      window.location.reload();
+        
+    } catch (error) {
+      console.error('Error executing webhook logic:', error);
+      alert(`Error executing webhook logic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExecutingWebhook(false);
     }
   };
 
@@ -249,19 +412,69 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
                     </div>
                   )}
 
-                  {/* Fix Trial Button */}
-                  {handbookData.trial_end_date === null && (
-                    <div className="border-t border-gray-600 pt-3 mt-3">
+                  {/* Debug Buttons */}
+                  <div className="border-t border-gray-600 pt-3 mt-3">
+                    <div className="space-y-2">
+                      {/* Fix Trial Button - only show if trial_end_date is null */}
+                      {handbookData.trial_end_date === null && (
+                        <Button
+                          onClick={fixTrialData}
+                          size="sm"
+                          className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                          disabled={isFixing}
+                        >
+                          <Wrench className="h-3 w-3 mr-1" />
+                          {isFixing ? "Fixar..." : "🔧 Fix Trial Data"}
+                        </Button>
+                      )}
+                      
+                      {/* Check Payment Status Button - always show */}
                       <Button
-                        onClick={handleFixTrial}
+                        onClick={checkPaymentStatus}
                         size="sm"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={isLoading}
                       >
-                        <Wrench className="h-3 w-3 mr-1" />
-                        🔧 Fix Trial Data
+                        <Bug className="h-3 w-3 mr-1" />
+                        {isLoading ? "Kollar..." : "🔍 Check Payment Status"}
+                      </Button>
+                      
+                                            {/* Clear Cache Button - always show */}
+                      <Button
+                        onClick={clearAllCache}
+                        size="sm"
+                        className="w-full bg-red-600 hover:bg-red-700 text-white"
+                        disabled={isClearingCache}
+                      >
+                        <RefreshCw className={`h-3 w-3 mr-1 ${isClearingCache ? 'animate-spin' : ''}`} />
+                        {isClearingCache ? "Rensar..." : "🗑️ Rensa All Cache"}
+                      </Button>
+
+                      {/* Execute Webhook Logic Button - show for trial handbooks */}
+                      {handbookData && handbookData.trial_end_date && (
+                        <Button
+                          onClick={executeWebhookLogic}
+                          size="sm"
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                          disabled={isExecutingWebhook}
+                        >
+                          <RefreshCw className={`h-3 w-3 mr-1 ${isExecutingWebhook ? 'animate-spin' : ''}`} />
+                          {isExecutingWebhook ? "Kör webhook..." : "🔧 Execute Webhook Logic"}
+                        </Button>
+                      )}
+
+                      {/* Mark as Paid Button - always show */}
+                      <Button
+                        onClick={markHandbookAsPaid}
+                        size="sm"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                        disabled={isMarkingPaid}
+                      >
+                        <RefreshCw className={`h-3 w-3 mr-1 ${isMarkingPaid ? 'animate-spin' : ''}`} />
+                        {isMarkingPaid ? "Markerar..." : "💳 Mark as Paid"}
                       </Button>
                     </div>
-                  )}
+                  </div>
                 </>
               )}
             </div>
