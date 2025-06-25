@@ -512,10 +512,14 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
       currency: stripeSession.currency
     });
 
-    // SÄKERHETSÅTGÄRD 1: Om handbookId saknas, hitta användarens senaste trial-handbok
+    // SÄKERHETSÅTGÄRD 1: Om handbookId saknas, logga varning
     if (!handbookId) {
-      console.log(`⚠️ [Stripe Webhook] Missing handbookId in metadata, searching for user's trial handbook...`);
+      console.log(`⚠️ [Stripe Webhook] Missing handbookId in metadata - this payment is not for a specific handbook`);
+      console.log(`⚠️ [Stripe Webhook] Creating general subscription without updating any handbook trial status`);
       
+      // KOMMENTERAT: Den gamla logiken som försökte hitta användarens trial-handbok
+      // Detta stämmer inte med vår nya logik där varje handbok ska ha sin egen prenumeration
+      /*
       const { data: trialHandbooks, error: searchError } = await supabase
         .from('handbooks')
         .select('id, title, created_at, trial_end_date')
@@ -532,12 +536,10 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
       } else {
         console.log(`⚠️ [Stripe Webhook] No trial handbook found for user ${userId}`);
       }
+      */
     }
 
-    // SÄKERHETSÅTGÄRD 2: Om vi fortfarande inte har handbookId, skapa en generell prenumeration
-    if (!handbookId) {
-      console.log(`⚠️ [Stripe Webhook] No handbook found - creating general user subscription`);
-    }
+    // Nu skapar vi prenumerationen (antingen för specifik handbok eller generell)
 
     // 1. Uppdatera trial-status till completed med retry logic
     console.log(`🔄 [Stripe Webhook] Updating user profile for user ${userId}`);
@@ -605,44 +607,8 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
         console.log(`✅ [Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
       }, `Update handbook ${handbookId} to paid status`, 5, 2000); // More retries and longer delay for critical operation
     } else {
-      console.log(`⚠️ [Stripe Webhook] Skipping handbook update - no handbookId available`);
-    }
-
-    // SÄKERHETSÅTGÄRD 3: Om ingen specifik handbok, uppdatera ALLA användarens trial-handböcker
-    if (!handbookId) {
-      console.log(`🔄 [Stripe Webhook] No specific handbook - updating ALL user trial handbooks to paid status`);
-      
-      const { data: allTrialHandbooks, error: allTrialError } = await supabase
-        .from('handbooks')
-        .select('id, title, trial_end_date')
-        .eq('owner_id', userId)
-        .not('trial_end_date', 'is', null);
-
-      if (allTrialError) {
-        console.error(`❌ [Stripe Webhook] Error fetching all trial handbooks:`, allTrialError);
-      } else if (allTrialHandbooks && allTrialHandbooks.length > 0) {
-        console.log(`📚 [Stripe Webhook] Found ${allTrialHandbooks.length} trial handbooks to update`);
-        
-        for (const handbook of allTrialHandbooks) {
-          try {
-            const { error: updateError } = await supabase
-              .from('handbooks')
-              .update({
-                trial_end_date: null,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', handbook.id);
-
-            if (updateError) {
-              console.error(`❌ [Stripe Webhook] Error updating handbook ${handbook.id}:`, updateError);
-            } else {
-              console.log(`✅ [Stripe Webhook] Updated handbook ${handbook.title} (${handbook.id}) to paid status`);
-            }
-          } catch (error) {
-            console.error(`❌ [Stripe Webhook] Exception updating handbook ${handbook.id}:`, error);
-          }
-        }
-      }
+      console.log(`⚠️ [Stripe Webhook] No specific handbook ID - creating general subscription without updating handbooks`);
+      console.log(`⚠️ [Stripe Webhook] Each handbook should have its own subscription. Consider investigating why handbookId is missing.`);
     }
 
     // 3. Skapa subscription record med rätt plan-typ

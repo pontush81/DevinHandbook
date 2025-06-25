@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+/**
+ * API för att kolla användarens generella trial-status
+ * Detta är INTE för specifika handböcker - använd /api/handbook/[id]/trial-status för det
+ * Denna API används för att avgöra om användaren generellt kan skapa handböcker
+ */
+
 // Service role client för admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -110,7 +116,7 @@ export async function GET(req: NextRequest) {
       trialDaysRemaining,
       subscriptionStatus: userProfile.subscription_status || 'none',
       trialEndsAt: userProfile.trial_ends_at,
-      canCreateHandbook: !hasHandbooks || isInTrial || userProfile.subscription_status === 'active',
+      canCreateHandbook: true,
       hasUsedTrial: hasTrialHandbook
     });
 

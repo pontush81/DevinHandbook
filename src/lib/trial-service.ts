@@ -32,65 +32,14 @@ export interface TrialReminder {
 
 /**
  * Kontrollerar trial-status för en användare (client-side)
- * Kollar både user_profiles och subscriptions tabellerna för korrekt status
+ * Detta är ENDAST för att avgöra om användaren kan skapa en FÖRSTA handbok med trial
+ * För specifika handböckers status, använd getHandbookTrialStatus()
  */
 export async function getTrialStatus(userId: string): Promise<TrialStatus> {
   try {
-    // Först, kolla om användaren har en aktiv subscription i subscriptions tabellen
-    const { data: subscriptions, error: subError } = await supabase
-      .from('subscriptions')
-      .select('status, plan_type, expires_at, trial_ends_at')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    console.log('🔍 [getTrialStatus] Checking user-level trial eligibility for:', userId);
 
-    if (subError) {
-      console.error('Error checking subscriptions:', subError);
-    }
-
-    // Om användaren har en aktiv subscription, kontrollera om de fortfarande är i trial
-    if (subscriptions && subscriptions.length > 0) {
-      const subscription = subscriptions[0];
-      
-      // Kontrollera om trial fortfarande är aktiv baserat på trial_ends_at
-      const isStillInTrial = subscription.trial_ends_at ? 
-        new Date() < new Date(subscription.trial_ends_at) : false;
-      
-      const trialDaysRemaining = subscription.trial_ends_at ? 
-        getTrialDaysRemaining(subscription.trial_ends_at) : 0;
-      
-      // Kontrollera om användaren har handböcker
-      const { data: handbooks, error: handbooksError } = await supabase
-        .from('handbooks')
-        .select('id, created_during_trial')
-        .eq('owner_id', userId);
-
-      if (handbooksError) {
-        console.error('Error fetching handbooks:', handbooksError);
-      }
-
-      const hasHandbooks = handbooks && handbooks.length > 0;
-      const hasTrialHandbook = handbooks?.some(h => h.created_during_trial) || false;
-
-      console.log('🔍 [getTrialStatus] Active subscription found:', {
-        subscriptionStatus: 'active',
-        trialEndsAt: subscription.trial_ends_at,
-        isStillInTrial,
-        trialDaysRemaining
-      });
-
-      return {
-        isInTrial: isStillInTrial,
-        trialDaysRemaining,
-        subscriptionStatus: isStillInTrial ? 'trial' : 'active',
-        trialEndsAt: subscription.trial_ends_at,
-        canCreateHandbook: true,
-        hasUsedTrial: hasTrialHandbook,
-      };
-    }
-
-    // Om ingen aktiv subscription, använd den gamla RPC-funktionen för trial-status
+    // Använd RPC-funktionen för användarens generella trial-status
     const { data, error } = await supabase
       .rpc('check_trial_status', { user_uuid: userId });
 
@@ -101,7 +50,7 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus> {
 
     const result = data[0];
     
-    // Kontrollera också om användaren har handböcker
+    // Kontrollera om användaren har skapat handböcker tidigare
     const { data: handbooks, error: handbooksError } = await supabase
       .from('handbooks')
       .select('id, created_during_trial')
@@ -114,12 +63,20 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus> {
     const hasHandbooks = handbooks && handbooks.length > 0;
     const hasTrialHandbook = handbooks?.some(h => h.created_during_trial) || false;
 
+    console.log('🔍 [getTrialStatus] User trial eligibility:', {
+      isInTrial: result?.is_in_trial || false,
+      trialDaysRemaining: result?.trial_days_remaining || 0,
+      subscriptionStatus: result?.subscription_status || 'none',
+      hasHandbooks,
+      hasTrialHandbook
+    });
+
     return {
       isInTrial: result?.is_in_trial || false,
       trialDaysRemaining: result?.trial_days_remaining || 0,
       subscriptionStatus: result?.subscription_status || 'none',
       trialEndsAt: result?.trial_ends_at || null,
-      canCreateHandbook: !hasHandbooks || result?.is_in_trial || result?.subscription_status === 'active',
+      canCreateHandbook: true, // Användare kan alltid skapa nya handböcker (som börjar som trial)
       hasUsedTrial: hasTrialHandbook,
     };
   } catch (error) {

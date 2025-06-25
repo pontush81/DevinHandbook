@@ -3,11 +3,12 @@ import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔄 [Cron] Starting orphaned trials fix job...');
+    console.log('🔄 [Cron] Starting simplified orphaned trials fix job...');
     
     const supabase = getServiceSupabase();
     
-    // Hitta användare som har aktiva prenumerationer men handböcker fortfarande i trial
+    // ENDAST hitta handböcker som har en specifik aktiv prenumeration men fortfarande är i trial
+    // Detta är den enda situationen som verkligen är "fel"
     const { data: activeSubscriptions, error: subError } = await supabase
       .from('subscriptions')
       .select(`
@@ -15,17 +16,16 @@ export async function GET(request: NextRequest) {
         handbook_id,
         status,
         plan_type,
-        created_at,
-        stripe_subscription_id
+        created_at
       `)
       .eq('status', 'active')
-      .not('handbook_id', 'is', null);
+      .not('handbook_id', 'is', null); // Endast prenumerationer för specifika handböcker
 
     if (subError) {
       throw new Error(`Error fetching active subscriptions: ${subError.message}`);
     }
 
-    console.log(`📊 [Cron] Found ${activeSubscriptions?.length || 0} active subscriptions with handbook_id`);
+    console.log(`📊 [Cron] Found ${activeSubscriptions?.length || 0} active handbook-specific subscriptions`);
 
     let fixedCount = 0;
     let checkedCount = 0;
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         try {
           checkedCount++;
           
-          // Kolla om handboken fortfarande är i trial-läge
+          // Kolla om handboken fortfarande är i trial-läge trots att den har en aktiv prenumeration
           const { data: handbook, error: handbookError } = await supabase
             .from('handbooks')
             .select('id, title, trial_end_date, owner_id')
@@ -52,9 +52,9 @@ export async function GET(request: NextRequest) {
             continue;
           }
 
-          // Om handboken har trial_end_date (inte null) men användaren har aktiv prenumeration
+          // Om handboken har trial_end_date (inte null) men det finns en aktiv prenumeration för den
           if (handbook.trial_end_date !== null) {
-            console.log(`🔧 [Cron] Found orphaned trial: ${handbook.title} (${handbook.id}) should be paid`);
+            console.log(`🔧 [Cron] Found truly orphaned trial: ${handbook.title} (${handbook.id}) has active subscription but still in trial`);
             
             // Uppdatera handboken till betald status
             const { error: updateError } = await supabase
@@ -85,8 +85,9 @@ export async function GET(request: NextRequest) {
                     handbook_id: handbook.id,
                     handbook_title: handbook.title,
                     subscription_plan: subscription.plan_type,
-                    fixed_by: 'cron_job',
-                    original_trial_end_date: handbook.trial_end_date
+                    fixed_by: 'simplified_cron_job',
+                    original_trial_end_date: handbook.trial_end_date,
+                    reason: 'handbook_has_active_subscription_but_still_trial'
                   }
                 });
             }
@@ -97,75 +98,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Hitta också användare med aktiva prenumerationer men INGA specifika handböcker
-    const { data: generalSubscriptions, error: generalError } = await supabase
-      .from('subscriptions')
-      .select(`
-        user_id,
-        status,
-        plan_type,
-        created_at
-      `)
-      .eq('status', 'active')
-      .is('handbook_id', null);
-
-    if (generalError) {
-      console.error(`❌ [Cron] Error fetching general subscriptions:`, generalError);
-    } else if (generalSubscriptions && generalSubscriptions.length > 0) {
-      console.log(`📊 [Cron] Found ${generalSubscriptions.length} general active subscriptions`);
-      
-      for (const subscription of generalSubscriptions) {
-        try {
-          // Hitta alla trial-handböcker för denna användare
-          const { data: trialHandbooks, error: trialError } = await supabase
-            .from('handbooks')
-            .select('id, title, trial_end_date')
-            .eq('owner_id', subscription.user_id)
-            .not('trial_end_date', 'is', null);
-
-          if (trialError) {
-            console.error(`❌ [Cron] Error fetching trial handbooks for user ${subscription.user_id}:`, trialError);
-            continue;
-          }
-
-          if (trialHandbooks && trialHandbooks.length > 0) {
-            console.log(`🔧 [Cron] User ${subscription.user_id} has general subscription but ${trialHandbooks.length} trial handbooks`);
-            
-            for (const handbook of trialHandbooks) {
-              const { error: updateError } = await supabase
-                .from('handbooks')
-                .update({
-                  trial_end_date: null,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', handbook.id);
-
-              if (updateError) {
-                console.error(`❌ [Cron] Error updating handbook ${handbook.id}:`, updateError);
-              } else {
-                fixedCount++;
-                console.log(`✅ [Cron] Fixed general subscription handbook: ${handbook.title} (${handbook.id})`);
-              }
-            }
-          }
-        } catch (error) {
-          console.error(`❌ [Cron] Error processing general subscription for user ${subscription.user_id}:`, error);
-        }
-      }
-    }
-
     const result = {
       success: true,
-      message: 'Orphaned trials fix job completed',
+      message: 'Simplified orphaned trials fix job completed',
+      explanation: 'Only fixes handbooks that have active subscriptions but are still marked as trial',
       stats: {
         checkedSubscriptions: checkedCount,
-        fixedHandbooks: fixedCount,
-        generalSubscriptions: generalSubscriptions?.length || 0
+        fixedHandbooks: fixedCount
       },
       timestamp: new Date().toISOString()
     };
 
-    console.log(`✅ [Cron] Orphaned trials fix completed:`, result);
+    console.log(`✅ [Cron] Simplified orphaned trials fix completed:`, result);
 
     return NextResponse.json(result);
 
