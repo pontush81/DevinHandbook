@@ -21,11 +21,8 @@ export async function GET(req: NextRequest) {
       stripe: {
         usingTestKeys: useTestKeys,
         keysAvailable: {
-          STRIPE_SECRET_KEY_TEST: !!process.env.STRIPE_SECRET_KEY_TEST,
           STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
-          STRIPE_WEBHOOK_SECRET_TEST: !!process.env.STRIPE_WEBHOOK_SECRET_TEST,
           STRIPE_WEBHOOK_SECRET: !!process.env.STRIPE_WEBHOOK_SECRET,
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST,
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
         },
         activeKeys: {
@@ -34,43 +31,43 @@ export async function GET(req: NextRequest) {
           publishableKey: useTestKeys ? 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST' : 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'
         },
         keyValidation: {
-          secretKeyExists: !!(useTestKeys ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY),
-          secretKeyType: (() => {
-            const key = useTestKeys ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY;
-            if (!key) return 'MISSING';
-            if (key.startsWith('sk_test_')) return 'TEST';
-            if (key.startsWith('sk_live_')) return 'LIVE';
-            return 'UNKNOWN';
-          })(),
-          webhookSecretExists: !!(useTestKeys ? process.env.STRIPE_WEBHOOK_SECRET_TEST : process.env.STRIPE_WEBHOOK_SECRET),
-          webhookSecretLength: (useTestKeys ? process.env.STRIPE_WEBHOOK_SECRET_TEST : process.env.STRIPE_WEBHOOK_SECRET)?.length || 0
+          secretKeyExists: !!process.env.STRIPE_SECRET_KEY,
+          secretKeyType: process.env.STRIPE_SECRET_KEY 
+            ? (process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ? 'TEST' : 'LIVE')
+            : 'MISSING',
+          webhookSecretExists: !!process.env.STRIPE_WEBHOOK_SECRET,
+          webhookSecretLength: process.env.STRIPE_WEBHOOK_SECRET?.length || 0
         }
       },
       
       pricing: {
-        HANDBOOK_PRICE: process.env.HANDBOOK_PRICE,
-        calculatedPrice: Number(process.env.HANDBOOK_PRICE) || (useTestKeys ? 1000 : 249000),
-        priceInSEK: (Number(process.env.HANDBOOK_PRICE) || (useTestKeys ? 1000 : 249000)) / 100
+        HANDBOOK_PRICE: process.env.HANDBOOK_PRICE || 'not set',
+        NEXT_PUBLIC_HANDBOOK_PRICE: process.env.NEXT_PUBLIC_HANDBOOK_PRICE || 'not set',
+        calculatedPrice: Number(process.env.HANDBOOK_PRICE) || 249000,
+        priceInSEK: Math.round((Number(process.env.HANDBOOK_PRICE) || 249000) / 100)
       },
       
       urls: {
-        NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+        NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'not set',
         NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
-        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-        VERCEL_URL: process.env.VERCEL_URL
+        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'not set',
+        VERCEL_URL: process.env.VERCEL_URL || 'not set'
       },
       
       status: {
-        stripeConfigured: !!(useTestKeys ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY),
-        webhookConfigured: !!(useTestKeys ? process.env.STRIPE_WEBHOOK_SECRET_TEST : process.env.STRIPE_WEBHOOK_SECRET),
-        environmentValid: isDevelopment || isStaging || isProduction,
-        readyForPayments: !!(useTestKeys ? process.env.STRIPE_SECRET_KEY_TEST : process.env.STRIPE_SECRET_KEY) && 
-                         !!(useTestKeys ? process.env.STRIPE_WEBHOOK_SECRET_TEST : process.env.STRIPE_WEBHOOK_SECRET)
+        stripeConfigured: !!(process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY),
+        webhookConfigured: !!process.env.STRIPE_WEBHOOK_SECRET,
+        environmentValid: true,
+        readyForPayments: !!(
+          process.env.STRIPE_SECRET_KEY && 
+          process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY && 
+          process.env.STRIPE_WEBHOOK_SECRET
+        )
       },
       
       debug: {
         timestamp: new Date().toISOString(),
-        vercelRegion: process.env.VERCEL_REGION,
+        vercelRegion: process.env.VERCEL_REGION || 'unknown',
         nodeVersion: process.version
       }
     };

@@ -19,14 +19,9 @@ console.log(`[Stripe Config] Environment: ${process.env.NODE_ENV}, Vercel: ${pro
 console.log(`[Stripe Config] isDevelopment: ${isDevelopment}, isStaging: ${isStaging}, isProduction: ${isProduction}`);
 console.log(`[Stripe Config] Using: ${useTestKeys ? 'TEST' : 'LIVE'} keys`);
 
-// Välj nycklar
-const stripeSecretKey = useTestKeys 
-  ? process.env.STRIPE_SECRET_KEY_TEST 
-  : process.env.STRIPE_SECRET_KEY;
-
-const stripeWebhookSecret = useTestKeys 
-  ? process.env.STRIPE_WEBHOOK_SECRET_TEST
-  : process.env.STRIPE_WEBHOOK_SECRET;
+// Använd samma variabelnamn - Vercel hanterar environments
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 // Debug logging
 console.log(`[Stripe Config] Secret key exists: ${!!stripeSecretKey}, Key type: ${stripeSecretKey ? (stripeSecretKey.startsWith('sk_test_') ? 'TEST' : 'LIVE') : 'MISSING'}`);
@@ -34,11 +29,11 @@ console.log(`[Stripe Config] Webhook secret exists: ${!!stripeWebhookSecret}, Le
 
 // Validation
 if (!stripeSecretKey) {
-  console.error(`[Stripe Config] Missing ${useTestKeys ? 'STRIPE_SECRET_KEY_TEST' : 'STRIPE_SECRET_KEY'}`);
+  console.error(`[Stripe Config] Missing STRIPE_SECRET_KEY for environment: ${currentEnvironment}`);
 }
 
 if (!stripeWebhookSecret) {
-  console.error(`[Stripe Config] Missing ${useTestKeys ? 'STRIPE_WEBHOOK_SECRET_TEST' : 'STRIPE_WEBHOOK_SECRET'}`);
+  console.error(`[Stripe Config] Missing STRIPE_WEBHOOK_SECRET for environment: ${currentEnvironment}`);
 }
 
 // Exportera teststatus för användning i andra moduler
