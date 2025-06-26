@@ -328,60 +328,105 @@ async function handleCheckoutCompleted(session: any) {
   if (isTrialUpgrade) {
     console.log(`[Stripe Webhook] Detected trial upgrade (metadata: ${!!action}, fallback: ${!action})`);
     
+    let finalUserId = userId;
+    let finalHandbookId = handbookId;
+    
     // Om vi har userId från metadata, använd det
     if (userId) {
       console.log(`[Stripe Webhook] Using userId from metadata: ${userId}`);
-      await handleTrialUpgrade(userId, session);
+    } else {
+      // FALLBACK: Om metadata saknas, försök hitta userId via Stripe customer
+      if (session.customer) {
+        console.log(`[Stripe Webhook] No userId in metadata, searching via customer: ${session.customer}`);
+        
+        const supabase = getServiceSupabase();
+        
+        // Försök hitta användaren via tidigare subscriptions med samma customer ID
+        const { data: existingSubscription } = await supabase
+          .from('subscriptions')
+          .select('user_id')
+          .eq('stripe_customer_id', session.customer)
+          .limit(1)
+          .single();
+        
+        if (existingSubscription) {
+          console.log(`[Stripe Webhook] Found userId via existing subscription: ${existingSubscription.user_id}`);
+          finalUserId = existingSubscription.user_id;
+        } else {
+          // SISTA UTVÄG: Försök hitta via Stripe customer email
+          try {
+            if (stripe) {
+              const customer = await stripe.customers.retrieve(session.customer);
+              if (customer && !customer.deleted && customer.email) {
+                console.log(`[Stripe Webhook] Found customer email: ${customer.email}`);
+                
+                const { data: userProfile } = await supabase
+                  .from('user_profiles')
+                  .select('id')
+                  .eq('email', customer.email)
+                  .limit(1)
+                  .single();
+                
+                if (userProfile) {
+                  console.log(`[Stripe Webhook] Found userId via email: ${userProfile.id}`);
+                  finalUserId = userProfile.id;
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`[Stripe Webhook] Error retrieving customer from Stripe:`, error);
+          }
+        }
+      }
+    }
+    
+    // Om vi fortfarande inte har userId, kan vi inte fortsätta
+    if (!finalUserId) {
+      console.error(`[Stripe Webhook] Could not determine userId for trial upgrade - session: ${session.id}`);
       return;
     }
     
-    // FALLBACK: Om metadata saknas, försök hitta userId via Stripe customer
-    if (session.customer) {
-      console.log(`[Stripe Webhook] No userId in metadata, searching via customer: ${session.customer}`);
+    // Om handbookId saknas, försök hitta den senaste trial-handboken för användaren
+    if (!finalHandbookId) {
+      console.log(`[Stripe Webhook] No handbookId in metadata, searching for user's trial handbook`);
       
       const supabase = getServiceSupabase();
       
-      // Försök hitta användaren via tidigare subscriptions med samma customer ID
-      const { data: existingSubscription } = await supabase
-        .from('subscriptions')
-        .select('user_id')
-        .eq('stripe_customer_id', session.customer)
-        .limit(1)
-        .single();
+      // Hitta den senaste handboken som fortfarande är i trial för denna användare
+      const { data: trialHandbooks } = await supabase
+        .from('handbooks')
+        .select('id, title, created_at')
+        .eq('owner_id', finalUserId)
+        .not('trial_end_date', 'is', null) // Fortfarande i trial
+        .order('created_at', { ascending: false })
+        .limit(1);
       
-      if (existingSubscription) {
-        console.log(`[Stripe Webhook] Found userId via existing subscription: ${existingSubscription.user_id}`);
-        await handleTrialUpgrade(existingSubscription.user_id, session);
-        return;
-      }
-      
-      // SISTA UTVÄG: Försök hitta via Stripe customer email
-      try {
-        if (stripe) {
-          const customer = await stripe.customers.retrieve(session.customer);
-          if (customer && !customer.deleted && customer.email) {
-            console.log(`[Stripe Webhook] Found customer email: ${customer.email}`);
-            
-            const { data: userProfile } = await supabase
-              .from('user_profiles')
-              .select('id')
-              .eq('email', customer.email)
-              .limit(1)
-              .single();
-            
-            if (userProfile) {
-              console.log(`[Stripe Webhook] Found userId via email: ${userProfile.id}`);
-              await handleTrialUpgrade(userProfile.id, session);
-              return;
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`[Stripe Webhook] Error retrieving customer from Stripe:`, error);
-      }
-    }
+      if (trialHandbooks && trialHandbooks.length > 0) {
+                 finalHandbookId = trialHandbooks[0].id;
+         console.log(`[Stripe Webhook] Found trial handbook: ${finalHandbookId} (${trialHandbooks[0].title})`);
+       } else {
+         console.log(`[Stripe Webhook] No trial handbooks found for user ${finalUserId}`);
+         // Vi kan fortfarande skapa en allmän subscription utan specifik handbook
+       }
+     }
+     
+     // Skapa en modifierad session med komplett metadata för handleTrialUpgrade
+     const enhancedSession = {
+       ...session,
+       metadata: {
+         ...session.metadata,
+         userId: finalUserId,
+         handbookId: finalHandbookId || undefined,
+         action: 'upgrade_from_trial',
+         type: 'subscription',
+         planType: planType || 'yearly', // Default till yearly om det saknas
+         webhook_enhanced: true // Flagga att vi har förbättrat metadata
+       }
+     };
     
-    console.error(`[Stripe Webhook] Could not determine userId for trial upgrade - session: ${session.id}`);
+    console.log(`[Stripe Webhook] Enhanced session metadata:`, enhancedSession.metadata);
+    
+    await handleTrialUpgrade(finalUserId, enhancedSession);
     return;
   }
   
@@ -611,147 +656,125 @@ async function handleSubscriptionCancelled(subscription: any) {
 }
 
 export async function handleTrialUpgrade(userId: string, stripeSession: any) {
-  console.log(`🔄 [Stripe Webhook] Handling trial upgrade for user ${userId}`);
-  console.log(`🔄 [Stripe Webhook] Full stripeSession.metadata:`, JSON.stringify(stripeSession.metadata, null, 2));
-  
+  console.log(`[Stripe Webhook] === HANDLING TRIAL UPGRADE ===`);
+  console.log(`[Stripe Webhook] User ID: ${userId}`);
+  console.log(`[Stripe Webhook] Session ID: ${stripeSession.id}`);
+  console.log(`[Stripe Webhook] Session metadata:`, stripeSession.metadata);
+  console.log(`[Stripe Webhook] Session customer:`, stripeSession.customer);
+  console.log(`[Stripe Webhook] Session subscription:`, stripeSession.subscription);
+
   const supabase = getServiceSupabase();
   
   try {
-    // Extrahera plan-typ och handbook ID från metadata
-    const planType = stripeSession.metadata?.planType || 'monthly';
+    // Extract metadata with fallbacks
     let handbookId = stripeSession.metadata?.handbookId;
+    let planType = stripeSession.metadata?.planType || 'yearly'; // Default to yearly
+    
+    console.log(`[Stripe Webhook] Initial metadata - handbookId: ${handbookId}, planType: ${planType}`);
+    
+    // ROBUST FALLBACK 1: If no handbookId in metadata, find user's most recent trial handbook
+    if (!handbookId) {
+      console.log(`[Stripe Webhook] No handbookId in metadata, searching for user's trial handbooks...`);
+      
+      const { data: trialHandbooks, error: searchError } = await supabase
+        .from('handbooks')
+        .select('id, title, created_at, trial_end_date')
+        .eq('owner_id', userId)
+        .not('trial_end_date', 'is', null) // Still in trial
+        .order('created_at', { ascending: false })
+        .limit(5); // Get last 5 to be safe
+      
+      if (searchError) {
+        console.error(`[Stripe Webhook] Error searching for trial handbooks:`, searchError);
+      } else if (trialHandbooks && trialHandbooks.length > 0) {
+        // Take the most recent one
+        handbookId = trialHandbooks[0].id;
+        console.log(`[Stripe Webhook] FALLBACK: Found ${trialHandbooks.length} trial handbooks, using most recent: ${handbookId} (${trialHandbooks[0].title})`);
+        
+        // Log all found handbooks for debugging
+        trialHandbooks.forEach((hb, idx) => {
+          console.log(`[Stripe Webhook] Trial handbook ${idx + 1}: ${hb.id} - ${hb.title} (created: ${hb.created_at})`);
+        });
+      } else {
+        console.log(`[Stripe Webhook] FALLBACK: No trial handbooks found for user ${userId}`);
+      }
+    }
+    
+    // ROBUST FALLBACK 2: If still no handbookId, check if this user has ANY handbooks at all
+    if (!handbookId) {
+      console.log(`[Stripe Webhook] Still no handbookId, checking for ANY user handbooks...`);
+      
+      const { data: anyHandbooks, error: anyError } = await supabase
+        .from('handbooks')
+        .select('id, title, created_at, trial_end_date')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      if (anyError) {
+        console.error(`[Stripe Webhook] Error searching for any handbooks:`, anyError);
+      } else if (anyHandbooks && anyHandbooks.length > 0) {
+        console.log(`[Stripe Webhook] Found ${anyHandbooks.length} total handbooks for user:`);
+        anyHandbooks.forEach((hb, idx) => {
+          console.log(`[Stripe Webhook] Handbook ${idx + 1}: ${hb.id} - ${hb.title} (trial_end_date: ${hb.trial_end_date})`);
+        });
+        
+        // If any of them still has trial_end_date, use that one
+        const stillInTrial = anyHandbooks.find(hb => hb.trial_end_date !== null);
+        if (stillInTrial) {
+          handbookId = stillInTrial.id;
+          console.log(`[Stripe Webhook] FALLBACK 2: Using handbook still in trial: ${handbookId} (${stillInTrial.title})`);
+        } else {
+          console.log(`[Stripe Webhook] FALLBACK 2: All handbooks already paid, will create general subscription`);
+        }
+      } else {
+        console.log(`[Stripe Webhook] FALLBACK 2: User has no handbooks at all - this is unusual for trial upgrade`);
+      }
+    }
+
+    // Get Stripe subscription and customer info
     const subscriptionId = stripeSession.subscription;
     const customerId = stripeSession.customer;
     
-    console.log(`📊 [Stripe Webhook] Trial upgrade details:`, {
-      userId,
-      handbookId: handbookId || 'MISSING!',
-      handbookIdType: typeof handbookId,
-      handbookIdLength: handbookId ? handbookId.length : 0,
-      planType,
-      subscriptionId,
-      customerId,
-      sessionId: stripeSession.id,
-      amountTotal: stripeSession.amount_total,
-      currency: stripeSession.currency
-    });
+    console.log(`[Stripe Webhook] Stripe IDs - subscription: ${subscriptionId}, customer: ${customerId}`);
 
-    // KRITISK FÖRBÄTTRING: Om handbookId saknas, försök hitta användarens trial-handbok
-    if (!handbookId || handbookId === '' || handbookId === 'undefined' || handbookId.trim() === '') {
-      console.log(`⚠️ [Stripe Webhook] Missing handbookId in metadata, searching for user's trial handbook...`);
-      
-      // Hitta användarens senaste trial-handbok
-      const { data: trialHandbooks, error: searchError } = await supabase
-        .from('handbooks')
-        .select('id, title, trial_end_date, created_at')
-        .eq('owner_id', userId)
-        .not('trial_end_date', 'is', null) // Fortfarande i trial
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      if (searchError) {
-        console.error(`❌ [Stripe Webhook] Error searching for trial handbooks:`, searchError);
-      } else if (trialHandbooks && trialHandbooks.length > 0) {
-        handbookId = trialHandbooks[0].id;
-        console.log(`✅ [Stripe Webhook] Found trial handbook to upgrade: ${handbookId} (${trialHandbooks[0].title})`);
-      } else {
-        console.log(`⚠️ [Stripe Webhook] No trial handbooks found for user ${userId}`);
-      }
-    } else {
-      console.log(`✅ [Stripe Webhook] Valid handbookId found: ${handbookId}`);
-    }
-
-    // 1. Uppdatera trial-status till completed med retry logic
-    console.log(`🔄 [Stripe Webhook] Updating user profile for user ${userId}`);
-    await retryOperation(async () => {
-      const { error: trialError } = await supabase
-        .from('user_profiles')
-        .update({
-          subscription_status: 'active',
-          trial_used: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (trialError) {
-        throw new Error(`Failed to update user profile: ${trialError.message}`);
-      }
-    }, `Update user profile for ${userId}`);
-
-    // 2. KRITISK: Uppdatera handbok prenumeration om vi har en handbookId
+    // STEP 1: Mark handbook as paid (if we have a handbookId)
     if (handbookId) {
-      console.log(`🎯 [Stripe Webhook] CRITICAL: Updating handbook ${handbookId} to paid status`);
+      console.log(`[Stripe Webhook] Step 1: Marking handbook ${handbookId} as paid...`);
       
-      await retryOperation(async () => {
-        // Använd den nya enkla servicen
+      try {
         const { markHandbookAsPaid } = await import('@/lib/handbook-status');
         await markHandbookAsPaid(handbookId);
-        console.log(`✅ [Stripe Webhook] Successfully activated subscription for handbook ${handbookId}`);
-      }, `Update handbook ${handbookId} to paid status`, 5, 2000); // More retries and longer delay for critical operation
-      
-      // EXTRA SÄKERHET: Verifiera att uppdateringen lyckades
-      await retryOperation(async () => {
-        const { data: verifyHandbook, error: verifyError } = await supabase
+        console.log(`✅ [Stripe Webhook] Successfully marked handbook ${handbookId} as paid`);
+        
+        // Verify the update worked
+        const { data: verifyHandbook } = await supabase
           .from('handbooks')
-          .select('trial_end_date, title')
+          .select('id, title, trial_end_date')
           .eq('id', handbookId)
           .single();
         
-        if (verifyError) {
-          throw new Error(`Failed to verify handbook update: ${verifyError.message}`);
-        }
-        
-        if (verifyHandbook.trial_end_date !== null) {
-          throw new Error(`Handbook ${handbookId} still has trial_end_date set after payment processing`);
-        }
-        
-        console.log(`✅ [Stripe Webhook] VERIFIED: Handbook "${verifyHandbook.title}" is now marked as PAID`);
-      }, `Verify handbook ${handbookId} payment status`, 3, 1000);
-      
-    } else {
-      console.log(`⚠️ [Stripe Webhook] No handbook ID found - creating general subscription without updating handbooks`);
-      console.log(`⚠️ [Stripe Webhook] This may indicate a problem with the payment flow`);
-      
-      // SISTA UTVÄG: Om ingen specifik handbok hittades men betalning lyckades,
-      // markera ALLA användarens trial-handböcker som betalda
-      console.log(`🔄 [Stripe Webhook] FALLBACK: Searching for ANY trial handbooks to upgrade...`);
-      
-      try {
-        const { data: allTrialHandbooks, error: fallbackError } = await supabase
-          .from('handbooks')
-          .select('id, title, trial_end_date')
-          .eq('owner_id', userId)
-          .not('trial_end_date', 'is', null); // Alla som fortfarande är i trial
-        
-        if (fallbackError) {
-          console.error(`❌ [Stripe Webhook] Fallback search failed:`, fallbackError);
-        } else if (allTrialHandbooks && allTrialHandbooks.length > 0) {
-          console.log(`🎯 [Stripe Webhook] FALLBACK: Found ${allTrialHandbooks.length} trial handbooks to upgrade`);
-          
-          // Markera alla som betalda
-          for (const handbook of allTrialHandbooks) {
-            try {
-              const { markHandbookAsPaid } = await import('@/lib/handbook-status');
-              await markHandbookAsPaid(handbook.id);
-              console.log(`✅ [Stripe Webhook] FALLBACK: Marked handbook "${handbook.title}" as paid`);
-            } catch (error) {
-              console.error(`❌ [Stripe Webhook] FALLBACK: Failed to mark handbook ${handbook.id} as paid:`, error);
-            }
-          }
+        if (verifyHandbook?.trial_end_date === null) {
+          console.log(`✅ [Stripe Webhook] VERIFIED: Handbook "${verifyHandbook.title}" is now marked as PAID`);
         } else {
-          console.log(`⚠️ [Stripe Webhook] FALLBACK: No trial handbooks found for user ${userId}`);
+          console.error(`❌ [Stripe Webhook] VERIFICATION FAILED: Handbook still has trial_end_date: ${verifyHandbook?.trial_end_date}`);
         }
+        
       } catch (error) {
-        console.error(`❌ [Stripe Webhook] FALLBACK: Error in fallback logic:`, error);
+        console.error(`❌ [Stripe Webhook] Error marking handbook as paid:`, error);
+        // Continue anyway to create subscription
       }
+    } else {
+      console.log(`⚠️ [Stripe Webhook] Step 1 SKIPPED: No handbookId found - will create general subscription`);
     }
 
-    // 3. Skapa subscription record med rätt plan-typ
-    // Konvertera planType till databas-kompatibelt format
+    // STEP 2: Create subscription record
+    console.log(`[Stripe Webhook] Step 2: Creating subscription record...`);
+    
     const dbPlanType = planType === 'yearly' ? 'annual' : 'monthly';
     const subscriptionData = {
       user_id: userId,
-      handbook_id: handbookId || null, // Lägg till handbook_id om det finns
+      handbook_id: handbookId || null,
       plan_type: dbPlanType,
       status: 'active',
       started_at: new Date().toISOString(),
@@ -767,18 +790,10 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
         original_plan_type: planType,
         upgraded_from_trial: true,
         handbook_id: handbookId || null,
-        fallback_used: !stripeSession.metadata?.handbookId // Flagga om vi använde fallback
+        fallback_used: !stripeSession.metadata?.handbookId,
+        webhook_enhanced: !!stripeSession.metadata?.webhook_enhanced
       }
     };
-
-    // Sätt rätt datum baserat på plan-typ
-    if (planType === 'yearly') {
-      subscriptionData.expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-      subscriptionData.next_payment_due = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    } else {
-      subscriptionData.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      subscriptionData.next_payment_due = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    }
 
     const { data: subscription, error: subError } = await supabase
       .from('subscriptions')
@@ -791,9 +806,11 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
       throw subError;
     }
 
-    console.log(`[Stripe Webhook] Created ${planType} subscription: ${subscription.id}`);
+    console.log(`✅ [Stripe Webhook] Created ${planType} subscription: ${subscription.id}`);
 
-    // 4. Uppdatera account status
+    // STEP 3: Update account status
+    console.log(`[Stripe Webhook] Step 3: Updating account status...`);
+    
     const { error: statusError } = await supabase
       .from('account_status')
       .upsert({
@@ -801,10 +818,10 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
         status: 'active',
         can_access_handbooks: true,
         can_create_handbooks: true,
-        max_handbooks: 999, // Obergränsade handböcker
+        max_handbooks: 999,
         suspended_at: null,
         scheduled_deletion_at: null,
-        warning_sent_at: null,
+        updated_at: new Date().toISOString(),
         metadata: {
           subscription_id: subscription.id,
           activated_via: 'trial_upgrade',
@@ -812,41 +829,59 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
           original_plan_type: planType,
           activation_date: new Date().toISOString(),
           handbook_id: handbookId || null,
-          fallback_used: !stripeSession.metadata?.handbookId
+          fallback_used: !stripeSession.metadata?.handbookId,
+          webhook_enhanced: !!stripeSession.metadata?.webhook_enhanced
         }
       }, { onConflict: 'user_id' });
 
     if (statusError) {
       console.error('[Stripe Webhook] Error updating account status:', statusError);
+    } else {
+      console.log(`✅ [Stripe Webhook] Updated account status for user ${userId}`);
     }
 
-    // 5. Logga lifecycle event
-    await supabase
+    // STEP 4: Log lifecycle event
+    console.log(`[Stripe Webhook] Step 4: Logging lifecycle event...`);
+    
+    const { error: lifecycleError } = await supabase
       .from('customer_lifecycle_events')
       .insert({
         user_id: userId,
         subscription_id: subscription.id,
-        event_type: 'trial_converted',
+        event_type: 'trial_upgraded',
         status: 'completed',
-        automated_action: 'subscription_activated',
+        automated_action: 'subscription_created',
         action_completed_at: new Date().toISOString(),
         metadata: {
           stripe_session_id: stripeSession.id,
+          stripe_subscription_id: subscriptionId,
+          stripe_customer_id: customerId,
           plan_type: dbPlanType,
           original_plan_type: planType,
-          payment_amount: stripeSession.amount_total,
-          currency: stripeSession.currency,
-          converted_from: 'trial',
           handbook_id: handbookId || null,
+          amount_paid: stripeSession.amount_total,
+          currency: stripeSession.currency,
           fallback_used: !stripeSession.metadata?.handbookId,
-          security_measures_applied: true
+          webhook_enhanced: !!stripeSession.metadata?.webhook_enhanced
         }
       });
 
-    console.log(`✅ [Stripe Webhook] Trial upgrade completed successfully for user ${userId} with enhanced security measures`);
+    if (lifecycleError) {
+      console.error('[Stripe Webhook] Error logging lifecycle event:', lifecycleError);
+    } else {
+      console.log(`✅ [Stripe Webhook] Logged lifecycle event`);
+    }
+
+    console.log(`🎉 [Stripe Webhook] === TRIAL UPGRADE COMPLETED SUCCESSFULLY ===`);
+    console.log(`🎉 [Stripe Webhook] Summary:`);
+    console.log(`🎉 [Stripe Webhook] - User: ${userId}`);
+    console.log(`🎉 [Stripe Webhook] - Handbook: ${handbookId || 'NONE (general subscription)'}`);
+    console.log(`🎉 [Stripe Webhook] - Plan: ${planType} (${dbPlanType})`);
+    console.log(`🎉 [Stripe Webhook] - Subscription: ${subscription.id}`);
+    console.log(`🎉 [Stripe Webhook] - Fallback used: ${!stripeSession.metadata?.handbookId}`);
 
   } catch (error) {
-    console.error('❌ [Stripe Webhook] Error in trial upgrade:', error);
+    console.error(`❌ [Stripe Webhook] TRIAL UPGRADE FAILED:`, error);
     throw error;
   }
 }

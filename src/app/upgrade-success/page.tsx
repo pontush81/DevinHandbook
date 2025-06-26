@@ -79,6 +79,36 @@ function UpgradeSuccessContent() {
         } else {
           console.error('[Upgrade Success] Payment verification failed:', result);
           setVerificationStatus('failed');
+          
+          // AUTOMATISK REPARATION: Om verifieringen misslyckades, försök reparera webhook
+          console.log('[Upgrade Success] Attempting automatic webhook repair...');
+          setVerificationStatus('repairing');
+          
+          try {
+            const repairResponse = await fetch('/api/stripe/auto-fix-failed-webhooks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId,
+                userId: user.id,
+                handbookId: handbookId || undefined
+              })
+            });
+
+            const repairResult = await repairResponse.json();
+            
+            if (repairResult.success) {
+              console.log('[Upgrade Success] Webhook repair successful:', repairResult);
+              setPaymentVerified(true);
+              setVerificationStatus('repaired');
+            } else {
+              console.error('[Upgrade Success] Webhook repair failed:', repairResult);
+              setVerificationStatus('repair_failed');
+            }
+          } catch (repairError) {
+            console.error('[Upgrade Success] Error during webhook repair:', repairError);
+            setVerificationStatus('repair_failed');
+          }
         }
       } catch (error) {
         console.error('[Upgrade Success] Error verifying payment:', error);
@@ -147,9 +177,12 @@ function UpgradeSuccessContent() {
             <Badge variant="outline" className="mx-auto mb-3 bg-green-100 text-green-800 border-green-300">
               <Sparkles className="w-3 h-3 mr-1" />
               {verificationStatus === 'verifying' ? 'Verifierar betalning...' :
+               verificationStatus === 'repairing' ? 'Reparerar webhook...' :
+               verificationStatus === 'repaired' ? 'Betalning genomförd (reparerad)' :
                verificationStatus === 'processed' ? 'Betalning genomförd (återställd)' :
                verificationStatus === 'already_processed' ? 'Betalning genomförd' :
                verificationStatus === 'failed' ? 'Betalning misslyckades' :
+               verificationStatus === 'repair_failed' ? 'Reparation misslyckades' :
                'Betalning genomförd'}
             </Badge>
             <CardTitle className="text-3xl font-bold text-gray-900">
