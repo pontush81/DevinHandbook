@@ -75,22 +75,29 @@ export async function POST(req: NextRequest) {
   let eventType = 'unknown';
   let eventId = 'unknown';
   
+  console.log('🎯 [Stripe Webhook] === WEBHOOK CALL RECEIVED ===');
+  console.log('🎯 [Stripe Webhook] Request method:', req.method);
+  console.log('🎯 [Stripe Webhook] Request URL:', req.url);
+  console.log('🎯 [Stripe Webhook] Request headers:', Object.fromEntries(req.headers.entries()));
+  
   try {
-    console.log(`🎯 [Stripe Webhook] Starting webhook processing in ${isTestMode ? 'TESTLÄGE' : 'SKARPT LÄGE'}`);
+    const body = await req.text();
+    const signature = req.headers.get('stripe-signature');
     
-    const payload = await req.text();
-    const signature = req.headers.get('stripe-signature') || '';
-
-    console.log(`📦 [Stripe Webhook] Payload length: ${payload.length}, Signature: ${signature ? 'Present' : 'Missing'}`);
-
+    console.log('🎯 [Stripe Webhook] Body length:', body.length);
+    console.log('🎯 [Stripe Webhook] Signature present:', !!signature);
+    console.log('🎯 [Stripe Webhook] Signature value:', signature ? signature.substring(0, 50) + '...' : 'MISSING');
+    
     if (!signature) {
-      console.error('❌ [Stripe Webhook] Missing stripe-signature header');
-      return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
+      console.error('❌ [Stripe Webhook] No Stripe signature found');
+      return NextResponse.json({ error: 'No Stripe signature' }, { status: 400 });
     }
 
+    console.log('🔐 [Stripe Webhook] Attempting to construct event from payload...');
+    
     let event;
     try {
-      event = await constructEventFromPayload(payload, signature);
+      event = await constructEventFromPayload(body, signature);
       eventType = event.type;
       eventId = event.id;
       console.log(`✅ [Stripe Webhook] Event verified successfully: ${event.type} (ID: ${event.id})`);
