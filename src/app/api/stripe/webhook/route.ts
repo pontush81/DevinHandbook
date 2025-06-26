@@ -3,6 +3,7 @@ import { constructEventFromPayload, isTestMode } from '@/lib/stripe';
 import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
 import { getServiceSupabase } from '@/lib/supabase';
+import { stripe } from '@/lib/stripe';
 
 // Webhook processing status tracking
 interface WebhookProcessingResult {
@@ -304,6 +305,9 @@ async function handleCheckoutCompleted(session: any) {
   console.log("[Stripe Webhook] Full session object keys:", Object.keys(session));
   console.log("[Stripe Webhook] Session ID:", session.id);
   console.log("[Stripe Webhook] Session payment_status:", session.payment_status);
+  console.log("[Stripe Webhook] Session mode:", session.mode);
+  console.log("[Stripe Webhook] Session customer:", session.customer);
+  console.log("[Stripe Webhook] Session subscription:", session.subscription);
   
   const { subdomain, handbookName, userId, action, type, handbookId, planType } = session.metadata || {};
   
@@ -317,10 +321,67 @@ async function handleCheckoutCompleted(session: any) {
     planType
   });
   
-  // Hantera trial-uppgraderingar
-  if (action === 'upgrade_from_trial' && type === 'subscription') {
-    console.log(`[Stripe Webhook] Handling trial upgrade for user ${userId} and handbook ${handbookId}`);
-    await handleTrialUpgrade(userId, session);
+  // FÖRBÄTTRING: Hantera trial-uppgraderingar även utan metadata
+  const isTrialUpgrade = (action === 'upgrade_from_trial' && type === 'subscription') || 
+                        (session.mode === 'subscription' && session.subscription && !subdomain && !handbookName);
+  
+  if (isTrialUpgrade) {
+    console.log(`[Stripe Webhook] Detected trial upgrade (metadata: ${!!action}, fallback: ${!action})`);
+    
+    // Om vi har userId från metadata, använd det
+    if (userId) {
+      console.log(`[Stripe Webhook] Using userId from metadata: ${userId}`);
+      await handleTrialUpgrade(userId, session);
+      return;
+    }
+    
+    // FALLBACK: Om metadata saknas, försök hitta userId via Stripe customer
+    if (session.customer) {
+      console.log(`[Stripe Webhook] No userId in metadata, searching via customer: ${session.customer}`);
+      
+      const supabase = getServiceSupabase();
+      
+      // Försök hitta användaren via tidigare subscriptions med samma customer ID
+      const { data: existingSubscription } = await supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('stripe_customer_id', session.customer)
+        .limit(1)
+        .single();
+      
+      if (existingSubscription) {
+        console.log(`[Stripe Webhook] Found userId via existing subscription: ${existingSubscription.user_id}`);
+        await handleTrialUpgrade(existingSubscription.user_id, session);
+        return;
+      }
+      
+      // SISTA UTVÄG: Försök hitta via Stripe customer email
+      try {
+        if (stripe) {
+          const customer = await stripe.customers.retrieve(session.customer);
+          if (customer && !customer.deleted && customer.email) {
+            console.log(`[Stripe Webhook] Found customer email: ${customer.email}`);
+            
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('id')
+              .eq('email', customer.email)
+              .limit(1)
+              .single();
+            
+            if (userProfile) {
+              console.log(`[Stripe Webhook] Found userId via email: ${userProfile.id}`);
+              await handleTrialUpgrade(userProfile.id, session);
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`[Stripe Webhook] Error retrieving customer from Stripe:`, error);
+      }
+    }
+    
+    console.error(`[Stripe Webhook] Could not determine userId for trial upgrade - session: ${session.id}`);
     return;
   }
   
