@@ -16,7 +16,7 @@ const stripeSecretKey = useTestKeys
   : process.env.STRIPE_SECRET_KEY;
 
 const stripeWebhookSecret = useTestKeys 
-  ? process.env.STRIPE_WEBHOOK_SECRET_TEST 
+  ? (process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET)
   : process.env.STRIPE_WEBHOOK_SECRET;
 
 // Debug logging för webhook secret
