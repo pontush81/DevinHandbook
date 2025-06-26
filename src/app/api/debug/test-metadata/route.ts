@@ -32,15 +32,18 @@ export async function POST(req: NextRequest) {
     // Create a simple checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      mode: 'payment',
+      mode: 'subscription',
       line_items: [
         {
           price_data: {
             currency: 'sek',
             product_data: {
-              name: 'Test Product',
+              name: 'Test Subscription',
             },
-            unit_amount: 1000, // 10 SEK
+            unit_amount: 149000,
+            recurring: {
+              interval: 'year',
+            },
           },
           quantity: 1,
         },
