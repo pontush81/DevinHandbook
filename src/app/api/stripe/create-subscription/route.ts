@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     console.log(`[Stripe Subscription] Creating ${planType} subscription for user ${userId}${handbookId ? ` and handbook ${handbookId}` : ''}`);
 
     // Prepare metadata
-    const metadata = {
+    const metadata: { [key: string]: string } = {
       userId,
       action: 'upgrade_from_trial',
       type: 'subscription',
@@ -102,6 +102,9 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`[Stripe Subscription] Created ${planType} session: ${session.id}`);
+    console.log(`[Stripe Subscription] Session metadata verification:`, session.metadata);
+    console.log(`[Stripe Subscription] Session customer:`, session.customer);
+    console.log(`[Stripe Subscription] Session subscription:`, session.subscription);
 
     // KRITISK FÖRBÄTTRING: Skapa en fallback-timer för att kontrollera betalningsstatus
     // Detta säkerställer att handboken markeras som betald även om webhook misslyckas
