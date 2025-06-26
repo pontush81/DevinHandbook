@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Check, CreditCard, Gift, Star } from 'lucide-react';
-import { getProPricing } from '@/lib/pricing';
+import { getProPricing, PRICING } from '@/lib/pricing';
 
 interface BlockedAccountScreenProps {
   trialEndedAt: string;
@@ -60,13 +60,13 @@ export function BlockedAccountScreen({
 
   const pricing = {
     monthly: {
-      price: 149,
+      price: PRICING.PRO.monthly,
       period: '/månad',
       description: 'Betala månadsvis',
       badge: null
     },
     yearly: {
-      price: 1490,
+      price: PRICING.PRO.yearly,
       period: '/år',
       description: 'Betala årsvis',
       badge: 'Spara 20%!'
@@ -123,7 +123,7 @@ export function BlockedAccountScreen({
                     <div className="text-sm text-gray-600">Betala månadsvis</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-gray-900">149 kr</div>
+                    <div className="text-xl font-bold text-gray-900">{PRICING.PRO.monthly} kr</div>
                     <div className="text-sm text-gray-500">/månad</div>
                   </div>
                 </div>
