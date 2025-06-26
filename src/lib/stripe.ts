@@ -1,48 +1,58 @@
 import Stripe from 'stripe';
 
 /**
- * Väljer rätt Stripe-nyckel baserat på miljö
- * Produktionsnycklar används endast i produktionsmiljö, annars testnycklar
- * FORCE_STRIPE_TEST_MODE kan användas för att tvinga testläge i produktion
+ * Miljöbaserad Stripe-konfiguration
+ * - Development: Använder alltid test-nycklar
+ * - Staging: Använder test-nycklar med riktiga webhooks  
+ * - Production: Använder live-nycklar
  */
+
+// Bestäm miljö
+const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production';
-const forceTestMode = process.env.FORCE_STRIPE_TEST_MODE === 'true';
+const isStaging = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'preview';
 
-// Bestäm vilka nycklar som ska användas
-const useTestKeys = !isProduction || forceTestMode;
+// Välj rätt nycklar baserat på miljö
+const useTestKeys = isDevelopment || isStaging;
 
+console.log(`[Stripe Config] Environment: ${process.env.NODE_ENV}, Vercel: ${process.env.VERCEL_ENV}`);
+console.log(`[Stripe Config] isDevelopment: ${isDevelopment}, isStaging: ${isStaging}, isProduction: ${isProduction}`);
+console.log(`[Stripe Config] Using: ${useTestKeys ? 'TEST' : 'LIVE'} keys`);
+
+// Välj nycklar
 const stripeSecretKey = useTestKeys 
   ? process.env.STRIPE_SECRET_KEY_TEST 
   : process.env.STRIPE_SECRET_KEY;
 
 const stripeWebhookSecret = useTestKeys 
-  ? (process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET)
+  ? process.env.STRIPE_WEBHOOK_SECRET_TEST
   : process.env.STRIPE_WEBHOOK_SECRET;
 
-// Debug logging för webhook secret
-console.log(`[Stripe Config] Using webhook secret: ${useTestKeys ? 'TEST' : 'PRODUCTION'}`);
-console.log(`[Stripe Config] STRIPE_WEBHOOK_SECRET_TEST exists: ${!!process.env.STRIPE_WEBHOOK_SECRET_TEST}`);
-console.log(`[Stripe Config] STRIPE_WEBHOOK_SECRET exists: ${!!process.env.STRIPE_WEBHOOK_SECRET}`);
-console.log(`[Stripe Config] Selected webhook secret exists: ${!!stripeWebhookSecret}, Length: ${stripeWebhookSecret ? stripeWebhookSecret.length : 0}`);
+// Debug logging
+console.log(`[Stripe Config] Secret key exists: ${!!stripeSecretKey}, Key type: ${stripeSecretKey ? (stripeSecretKey.startsWith('sk_test_') ? 'TEST' : 'LIVE') : 'MISSING'}`);
+console.log(`[Stripe Config] Webhook secret exists: ${!!stripeWebhookSecret}, Length: ${stripeWebhookSecret ? stripeWebhookSecret.length : 0}`);
 
-// Debug logging för miljövariabler
-console.log(`[Stripe Config] isProduction: ${isProduction}, forceTestMode: ${forceTestMode}, useTestKeys: ${useTestKeys}`);
-console.log(`[Stripe Config] Secret key exists: ${!!stripeSecretKey}, Key prefix: ${stripeSecretKey ? stripeSecretKey.substring(0, 12) + '...' : 'undefined'}`);
-console.log(`[Stripe Config] STRIPE_SECRET_KEY_TEST exists: ${!!process.env.STRIPE_SECRET_KEY_TEST}`);
-console.log(`[Stripe Config] STRIPE_SECRET_KEY exists: ${!!process.env.STRIPE_SECRET_KEY}`);
+// Validation
+if (!stripeSecretKey) {
+  console.error(`[Stripe Config] Missing ${useTestKeys ? 'STRIPE_SECRET_KEY_TEST' : 'STRIPE_SECRET_KEY'}`);
+}
+
+if (!stripeWebhookSecret) {
+  console.error(`[Stripe Config] Missing ${useTestKeys ? 'STRIPE_WEBHOOK_SECRET_TEST' : 'STRIPE_WEBHOOK_SECRET'}`);
+}
 
 // Exportera teststatus för användning i andra moduler
 export const isTestMode = useTestKeys;
+export const currentEnvironment = isDevelopment ? 'development' : isStaging ? 'staging' : 'production';
 
 /**
  * Stripe-instans som konfigureras baserat på miljö
- * Med säkerhetskontroll för om nyckeln finns
  */
 export const stripe = stripeSecretKey 
   ? new Stripe(stripeSecretKey, {
       apiVersion: '2025-04-30.basil',
     })
-  : null as any; // För att undvika byggfel under utveckling
+  : null as any;
 
 export const createCheckoutSession = async (
   handbookName: string,
@@ -51,16 +61,14 @@ export const createCheckoutSession = async (
   successUrl: string,
   cancelUrl: string
 ) => {
-  // Säkerhetskontroll att Stripe är initierat
   if (!stripe) {
     throw new Error("Stripe not initialized. Missing API key.");
   }
   
-  // Använd ett mycket litet belopp för testning i produktion
-  // HANDBOOK_PRICE är i öre, alltså 300 = 3 kronor (Stripe's minimumgräns)
-  const priceAmount = Number(process.env.HANDBOOK_PRICE) || 300; // Default till 3 kr om ingen miljövariabel finns
+  // Miljöbaserat pris
+  const priceAmount = Number(process.env.HANDBOOK_PRICE) || (useTestKeys ? 1000 : 249000); // 10 kr test, 2490 kr prod
   
-  console.log(`Creating checkout session with amount: ${priceAmount} öre (${priceAmount/100} kr)`);
+  console.log(`[Stripe] Creating checkout session - Amount: ${priceAmount} öre (${priceAmount/100} kr), Environment: ${currentEnvironment}`);
   
   return await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -72,7 +80,7 @@ export const createCheckoutSession = async (
             name: `Digital handbok: ${handbookName}`,
             description: `URL: handbok.org/${subdomain}`,
           },
-          unit_amount: priceAmount, // Använder priset från miljövariabeln eller default (3 kr)
+          unit_amount: priceAmount,
         },
         quantity: 1,
       },
@@ -93,12 +101,10 @@ export const constructEventFromPayload = async (
   signature: string,
   webhookSecret?: string
 ) => {
-  // Säkerhetskontroll att Stripe är initierat
   if (!stripe) {
     throw new Error("Stripe not initialized. Missing API key.");
   }
   
-  // Använd rätt webhook-nyckel baserat på miljö
   return stripe.webhooks.constructEvent(
     payload, 
     signature, 
