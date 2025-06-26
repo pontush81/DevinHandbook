@@ -24,19 +24,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Pricing
+    // Dynamiska priser från miljövariabel
+    const basePrice = Number(process.env.HANDBOOK_PRICE) || 249000; // Standard 2490 kr
+    
     const pricing = {
       monthly: {
-        amount: 14900, // 149 kr i öre
+        amount: basePrice, // Använd miljövariabel
         interval: 'month' as const,
         name: 'Handbok.org - Månadsprenumeration'
       },
       yearly: {
-        amount: 149000, // 1490 kr i öre  
+        amount: basePrice * 10, // 10x månadspris för årspris
         interval: 'year' as const,
         name: 'Handbok.org - Årsprenumeration'
       }
     };
+
+    console.log(`🔧 [Stripe Subscription] Using prices - Monthly: ${pricing.monthly.amount} öre, Yearly: ${pricing.yearly.amount} öre`);
 
     const selectedPlan = pricing[planType as keyof typeof pricing];
     
