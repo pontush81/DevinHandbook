@@ -181,8 +181,46 @@ export async function POST(req: NextRequest) {
           );
           break;
           
+        case 'checkout.session.expired':
+          console.log(`⏰ [Stripe Webhook] Processing checkout.session.expired`);
+          await retryOperation(
+            () => handleCheckoutExpired(event.data.object),
+            'handleCheckoutExpired'
+          );
+          break;
+          
+        case 'customer.created':
+          console.log(`👤 [Stripe Webhook] Processing customer.created`);
+          // Just log for now, no specific action needed
+          console.log(`✅ [Stripe Webhook] Customer created: ${event.data.object.id}`);
+          break;
+          
+        case 'customer.updated':
+          console.log(`👤 [Stripe Webhook] Processing customer.updated`);
+          // Just log for now, no specific action needed
+          console.log(`✅ [Stripe Webhook] Customer updated: ${event.data.object.id}`);
+          break;
+          
+        case 'payment_method.attached':
+          console.log(`💳 [Stripe Webhook] Processing payment_method.attached`);
+          // Just log for now, no specific action needed
+          console.log(`✅ [Stripe Webhook] Payment method attached: ${event.data.object.id}`);
+          break;
+          
+        case 'payment_intent.created':
+        case 'payment_intent.succeeded':
+        case 'charge.succeeded':
+        case 'invoice.created':
+        case 'invoice.finalized':
+        case 'invoice.paid':
+          console.log(`📋 [Stripe Webhook] Processing ${event.type}`);
+          // These events are informational, no specific action needed
+          console.log(`✅ [Stripe Webhook] Event ${event.type} processed (informational only)`);
+          break;
+          
         default:
           console.log(`⚠️ [Stripe Webhook] Unhandled event type: ${event.type}`);
+          console.log(`ℹ️ [Stripe Webhook] This event type is not configured for processing, but webhook completed successfully`);
       }
 
       const processingTime = Date.now() - startTime;
@@ -681,9 +719,30 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
   }
 }
 
+async function handleCheckoutExpired(session: any) {
+  console.log(`⏰ [Checkout Expired] Session expired: ${session.id}`);
+  console.log(`ℹ️ [Checkout Expired] Customer did not complete payment within the time limit`);
+  
+  // Optional: Log expired sessions for analytics
+  const supabase = getServiceSupabase();
+  try {
+    await supabase
+      .from('checkout_sessions')
+      .insert({
+        stripe_session_id: session.id,
+        status: 'expired',
+        expired_at: new Date().toISOString(),
+        metadata: session.metadata || {}
+      });
+  } catch (error) {
+    console.error('❌ [Checkout Expired] Failed to log expired session:', error);
+  }
+  
+  console.log(`✅ [Checkout Expired] Session ${session.id} processed successfully`);
+}
+
 async function handleSubscriptionCreated(subscription: any) {
-  console.log("[Stripe Webhook] Handling customer.subscription.created");
-  // Detta kommer att hanteras av checkout.session.completed för vårt fall
+  console.log(`📝 [Subscription Created] Processing subscription: ${subscription.id}`);
 }
 
 async function integrateWithCustomerLifecycle(userId: string, handbookId: string, stripeSession: any) {
