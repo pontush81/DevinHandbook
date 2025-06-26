@@ -5,14 +5,17 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, handbookId, planType, successUrl, cancelUrl } = await req.json();
 
-    console.log(`[Stripe Subscription] Received request data:`, {
+    console.log(`🔧 [Stripe Subscription] Creating session with:`, {
       userId,
       handbookId,
-      handbookIdType: typeof handbookId,
       planType,
       successUrl,
       cancelUrl
     });
+
+    if (!stripe) {
+      return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
+    }
 
     if (!userId || !planType || !successUrl || !cancelUrl) {
       return NextResponse.json(
@@ -21,26 +24,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!stripe) {
-      return NextResponse.json(
-        { error: 'Stripe not configured' },
-        { status: 500 }
-      );
-    }
-
-    // Ny prissättning
+    // Pricing
     const pricing = {
       monthly: {
         amount: 14900, // 149 kr i öre
         interval: 'month' as const,
-        name: 'Handbok.org - Månadsprenumeration',
-        description: 'Digital handbok för din förening med full funktionalitet'
+        name: 'Handbok.org - Månadsprenumeration'
       },
       yearly: {
         amount: 149000, // 1490 kr i öre  
         interval: 'year' as const,
-        name: 'Handbok.org - Årsprenumeration',
-        description: 'Digital handbok för din förening med full funktionalitet (spara 20%!)'
+        name: 'Handbok.org - Årsprenumeration'
       }
     };
 
@@ -53,9 +47,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[Stripe Subscription] Creating ${planType} subscription for user ${userId}${handbookId ? ` and handbook ${handbookId}` : ''}`);
-
-    // Prepare metadata
+    // Prepare metadata exactly like in working debug route
     const metadata: { [key: string]: string } = {
       userId,
       action: 'upgrade_from_trial',
@@ -68,9 +60,9 @@ export async function POST(req: NextRequest) {
       metadata.handbookId = handbookId.trim();
     }
 
-    console.log(`[Stripe Subscription] Session metadata:`, metadata);
+    console.log(`🔧 [Stripe Subscription] Metadata to send:`, metadata);
 
-    // Skapa Stripe checkout session för prenumeration
+    // Create session exactly like working debug route
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
@@ -80,7 +72,6 @@ export async function POST(req: NextRequest) {
             currency: 'sek',
             product_data: {
               name: selectedPlan.name,
-              description: selectedPlan.description,
             },
             unit_amount: selectedPlan.amount,
             recurring: {
@@ -93,66 +84,10 @@ export async function POST(req: NextRequest) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: metadata,
-      // Automatisk insamling av skatteuppgifter
-      automatic_tax: {
-        enabled: false, // Sätter till false för enkelhets skull
-      },
-      // Kunduppgifter - customer skapas automatiskt i subscription mode
-      billing_address_collection: 'required'
     });
 
-    console.log(`[Stripe Subscription] Created ${planType} session: ${session.id}`);
-    console.log(`[Stripe Subscription] Session metadata verification:`, session.metadata);
-    console.log(`[Stripe Subscription] Session customer:`, session.customer);
-    console.log(`[Stripe Subscription] Session subscription:`, session.subscription);
-
-    // KRITISK FÖRBÄTTRING: Skapa en fallback-timer för att kontrollera betalningsstatus
-    // Detta säkerställer att handboken markeras som betald även om webhook misslyckas
-    if (handbookId) {
-      console.log(`[Stripe Subscription] Setting up fallback payment verification for handbook ${handbookId}`);
-      
-      // Skapa en bakgrundsprocess som kontrollerar betalningsstatus efter 5 minuter
-      // Detta är tillräckligt tid för webhook att komma fram, men inte för lång för användaren
-      setTimeout(async () => {
-        try {
-          console.log(`[Fallback Check] Checking payment status for session ${session.id}`);
-          
-          // Hämta session-status från Stripe
-          const updatedSession = await stripe.checkout.sessions.retrieve(session.id);
-          
-          if (updatedSession.payment_status === 'paid') {
-            console.log(`[Fallback Check] Payment confirmed for session ${session.id}, checking if webhook processed it`);
-            
-            // Kontrollera om handboken fortfarande är i trial-läge
-            const { getServiceSupabase } = await import('@/lib/supabase');
-            const supabase = getServiceSupabase();
-            
-            const { data: handbook } = await supabase
-              .from('handbooks')
-              .select('trial_end_date')
-              .eq('id', handbookId)
-              .single();
-            
-            // Om handboken fortfarande har trial_end_date (inte null) betyder det att webhook misslyckades
-            if (handbook && handbook.trial_end_date !== null) {
-              console.log(`[Fallback Check] Webhook appears to have failed for handbook ${handbookId}, executing fallback payment processing`);
-              
-              // Kör webhook-logiken manuellt
-              const { handleTrialUpgrade } = await import('@/app/api/stripe/webhook/route');
-              await handleTrialUpgrade(userId, updatedSession);
-              
-              console.log(`[Fallback Check] Successfully processed fallback payment for handbook ${handbookId}`);
-            } else {
-              console.log(`[Fallback Check] Webhook already processed payment for handbook ${handbookId}`);
-            }
-          } else {
-            console.log(`[Fallback Check] Payment not completed for session ${session.id}, status: ${updatedSession.payment_status}`);
-          }
-        } catch (error) {
-          console.error(`[Fallback Check] Error in fallback payment verification:`, error);
-        }
-      }, 5 * 60 * 1000); // 5 minuter delay
-    }
+    console.log(`🔧 [Stripe Subscription] Created session: ${session.id}`);
+    console.log(`🔧 [Stripe Subscription] Session metadata verification:`, session.metadata);
 
     return NextResponse.json({
       sessionId: session.id,
@@ -163,11 +98,9 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('[Stripe Subscription] Error creating subscription:', error);
+    console.error('🚨 [Stripe Subscription] Error:', error);
     return NextResponse.json(
-      { 
-        error: error.message || 'Failed to create subscription session' 
-      },
+      { error: 'Failed to create subscription session', details: error.message },
       { status: 500 }
     );
   }
