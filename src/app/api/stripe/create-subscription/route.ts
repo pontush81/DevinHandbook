@@ -5,6 +5,15 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, handbookId, planType, successUrl, cancelUrl } = await req.json();
 
+    console.log(`[Stripe Subscription] Received request data:`, {
+      userId,
+      handbookId,
+      handbookIdType: typeof handbookId,
+      planType,
+      successUrl,
+      cancelUrl
+    });
+
     if (!userId || !planType || !successUrl || !cancelUrl) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -46,6 +55,21 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Stripe Subscription] Creating ${planType} subscription for user ${userId}${handbookId ? ` and handbook ${handbookId}` : ''}`);
 
+    // Prepare metadata
+    const metadata = {
+      userId,
+      action: 'upgrade_from_trial',
+      type: 'subscription',
+      planType: planType
+    };
+
+    // Add handbookId only if it's a valid string
+    if (handbookId && typeof handbookId === 'string' && handbookId.trim() !== '') {
+      metadata.handbookId = handbookId.trim();
+    }
+
+    console.log(`[Stripe Subscription] Session metadata:`, metadata);
+
     // Skapa Stripe checkout session för prenumeration
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -68,13 +92,7 @@ export async function POST(req: NextRequest) {
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: {
-        userId,
-        ...(handbookId && handbookId.trim() !== '' ? { handbookId } : {}), // Only include if valid
-        action: 'upgrade_from_trial',
-        type: 'subscription',
-        planType: planType
-      },
+      metadata: metadata,
       // Automatisk insamling av skatteuppgifter
       automatic_tax: {
         enabled: false, // Sätter till false för enkelhets skull
