@@ -24,7 +24,17 @@ export async function GET(
     const response = toTrialStatusResponse(status);
 
     console.log('🎯 [Trial Status API] Response:', response);
-    return NextResponse.json(response);
+    
+    // Skapa response med no-cache headers för real-time data
+    return new NextResponse(JSON.stringify(response), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
 
   } catch (error) {
     console.error('❌ [Trial Status API] Error:', error);
