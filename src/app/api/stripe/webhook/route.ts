@@ -256,12 +256,25 @@ async function createHandbookInSupabase(name: string, subdomain: string, userId:
 async function handleCheckoutCompleted(session: any) {
   console.log("[Stripe Webhook] Handling checkout.session.completed");
   console.log("[Stripe Webhook] Session metadata:", session.metadata);
+  console.log("[Stripe Webhook] Full session object keys:", Object.keys(session));
+  console.log("[Stripe Webhook] Session ID:", session.id);
+  console.log("[Stripe Webhook] Session payment_status:", session.payment_status);
   
-  const { subdomain, handbookName, userId, action, type } = session.metadata || {};
+  const { subdomain, handbookName, userId, action, type, handbookId, planType } = session.metadata || {};
+  
+  console.log("[Stripe Webhook] Extracted metadata values:", {
+    subdomain,
+    handbookName,
+    userId,
+    action,
+    type,
+    handbookId,
+    planType
+  });
   
   // Hantera trial-uppgraderingar
   if (action === 'upgrade_from_trial' && type === 'subscription') {
-    console.log(`[Stripe Webhook] Handling trial upgrade for user ${userId}`);
+    console.log(`[Stripe Webhook] Handling trial upgrade for user ${userId} and handbook ${handbookId}`);
     await handleTrialUpgrade(userId, session);
     return;
   }
@@ -279,6 +292,8 @@ async function handleCheckoutCompleted(session: any) {
       await integrateWithCustomerLifecycle(userId, handbookResult.id, session);
     }
   }
+  
+  console.log("[Stripe Webhook] checkout.session.completed processing finished");
 }
 
 async function handlePaymentSucceeded(invoice: any) {
@@ -491,6 +506,7 @@ async function handleSubscriptionCancelled(subscription: any) {
 
 export async function handleTrialUpgrade(userId: string, stripeSession: any) {
   console.log(`🔄 [Stripe Webhook] Handling trial upgrade for user ${userId}`);
+  console.log(`🔄 [Stripe Webhook] Full stripeSession.metadata:`, JSON.stringify(stripeSession.metadata, null, 2));
   
   const supabase = getServiceSupabase();
   
@@ -503,7 +519,9 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
     
     console.log(`📊 [Stripe Webhook] Trial upgrade details:`, {
       userId,
-      handbookId,
+      handbookId: handbookId || 'MISSING!',
+      handbookIdType: typeof handbookId,
+      handbookIdLength: handbookId ? handbookId.length : 0,
       planType,
       subscriptionId,
       customerId,
@@ -513,30 +531,15 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
     });
 
     // SÄKERHETSÅTGÄRD 1: Om handbookId saknas, logga varning
-    if (!handbookId) {
-      console.log(`⚠️ [Stripe Webhook] Missing handbookId in metadata - this payment is not for a specific handbook`);
+    if (!handbookId || handbookId === '' || handbookId === 'undefined' || handbookId.trim() === '') {
+      console.log(`⚠️ [Stripe Webhook] Missing or invalid handbookId in metadata: "${handbookId}"`);
+      console.log(`⚠️ [Stripe Webhook] This payment is not for a specific handbook`);
       console.log(`⚠️ [Stripe Webhook] Creating general subscription without updating any handbook trial status`);
       
-      // KOMMENTERAT: Den gamla logiken som försökte hitta användarens trial-handbok
-      // Detta stämmer inte med vår nya logik där varje handbok ska ha sin egen prenumeration
-      /*
-      const { data: trialHandbooks, error: searchError } = await supabase
-        .from('handbooks')
-        .select('id, title, created_at, trial_end_date')
-        .eq('owner_id', userId)
-        .not('trial_end_date', 'is', null) // Handböcker som fortfarande är i trial
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (searchError) {
-        console.error(`❌ [Stripe Webhook] Error searching for trial handbook:`, searchError);
-      } else if (trialHandbooks && trialHandbooks.length > 0) {
-        handbookId = trialHandbooks[0].id;
-        console.log(`✅ [Stripe Webhook] Found trial handbook: ${trialHandbooks[0].title} (${handbookId})`);
-      } else {
-        console.log(`⚠️ [Stripe Webhook] No trial handbook found for user ${userId}`);
-      }
-      */
+      // Set handbookId to null to be explicit
+      handbookId = null;
+    } else {
+      console.log(`✅ [Stripe Webhook] Valid handbookId found: ${handbookId}`);
     }
 
     // Nu skapar vi prenumerationen (antingen för specifik handbok eller generell)

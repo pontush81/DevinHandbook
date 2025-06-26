@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { HandbooksTable } from "./HandbooksTable";
 import { UsersTable } from "./UsersTable";
+import { WebhookTester } from "@/components/debug/WebhookTester";
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +16,8 @@ import {
   TrendingUp,
   Plus,
   Edit,
-  Eye
+  Eye,
+  Webhook
 } from "lucide-react";
 import Link from "next/link";
 
@@ -67,7 +69,7 @@ export default function AdminDashboardPage() {
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'handbooks' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'handbooks' | 'users' | 'webhook'>('overview');
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
   const fetchData = async () => {
@@ -218,10 +220,11 @@ export default function AdminDashboardPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Översikt</TabsTrigger>
           <TabsTrigger value="handbooks">Handböcker</TabsTrigger>
           <TabsTrigger value="users">Användare</TabsTrigger>
+          <TabsTrigger value="webhook">Webhook</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -407,6 +410,10 @@ export default function AdminDashboardPage() {
           ) : (
             <UsersTable users={users} onDataChange={fetchData} />
           )}
+        </TabsContent>
+
+        <TabsContent value="webhook">
+          <WebhookTester />
         </TabsContent>
       </Tabs>
     </div>

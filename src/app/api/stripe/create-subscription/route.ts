@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       cancel_url: cancelUrl,
       metadata: {
         userId,
-        handbookId: handbookId || '',
+        ...(handbookId && handbookId.trim() !== '' ? { handbookId } : {}), // Only include if valid
         action: 'upgrade_from_trial',
         type: 'subscription',
         planType: planType
