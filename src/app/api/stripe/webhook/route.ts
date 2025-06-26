@@ -16,24 +16,43 @@ interface WebhookProcessingResult {
 }
 
 // Log webhook processing results for monitoring
-async function logWebhookResult(result: WebhookProcessingResult) {
-  const supabase = getServiceSupabase();
-  
+async function logWebhookResult({ success, eventType, eventId, processingTimeMs, error }: {
+  success: boolean;
+  eventType: string;
+  eventId: string;
+  processingTimeMs: number;
+  error?: string;
+}) {
   try {
-    await supabase
+    const supabase = getServiceSupabase();
+    
+    const logEntry = {
+      event_id: eventId,
+      event_type: eventType,
+      success: success,
+      processing_time_ms: processingTimeMs,
+      processed_at: new Date().toISOString(),
+      error_message: error || undefined,
+      environment: process.env.NODE_ENV || 'unknown'
+    };
+
+    console.log(`📊 [Webhook Log] Recording result:`, logEntry);
+
+    // Try to insert into webhook_logs table if it exists
+    const { error: logError } = await supabase
       .from('webhook_processing_logs')
-      .insert({
-        event_type: result.eventType,
-        event_id: result.eventId,
-        success: result.success,
-        processing_time_ms: result.processingTimeMs,
-        error_message: result.error,
-        retry_count: result.retryCount || 0,
-        processed_at: new Date().toISOString(),
-        test_mode: isTestMode
-      });
+      .insert(logEntry);
+
+    if (logError) {
+      console.warn(`⚠️ [Webhook Log] Could not save to database (table may not exist):`, logError.message);
+      // Don't throw error - this is just logging
+    } else {
+      console.log(`✅ [Webhook Log] Successfully recorded webhook result`);
+    }
+
   } catch (error) {
-    console.error('❌ [Webhook Logging] Failed to log webhook result:', error);
+    console.warn(`⚠️ [Webhook Log] Failed to log webhook result:`, error);
+    // Don't throw error - this is just logging
   }
 }
 

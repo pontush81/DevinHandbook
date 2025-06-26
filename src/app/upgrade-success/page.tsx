@@ -56,7 +56,27 @@ function UpgradeSuccessContent() {
         console.log('[Upgrade Success] Verifying payment for session:', sessionId);
         setVerificationStatus('verifying');
 
-        const response = await fetch('/api/stripe/verify-payment', {
+        // STEG 1: Kontrollera om handboken redan är betald
+        if (handbookId) {
+          console.log('[Upgrade Success] Checking handbook payment status first...');
+          const statusResponse = await fetch(`/api/handbook/${handbookId}/trial-status?userId=${user.id}`);
+          const statusData = await statusResponse.json();
+          
+          console.log('[Upgrade Success] Current handbook status:', statusData);
+          
+          if (!statusData.isInTrial && statusData.subscriptionStatus === 'active') {
+            console.log('[Upgrade Success] ✅ Handbook already paid - webhook worked correctly');
+            setPaymentVerified(true);
+            setVerificationStatus('already_processed');
+            return;
+          }
+        }
+
+        // STEG 2: Om handboken fortfarande är i trial, kör automatisk reparation
+        console.log('[Upgrade Success] Handbook still in trial - running auto-fix...');
+        setVerificationStatus('repairing');
+
+        const response = await fetch('/api/stripe/auto-fix-failed-webhooks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -69,50 +89,36 @@ function UpgradeSuccessContent() {
         const result = await response.json();
         
         if (result.success) {
-          console.log('[Upgrade Success] Payment verification result:', result);
+          console.log('[Upgrade Success] Auto-fix result:', result);
           setPaymentVerified(true);
-          setVerificationStatus(result.status);
+          setVerificationStatus(result.status || 'processed');
           
-          if (result.status === 'processed') {
-            console.log('[Upgrade Success] Payment was processed via fallback - webhook had failed');
+          // STEG 3: Verifiera att reparationen fungerade
+          if (handbookId) {
+            console.log('[Upgrade Success] Verifying repair worked...');
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Vänta 2 sekunder
+            
+            const verifyResponse = await fetch(`/api/handbook/${handbookId}/trial-status?userId=${user.id}`);
+            const verifyData = await verifyResponse.json();
+            
+            console.log('[Upgrade Success] Post-repair status:', verifyData);
+            
+            if (!verifyData.isInTrial && verifyData.subscriptionStatus === 'active') {
+              console.log('[Upgrade Success] ✅ Repair successful - handbook now paid');
+              setVerificationStatus('repaired_successfully');
+            } else {
+              console.log('[Upgrade Success] ⚠️ Repair may not have worked completely');
+              setVerificationStatus('repair_incomplete');
+            }
           }
         } else {
-          console.error('[Upgrade Success] Payment verification failed:', result);
+          console.error('[Upgrade Success] Auto-fix failed:', result);
           setVerificationStatus('failed');
-          
-          // AUTOMATISK REPARATION: Om verifieringen misslyckades, försök reparera webhook
-          console.log('[Upgrade Success] Attempting automatic webhook repair...');
-          setVerificationStatus('repairing');
-          
-          try {
-            const repairResponse = await fetch('/api/stripe/auto-fix-failed-webhooks', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                sessionId,
-                userId: user.id,
-                handbookId: handbookId || undefined
-              })
-            });
-
-            const repairResult = await repairResponse.json();
-            
-            if (repairResult.success) {
-              console.log('[Upgrade Success] Webhook repair successful:', repairResult);
-              setPaymentVerified(true);
-              setVerificationStatus('repaired');
-            } else {
-              console.error('[Upgrade Success] Webhook repair failed:', repairResult);
-              setVerificationStatus('repair_failed');
-            }
-          } catch (repairError) {
-            console.error('[Upgrade Success] Error during webhook repair:', repairError);
-            setVerificationStatus('repair_failed');
-          }
         }
+        
       } catch (error) {
-        console.error('[Upgrade Success] Error verifying payment:', error);
-        setVerificationStatus('error');
+        console.error('[Upgrade Success] Payment verification failed:', error);
+        setVerificationStatus('failed');
       }
     }
 
@@ -176,14 +182,14 @@ function UpgradeSuccessContent() {
             </div>
             <Badge variant="outline" className="mx-auto mb-3 bg-green-100 text-green-800 border-green-300">
               <Sparkles className="w-3 h-3 mr-1" />
-              {verificationStatus === 'verifying' ? 'Verifierar betalning...' :
-               verificationStatus === 'repairing' ? 'Reparerar webhook...' :
-               verificationStatus === 'repaired' ? 'Betalning genomförd (reparerad)' :
-               verificationStatus === 'processed' ? 'Betalning genomförd (återställd)' :
-               verificationStatus === 'already_processed' ? 'Betalning genomförd' :
-               verificationStatus === 'failed' ? 'Betalning misslyckades' :
-               verificationStatus === 'repair_failed' ? 'Reparation misslyckades' :
-               'Betalning genomförd'}
+              {verificationStatus === 'verifying' ? 'Kontrollerar betalningsstatus...' :
+               verificationStatus === 'repairing' ? 'Reparerar webhook-fel...' :
+               verificationStatus === 'already_processed' ? 'Betalning genomförd ✅' :
+               verificationStatus === 'repaired_successfully' ? 'Betalning genomförd (reparerad) ✅' :
+               verificationStatus === 'repair_incomplete' ? 'Betalning genomförd (delvis reparerad) ⚠️' :
+               verificationStatus === 'processed' ? 'Betalning genomförd ✅' :
+               verificationStatus === 'failed' ? 'Betalning misslyckades ❌' :
+               'Betalning genomförd ✅'}
             </Badge>
             <CardTitle className="text-3xl font-bold text-gray-900">
               Tack för din betalning! 🎉
