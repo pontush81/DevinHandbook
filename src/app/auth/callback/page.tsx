@@ -12,21 +12,67 @@ function AuthCallbackContent() {
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
-    // Hämta tokens från URL-hash
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", "?"));
-    const access_token = params.get("access_token");
-    const refresh_token = params.get("refresh_token");
-    const type = params.get("type"); // Type kan vara 'signup', 'recovery', etc.
-    
-    // Check for join code in query parameters
-    let joinCode = searchParams.get("join");
+    const handleAuth = async () => {
+      // Check for OAuth code parameter (Google OAuth)
+      const code = searchParams.get("code");
+      
+      if (code) {
+        console.log('[Auth Callback] Google OAuth code found, exchanging for session');
+        
+        try {
+          // Exchange code for session using Supabase
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('[Auth Callback] Error exchanging code:', error);
+            setStatus("error");
+            setMessage("Google inloggning misslyckades. Prova igen.");
+            return;
+          }
+          
+          if (data.session) {
+            console.log('[Auth Callback] Google OAuth session established successfully');
+            setStatus("success");
+            setMessage("Google inloggning lyckades! Du omdirigeras...");
+            
+            // Check for join code
+            let joinCode = searchParams.get("join");
+            
+            // Small delay to ensure session is established
+            setTimeout(() => {
+              // Use smart redirect for post-login routing
+              if (typeof window !== 'undefined') {
+                const { smartRedirect } = require('@/lib/redirect-utils');
+                smartRedirect();
+              }
+            }, 1000);
+          } else {
+            setStatus("error");
+            setMessage("Ingen session skapades. Prova igen.");
+          }
+        } catch (error) {
+          console.error('[Auth Callback] Exception during code exchange:', error);
+          setStatus("error");
+          setMessage("Ett fel uppstod vid Google inloggning. Prova igen.");
+        }
+        return;
+      }
+      
+      // Handle hash-based tokens (email verification, password reset, etc.)
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.replace("#", "?"));
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+      const type = params.get("type"); // Type kan vara 'signup', 'recovery', etc.
+      
+      // Check for join code in query parameters
+      let joinCode = searchParams.get("join");
 
-    if (!access_token || !refresh_token) {
-      setStatus("error");
-      setMessage("Ingen access token hittades. Prova att logga in igen eller klicka på länken i mailet.");
-      return;
-    }
+      if (!access_token || !refresh_token) {
+        setStatus("error");
+        setMessage("Ingen access token hittades. Prova att logga in igen eller klicka på länken i mailet.");
+        return;
+      }
 
     // Sätt sessionen i Supabase-klienten
     supabase.auth.setSession({ access_token, refresh_token })
@@ -130,6 +176,9 @@ function AuthCallbackContent() {
           }
         }
       });
+    };
+    
+    handleAuth();
   }, [router, searchParams]);
   
   // Funktion för att kontrollera om användaren har handböcker (används inte längre i det direkta flödet)
