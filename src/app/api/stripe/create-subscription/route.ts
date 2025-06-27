@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Dynamiska priser från miljövariabel
-    const basePrice = Number(process.env.HANDBOOK_PRICE) || 249000; // Standard 2490 kr
+    const basePrice = Number(process.env.HANDBOOK_PRICE) || 149000; // Standard 1490 kr
     
     const pricing = {
       monthly: {

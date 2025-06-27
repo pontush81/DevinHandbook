@@ -61,7 +61,7 @@ export const createCheckoutSession = async (
   }
   
   // Miljöbaserat pris
-  const priceAmount = Number(process.env.HANDBOOK_PRICE) || (useTestKeys ? 1000 : 249000); // 10 kr test, 2490 kr prod
+  const priceAmount = Number(process.env.HANDBOOK_PRICE) || (useTestKeys ? 1000 : 149000); // 10 kr test, 1490 kr prod
   
   console.log(`[Stripe] Creating checkout session - Amount: ${priceAmount} öre (${priceAmount/100} kr), Environment: ${currentEnvironment}`);
   

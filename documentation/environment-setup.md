@@ -76,7 +76,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...från_production_webhook...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
 # Prisstruktur för produktion
-HANDBOOK_PRICE=249000  # 2490 kr
+HANDBOOK_PRICE=149000  # 1490 kr
 
 # App URLs
 NEXT_PUBLIC_APP_URL=https://www.handbok.org

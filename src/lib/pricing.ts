@@ -1,6 +1,6 @@
 // Hämta pris från miljövariabel (i öre)
 const getHandbookPrice = () => {
-  const priceInOre = Number(process.env.NEXT_PUBLIC_HANDBOOK_PRICE || process.env.HANDBOOK_PRICE) || 249000;
+  const priceInOre = Number(process.env.NEXT_PUBLIC_HANDBOOK_PRICE || process.env.HANDBOOK_PRICE) || 149000;
   return Math.round(priceInOre / 100); // Konvertera från öre till kronor
 };
 

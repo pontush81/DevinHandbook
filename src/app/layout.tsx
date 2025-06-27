@@ -105,7 +105,7 @@ export default function RootLayout({
               "areaServed": "Sweden",
               "offers": {
                 "@type": "Offer",
-                "price": "2490",
+                "price": "1490",
                 "priceCurrency": "SEK",
                 "priceValidUntil": "2025-12-31",
                 "description": "Årsabonnemang för digital föreningshandbok"

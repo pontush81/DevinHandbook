@@ -43,8 +43,8 @@ export async function GET(req: NextRequest) {
       pricing: {
         HANDBOOK_PRICE: process.env.HANDBOOK_PRICE || 'not set',
         NEXT_PUBLIC_HANDBOOK_PRICE: process.env.NEXT_PUBLIC_HANDBOOK_PRICE || 'not set',
-        calculatedPrice: Number(process.env.HANDBOOK_PRICE) || 249000,
-        priceInSEK: Math.round((Number(process.env.HANDBOOK_PRICE) || 249000) / 100)
+        calculatedPrice: Number(process.env.HANDBOOK_PRICE) || 149000,
+        priceInSEK: Math.round((Number(process.env.HANDBOOK_PRICE) || 149000) / 100)
       },
       
       urls: {
