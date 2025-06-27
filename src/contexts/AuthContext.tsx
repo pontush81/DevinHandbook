@@ -214,7 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Use global flag to prevent multiple initializations during Fast Refresh
     if (globalAuthInitialized) {
-      console.log('🔄 AuthContext: Already initialized globally, skipping...');
+      // console.log('🔄 AuthContext: Already initialized globally, skipping...');
       return;
     }
     
@@ -360,12 +360,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false); // Viktigt: Sätt isLoading till false när användaren är inloggad
-        console.log('🏁 AuthContext: Set isLoading to false after', event);
-        console.log('🏁 AuthContext: Current state after update:', { 
-          hasSession: !!session, 
-          hasUser: !!(session?.user), 
-          isLoading: false 
-        });
+        // console.log('🏁 AuthContext: Set isLoading to false after', event);
+        // console.log('🏁 AuthContext: Current state after update:', { 
+        //   hasSession: !!session, 
+        //   hasUser: !!(session?.user), 
+        //   isLoading: false 
+        // });
         
         // Säkerställ att användarprofilen finns
         if (session?.user?.id && session?.user?.email) {
@@ -664,12 +664,12 @@ export const useAuth = () => {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   
-  // Debug logging för att se vad useAuth returnerar
-  console.log('🎯 useAuth returning:', {
-    hasUser: !!context.user,
-    isLoading: context.isLoading,
-    hasSession: !!context.session
-  });
+  // Debug logging disabled to reduce console spam
+  // console.log('🎯 useAuth returning:', {
+  //   hasUser: !!context.user,
+  //   isLoading: context.isLoading,
+  //   hasSession: !!context.session
+  // });
   
   return context;
 };

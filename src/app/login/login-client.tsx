@@ -327,7 +327,7 @@ export default function LoginClient() {
                     const currentPath = window.location.pathname;
                     const intendedPage = sessionStorage.getItem('intended_page');
                     
-                    console.log("Login-client: Checking redirect logic", { currentPath, intendedPage });
+                    // console.log("Login-client: Checking redirect logic", { currentPath, intendedPage });
                     
                     if (currentPath === '/upgrade' || intendedPage === '/upgrade') {
                       console.log("User is on upgrade page or intended to go to upgrade, skipping smart redirect");

@@ -286,7 +286,7 @@ export async function smartRedirectWithPolling(
 ): Promise<void> {
   let attempts = 0;
   
-  console.log(`[Smart Redirect Polling] Starting with maxAttempts: ${maxAttempts}, intervalMs: ${intervalMs}, userId: ${userId}, isSuperAdmin: ${isSuperAdmin}`);
+  // console.log(`[Smart Redirect Polling] Starting with maxAttempts: ${maxAttempts}, intervalMs: ${intervalMs}, userId: ${userId}, isSuperAdmin: ${isSuperAdmin}`);
   
   // Global check to prevent redirects when on create-handbook page
   if (typeof window !== 'undefined') {
@@ -308,7 +308,7 @@ export async function smartRedirectWithPolling(
     const currentUrl = window.location.href;
     const intendedPage = sessionStorage.getItem('intended_page');
     
-    console.log(`[Smart Redirect Polling] INITIAL CHECK - Current path: "${currentPath}", Current URL: "${currentUrl}", Intended page: "${intendedPage}"`);
+    // console.log(`[Smart Redirect Polling] INITIAL CHECK - Current path: "${currentPath}", Current URL: "${currentUrl}", Intended page: "${intendedPage}"`);
     
     if (currentPath === '/upgrade' || intendedPage === '/upgrade') {
       console.log('[Smart Redirect Polling] EARLY EXIT - User is on upgrade page or intended to go to upgrade, skipping redirect');
@@ -348,7 +348,7 @@ export async function smartRedirectWithPolling(
   
   const attemptRedirect = async (): Promise<void> => {
     attempts++;
-    console.log(`[Smart Redirect Polling] Attempt ${attempts}/${maxAttempts}`);
+    // console.log(`[Smart Redirect Polling] Attempt ${attempts}/${maxAttempts}`);
     
     try {
       // Check if user is currently joining a handbook via code - if so, don't interfere
@@ -362,11 +362,11 @@ export async function smartRedirectWithPolling(
         
         const windowJoiningFlag = (window as any).__joining_handbook;
         
-        console.log('[Smart Redirect Polling] Checking joining flags:', { 
-          joiningFlag, 
-          pendingJoinCode, 
-          windowJoiningFlag 
-        });
+        // console.log('[Smart Redirect Polling] Checking joining flags:', { 
+        //   joiningFlag, 
+        //   pendingJoinCode, 
+        //   windowJoiningFlag 
+        // });
         
         if (joiningFlag === 'true' || pendingJoinCode || windowJoiningFlag) {
           console.log('[Smart Redirect Polling] User is joining handbook via code, skipping redirect');
@@ -399,7 +399,7 @@ export async function smartRedirectWithPolling(
         return;
       }
 
-      console.log(`[Smart Redirect Polling] Attempt ${attempts}: Fetching handbooks for user: ${userId}`);
+      // console.log(`[Smart Redirect Polling] Attempt ${attempts}: Fetching handbooks for user: ${userId}`);
       
       // Fetch user's handbooks (both owned and member of)
       const [ownedHandbooks, memberHandbooks] = await Promise.all([
