@@ -246,19 +246,7 @@ export function EarlyUpgradeScreen({
               Trial slutar {formatDate(trialEndsAt)}
             </p>
 
-            {/* Benefits of upgrading early */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-center mb-2">
-                <Star className="h-5 w-5 text-blue-600 mr-2" />
-                <span className="font-medium text-blue-800">Fördelar med tidig aktivering</span>
-              </div>
-              <ul className="text-sm text-blue-700 text-left space-y-1">
-                <li>• Säker tillgång till alla funktioner</li>
-                <li>• Inga avbrott när trial slutar</li>
-                <li>• Stöd utvecklingen av plattformen</li>
-                <li>• Prioriterad support</li>
-              </ul>
-            </div>
+
 
             {/* Plan selection */}
             <div className="space-y-3 mb-6">

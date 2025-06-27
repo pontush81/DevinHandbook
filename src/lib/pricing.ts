@@ -1,14 +1,21 @@
-// Hämta pris från miljövariabel (i öre)
-const getHandbookPrice = () => {
-  const priceInOre = Number(process.env.NEXT_PUBLIC_HANDBOOK_PRICE || process.env.HANDBOOK_PRICE) || 149000;
-  return Math.round(priceInOre / 100); // Konvertera från öre till kronor
+// Hämta årligt pris från miljövariabel (i öre)
+const getYearlyPriceInOre = () => {
+  return Number(process.env.NEXT_PUBLIC_HANDBOOK_PRICE || process.env.HANDBOOK_PRICE) || 149000;
+};
+
+const getYearlyPrice = () => {
+  return Math.round(getYearlyPriceInOre() / 100); // Konvertera från öre till kronor
+};
+
+const getMonthlyPrice = () => {
+  return Math.round(getYearlyPrice() / 10); // 149 kr/månad (1490/10)
 };
 
 // Dynamiska priser baserat på miljövariabel
 export const PRICING = {
   PRO: {
-    monthly: getHandbookPrice(), // Använd miljövariabel
-    yearly: getHandbookPrice(), // Samma pris för årlig betalning
+    monthly: getMonthlyPrice(), // 149 kr/månad
+    yearly: getYearlyPrice(), // 1490 kr/år
     currency: 'kr'
   }
 } as const;

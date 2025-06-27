@@ -25,16 +25,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Dynamiska priser från miljövariabel
-    const basePrice = Number(process.env.HANDBOOK_PRICE) || 149000; // Standard 1490 kr
+    const yearlyPriceInOre = Number(process.env.HANDBOOK_PRICE) || 149000; // 1490 kr årligt
+    const monthlyPriceInOre = Math.round(yearlyPriceInOre / 10); // 149 kr månadsvis (1490/10)
     
     const pricing = {
       monthly: {
-        amount: basePrice, // Använd miljövariabel
+        amount: monthlyPriceInOre, // 149 kr/månad (14900 öre)
         interval: 'month' as const,
         name: 'Handbok.org - Månadsprenumeration'
       },
       yearly: {
-        amount: basePrice, // Samma pris för årspris
+        amount: yearlyPriceInOre, // 1490 kr/år (149000 öre)
         interval: 'year' as const,
         name: 'Handbok.org - Årsprenumeration'
       }
