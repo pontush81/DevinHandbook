@@ -293,8 +293,8 @@ function getUrgencyLevel(daysRemaining: number, isInTrial: boolean): 'low' | 'me
  */
 export async function getHandbookTrialStatus(userId: string, handbookId: string): Promise<TrialStatus> {
   try {
-    console.log('🔧 [DEBUG] getHandbookTrialStatus called with updated code - timestamp:', new Date().toISOString());
-    console.log('🔧 [DEBUG] Using getServiceSupabase for database queries');
+      // console.log('🔧 [DEBUG] getHandbookTrialStatus called with updated code - timestamp:', new Date().toISOString());
+  // console.log('🔧 [DEBUG] Using getServiceSupabase for database queries');
 
     // 1. Kolla om det finns en prenumeration för just denna handbok (aktiv ELLER uppsagd)
     const { data: handbookSubscriptions, error: handbookSubError } = await getServiceSupabase()

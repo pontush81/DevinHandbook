@@ -342,14 +342,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Lyssna på auth-ändringar
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state change:', event, {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        email: session?.user?.email
-      });
+      // console.log('🔄 Auth state change:', event, {
+      //   hasSession: !!session,
+      //   userId: session?.user?.id || 'no user',
+      //   email: session?.user?.email || 'no email'
+      // });
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        console.log('✅ User signed in, token refreshed, or initial session found');
+        // console.log('✅ User signed in, token refreshed, or initial session found');
         
         // Återställ failure counter vid lyckad auth
         if (typeof window !== 'undefined' && window.authStorageFallback) {
@@ -360,11 +360,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false); // Viktigt: Sätt isLoading till false när användaren är inloggad
-        // console.log('🏁 AuthContext: Set isLoading to false after', event);
-        // console.log('🏁 AuthContext: Current state after update:', { 
-        //   hasSession: !!session, 
-        //   hasUser: !!(session?.user), 
-        //   isLoading: false 
+        // console.log('🏁 AuthContext: Set isLoading to false after INITIAL_SESSION');
+        // console.log('🏁 AuthContext: Current state after update:', {
+        //   hasSession: !!session,
+        //   hasUser: !!user,
+        //   isLoading: false
         // });
         
         // Säkerställ att användarprofilen finns

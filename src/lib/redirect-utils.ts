@@ -344,6 +344,12 @@ export async function smartRedirectWithPolling(
       console.log('[Smart Redirect Polling] User is on upgrade-related page, skipping redirect');
       return;
     }
+    
+    // Check if user is on a settings page - don't redirect
+    if (currentPath.includes('/settings')) {
+      console.log('[Smart Redirect Polling] User is on settings page, skipping redirect');
+      return;
+    }
   }
   
   const attemptRedirect = async (): Promise<void> => {
