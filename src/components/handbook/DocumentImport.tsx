@@ -543,78 +543,62 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-            <Brain className="h-5 w-5" />
-            Smart handboksimport
+        <CardHeader className="pb-6">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <Brain className="h-6 w-6" />
+            Skapa handbok
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Ladda upp dokument → AI skapar sektioner automatiskt
+          <p className="text-muted-foreground mt-2">
+            Ladda upp dokument och låt AI skapa en strukturerad handbok
           </p>
         </CardHeader>
-        <CardContent className="space-y-4 lg:space-y-6">
+        <CardContent className="space-y-8">
           {/* File Upload Area */}
           <div
             className={`
-              border-2 border-dashed rounded-lg p-4 md:p-6 text-center transition-all duration-300 ease-in-out
-              ${dragActive ? 'border-primary bg-primary/10 scale-[1.02] shadow-lg transform' : 'border-gray-300'}
-              ${files.length > 0 ? 'border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 shadow-sm' : ''}
-              hover:border-gray-400 hover:bg-gray-50/50
+              border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ease-in-out
+              ${dragActive ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-gray-200'}
+              ${files.length > 0 ? 'border-green-400 bg-green-50/30' : ''}
+              hover:border-gray-300 hover:bg-gray-50/30
             `}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <div className="flex flex-col items-center space-y-3">
+            <div className="flex flex-col items-center space-y-6">
               {files.length > 0 ? (
                 <>
                   <div className="relative">
-                    <FileText className="h-10 w-10 md:h-12 md:w-12 text-green-600 animate-in zoom-in-50 duration-300" />
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center animate-in zoom-in-75 duration-300 delay-150">
+                    <FileText className="h-12 w-12 text-green-600" />
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
                   </div>
                   <div className="text-center space-y-2">
-                    <p className="font-medium text-sm md:text-base">
+                    <p className="font-medium text-base">
                       {files.length === 1 ? files[0].name : `${files.length} filer valda`}
                     </p>
-                    {files.length === 1 ? (
-                      <p className="text-xs md:text-sm text-muted-foreground">
-                        {(files[0].size / 1024 / 1024).toFixed(2)} MB
+                    {files.length === 1 && (
+                      <p className="text-sm text-muted-foreground">
+                        {(files[0].size / 1024 / 1024).toFixed(1)} MB
                       </p>
-                    ) : (
-                      <div className="space-y-1">
-                        <p className="text-xs md:text-sm text-muted-foreground">
-                          Total storlek: {(files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                        <div className="max-h-20 overflow-y-auto text-xs text-muted-foreground">
-                          {files.map((file, index) => (
-                            <div key={index} className="truncate">
-                              {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     )}
                   </div>
                 </>
               ) : (
                 <>
                   <div className="relative">
-                    <Upload className="h-10 w-10 md:h-12 md:w-12 text-gray-400 transition-all duration-300 hover:text-gray-600 hover:scale-110" />
-                    {dragActive && (
-                      <div className="absolute inset-0 border-2 border-primary border-dashed rounded-full animate-ping"></div>
-                    )}
+                    <Upload className="h-12 w-12 text-gray-400" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-base md:text-lg font-medium">
-                      Dra filer hit eller klicka
+                  <div className="text-center space-y-1">
+                    <p className="text-lg font-medium text-gray-900">
+                      Dra filer hit
                     </p>
-                    <p className="text-xs md:text-sm text-muted-foreground hidden md:block">
-                      Flera filer tillåtna
+                    <p className="text-sm text-muted-foreground">
+                      eller klicka för att välja
                     </p>
                   </div>
                 </>
@@ -629,22 +613,22 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
                 onChange={(e) => e.target.files && handleMultipleFileSelection(Array.from(e.target.files))}
                 id="file-upload"
               />
-              <div className="flex gap-2">
+              
+              <div className="flex gap-3">
                 <Button 
                   type="button"
                   variant="outline" 
-                  className="cursor-pointer text-sm md:text-base"
+                  className="cursor-pointer"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isAnalyzing || isLoading}
                 >
-                  {files.length > 0 ? 'Välj fler filer' : 'Välj filer'}
+                  {files.length > 0 ? 'Lägg till fler' : 'Välj filer'}
                 </Button>
                 {files.length > 0 && (
                   <Button 
                     type="button"
                     variant="ghost" 
-                    size="sm"
-                    className="text-xs text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive"
                     onClick={() => {
                       setFiles([]);
                       setAnalysisResult(null);
@@ -652,15 +636,14 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
                     }}
                     disabled={isAnalyzing || isLoading}
                   >
-                    Rensa alla
+                    Rensa
                   </Button>
                 )}
               </div>
               
-              <div className="text-xs text-muted-foreground text-center px-2">
-                <span className="block md:hidden">PDF, Word, bilder upp till 10MB</span>
-                <span className="hidden md:block">Stöder PDF (inklusive scannade dokument med OCR), Word (.docx), textfiler och bilder (JPG, PNG, GIF, WebP) upp till 10MB per fil</span>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                PDF, Word eller textfiler (max 10MB)
+              </p>
             </div>
           </div>
 
@@ -673,110 +656,23 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
 
           {/* Analysis Progress */}
           {isAnalyzing && (
-            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
-              {/* Animated background particles */}
-              <div className="absolute inset-0 opacity-20">
-                <div className="absolute top-4 left-8 w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '2s' }}></div>
-                <div className="absolute top-8 right-12 w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2.5s' }}></div>
-                <div className="absolute bottom-6 left-16 w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.2s' }}></div>
-                <div className="absolute bottom-4 right-8 w-1 h-1 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '1.5s', animationDuration: '2.8s' }}></div>
-                <div className="absolute top-12 left-1/3 w-1 h-1 bg-indigo-300 rounded-full animate-bounce" style={{ animationDelay: '0.8s', animationDuration: '2.3s' }}></div>
-              </div>
-              
-              <CardContent className="pt-6 pb-6 relative z-10">
-                <div className="space-y-5">
-                  {/* Main status with enhanced animation */}
+            <Card className="border-blue-200 bg-blue-50/30">
+              <CardContent className="pt-6 pb-6">
+                <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                      <div className="absolute inset-0 h-6 w-6 border-2 border-blue-200 rounded-full animate-ping"></div>
-                    </div>
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
                     <div className="flex-1">
-                      <span className="text-sm font-medium text-blue-900 block">{analysisStep}</span>
-                      <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                        <Brain className="h-3 w-3" />
-                        Bearbetar innehåll...
-                      </div>
+                      <span className="text-sm font-medium text-gray-900 block">{analysisStep}</span>
                     </div>
                   </div>
                   
-                  {/* Enhanced progress bar with gradient and glow */}
                   <div className="space-y-2">
-                    <div className="relative">
-                      <Progress 
-                        value={analysisProgress} 
-                        className="w-full h-3 bg-gradient-to-r from-blue-100 to-indigo-100" 
-                      />
-                      <div 
-                        className="absolute top-0 left-0 h-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out shadow-lg"
-                        style={{ 
-                          width: `${analysisProgress}%`,
-                          boxShadow: '0 0 10px rgba(79, 70, 229, 0.4)'
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-blue-600 font-medium">{Math.round(analysisProgress)}%</span>
-                      <span className="text-blue-500">
-                        {analysisProgress < 15 ? '📄 Laddar upp...' : 
-                         analysisProgress < 25 ? '📝 Läser dokument...' : 
-                         analysisProgress < 85 ? '🧠 AI analyserar djupt...' : 
-                         '✨ Skapar sektioner...'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Multi-file indicator */}
-                  {files.length > 1 && (
-                    <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
-                      <div className="flex items-center gap-2 text-xs text-blue-700">
-                        <FileText className="h-4 w-4" />
-                        <span className="font-medium">
-                          Bearbetar fil {currentFileIndex + 1} av {files.length}
-                        </span>
-                      </div>
-                      {/* File progress indicator */}
-                      <div className="mt-2 flex gap-1">
-                        {Array.from({ length: files.length }).map((_, index) => (
-                          <div
-                            key={index}
-                            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                              index < currentFileIndex ? 'bg-green-400' :
-                              index === currentFileIndex ? 'bg-blue-500 animate-pulse' :
-                              'bg-gray-200'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Processing steps visualization */}
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className={`p-2 rounded-lg transition-all duration-500 ${analysisProgress > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
-                      <Upload className={`h-4 w-4 mx-auto mb-1 ${analysisProgress > 0 && analysisProgress < 15 ? 'animate-bounce' : ''}`} />
-                      <div className="text-xs font-medium">Upload</div>
-                    </div>
-                    <div className={`p-2 rounded-lg transition-all duration-500 ${analysisProgress > 15 ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}>
-                      <Brain className={`h-4 w-4 mx-auto mb-1 ${analysisProgress > 15 && analysisProgress < 85 ? 'animate-pulse' : ''}`} />
-                      <div className="text-xs font-medium">AI-analys</div>
-                    </div>
-                    <div className={`p-2 rounded-lg transition-all duration-500 ${analysisProgress > 85 ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>
-                      <CheckCircle className={`h-4 w-4 mx-auto mb-1 ${analysisProgress > 85 ? 'animate-bounce' : ''}`} />
-                      <div className="text-xs font-medium">Klar</div>
-                    </div>
-                  </div>
-                  
-                  {/* Fun loading messages */}
-                  <div className="text-center">
-                    <div className="text-xs text-blue-600 font-medium animate-pulse">
-                      {analysisProgress < 20 ? '🔍 Läser igenom ditt dokument...' :
-                       analysisProgress < 40 ? '📝 Extraherar text och struktur...' :
-                       analysisProgress < 60 ? '🤖 AI:n analyserar innehållet...' :
-                       analysisProgress < 80 ? '🎯 Identifierar sektioner...' :
-                       '🎉 Snart klar!'}
+                    <Progress value={analysisProgress} className="w-full h-2" />
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                      <span>{Math.round(analysisProgress)}%</span>
+                      {files.length > 1 && (
+                        <span>Fil {currentFileIndex + 1} av {files.length}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -784,26 +680,21 @@ Detta dokument verkar vara en scannad PDF som innehåller bilder istället för 
             </Card>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 justify-end">
-            {files.length > 0 && !analysisResult && !isAnalyzing && (
+          {/* Action Button */}
+          {files.length > 0 && !analysisResult && !isAnalyzing && (
+            <div className="pt-2">
               <Button 
                 type="button"
                 onClick={analyzeDocument} 
                 disabled={isAnalyzing || isLoading}
-                className="flex items-center justify-center gap-2 w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg ring-2 ring-blue-300 ring-opacity-50 transition-all duration-200 transform hover:scale-105"
+                className="w-full"
                 size="lg"
               >
-                <Brain className="h-5 w-5" />
-                ✨ Skapa handbok med AI
-                {files.length > 1 && (
-                  <span className="ml-1 text-xs bg-white/20 px-2 py-1 rounded">
-                    {files.length} filer
-                  </span>
-                )}
+                <Brain className="h-4 w-4 mr-2" />
+                Skapa handbok
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

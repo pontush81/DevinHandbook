@@ -265,7 +265,7 @@ function CreateHandbookContent() {
             Skapa digital handbok
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-xl px-4 text-center">
-            AI-driven handbok på 2 minuter
+            Skapa en professionell digital handbok för din förening
           </p>
           {handbooks.length > 0 && (
             <Button variant="outline" className="mb-3 md:mb-4 text-sm md:text-base" onClick={() => router.push('/dashboard')}>

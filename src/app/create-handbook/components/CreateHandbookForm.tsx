@@ -393,7 +393,7 @@ export function CreateHandbookForm({ forceNew = false }: CreateHandbookFormProps
             >
               <div className="flex items-center gap-2">
                 <Brain className="h-4 w-4" />
-                Manuell skapelse
+                Skapa manuellt
               </div>
             </button>
             <button
@@ -406,7 +406,7 @@ export function CreateHandbookForm({ forceNew = false }: CreateHandbookFormProps
             >
               <div className="flex items-center gap-2">
                 <Upload className="h-4 w-4" />
-                AI från dokument {importedSections.length > 0 && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">{importedSections.length}</span>}
+                Skapa från dokument {importedSections.length > 0 && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">{importedSections.length}</span>}
               </div>
             </button>
           </nav>
@@ -513,8 +513,8 @@ export function CreateHandbookForm({ forceNew = false }: CreateHandbookFormProps
                     ) : (
                       <>
                         <Gift className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-                        <span className="hidden sm:inline">Starta 30 dagars gratis trial</span>
-                        <span className="sm:hidden">Starta trial</span>
+                        <span className="hidden sm:inline">Starta 30 dagars gratis provperiod</span>
+                        <span className="sm:hidden">Starta provperiod</span>
                       </>
                     )}
                   </Button>
@@ -659,7 +659,7 @@ export function CreateHandbookForm({ forceNew = false }: CreateHandbookFormProps
                       ) : (
                         <>
                           <Brain className="mr-2 h-5 w-5" />
-                          Skapa handbok med AI-innehåll
+                          Skapa handbok
                         </>
                       )}
                     </Button>
