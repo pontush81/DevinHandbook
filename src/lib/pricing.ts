@@ -8,7 +8,7 @@ const getHandbookPrice = () => {
 export const PRICING = {
   PRO: {
     monthly: getHandbookPrice(), // Använd miljövariabel
-    yearly: getHandbookPrice() * 10, // Om du vill ha årspris
+    yearly: getHandbookPrice(), // Samma pris för årlig betalning
     currency: 'kr'
   }
 } as const;

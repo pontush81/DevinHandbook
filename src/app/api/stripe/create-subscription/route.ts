@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         name: 'Handbok.org - Månadsprenumeration'
       },
       yearly: {
-        amount: basePrice * 10, // 10x månadspris för årspris
+        amount: basePrice, // Samma pris för årspris
         interval: 'year' as const,
         name: 'Handbok.org - Årsprenumeration'
       }
