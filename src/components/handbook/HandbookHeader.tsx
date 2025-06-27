@@ -42,19 +42,31 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
   const { user, signOut } = useAuth();
   const router = useRouter();
 
+  // State to track if component is mounted
+  const [isMounted, setIsMounted] = useState(false);
+
   // Cleanup any duplicate user menus on mount
   useEffect(() => {
+    setIsMounted(true);
+    
     const timer = setTimeout(() => {
       // Remove any duplicate user elements that might exist
       const duplicateElements = document.querySelectorAll('header [class*="rounded-full"]:not([data-component="handbook-avatar"])');
       duplicateElements.forEach((el, index) => {
         if (index > 0) { // Keep first, remove others
-          el.remove();
+          try {
+            el.remove();
+          } catch (error) {
+            // Silently handle removal errors
+          }
         }
       });
     }, 100);
     
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      setIsMounted(false);
+    };
   }, []);
 
   const handleSignOut = async () => {
@@ -169,28 +181,31 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
           )}
 
           {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                className="relative h-8 w-8 sm:h-8 sm:w-auto sm:px-2 rounded-full sm:rounded-md"
-                data-debug="handbook-user-trigger"
-              >
-                <Avatar className="h-6 w-6 sm:h-7 sm:w-7">
-                  <AvatarImage 
-                    src={user?.user_metadata?.avatar_url} 
-                    alt={user?.user_metadata?.full_name || user?.email || "Användare"} 
-                  />
-                  <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm font-medium">
-                    {getUserInitials(user)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline ml-2 text-xs font-medium text-gray-700 truncate max-w-[100px]">
-                  {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Användare'}
-                </span>
-                <ChevronDown className="hidden sm:inline h-3 w-3 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
+          {user && isMounted && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="relative h-8 w-8 sm:h-8 sm:w-auto sm:px-2 rounded-full sm:rounded-md"
+                  data-debug="handbook-user-trigger"
+                >
+                  <Avatar className="h-6 w-6 sm:h-7 sm:w-7" data-component="handbook-avatar">
+                    {user?.user_metadata?.avatar_url ? (
+                      <AvatarImage 
+                        src={user.user_metadata.avatar_url} 
+                        alt={user?.user_metadata?.full_name || user?.email || "Användare"} 
+                      />
+                    ) : null}
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm font-medium">
+                      {getUserInitials(user)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline ml-2 text-xs font-medium text-gray-700 truncate max-w-[100px]">
+                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Användare'}
+                  </span>
+                  <ChevronDown className="hidden sm:inline h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48 sm:w-56 bg-white border border-gray-200 shadow-lg rounded-md mr-2 sm:mr-0" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1 p-1">
@@ -227,7 +242,8 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
                 <span className="text-sm">Logga ut</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          )}
           
           {!user && (
             <Button variant="ghost" size="sm" asChild>
