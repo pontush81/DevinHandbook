@@ -147,7 +147,7 @@ export function BlockedAccountScreen({
                     <div className="text-sm text-gray-600">Betala årsvis (2 månader gratis)</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-gray-900">1490 kr</div>
+                    <div className="text-xl font-bold text-gray-900">{PRICING.PRO.yearly} kr</div>
                     <div className="text-sm text-gray-500">/år</div>
                   </div>
                 </div>

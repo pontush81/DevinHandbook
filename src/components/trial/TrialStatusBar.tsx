@@ -343,7 +343,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
               size="sm"
             >
               <CreditCard className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Uppgradera (2490 kr/år)</span>
+                              <span className="hidden sm:inline">Uppgradera (1490 kr/år)</span>
               <span className="sm:hidden">Uppgradera</span>
             </Button>
             <Button

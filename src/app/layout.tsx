@@ -19,8 +19,8 @@ export default function RootLayout({
   return (
     <html lang="sv" suppressHydrationWarning className={inter.className}>
       <head>
-        <title>Handbok.org - Digital handbok för bostadsrättsföreningar | 2490 kr/år</title>
-        <meta name="description" content="Skapa en digital handbok för din bostadsrättsförening. Samla stadgar, regler, kontakter och information på ett ställe. Tillgängligt dygnet runt för alla medlemmar. Endast 2490 kr per år." />
+        <title>Handbok.org - Digital handbok för bostadsrättsföreningar | 1490 kr/år</title>
+        <meta name="description" content="Skapa en digital handbok för din bostadsrättsförening. Samla stadgar, regler, kontakter och information på ett ställe. Tillgängligt dygnet runt för alla medlemmar. Endast 1490 kr per år." />
         <meta name="keywords" content="bostadsrättsförening, digital handbok, stadgar, regler, föreningshandbok, brf handbok, bostadsrätt, förening, medlemsinformation" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
@@ -29,7 +29,7 @@ export default function RootLayout({
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://handbok.org/" />
         <meta property="og:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
-        <meta property="og:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 2490 kr per år." />
+        <meta property="og:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 1490 kr per år." />
         <meta property="og:image" content="https://handbok.org/og-image.jpg" />
         <meta property="og:locale" content="sv_SE" />
         <meta property="og:site_name" content="Handbok.org" />
@@ -38,7 +38,7 @@ export default function RootLayout({
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:url" content="https://handbok.org/" />
         <meta property="twitter:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
-        <meta property="twitter:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 2490 kr per år." />
+        <meta property="twitter:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 1490 kr per år." />
         <meta property="twitter:image" content="https://handbok.org/og-image.jpg" />
         
         {/* Additional SEO */}
