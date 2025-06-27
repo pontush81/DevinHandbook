@@ -114,7 +114,7 @@ export default function RootLayout({
           `}
         </script>
         
-        <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+        <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.google.com https://ssl.gstatic.com https://www.gstatic.com; frame-src 'self' https://accounts.google.com https://www.google.com; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://kjsquvjzctdwgjypcjrg.supabase.co wss://kjsquvjzctdwgjypcjrg.supabase.co data:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://accounts.google.com https://www.google.com;" />
         <meta httpEquiv="Cross-Origin-Embedder-Policy" content="unsafe-none" />
         <meta httpEquiv="Cross-Origin-Opener-Policy" content="unsafe-none" />
         <meta httpEquiv="Cross-Origin-Resource-Policy" content="cross-origin" />
