@@ -11,10 +11,59 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { User, LogOut, Edit, Settings, ChevronDown, Bell, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+
+// Safe Avatar component to avoid DOM errors
+interface SafeAvatarProps {
+  user: any;
+  getUserInitials: (user: any) => string;
+  className?: string;
+}
+
+const SafeAvatar: React.FC<SafeAvatarProps> = ({ user, getUserInitials, className }) => {
+  const [imageError, setImageError] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className={`${className} rounded-full bg-blue-100 flex items-center justify-center`}>
+        <span className="text-blue-600 text-xs sm:text-sm font-medium">
+          {getUserInitials(user)}
+        </span>
+      </div>
+    );
+  }
+
+  const hasValidAvatar = user?.user_metadata?.avatar_url && !imageError;
+
+  return (
+    <div 
+      className={`${className} relative rounded-full overflow-hidden bg-blue-100 flex items-center justify-center`}
+      data-component="handbook-avatar"
+    >
+      {hasValidAvatar ? (
+        <img 
+          src={user.user_metadata.avatar_url} 
+          alt={user?.user_metadata?.full_name || user?.email || "Användare"}
+          className="h-full w-full object-cover"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <span className="text-blue-600 text-xs sm:text-sm font-medium">
+          {getUserInitials(user)}
+        </span>
+      )}
+    </div>
+  );
+};
 
 interface HandbookHeaderProps {
   handbookTitle: string;
@@ -189,17 +238,11 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
                   className="relative h-8 w-8 sm:h-8 sm:w-auto sm:px-2 rounded-full sm:rounded-md"
                   data-debug="handbook-user-trigger"
                 >
-                  <Avatar className="h-6 w-6 sm:h-7 sm:w-7" data-component="handbook-avatar">
-                    {user?.user_metadata?.avatar_url ? (
-                      <AvatarImage 
-                        src={user.user_metadata.avatar_url} 
-                        alt={user?.user_metadata?.full_name || user?.email || "Användare"} 
-                      />
-                    ) : null}
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs sm:text-sm font-medium">
-                      {getUserInitials(user)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <SafeAvatar 
+                    user={user} 
+                    getUserInitials={getUserInitials}
+                    className="h-6 w-6 sm:h-7 sm:w-7"
+                  />
                   <span className="hidden sm:inline ml-2 text-xs font-medium text-gray-700 truncate max-w-[100px]">
                     {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Användare'}
                   </span>
