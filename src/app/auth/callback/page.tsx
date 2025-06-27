@@ -17,44 +17,24 @@ function AuthCallbackContent() {
       const code = searchParams.get("code");
       
       if (code) {
-        console.log('[Auth Callback] Google OAuth code found, exchanging for session');
+        console.log('[Auth Callback] Google OAuth code found, session should already be established');
         
-        try {
-          // Exchange code for session using Supabase
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          
-          if (error) {
-            console.error('[Auth Callback] Error exchanging code:', error);
-            setStatus("error");
-            setMessage("Google inloggning misslyckades. Prova igen.");
-            return;
+        // For Google OAuth, Supabase handles the code exchange automatically
+        // The session should already be set when we reach this callback
+        setStatus("success");
+        setMessage("Google inloggning lyckades! Du omdirigeras...");
+        
+        // Check for join code
+        let joinCode = searchParams.get("join");
+        
+        // Small delay to ensure session is established
+        setTimeout(() => {
+          // Use smart redirect for post-login routing
+          if (typeof window !== 'undefined') {
+            const { smartRedirect } = require('@/lib/redirect-utils');
+            smartRedirect();
           }
-          
-          if (data.session) {
-            console.log('[Auth Callback] Google OAuth session established successfully');
-            setStatus("success");
-            setMessage("Google inloggning lyckades! Du omdirigeras...");
-            
-            // Check for join code
-            let joinCode = searchParams.get("join");
-            
-            // Small delay to ensure session is established
-            setTimeout(() => {
-              // Use smart redirect for post-login routing
-              if (typeof window !== 'undefined') {
-                const { smartRedirect } = require('@/lib/redirect-utils');
-                smartRedirect();
-              }
-            }, 1000);
-          } else {
-            setStatus("error");
-            setMessage("Ingen session skapades. Prova igen.");
-          }
-        } catch (error) {
-          console.error('[Auth Callback] Exception during code exchange:', error);
-          setStatus("error");
-          setMessage("Ett fel uppstod vid Google inloggning. Prova igen.");
-        }
+        }, 1000);
         return;
       }
       
