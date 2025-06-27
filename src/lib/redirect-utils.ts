@@ -19,7 +19,7 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
     if (!subdomain || typeof subdomain !== 'string' || subdomain.trim() === '') {
       console.error(`[Redirect to New Handbook] ❌ Invalid subdomain parameter: ${subdomain}`);
       console.log(`[Redirect to New Handbook] Falling back to dashboard`);
-      window.location.href = '/dashboard';
+      navigateWithCleanUrl('/dashboard');
       return;
     }
     
@@ -35,8 +35,8 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
       console.log(`[Redirect to New Handbook] 🏠 Development redirect to: ${handbookUrl}`);
       
       if (typeof window !== 'undefined') {
-        console.log(`[Redirect to New Handbook] ✅ Executing window.location.href redirect...`);
-        window.location.href = handbookUrl;
+        console.log(`[Redirect to New Handbook] ✅ Executing navigateWithCleanUrl redirect...`);
+        navigateWithCleanUrl(handbookUrl);
       } else {
         console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
       }
@@ -47,7 +47,7 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
       console.log(`[Redirect to New Handbook] ⚡ Redirecting to new URL structure: ${handbookUrl}`);
       
       if (typeof window !== 'undefined') {
-        window.location.href = handbookUrl;
+        navigateWithCleanUrl(handbookUrl);
       } else {
         console.error(`[Redirect to New Handbook] ❌ Window object not available for redirect`);
       }
@@ -56,7 +56,7 @@ export async function redirectToNewlyCreatedHandbook(subdomain: string): Promise
     console.error('[Redirect to New Handbook] Error during redirect:', error);
     // Fallback to dashboard
     console.log('[Redirect to New Handbook] Falling back to dashboard');
-    window.location.href = '/dashboard';
+    navigateWithCleanUrl('/dashboard');
   }
 }
 
@@ -83,13 +83,13 @@ async function transferSessionToSubdomain(subdomain: string): Promise<void> {
     const handbookUrl = `https://www.handbok.org/${subdomain}`;
     console.log(`[Transfer Session] 🚀 Redirecting to new URL structure: ${handbookUrl}`);
     
-    window.location.href = handbookUrl;
+    navigateWithCleanUrl(handbookUrl);
     
   } catch (error) {
     console.error('[Transfer Session] ❌ Error during redirect:', error);
     // Fallback to direct redirect
     console.log('[Transfer Session] 🔄 Falling back to dashboard');
-    window.location.href = '/dashboard';
+    navigateWithCleanUrl('/dashboard');
   }
 }
 
@@ -176,7 +176,7 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
     // Super admins always go to dashboard for overview
     if (isSuperAdmin) {
       console.log('[Smart Redirect] Super admin detected, redirecting to dashboard');
-      window.location.href = '/dashboard';
+      navigateWithCleanUrl('/dashboard');
       return;
     }
 
@@ -187,8 +187,8 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
     }
 
     if (!userId) {
-      console.log('[Smart Redirect] No user found, redirecting to create-handbook for onboarding');
-      window.location.href = '/create-handbook?new=true';
+              console.log('[Smart Redirect] No user found, redirecting to create-handbook for onboarding');
+        navigateWithCleanUrl('/create-handbook?new=true');
       return;
     }
 
@@ -220,7 +220,7 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
         memberError: memberHandbooks.error 
       });
       console.log('[Smart Redirect] Falling back to dashboard due to error');
-      window.location.href = '/dashboard';
+      navigateWithCleanUrl('/dashboard');
       return;
     }
 
@@ -240,7 +240,7 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
 
     if (!uniqueHandbooks || uniqueHandbooks.length === 0) {
       console.log('[Smart Redirect] No handbooks found, redirecting to create handbook');
-      window.location.href = '/create-handbook';
+      navigateWithCleanUrl('/create-handbook');
       return;
     }
 
@@ -250,7 +250,7 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
       if (!handbook || !handbook.slug || typeof handbook.slug !== 'string') {
         console.error('[Smart Redirect] Invalid handbook or slug:', handbook);
         console.log('[Smart Redirect] Falling back to dashboard due to invalid slug');
-        window.location.href = '/dashboard';
+        navigateWithCleanUrl('/dashboard');
         return;
       }
 
@@ -260,17 +260,17 @@ export async function smartRedirect(userId?: string, isSuperAdmin: boolean = fal
         ? `http://localhost:3000/${handbook.slug}`  // Map slug to subdomain for URL
         : `https://www.handbok.org/${handbook.slug}`;
       
-      window.location.href = handbookUrl;
+      navigateWithCleanUrl(handbookUrl);
       return;
     }
 
     // Multiple handbooks - go to dashboard
     console.log(`[Smart Redirect] Multiple handbooks found (${uniqueHandbooks.length}), redirecting to dashboard`);
-    window.location.href = '/dashboard';
+    navigateWithCleanUrl('/dashboard');
   } catch (error) {
     console.error('[Smart Redirect] Unexpected error:', error);
     // Fallback to create-handbook for better onboarding experience
-    window.location.href = '/create-handbook?new=true';
+    navigateWithCleanUrl('/create-handbook?new=true');
   }
 }
 
@@ -312,12 +312,12 @@ export async function smartRedirectWithPolling(
     
     if (currentPath === '/upgrade' || intendedPage === '/upgrade') {
       console.log('[Smart Redirect Polling] EARLY EXIT - User is on upgrade page or intended to go to upgrade, skipping redirect');
-      // If user intended to go to upgrade but is not there, redirect them back
-      if (intendedPage === '/upgrade' && currentPath !== '/upgrade') {
-        console.log('[Smart Redirect Polling] REDIRECTING BACK - Redirecting back to intended upgrade page');
-        sessionStorage.removeItem('intended_page');
-        window.location.href = '/upgrade';
-      }
+              // If user intended to go to upgrade but is not there, redirect them back
+        if (intendedPage === '/upgrade' && currentPath !== '/upgrade') {
+          console.log('[Smart Redirect Polling] REDIRECTING BACK - Redirecting back to intended upgrade page');
+          sessionStorage.removeItem('intended_page');
+          navigateWithCleanUrl('/upgrade');
+        }
       return;
     }
     
@@ -377,7 +377,7 @@ export async function smartRedirectWithPolling(
       // Super admins always go to dashboard for overview
       if (isSuperAdmin) {
         console.log('[Smart Redirect Polling] Super admin detected, redirecting to dashboard');
-        window.location.href = '/dashboard';
+        navigateWithCleanUrl('/dashboard');
         return;
       }
 
@@ -391,7 +391,7 @@ export async function smartRedirectWithPolling(
         console.log(`[Smart Redirect Polling] Attempt ${attempts}: No user found`);
         if (attempts >= maxAttempts) {
           console.log('[Smart Redirect Polling] Max attempts reached with no user, redirecting to create-handbook for onboarding');
-          window.location.href = '/create-handbook?new=true';
+          navigateWithCleanUrl('/create-handbook?new=true');
         } else {
           console.log(`[Smart Redirect Polling] Retrying in ${intervalMs}ms...`);
           setTimeout(attemptRedirect, intervalMs);
@@ -428,7 +428,7 @@ export async function smartRedirectWithPolling(
         });
         if (attempts >= maxAttempts) {
           console.log('[Smart Redirect Polling] Max attempts reached, falling back to create-handbook for onboarding');
-          window.location.href = '/create-handbook?new=true';
+          navigateWithCleanUrl('/create-handbook?new=true');
         } else {
           console.log(`[Smart Redirect Polling] Retrying in ${intervalMs}ms...`);
           setTimeout(attemptRedirect, intervalMs);
@@ -454,7 +454,7 @@ export async function smartRedirectWithPolling(
       if (handbookCount === 0) {
         if (attempts >= maxAttempts) {
           console.log('[Smart Redirect Polling] Max attempts reached with no handbooks, redirecting to create-handbook for onboarding');
-          window.location.href = '/create-handbook?new=true';
+          navigateWithCleanUrl('/create-handbook?new=true');
         } else {
           console.log('[Smart Redirect Polling] No handbooks yet, retrying...');
           setTimeout(attemptRedirect, intervalMs);
@@ -469,7 +469,7 @@ export async function smartRedirectWithPolling(
         if (!handbook || !handbook.slug || typeof handbook.slug !== 'string') {
           console.error('[Smart Redirect Polling] Invalid handbook or slug:', handbook);
           console.log('[Smart Redirect Polling] Falling back to dashboard due to invalid slug');
-          window.location.href = '/dashboard';
+          navigateWithCleanUrl('/dashboard');
           return;
         }
         
@@ -480,19 +480,19 @@ export async function smartRedirectWithPolling(
           : `https://www.handbok.org/${handbook.slug}`;
         
         console.log(`[Smart Redirect Polling] Redirecting to: ${handbookUrl}`);
-        window.location.href = handbookUrl;
+        navigateWithCleanUrl(handbookUrl);
         return;
         
       } else {
         console.log(`[Smart Redirect Polling] Multiple handbooks found (${handbookCount}), redirecting to dashboard`);
-        window.location.href = '/dashboard';
+        navigateWithCleanUrl('/dashboard');
       }
       
     } catch (error) {
       console.error(`[Smart Redirect Polling] Attempt ${attempts}: Unexpected error:`, error);
       if (attempts >= maxAttempts) {
         console.log('[Smart Redirect Polling] Max attempts reached due to error, falling back to create-handbook for onboarding');
-        window.location.href = '/create-handbook?new=true';
+        navigateWithCleanUrl('/create-handbook?new=true');
       } else {
         console.log(`[Smart Redirect Polling] Retrying after error in ${intervalMs}ms...`);
         setTimeout(attemptRedirect, intervalMs);
@@ -503,4 +503,50 @@ export async function smartRedirectWithPolling(
   // Start the polling
   console.log('[Smart Redirect Polling] Starting polling...');
   attemptRedirect();
+}
+
+/**
+ * Clean OAuth parameters from URL to avoid carrying them over to other pages
+ */
+function cleanOAuthParametersFromUrl(): string {
+  if (typeof window === 'undefined') return '';
+  
+  const url = new URL(window.location.href);
+  
+  // Remove common OAuth parameters
+  const oauthParams = [
+    'code', 'state', 'scope', 'authuser', 'hd', 'prompt',
+    'access_token', 'expires_in', 'provider_token', 'provider_refresh_token',
+    'token_type', 'refresh_token'
+  ];
+  
+  oauthParams.forEach(param => {
+    url.searchParams.delete(param);
+  });
+  
+  // Also clean hash parameters (for OAuth flows that use hash)
+  url.hash = '';
+  
+  return url.toString();
+}
+
+/**
+ * Navigate to a URL with clean OAuth parameters
+ */
+function navigateWithCleanUrl(targetUrl: string): void {
+  if (typeof window === 'undefined') return;
+  
+  // If target URL contains OAuth params, clean them
+  const url = new URL(targetUrl, window.location.origin);
+  const oauthParams = [
+    'code', 'state', 'scope', 'authuser', 'hd', 'prompt',
+    'access_token', 'expires_in', 'provider_token', 'provider_refresh_token',
+    'token_type', 'refresh_token'
+  ];
+  
+  oauthParams.forEach(param => {
+    url.searchParams.delete(param);
+  });
+  
+  window.location.href = url.toString();
 } 
