@@ -18,10 +18,10 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
       redirect('/login');
     }
 
-    // Get handbook data
+    // Get handbook data including owner_id
     const { data: handbookData, error: handbookError } = await supabase
       .from('handbooks')
-      .select('id, title, slug, forum_enabled')
+      .select('id, title, slug, forum_enabled, owner_id')
       .eq('slug', slug)
       .single();
 
@@ -30,19 +30,23 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
       redirect('/dashboard');
     }
 
-    // Check user role
+    // Check if user is owner or has a role in handbook_members
+    const isOwner = handbookData.owner_id === session.user.id;
     const userRole = await getUserRole(session.user.id, handbookData.id);
     
-    // Everyone with access can view settings (admin functions will be hidden for non-admins)
-    if (!userRole) {
+    // User needs to be owner or have a role to access settings
+    if (!isOwner && !userRole) {
       redirect(`/${slug}`);
     }
+
+    // Determine effective role: owner gets admin, otherwise use membership role
+    const effectiveRole = isOwner ? 'admin' : userRole;
 
     return (
       <SettingsPageClient 
         handbookData={handbookData}
         handbookSlug={slug}
-        userRole={userRole}
+        userRole={effectiveRole}
         userId={session.user.id}
       />
     );
