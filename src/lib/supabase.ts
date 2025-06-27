@@ -17,11 +17,11 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Logga miljövariabler för felsökning (bara vid felsökning, ta bort i produktion)
 if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'true') {
-  console.log('Supabase URL:', supabaseUrl ? '✓ Set' : '✗ Missing', supabaseUrl ? `(${supabaseUrl.substring(0, 12)}...)` : '');
-  console.log('Supabase Anon Key:', supabaseAnonKey ? '✓ Set' : '✗ Missing', supabaseAnonKey ? '(längd: ' + supabaseAnonKey.length + ')' : '');
+  // console.log('Supabase URL:', supabaseUrl ? '✓ Set' : '✗ Missing', supabaseUrl ? `(${supabaseUrl.substring(0, 12)}...)` : '');
+      // console.log('Supabase Anon Key:', supabaseAnonKey ? '✓ Set' : '✗ Missing', supabaseAnonKey ? '(längd: ' + supabaseAnonKey.length + ')' : '');
   // Only log Service Role Key on the server side
   if (typeof window === 'undefined') {
-    console.log('Supabase Service Role Key:', supabaseServiceRoleKey ? '✓ Set' : '✗ Missing', supabaseServiceRoleKey ? '(längd: ' + supabaseServiceRoleKey.length + ')' : '');
+          // console.log('Supabase Service Role Key:', supabaseServiceRoleKey ? '✓ Set' : '✗ Missing', supabaseServiceRoleKey ? '(längd: ' + supabaseServiceRoleKey.length + ')' : '');
   }
   console.log('Node Environment:', process.env.NODE_ENV);
   console.log('Is Edge Runtime:', typeof EdgeRuntime !== 'undefined');
@@ -29,8 +29,8 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'tru
   
   // Lägg till produktionsspecifik diagnostik
   if (typeof window !== 'undefined') {
-    console.log('Current hostname:', window.location.hostname);
-    console.log('NEXT_PUBLIC_HANDBOOK_DOMAIN:', process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN || 'not set');
+    // console.log('Current hostname:', window.location.hostname);
+    // console.log('NEXT_PUBLIC_HANDBOOK_DOMAIN:', process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN || 'not set');
     
     // Fix cookie domain for development
     let cookieDomain: string | undefined;
@@ -43,7 +43,7 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SUPABASE === 'tru
       cookieDomain = window.location.hostname === 'localhost' ? undefined : window.location.hostname;
     }
     
-    console.log('Cookie domain will be:', cookieDomain || 'localhost (no domain restriction)');
+    // console.log('Cookie domain will be:', cookieDomain || 'localhost (no domain restriction)');
   }
 }
 
@@ -106,7 +106,7 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       // Om det är ett återförsök, vänta med exponentiell backoff
       if (retryCount > 0) {
         const delay = Math.pow(2, retryCount - 1) * 200; // 200ms, 400ms, 800ms
-        console.log(`Återförsök ${retryCount}/${MAX_RETRIES} efter ${delay}ms för ${url}`);
+        // console.log(`Återförsök ${retryCount}/${MAX_RETRIES} efter ${delay}ms för ${url}`);
         
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -171,7 +171,7 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
           
           // Kontrollera för user_not_found fel
           if (error403Data?.code === 'user_not_found' || error403Data?.message?.includes('User from sub claim in JWT does not exist')) {
-            console.log('User not found in JWT - forcerar utloggning');
+            // console.log('User not found in JWT - forcerar utloggning');
             
             // Forcera utloggning på klientsidan
             if (typeof window !== 'undefined') {
@@ -221,7 +221,7 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         ) || (response.status === 400 && url.includes('/auth/v1/token'));
         
         if (isPermanentError) {
-          console.log(`Avbryter återförsök: Permanent fel detekterat i response`);
+          // console.log(`Avbryter återförsök: Permanent fel detekterat i response`);
           
           // För auth-fel, bevara det ursprungliga felet
           if (originalAuthError) {
@@ -278,7 +278,7 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       );
       
       if (isPermanentError) {
-        console.log(`Avbryter återförsök: Permanent fel detekterat i error`);
+        // console.log(`Avbryter återförsök: Permanent fel detekterat i error`);
         
         // Skicka ett globalt event för att hantera sessionsfel i UI
         if (typeof window !== 'undefined') {
@@ -421,7 +421,7 @@ const cookieAwareStorage = {
 function createSupabaseClient(): SupabaseClient<Database> {
   // Import and use the singleton from supabase-client.ts to prevent multiple instances
   const { getSupabaseClient } = require('./supabase-client');
-  console.log('♻️ Supabase: Using singleton from supabase-client');
+  // console.log('♻️ Supabase: Using singleton from supabase-client');
   
   return getSupabaseClient() as SupabaseClient<Database>;
 }
@@ -450,7 +450,7 @@ export const syncCookiesToLocalStorage = () => {
     }
     
     if (syncedCount > 0) {
-      console.log(`Synced ${syncedCount} auth cookies to localStorage`);
+      // console.log(`Synced ${syncedCount} auth cookies to localStorage`);
     }
   } catch (error) {
     console.warn('Error syncing cookies to localStorage:', error);
@@ -517,15 +517,15 @@ export const getAdminClient = () => {
 export async function testDatabaseConnection() {
   try {
     // Logga diagnostisk information
-    console.log('Testar databaskoppling...');
-    console.log('Supabase URL:', supabaseUrl ? supabaseUrl.substring(0, 15) + '...' : 'Saknas');
-    console.log('Anon Key finns:', !!supabaseAnonKey);
-    console.log('Service Role Key finns:', !!supabaseServiceRoleKey);
-    console.log('Node Environment:', process.env.NODE_ENV);
-    console.log('Is Edge Runtime:', typeof EdgeRuntime !== 'undefined');
+    // console.log('Testar databaskoppling...');
+    // console.log('Supabase URL:', supabaseUrl ? supabaseUrl.substring(0, 15) + '...' : 'Saknas');
+    // console.log('Anon Key finns:', !!supabaseAnonKey);
+    // console.log('Service Role Key finns:', !!supabaseServiceRoleKey);
+    // console.log('Node Environment:', process.env.NODE_ENV);
+    // console.log('Is Edge Runtime:', typeof EdgeRuntime !== 'undefined');
     
     const client = getServiceSupabase();
-    console.log('Anropar Supabase API...');
+    // console.log('Anropar Supabase API...');
     
     try {
       const startTime = Date.now();
@@ -543,7 +543,7 @@ export async function testDatabaseConnection() {
         };
       }
       
-      console.log('Databasanslutning lyckades efter', endTime - startTime, 'ms');
+      // console.log('Databasanslutning lyckades efter', endTime - startTime, 'ms');
       return { connected: true, error: null, data, timing: endTime - startTime };
     } catch (queryError) {
       console.error('Fel vid databasförfrågan:', queryError);

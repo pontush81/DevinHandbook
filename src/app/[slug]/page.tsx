@@ -14,7 +14,7 @@ interface HandbookPageProps {
 export default async function HandbookPage({ params }: HandbookPageProps) {
   const { slug } = await params;
 
-  console.log('🎯 [HandbookPage] Loading handbook for slug:', slug);
+  // console.log('🎯 [HandbookPage] Loading handbook for slug:', slug);
 
   try {
     const handbookData = await getHandbookBySlug(slug);
@@ -24,12 +24,12 @@ export default async function HandbookPage({ params }: HandbookPageProps) {
       notFound();
     }
 
-    console.log('✅ [HandbookPage] Handbook loaded successfully:', {
-      id: handbookData.id,
-      title: handbookData.title,
-      slug: handbookData.slug,
-      sectionsCount: handbookData.sections?.length || 0
-    });
+    // console.log('✅ [HandbookPage] Handbook loaded successfully:', {
+    //   id: handbookData.id,
+    //   title: handbookData.title,
+    //   slug: handbookData.slug,
+    //   sectionsCount: handbookData.sections?.length || 0
+    // });
 
     // Adapt data structure for client component
     const adaptedData = {

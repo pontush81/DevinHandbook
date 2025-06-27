@@ -67,12 +67,12 @@ export function ContentArea({
     sectionsArray.flatMap(s => s.pages || []).find(p => p.id === currentPageId) : 
     null;
 
-  console.log('[ContentArea] Navigation state:', {
-    currentPageId,
-    foundPage: !!currentPage,
-    sectionsCount: sectionsArray.length,
-    mode: currentPageId ? 'single-page' : 'all-sections'
-  });
+  // console.log('[ContentArea] Navigation state:', {
+  //   currentPageId,
+  //   foundPage: !!currentPage,
+  //   sectionsCount: sectionsArray.length,
+  //   mode: currentPageId ? 'single-page' : 'all-sections'
+  // });
 
   // Navigation paradigm: Show single page OR all sections overview
   if (currentPageId && currentPage) {

@@ -72,14 +72,14 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
         const shouldShow = !trialStatusData.isInTrial && trialStatusData.subscriptionStatus !== 'active';
         setShouldShowPaywall(shouldShow);
 
-        console.log('🐛 Debug Info Details:', {
-          user,
-          authLoading: undefined,
-          ownershipStatus: ownershipData.isOwner,
-          trialStatus: trialStatusData,
-          shouldShowPaywall: shouldShow,
-          handbookData: handbookDebugData.handbook
-        });
+        // console.log('🐛 Debug Info Details:', {
+        //   user,
+        //   authLoading: undefined,
+        //   ownershipStatus: ownershipData.isOwner,
+        //   trialStatus: trialStatusData,
+        //   shouldShowPaywall: shouldShow,
+        //   handbookData: handbookDebugData.handbook
+        // });
       } catch (error) {
         console.error('Debug info error:', error);
       }

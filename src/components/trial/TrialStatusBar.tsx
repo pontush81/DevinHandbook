@@ -128,16 +128,16 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
       
       // Wait for ownership check to complete
       if (isHandbookOwner === null) {
-        console.log('🔄 TrialStatusBar: Waiting for ownership check...');
+        // console.log('🔄 TrialStatusBar: Waiting for ownership check...');
         return;
       }
       
       try {
         setIsLoading(true);
-        console.log('🎯 TrialStatusBar: Fetching trial status...', { userId, handbookId, isHandbookOwner });
+        // console.log('🎯 TrialStatusBar: Fetching trial status...', { userId, handbookId, isHandbookOwner });
         
         // Fetch trial status from handbook-specific API (now simplified)
-        console.log('🎯 TrialStatusBar: Calling handbook-specific API:', `/api/handbook/${handbookId}/trial-status?userId=${userId}`);
+                  // console.log('🎯 TrialStatusBar: Calling handbook-specific API:', `/api/handbook/${handbookId}/trial-status?userId=${userId}`);
         const url = `/api/handbook/${handbookId}/trial-status?userId=${userId}`;
         
         const response = await fetch(url);
@@ -147,7 +147,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
         }
         
         const status = await response.json();
-        console.log('🎯 TrialStatusBar received status:', status);
+                  // console.log('🎯 TrialStatusBar received status:', status);
         setTrialStatus(status);
       } catch (err) {
         console.error('TrialStatusBar: Error fetching trial status:', err);
@@ -195,24 +195,24 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
   }
 
   if (isLoading || !trialStatus || !isVisible || isHandbookOwner === null || isSuperAdmin === null) {
-    console.log('🚫 TrialStatusBar hidden: loading or missing data:', {
-      isLoading,
-      hasTrialStatus: !!trialStatus,
-      isVisible,
-      isHandbookOwner,
-      isSuperAdmin
-    });
+    // console.log('🚫 TrialStatusBar hidden: loading or missing data:', {
+    //   isLoading,
+    //   hasTrialStatus: !!trialStatus,
+    //   isVisible,
+    //   isHandbookOwner,
+    //   isSuperAdmin
+    // });
     return null;
   }
 
   // Visa för aktiva trials ELLER utgångna trials
   // INTE för aktiva prenumerationer som inte är i trial
-  console.log('🎯 TrialStatusBar visibility check:', {
-    isInTrial: trialStatus.isInTrial,
-    subscriptionStatus: trialStatus.subscriptionStatus,
-    trialDaysRemaining: trialStatus.trialDaysRemaining,
-    shouldShow: trialStatus.isInTrial || (trialStatus.subscriptionStatus === 'expired' && trialStatus.trialEndsAt)
-  });
+  // console.log('🎯 TrialStatusBar visibility check:', {
+  //   isInTrial: trialStatus.isInTrial,
+  //   subscriptionStatus: trialStatus.subscriptionStatus,
+  //   trialDaysRemaining: trialStatus.trialDaysRemaining,
+  //   shouldShow: trialStatus.isInTrial || (trialStatus.subscriptionStatus === 'expired' && trialStatus.trialEndsAt)
+  // });
   
   // Visa bannern om:
   // 1. Användaren är i aktiv trial ELLER
@@ -222,12 +222,12 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     return null;
   }
 
-  console.log('✅ TrialStatusBar: Should render banner!', {
-    isInTrial: trialStatus.isInTrial,
-    subscriptionStatus: trialStatus.subscriptionStatus,
-    trialDaysRemaining: trialStatus.trialDaysRemaining,
-    isExpired: trialStatus.trialDaysRemaining <= 0
-  });
+      // console.log('✅ TrialStatusBar: Should render banner!', {
+  //   isInTrial: trialStatus.isInTrial,
+  //   subscriptionStatus: trialStatus.subscriptionStatus,
+  //   trialDaysRemaining: trialStatus.trialDaysRemaining,
+  //   isExpired: trialStatus.trialDaysRemaining <= 0
+  // });
 
   const isExpired = trialStatus.trialDaysRemaining <= 0;
   const isExpiringSoon = trialStatus.trialDaysRemaining <= 3 && !isExpired;

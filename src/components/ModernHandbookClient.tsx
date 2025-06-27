@@ -73,7 +73,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   useEffect(() => {
     const backupTimer = setTimeout(() => {
       if (!mounted) {
-        console.log('⏰ [ModernHandbookClient] Backup mount timer triggered');
+        // console.log('⏰ [ModernHandbookClient] Backup mount timer triggered');
         setMounted(true);
         setIsLoading(false);
       }
@@ -101,16 +101,16 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       logState.current = currentState;
       
       if (logRef.current % 5 === 1) { // Only log every 5th actual state change
-        console.log('🎯 ModernHandbookClient state change:', {
-          user: !!user,
-          authLoading,
-          canEdit,
-          isEditMode,
-          handbookId: initialData.id,
-          mounted,
-          isLoading,
-          changeCount: logRef.current
-        });
+        // console.log('🎯 ModernHandbookClient state change:', {
+        //   user: !!user,
+        //   authLoading,
+        //   canEdit,
+        //   isEditMode,
+        //   handbookId: initialData.id,
+        //   mounted,
+        //   isLoading,
+        //   changeCount: logRef.current
+        // });
       }
     }
   }, [user, authLoading, canEdit, isEditMode, mounted, isLoading, initialData.id]);
@@ -141,14 +141,14 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
         // If superadmin, give full access immediately
         if (isSuperAdmin) {
-          console.log('👤 Superadmin detected - granting full access:', {
-            userId: user.id,
-            handbookId: initialData.id,
-            role: 'superadmin',
-            isOwner: false, // Not owner but has access
-            isAdmin: true,
-            canEdit: true
-          });
+          // console.log('👤 Superadmin detected - granting full access:', {
+          //   userId: user.id,
+          //   handbookId: initialData.id,
+          //   role: 'superadmin',
+          //   isOwner: false, // Not owner but has access
+          //   isAdmin: true,
+          //   canEdit: true
+          // });
           
           setIsAdmin(true);
           setCanEdit(true);
@@ -192,14 +192,14 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         setIsAdmin(isAdmin);
         setCanEdit(canEdit);
         
-        console.log('👤 User permissions:', {
-          userId: user.id,
-          handbookId: initialData.id,
-          role: handbookMembership?.role || 'none',
-          isOwner,
-          isAdmin,
-          canEdit
-        });
+        // console.log('👤 User permissions:', {
+        //   userId: user.id,
+        //   handbookId: initialData.id,
+        //   role: handbookMembership?.role || 'none',
+        //   isOwner,
+        //   isAdmin,
+        //   canEdit
+        // });
       } catch (error) {
         console.error('Error checking permissions:', error);
       } finally {
@@ -227,31 +227,31 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
         // Skip trial restrictions for superadmins
         if (isSuperAdmin) {
-          console.log('🔍 Superadmin detected - skipping trial restrictions');
+          // console.log('🔍 Superadmin detected - skipping trial restrictions');
           return;
         }
 
         const trialStatus = await getHandbookTrialStatus(user.id, initialData.id);
         
-        console.log('🔍 ModernHandbookClient trial check:', {
-          userId: user.id,
-          handbookId: initialData.id,
-          isInTrial: trialStatus.isInTrial,
-          subscriptionStatus: trialStatus.subscriptionStatus,
-          trialEndsAt: trialStatus.trialEndsAt,
-          trialDaysRemaining: trialStatus.trialDaysRemaining,
-          hasTrialEndDate: !!trialStatus.trialEndsAt
-        });
+        // console.log('🔍 ModernHandbookClient trial check:', {
+        //   userId: user.id,
+        //   handbookId: initialData.id,
+        //   isInTrial: trialStatus.isInTrial,
+        //   subscriptionStatus: trialStatus.subscriptionStatus,
+        //   trialEndsAt: trialStatus.trialEndsAt,
+        //   trialDaysRemaining: trialStatus.trialDaysRemaining,
+        //   hasTrialEndDate: !!trialStatus.trialEndsAt
+        // });
         
         // Blockera om trial har gått ut och ingen aktiv prenumeration
         const shouldBlock = !trialStatus.isInTrial && 
                            trialStatus.subscriptionStatus !== 'active' &&
                            trialStatus.trialEndsAt;
         
-        console.log('🔍 Should block user?', shouldBlock);
+        // console.log('🔍 Should block user?', shouldBlock);
         
         if (shouldBlock) {
-          console.log('🔒 Blocking user - trial expired');
+          // console.log('🔒 Blocking user - trial expired');
           setIsBlocked(true);
           setTrialEndedAt(trialStatus.trialEndsAt);
         }
@@ -287,7 +287,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   useEffect(() => {
     const handleToggleEditMode = () => {
       if (canEdit) {
-        console.log('🔧 Toggling edit mode from header event');
+        // console.log('🔧 Toggling edit mode from header event');
         setIsEditMode(!isEditMode);
       }
     };
@@ -303,7 +303,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Update section - Include API call to Supabase
   const updateSection = async (sectionId: string, updates: Partial<Section>) => {
     try {
-      console.log('[ModernHandbookClient] Updating section in Supabase:', { sectionId, updates });
+      // console.log('[ModernHandbookClient] Updating section in Supabase:', { sectionId, updates });
 
       // Make API call to update in Supabase
       const response = await fetch(`/api/sections/${sectionId}`, {
@@ -318,7 +318,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }
 
       const updatedSection = await response.json();
-      console.log('[ModernHandbookClient] Section updated in Supabase:', updatedSection);
+      // console.log('[ModernHandbookClient] Section updated in Supabase:', updatedSection);
 
       // Update local state with the response from Supabase
       setHandbookData(prev => ({
@@ -328,7 +328,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         )
       }));
       
-      console.log('[ModernHandbookClient] Local state updated successfully');
+      // console.log('[ModernHandbookClient] Local state updated successfully');
     } catch (error) {
       console.error('[ModernHandbookClient] Error updating section:', error);
       throw error; // Re-throw so AllSectionsView can handle the error
@@ -338,7 +338,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Update page - Include API call to Supabase
   const updatePage = async (pageId: string, updates: Partial<Page>) => {
     try {
-      console.log('[ModernHandbookClient] Updating page in Supabase:', { pageId, updates });
+      // console.log('[ModernHandbookClient] Updating page in Supabase:', { pageId, updates });
 
       // Make API call to update in Supabase
       const response = await fetch(`/api/pages/${pageId}`, {
@@ -356,7 +356,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }
 
       const updatedPage = await response.json();
-      console.log('[ModernHandbookClient] Page updated in Supabase:', updatedPage);
+      // console.log('[ModernHandbookClient] Page updated in Supabase:', updatedPage);
 
       // Update local state with the response from Supabase
       setHandbookData(prev => ({
@@ -369,7 +369,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         }))
       }));
       
-      console.log('[ModernHandbookClient] Local page state updated successfully');
+      // console.log('[ModernHandbookClient] Local page state updated successfully');
       
       // Check if section status should be updated based on page changes
       if ('is_published' in updates) {
@@ -390,7 +390,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Add new section - Make API call to create the section properly
   const addSection = async (sectionData: Partial<Section>) => {
     try {
-      console.log('[ModernHandbookClient] Creating new section:', sectionData);
+      // console.log('[ModernHandbookClient] Creating new section:', sectionData);
 
       // Prepare section data for API
       const newSectionData = {
@@ -403,7 +403,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         is_public: sectionData.is_public !== undefined ? sectionData.is_public : true
       };
 
-      console.log('[ModernHandbookClient] Sending section data to API:', newSectionData);
+      // console.log('[ModernHandbookClient] Sending section data to API:', newSectionData);
 
       const response = await fetch('/api/sections', {
         method: 'POST',
@@ -417,7 +417,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }
 
       const newSection = await response.json();
-      console.log('[ModernHandbookClient] Section created successfully:', newSection);
+      // console.log('[ModernHandbookClient] Section created successfully:', newSection);
 
       // Ensure the section has the proper structure with pages array
       const fullSection = {
@@ -431,7 +431,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         sections: [...prev.sections, fullSection]
       }));
 
-      console.log('[ModernHandbookClient] Section added to local state successfully:', fullSection.id);
+      // console.log('[ModernHandbookClient] Section added to local state successfully:', fullSection.id);
 
       // Scroll to the newly created section after a short delay to ensure DOM is updated
       setTimeout(() => {
@@ -441,7 +441,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             behavior: 'smooth', 
             block: 'start' 
           });
-          console.log('[ModernHandbookClient] Scrolled to new section:', fullSection.id);
+          // console.log('[ModernHandbookClient] Scrolled to new section:', fullSection.id);
         } else {
           console.warn('[ModernHandbookClient] Could not find section element to scroll to:', `section-${fullSection.id}`);
         }
@@ -456,12 +456,12 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Add new page
   const addPage = async (sectionId: string, pageData: Partial<Page>) => {
     try {
-      console.log('[ModernHandbookClient] Adding page to section:', { sectionId, pageData });
-      console.log('[ModernHandbookClient] Current handbook sections:', handbookData.sections.map(s => ({ 
-        id: s.id, 
-        title: s.title,
-        pagesCount: s.pages?.length || 0 
-      })));
+      // console.log('[ModernHandbookClient] Adding page to section:', { sectionId, pageData });
+      // console.log('[ModernHandbookClient] Current handbook sections:', handbookData.sections.map(s => ({ 
+      //   id: s.id, 
+      //   title: s.title,
+      //   pagesCount: s.pages?.length || 0 
+      // })));
 
       const section = handbookData.sections.find(s => s.id === sectionId);
       if (!section) {
@@ -469,14 +469,14 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         console.error('[ModernHandbookClient]', errorMsg);
         
         // Try to refresh the handbook data from the server to see if the section exists there
-        console.log('[ModernHandbookClient] Attempting to refresh handbook data to find missing section...');
+        // console.log('[ModernHandbookClient] Attempting to refresh handbook data to find missing section...');
         try {
           const response = await fetch(`/api/handbooks/${handbookData.id}`);
           if (response.ok) {
             const freshHandbookData = await response.json();
-            console.log('[ModernHandbookClient] Fresh data from server:', {
-              sections: freshHandbookData.sections?.map(s => ({ id: s.id, title: s.title })) || []
-            });
+            // console.log('[ModernHandbookClient] Fresh data from server:', {
+            //   sections: freshHandbookData.sections?.map(s => ({ id: s.id, title: s.title })) || []
+            // });
             
             // Adapt the fresh data to the expected structure (same as in the parent component)
             const adaptedData = {
@@ -508,7 +508,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             
             const sectionInFreshData = adaptedData.sections.find(s => s.id === sectionId);
             if (sectionInFreshData) {
-              console.log('[ModernHandbookClient] Found section in fresh data! Updating local state and retrying...');
+              // console.log('[ModernHandbookClient] Found section in fresh data! Updating local state and retrying...');
               setHandbookData(adaptedData);
               
               // Wait a bit for state to update, then retry
@@ -521,7 +521,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
               }
               
               // Continue with the page creation using the fresh section
-              console.log('[ModernHandbookClient] Proceeding with fresh section data:', updatedSection);
+              // console.log('[ModernHandbookClient] Proceeding with fresh section data:', updatedSection);
               
               // Generate slug from title with collision avoidance
               let slug = pageData.title
@@ -548,7 +548,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                 table_of_contents: true
               };
 
-              console.log('[ModernHandbookClient] Sending page data to API:', newPageData);
+              // console.log('[ModernHandbookClient] Sending page data to API:', newPageData);
 
               const pageResponse = await fetch('/api/pages', {
                 method: 'POST',
@@ -573,7 +573,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
               }
 
               const newPage = await pageResponse.json();
-              console.log('[ModernHandbookClient] Page created successfully:', newPage);
+              // console.log('[ModernHandbookClient] Page created successfully:', newPage);
 
               // Update local state with the new page
               setHandbookData(prev => ({
@@ -620,7 +620,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         table_of_contents: true
       };
 
-      console.log('[ModernHandbookClient] Sending page data to API:', newPageData);
+      // console.log('[ModernHandbookClient] Sending page data to API:', newPageData);
 
       const response = await fetch('/api/pages', {
         method: 'POST',
@@ -645,7 +645,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }
 
       const newPage = await response.json();
-      console.log('[ModernHandbookClient] Page created successfully:', newPage);
+      // console.log('[ModernHandbookClient] Page created successfully:', newPage);
 
       // Update local state
       setHandbookData(prev => ({
@@ -676,7 +676,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Delete page
   const deletePage = async (pageId: string, sectionId: string) => {
     try {
-      console.log('[ModernHandbookClient] Deleting page:', { pageId, sectionId });
+      // console.log('[ModernHandbookClient] Deleting page:', { pageId, sectionId });
 
       const response = await fetch(`/api/pages/${pageId}`, {
         method: 'DELETE',
@@ -688,7 +688,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         throw new Error(errorData.details || 'Failed to delete page');
       }
 
-      console.log('[ModernHandbookClient] Page deleted successfully from database');
+      // console.log('[ModernHandbookClient] Page deleted successfully from database');
 
       // Update local state by removing the page from its section
       setHandbookData(prev => ({
@@ -705,7 +705,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         setCurrentPageId(undefined);
       }
 
-      console.log('[ModernHandbookClient] Local state updated after page deletion');
+      // console.log('[ModernHandbookClient] Local state updated after page deletion');
       
       // Check if section status should be updated after page deletion
       checkAndUpdateSectionStatus(sectionId);
@@ -718,7 +718,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Delete section
   const deleteSection = async (sectionId: string) => {
     try {
-      console.log('[ModernHandbookClient] Deleting section:', { sectionId });
+      // console.log('[ModernHandbookClient] Deleting section:', { sectionId });
 
       const response = await fetch(`/api/sections/${sectionId}`, {
         method: 'DELETE',
@@ -730,7 +730,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         throw new Error(errorData.details || 'Failed to delete section');
       }
 
-      console.log('[ModernHandbookClient] Section deleted successfully from database');
+      // console.log('[ModernHandbookClient] Section deleted successfully from database');
 
       // Update local state
       setHandbookData(prev => ({
@@ -738,7 +738,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         sections: prev.sections.filter(section => section.id !== sectionId)
       }));
 
-      console.log('[ModernHandbookClient] Local state updated after section deletion');
+      // console.log('[ModernHandbookClient] Local state updated after section deletion');
     } catch (error) {
       console.error('[ModernHandbookClient] Error deleting section:', error);
       alert('Det gick inte att radera sektionen. Försök igen.');
@@ -753,7 +753,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     setHandbookData(currentHandbookData => {
       const section = currentHandbookData.sections.find(s => s.id === sectionId);
       if (!section) {
-        console.log(`[checkAndUpdateSectionStatus] Section not found: ${sectionId}`);
+        // console.log(`[checkAndUpdateSectionStatus] Section not found: ${sectionId}`);
         return currentHandbookData;
       }
 
@@ -761,16 +761,16 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       const publishedPages = section.pages.filter(page => page.is_published !== false);
       const totalPages = section.pages.length;
 
-      console.log(`[checkAndUpdateSectionStatus] Section "${section.title}":`);
-      console.log(`  - Total pages: ${totalPages}`);
-      console.log(`  - Published pages: ${publishedPages.length}`);
-      console.log(`  - Section is_published: ${section.is_published}`);
-      console.log(`  - Section is_public: ${section.is_public}`);
-      console.log(`  - Page details:`, section.pages.map(p => ({ title: p.title, is_published: p.is_published })));
+      // console.log(`[checkAndUpdateSectionStatus] Section "${section.title}":`);
+      // console.log(`  - Total pages: ${totalPages}`);
+      // console.log(`  - Published pages: ${publishedPages.length}`);
+      // console.log(`  - Section is_published: ${section.is_published}`);
+      // console.log(`  - Section is_public: ${section.is_public}`);
+      // console.log(`  - Page details:`, section.pages.map(p => ({ title: p.title, is_published: p.is_published })));
 
       // If section has pages but none are published, set section to draft
       if (totalPages > 0 && publishedPages.length === 0 && section.is_published !== false) {
-        console.log(`[checkAndUpdateSectionStatus] ✅ CASCADING: All pages are drafts, setting section to draft`);
+        // console.log(`[checkAndUpdateSectionStatus] ✅ CASCADING: All pages are drafts, setting section to draft`);
         // Update section in background without affecting current state update
         setTimeout(() => {
           updateSection(sectionId, { is_published: false });
@@ -778,7 +778,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       }
       // If section is draft but has published pages, set section to published
       else if (publishedPages.length > 0 && section.is_published === false) {
-        console.log(`[checkAndUpdateSectionStatus] ✅ CASCADING: Has published pages, setting section to published`);
+        // console.log(`[checkAndUpdateSectionStatus] ✅ CASCADING: Has published pages, setting section to published`);
         // Restore to public if is_public is not explicitly false
         setTimeout(() => {
           updateSection(sectionId, { 
@@ -787,7 +787,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           });
         }, 50);
       } else {
-        console.log(`[checkAndUpdateSectionStatus] ❌ NO CASCADE NEEDED: Section status is appropriate`);
+        // console.log(`[checkAndUpdateSectionStatus] ❌ NO CASCADE NEEDED: Section status is appropriate`);
       }
 
       return currentHandbookData; // Return unchanged state
@@ -799,8 +799,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     // First, sort all sections by order_index to ensure consistent ordering
     const sortedSections = [...sections].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     
-    console.log(`[getVisibleSections] Input sections order:`, sections.map(s => `${s.title}(${s.order_index})`).join(', '));
-    console.log(`[getVisibleSections] Sorted sections order:`, sortedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
+    // console.log(`[getVisibleSections] Input sections order:`, sections.map(s => `${s.title}(${s.order_index})`).join(', '));
+    // console.log(`[getVisibleSections] Sorted sections order:`, sortedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
     
     // Also sort pages within each section by order_index for consistency
     const sectionsWithSortedPages = sortedSections.map(section => ({
@@ -810,14 +810,14 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     
     if (isEditMode) {
       // In edit mode, show ALL sections regardless of visibility status
-      console.log('[getVisibleSections] Edit mode: showing all sections');
+      // console.log('[getVisibleSections] Edit mode: showing all sections');
       return sectionsWithSortedPages;
     }
     
     const filtered = sectionsWithSortedPages.filter(section => {
       // First check: Section must not be in draft mode
       if (section.is_published === false) {
-        console.log(`[getVisibleSections] Section "${section.title}": draft mode, hidden from all users`);
+        // console.log(`[getVisibleSections] Section "${section.title}": draft mode, hidden from all users`);
         return false;
       }
       
@@ -825,21 +825,21 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       if (section.is_public === false) {
         // Members-only section - only show to logged-in users
         if (user) {
-          console.log(`[getVisibleSections] Section "${section.title}": members-only, visible to logged-in user`);
+          // console.log(`[getVisibleSections] Section "${section.title}": members-only, visible to logged-in user`);
           return true;
         } else {
-          console.log(`[getVisibleSections] Section "${section.title}": members-only, hidden from non-logged-in user`);
+          // console.log(`[getVisibleSections] Section "${section.title}": members-only, hidden from non-logged-in user`);
           return false;
         }
       } else {
         // Public section - show to everyone
-        console.log(`[getVisibleSections] Section "${section.title}": public section, visible to all`);
+        // console.log(`[getVisibleSections] Section "${section.title}": public section, visible to all`);
         return true;
       }
     });
     
-    console.log(`[getVisibleSections] Normal mode: showing ${filtered.length}/${sections.length} sections (user: ${user ? 'logged in' : 'not logged in'})`);
-    console.log(`[getVisibleSections] Final filtered order:`, filtered.map(s => `${s.title}(${s.order_index})`).join(', '));
+    // console.log(`[getVisibleSections] Normal mode: showing ${filtered.length}/${sections.length} sections (user: ${user ? 'logged in' : 'not logged in'})`);
+    // console.log(`[getVisibleSections] Final filtered order:`, filtered.map(s => `${s.title}(${s.order_index})`).join(', '));
     return filtered;
   };
 
@@ -852,7 +852,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       const hasGaps = Math.max(...orderIndexes) !== orderIndexes.length - 1;
       
       if (uniqueIndexes.size !== orderIndexes.length || hasGaps) {
-        console.log('🔧 Order indexes need normalization');
+        // console.log('🔧 Order indexes need normalization');
         normalizeOrderIndexes();
       }
     }
@@ -863,7 +863,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Helper function to normalize order_index values to be sequential and unique
   const normalizeOrderIndexes = async () => {
     try {
-      console.log('🔧 [normalizeOrderIndexes] Starting normalization...');
+      // console.log('🔧 [normalizeOrderIndexes] Starting normalization...');
       
       // Sort sections by current order_index, then by created_at as fallback
       const sortedSections = [...handbookData.sections].sort((a, b) => {
@@ -874,7 +874,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
       });
       
-      console.log('🔧 [normalizeOrderIndexes] Current order:', sortedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
+      // console.log('🔧 [normalizeOrderIndexes] Current order:', sortedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
       
       const updatedSections = [];
       
@@ -882,7 +882,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       for (let i = 0; i < sortedSections.length; i++) {
         const section = sortedSections[i];
         if (section.order_index !== i) {
-          console.log(`🔧 [normalizeOrderIndexes] Updating ${section.title}: ${section.order_index} -> ${i}`);
+          // console.log(`🔧 [normalizeOrderIndexes] Updating ${section.title}: ${section.order_index} -> ${i}`);
           
           await supabase
             .from('sections')
@@ -901,8 +901,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         sections: updatedSections
       }));
       
-      console.log('✅ [normalizeOrderIndexes] Normalization completed');
-      console.log('✅ [normalizeOrderIndexes] New order:', updatedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
+      // console.log('✅ [normalizeOrderIndexes] Normalization completed');
+      // console.log('✅ [normalizeOrderIndexes] New order:', updatedSections.map(s => `${s.title}(${s.order_index})`).join(', '));
     } catch (error) {
       console.error('❌ [normalizeOrderIndexes] Error:', error);
     }
@@ -911,7 +911,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Move section up or down
   const moveSection = async (sectionId: string, direction: 'up' | 'down') => {
     try {
-      console.log('🔄 [moveSection] Starting move operation:', { sectionId, direction });
+      // console.log('🔄 [moveSection] Starting move operation:', { sectionId, direction });
       
       // First ensure order indexes are normalized
       await normalizeOrderIndexes();
@@ -922,32 +922,32 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       // Get the current state synchronously
       const currentSections = [...handbookData.sections].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
       const currentIndex = currentSections.findIndex(s => s.id === sectionId);
-      console.log('🔍 [moveSection] Current index found:', currentIndex);
+      // console.log('🔍 [moveSection] Current index found:', currentIndex);
       
       if (currentIndex === -1) {
-        console.log('❌ [moveSection] Section not found in sections array');
+        // console.log('❌ [moveSection] Section not found in sections array');
         return;
       }
 
       const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      console.log('📍 [moveSection] Target index:', newIndex);
+      // console.log('📍 [moveSection] Target index:', newIndex);
       
       // Check bounds
       if (newIndex < 0 || newIndex >= currentSections.length) {
-        console.log('❌ [moveSection] Target index out of bounds');
+        // console.log('❌ [moveSection] Target index out of bounds');
         return;
       }
 
       const currentSection = currentSections[currentIndex];
       const targetSection = currentSections[newIndex];
       
-      console.log('🔄 [moveSection] Swapping sections:', {
-        current: { id: currentSection.id, title: currentSection.title, order_index: currentSection.order_index },
-        target: { id: targetSection.id, title: targetSection.title, order_index: targetSection.order_index }
-      });
+      // console.log('🔄 [moveSection] Swapping sections:', {
+      //   current: { id: currentSection.id, title: currentSection.title, order_index: currentSection.order_index },
+      //   target: { id: targetSection.id, title: targetSection.title, order_index: targetSection.order_index }
+      // });
 
       // Update order_index values in database - swap the order_index values
-      console.log('💾 [moveSection] Updating database...');
+      // console.log('💾 [moveSection] Updating database...');
       const currentNewOrderIndex = targetSection.order_index;
       const targetNewOrderIndex = currentSection.order_index;
       
@@ -971,10 +971,10 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         return;
       }
 
-      console.log('✅ [moveSection] Database updated successfully');
+      // console.log('✅ [moveSection] Database updated successfully');
 
       // Update local state by creating a new sorted array with the swapped positions
-      console.log('🔄 [moveSection] Updating local state...');
+      // console.log('🔄 [moveSection] Updating local state...');
       setHandbookData(prev => {
         const newSections = [...prev.sections];
         
@@ -997,7 +997,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         };
       });
       
-      console.log('✅ [moveSection] Operation completed successfully');
+      // console.log('✅ [moveSection] Operation completed successfully');
 
     } catch (error) {
       console.error('❌ [moveSection] Error moving section:', error);
@@ -1007,7 +1007,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Add missing handleToggleSection function
   const handleToggleSection = async (sectionId: string, isPublished: boolean) => {
     try {
-      console.log('🔄 Toggling section visibility:', { sectionId, isPublished });
+      // console.log('🔄 Toggling section visibility:', { sectionId, isPublished });
       
       // Update in database
       const { error } = await supabase
@@ -1030,7 +1030,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         )
       }));
 
-      console.log('✅ Section visibility updated successfully');
+      // console.log('✅ Section visibility updated successfully');
     } catch (error) {
       console.error('❌ Error in handleToggleSection:', error);
     }
@@ -1039,7 +1039,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   // Update handbook settings
   const updateHandbook = async (handbookId: string, updates: { forum_enabled?: boolean }) => {
     try {
-      console.log('🔄 Updating handbook settings:', { handbookId, updates });
+      // console.log('🔄 Updating handbook settings:', { handbookId, updates });
       
       // Use secure API endpoint instead of direct database update
       const response = await fetch('/api/handbook/update-settings', {
@@ -1063,7 +1063,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         ...updates
       }));
 
-      console.log('✅ Handbook settings updated successfully');
+      // console.log('✅ Handbook settings updated successfully');
     } catch (error) {
       console.error('❌ Error in updateHandbook:', error);
       throw error;
@@ -1173,7 +1173,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             currentPageId={currentPageId}
             onPageSelect={setCurrentPageId}
             onSectionSelect={(sectionId) => {
-              console.log('🎯 Attempting to scroll to section:', sectionId);
+              // console.log('🎯 Attempting to scroll to section:', sectionId);
               
               // Clear current page to show all sections
               setCurrentPageId('');
@@ -1182,7 +1182,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
               requestAnimationFrame(() => {
                 setTimeout(() => {
                   const element = document.getElementById(`section-${sectionId}`);
-                  console.log('🔍 Found element:', element);
+                  // console.log('🔍 Found element:', element);
                   
                   if (element) {
                     element.scrollIntoView({ 
@@ -1200,11 +1200,11 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
             forumEnabled={handbookData.forum_enabled}
             editMode={isEditMode}
             onEditSection={(sectionId) => {
-              console.log('Edit section:', sectionId);
+              // console.log('Edit section:', sectionId);
               // TODO: Implement section editing functionality
             }}
             onDeleteSection={(sectionId) => {
-              console.log('Delete section:', sectionId);
+              // console.log('Delete section:', sectionId);
               // TODO: Implement section deletion functionality
             }}
             onToggleSection={(sectionId) => {

@@ -219,7 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     globalAuthInitialized = true;
-    console.log('✅ AuthContext: First global initialization, proceeding...');
+    // console.log('✅ AuthContext: First global initialization, proceeding...');
 
     const setData = async () => {
       console.log('🔄 AuthContext: Initializing auth state...');

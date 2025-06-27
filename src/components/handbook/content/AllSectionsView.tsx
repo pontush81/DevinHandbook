@@ -200,12 +200,12 @@ export function AllSectionsView({
   onUpdateHandbook
 }: AllSectionsViewProps) {
   // Debug log to check props
-  console.log('🔍 [AllSectionsView] Props received:', {
-    sectionsCount: sections.length,
-    isEditMode,
-    hasOnMoveSection: !!onMoveSection,
-    onMoveSectionType: typeof onMoveSection
-  });
+  // console.log('🔍 [AllSectionsView] Props received:', {
+  //   sectionsCount: sections.length,
+  //   isEditMode,
+  //   hasOnMoveSection: !!onMoveSection,
+  //   onMoveSectionType: typeof onMoveSection
+  // });
   
   // Initialize with all sections expanded for better UX
   const [expandedSections, setExpandedSections] = useState<Set<string>>(

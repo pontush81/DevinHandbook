@@ -9,7 +9,7 @@ let isInitialized = false;
 
 export function getSupabaseClient(): SupabaseClient {
   if (!supabaseInstance) {
-    console.log('🆕 Supabase: Creating new singleton instance');
+    // console.log('🆕 Supabase: Creating new singleton instance');
     
     // Custom storage that syncs to both localStorage and cookies
     const customStorage = {

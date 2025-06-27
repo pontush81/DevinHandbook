@@ -289,120 +289,33 @@ function getUrgencyLevel(daysRemaining: number, isInTrial: boolean): 'low' | 'me
 }
 
 /**
- * Kontrollerar trial-status för en specifik handbok
+ * Kontrollerar trial-status för en specifik handbok via API
+ * Detta undviker RLS-problem genom att använda server-side API
  */
 export async function getHandbookTrialStatus(userId: string, handbookId: string): Promise<TrialStatus> {
   try {
-      // console.log('🔧 [DEBUG] getHandbookTrialStatus called with updated code - timestamp:', new Date().toISOString());
-  // console.log('🔧 [DEBUG] Using getServiceSupabase for database queries');
-
-    // 1. Kolla om det finns en prenumeration för just denna handbok (aktiv ELLER uppsagd)
-    const { data: handbookSubscriptions, error: handbookSubError } = await getServiceSupabase()
-      .from('subscriptions')
-      .select('status, plan_type, expires_at, trial_ends_at, cancelled_at')
-      .eq('user_id', userId)
-      .eq('handbook_id', handbookId)
-      .in('status', ['active', 'cancelled'])
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (handbookSubError) {
-      console.error('Error checking handbook subscription:', handbookSubError);
+    // Använd API-endpoint istället för direkta databasanrop för att undvika RLS-problem
+    const response = await fetch(`/api/handbook/${handbookId}/trial-status?userId=${userId}`);
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
-
-    // Om det finns en prenumeration för denna handbok
-    if (handbookSubscriptions && handbookSubscriptions.length > 0) {
-      const subscription = handbookSubscriptions[0];
-      
-      console.log('🔍 [getHandbookTrialStatus] Found handbook-specific subscription:', {
-        handbookId,
-        subscriptionStatus: subscription.status,
-        trialEndsAt: subscription.trial_ends_at,
-        cancelledAt: subscription.cancelled_at
-      });
-
-      // Om prenumerationen är aktiv
-      if (subscription.status === 'active') {
-        return {
-          isInTrial: false, // Aktiv prenumeration = inte i trial
-          trialDaysRemaining: 0,
-          subscriptionStatus: 'active',
-          trialEndsAt: subscription.trial_ends_at,
-          canCreateHandbook: true,
-          hasUsedTrial: true,
-        };
-      }
-
-      // Om prenumerationen är uppsagd
-      if (subscription.status === 'cancelled') {
-        return {
-          isInTrial: false,
-          trialDaysRemaining: 0,
-          subscriptionStatus: 'cancelled',
-          trialEndsAt: subscription.trial_ends_at,
-          canCreateHandbook: false, // Uppsagd = kan inte skapa nya handböcker
-          hasUsedTrial: true,
-        };
-      }
+    
+    const data = await response.json();
+    
+    // Kontrollera om svaret har fel-format
+    if (data.error) {
+      throw new Error(data.error);
     }
-
-    // 2. Kolla handbokens trial_end_date direkt
-    const { data: handbook, error: handbookError } = await getServiceSupabase()
-      .from('handbooks')
-      .select('trial_end_date, created_during_trial')
-      .eq('id', handbookId)
-      .eq('owner_id', userId)
-      .single();
-
-    if (handbookError) {
-      console.error('Error fetching handbook:', handbookError);
-      throw handbookError;
-    }
-
-    if (!handbook) {
-      throw new Error('Handbook not found or user is not owner');
-    }
-
-    console.log('🔧 [DEBUG] Handbook data from database:', {
-      handbookId,
-      trial_end_date: handbook.trial_end_date,
-      created_during_trial: handbook.created_during_trial
-    });
-
-    // Om handboken inte har trial_end_date (null), så är den betald
-    if (!handbook.trial_end_date) {
-      console.log('🔍 [getHandbookTrialStatus] Handbook has no trial_end_date - fully paid');
-      return {
-        isInTrial: false,
-        trialDaysRemaining: 0,
-        subscriptionStatus: 'active',
-        trialEndsAt: null,
-        canCreateHandbook: true,
-        hasUsedTrial: handbook.created_during_trial || false,
-      };
-    }
-
-    // Kontrollera om trial fortfarande är aktiv för denna handbok
-    const trialEndDate = new Date(handbook.trial_end_date);
-    const now = new Date();
-    const isStillInTrial = trialEndDate > now;
-    const trialDaysRemaining = isStillInTrial ? 
-      getTrialDaysRemaining(handbook.trial_end_date) : 0;
-
-    console.log('🔍 [getHandbookTrialStatus] Handbook trial status:', {
-      handbookId,
-      trialEndDate: handbook.trial_end_date,
-      isStillInTrial,
-      trialDaysRemaining
-    });
-
+    
+    // Returnera data i rätt format
     return {
-      isInTrial: isStillInTrial,
-      trialDaysRemaining,
-      subscriptionStatus: isStillInTrial ? 'trial' : 'expired',
-      trialEndsAt: handbook.trial_end_date,
-      canCreateHandbook: true,
-      hasUsedTrial: handbook.created_during_trial || false,
+      isInTrial: data.isInTrial || false,
+      trialDaysRemaining: data.trialDaysRemaining || 0,
+      subscriptionStatus: data.subscriptionStatus || 'none',
+      trialEndsAt: data.trialEndsAt || null,
+      canCreateHandbook: data.canCreateHandbook !== false, // Default till true
+      hasUsedTrial: data.hasUsedTrial || false,
     };
 
   } catch (error) {

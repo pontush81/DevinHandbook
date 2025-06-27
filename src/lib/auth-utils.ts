@@ -7,29 +7,29 @@ import { Database } from '@/types/supabase';
  * Hämtar en session för servern baserad på cookies
  */
 export async function getServerSession() {
-  console.log('🔍 [getServerSession] Starting session check...');
+  // console.log('🔍 [getServerSession] Starting session check...');
   
   const cookieStore = await cookies();
   const allCookies = cookieStore.getAll();
   
-  console.log('🍪 [getServerSession] Found cookies:', { 
-    count: allCookies.length, 
-    names: allCookies.map(c => c.name),
-    supabaseCookies: allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-')).map(c => ({ name: c.name, hasValue: !!c.value }))
-  });
+  // console.log('🍪 [getServerSession] Found cookies:', { 
+  //   count: allCookies.length, 
+  //   names: allCookies.map(c => c.name),
+  //   supabaseCookies: allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-')).map(c => ({ name: c.name, hasValue: !!c.value }))
+  // });
   
   // Look for the specific auth token cookie
   const authCookie = allCookies.find(c => c.name === 'sb-kjsquvjzctdwgjypcjrg-auth-token');
   
   if (authCookie && authCookie.value) {
-    console.log('🔑 [getServerSession] Found auth cookie, parsing session...');
+    // console.log('🔑 [getServerSession] Found auth cookie, parsing session...');
     
     try {
       // Parse the auth token from cookie
       const authData = JSON.parse(decodeURIComponent(authCookie.value));
       
       if (authData && authData.access_token && authData.user) {
-        console.log('✅ [getServerSession] Valid session found in cookie');
+        // console.log('✅ [getServerSession] Valid session found in cookie');
         
         // Create a mock session object that matches Supabase session format
         const session = {
@@ -64,7 +64,7 @@ export async function getServerSession() {
     }
   );
 
-  console.log('📡 [getServerSession] Calling supabase.auth.getSession()...');
+  // console.log('📡 [getServerSession] Calling supabase.auth.getSession()...');
   
   // Hämta session
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -73,11 +73,11 @@ export async function getServerSession() {
     console.error('❌ [getServerSession] Session error:', error);
   }
   
-  console.log('✅ [getServerSession] Session result:', { 
-    hasSession: !!session, 
-    userId: session?.user?.id || 'no session',
-    expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'no expiry'
-  });
+  // console.log('✅ [getServerSession] Session result:', { 
+  //   hasSession: !!session, 
+  //   userId: session?.user?.id || 'no session',
+  //   expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'no expiry'
+  // });
   
   return session;
 }
@@ -86,17 +86,17 @@ export async function getServerSession() {
  * Kontrollerar om en användare är admin för en viss handbok
  */
 export async function isHandbookAdmin(userId: string, handbookId: string): Promise<boolean> {
-  console.log('🔍 [isHandbookAdmin] Checking admin status:', { userId, handbookId });
+  // console.log('🔍 [isHandbookAdmin] Checking admin status:', { userId, handbookId });
   
   if (!userId || !handbookId) {
-    console.log('❌ [isHandbookAdmin] Missing required parameters:', { userId: !!userId, handbookId: !!handbookId });
+    // console.log('❌ [isHandbookAdmin] Missing required parameters:', { userId: !!userId, handbookId: !!handbookId });
     return false;
   }
   
   try {
     const supabase = getServiceSupabase();
     
-    console.log('📊 [isHandbookAdmin] Querying handbook_members table...');
+    // console.log('📊 [isHandbookAdmin] Querying handbook_members table...');
     const { data, error } = await supabase
       .from('handbook_members')
       .select('id')
@@ -111,7 +111,7 @@ export async function isHandbookAdmin(userId: string, handbookId: string): Promi
     }
     
     const isAdmin = !!data;
-    console.log('✅ [isHandbookAdmin] Query result:', { data, isAdmin });
+    // console.log('✅ [isHandbookAdmin] Query result:', { data, isAdmin });
     
     return isAdmin;
   } catch (error) {

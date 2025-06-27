@@ -49,7 +49,7 @@ export async function createHandbook(
   isTrialHandbook: boolean = true,
   customTemplate?: any
 ) {
-  console.log('[Handbook] Creating handbook with owner_id:', { name, slug, userId: userId || 'guest', isTrialHandbook });
+  // console.log('[Handbook] Creating handbook with owner_id:', { name, slug, userId: userId || 'guest', isTrialHandbook });
 
   // Validate input
   if (!name || typeof name !== 'string' || !slug || typeof slug !== 'string') {
@@ -58,9 +58,9 @@ export async function createHandbook(
   }
 
   // Generate unique slug
-  console.log('[Handbook] Generating unique slug from base:', slug);
+  // console.log('[Handbook] Generating unique slug from base:', slug);
   const uniqueSlug = await generateUniqueSlug(slug);
-  console.log('[Handbook] Using unique slug:', uniqueSlug);
+  // console.log('[Handbook] Using unique slug:', uniqueSlug);
 
   // Calculate trial end date - 30 days from now
   const trialEndDate = new Date();
@@ -93,7 +93,7 @@ export async function createHandbook(
     forum_enabled: false // Start with forum disabled
   };
 
-  console.log('[Handbook] Creating handbook with data:', handbookData);
+  // console.log('[Handbook] Creating handbook with data:', handbookData);
 
   const { data: handbook, error: createError } = await supabaseAdmin
     .from('handbooks')
@@ -106,37 +106,37 @@ export async function createHandbook(
     throw new Error(`Failed to create handbook: ${createError.message}`);
   }
 
-  console.log('[Handbook] Handbook created successfully:', handbook.id);
+  // console.log('[Handbook] Handbook created successfully:', handbook.id);
 
   // Create forum categories if forum is enabled (future use)
   if (handbook.forum_enabled) {
-    console.log('[Handbook] Creating forum categories for handbook:', handbook.id);
+    // console.log('[Handbook] Creating forum categories for handbook:', handbook.id);
     await createDefaultForumCategories(handbook.id);
   }
 
   // Create sections - use custom template if provided, otherwise use default
-  console.log('[Handbook] Creating sections for handbook:', handbook.id);
+  // console.log('[Handbook] Creating sections for handbook:', handbook.id);
   if (customTemplate && customTemplate.sections && customTemplate.sections.length > 0) {
-    console.log('[Handbook] Using custom template with', customTemplate.sections.length, 'sections');
+    // console.log('[Handbook] Using custom template with', customTemplate.sections.length, 'sections');
     await createSectionsFromTemplate(handbook.id, customTemplate.sections);
   } else {
-    console.log('[Handbook] Using default template');
+    // console.log('[Handbook] Using default template');
     await createDefaultSections(handbook.id);
   }
 
   // If user is provided, add them as admin
   if (userId) {
-    console.log('[Handbook] Adding user as admin member:', { handbookId: handbook.id, userId });
+    // console.log('[Handbook] Adding user as admin member:', { handbookId: handbook.id, userId });
     await addHandbookMember(handbook.id, userId, 'admin');
   }
 
-  console.log('[Handbook] ✅ Handbook creation completed successfully');
+  // console.log('[Handbook] ✅ Handbook creation completed successfully');
   return handbook;
 }
 
 export async function getHandbookBySlug(slug: string): Promise<Handbook | null> {
   try {
-    console.log(`[Handbook Service] Getting handbook by slug: ${slug}`);
+    // console.log(`[Handbook Service] Getting handbook by slug: ${slug}`);
 
     // First, let's check if there are any handbooks with this slug at all (published or not)
     const { data: allHandbooks, error: debugError } = await (supabase as any)
@@ -147,9 +147,9 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     if (debugError) {
       console.error('[Handbook Service] Debug query error:', debugError);
     } else {
-      console.log(`[Handbook Service] Debug: Found ${allHandbooks?.length || 0} handbooks with slug "${slug}":`, 
-        allHandbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
-      );
+      // console.log(`[Handbook Service] Debug: Found ${allHandbooks?.length || 0} handbooks with slug "${slug}":`, 
+      //   allHandbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
+      // );
     }
 
     const { data: handbooks, error } = await (supabase as any)
@@ -189,12 +189,12 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     }
 
     if (!handbooks || handbooks.length === 0) {
-      console.log(`[Handbook Service] No published handbook found with slug: ${slug}`);
+      // console.log(`[Handbook Service] No published handbook found with slug: ${slug}`);
       // Check if there's an unpublished version
       if (allHandbooks && allHandbooks.length > 0) {
         const unpublished = allHandbooks.find(h => !h.published);
         if (unpublished) {
-          console.warn(`[Handbook Service] Found unpublished handbook with slug: ${slug} (id: ${unpublished.id})`);
+          // console.warn(`[Handbook Service] Found unpublished handbook with slug: ${slug} (id: ${unpublished.id})`);
         }
       }
       return null;
@@ -202,7 +202,7 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
 
     const handbook = handbooks[0];
 
-    console.log(`[Handbook Service] Found handbook: ${handbook.title} (id: ${handbook.id})`);
+    // console.log(`[Handbook Service] Found handbook: ${handbook.title} (id: ${handbook.id})`);
     
     return {
       id: handbook.id,
@@ -241,12 +241,12 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
 }
 
 export async function getHandbookById(id: string) {
-  console.log('[getHandbookById] id:', id);
+  // console.log('[getHandbookById] id:', id);
 
   const cacheKey = `handbook_id_${id}`;
   const cached = handbookCache[cacheKey];
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('[getHandbookById] Returning cached data for:', id);
+    // console.log('[getHandbookById] Returning cached data for:', id);
     return cached.data;
   }
 
@@ -310,7 +310,7 @@ export async function getHandbookById(id: string) {
     sections: handbookData.sections || []
   };
 
-  console.log('[getHandbookById] Successfully fetched handbook:', handbookObj.id);
+  // console.log('[getHandbookById] Successfully fetched handbook:', handbookObj.id);
 
   // Cache the result
   handbookCache[cacheKey] = { data: handbookObj, timestamp: Date.now() };
@@ -604,11 +604,11 @@ function convertAIContentToEditorJS(text: string): any {
 
 // Helper function to create sections from custom template (AI-imported data)
 async function createSectionsFromTemplate(handbookId: string, templateSections: any[]) {
-  console.log('[createSectionsFromTemplate] Creating sections from custom template for handbook:', handbookId);
-  console.log('[createSectionsFromTemplate] Template sections:', templateSections.length);
+  // console.log('[createSectionsFromTemplate] Creating sections from custom template for handbook:', handbookId);
+  // console.log('[createSectionsFromTemplate] Template sections:', templateSections.length);
   
   for (const templateSection of templateSections) {
-    console.log('[createSectionsFromTemplate] Creating section:', templateSection.title);
+    // console.log('[createSectionsFromTemplate] Creating section:', templateSection.title);
     
     // Create the section
     const { data: section, error: sectionError } = await supabaseAdmin
@@ -633,7 +633,7 @@ async function createSectionsFromTemplate(handbookId: string, templateSections: 
     // Create pages for this section
     if (templateSection.pages && templateSection.pages.length > 0) {
       for (const templatePage of templateSection.pages) {
-        console.log('[createSectionsFromTemplate] Creating page:', templatePage.title, 'in section:', section.id);
+        // console.log('[createSectionsFromTemplate] Creating page:', templatePage.title, 'in section:', section.id);
         
         // Use AI-specific conversion function to avoid header detection issues
         const editorJSContent = convertAIContentToEditorJS(templatePage.content || '');
@@ -655,7 +655,7 @@ async function createSectionsFromTemplate(handbookId: string, templateSections: 
       }
     } else {
       // If no pages provided, create a single page with the section content
-      console.log('[createSectionsFromTemplate] Creating single page for section:', section.id);
+      // console.log('[createSectionsFromTemplate] Creating single page for section:', section.id);
       
       // Use AI-specific conversion function to avoid header detection issues
       const editorJSContent = convertAIContentToEditorJS(templateSection.content || 'Innehåll kommer snart...');
@@ -677,16 +677,16 @@ async function createSectionsFromTemplate(handbookId: string, templateSections: 
     }
   }
   
-  console.log('[createSectionsFromTemplate] ✅ Custom template sections created successfully');
+  // console.log('[createSectionsFromTemplate] ✅ Custom template sections created successfully');
 }
 
 // Helper function to create default sections
 async function createDefaultSections(handbookId: string) {
-  console.log('[createDefaultSections] Creating sections from rich template for handbook:', handbookId);
+  // console.log('[createDefaultSections] Creating sections from rich template for handbook:', handbookId);
   
   // Use the rich template instead of simple sections
   for (const templateSection of completeBRFHandbook.sections) {
-    console.log('[createDefaultSections] Creating section:', templateSection.title);
+    // console.log('[createDefaultSections] Creating section:', templateSection.title);
     
     // Create the section
     const { data: section, error: sectionError } = await supabaseAdmin
@@ -710,7 +710,7 @@ async function createDefaultSections(handbookId: string) {
 
     // Create pages for this section
     for (const templatePage of templateSection.pages) {
-      console.log('[createDefaultSections] Creating page:', templatePage.title, 'in section:', section.id);
+      // console.log('[createDefaultSections] Creating page:', templatePage.title, 'in section:', section.id);
       
       const { error: pageError } = await supabaseAdmin
         .from('pages')
@@ -729,7 +729,7 @@ async function createDefaultSections(handbookId: string) {
     }
   }
   
-  console.log('[createDefaultSections] ✅ Rich template sections created successfully');
+  // console.log('[createDefaultSections] ✅ Rich template sections created successfully');
 }
 
 // Helper function to create default forum categories
@@ -772,7 +772,7 @@ async function addHandbookMember(handbookId: string, userId: string, role: 'admi
   if (error) {
     // If it's a duplicate key error, that's fine - user is already a member
     if (error.code === '23505') {
-      console.log('[addHandbookMember] User is already a member of this handbook:', { handbookId, userId });
+      // console.log('[addHandbookMember] User is already a member of this handbook:', { handbookId, userId });
       return; // Exit gracefully
     }
     
@@ -780,7 +780,7 @@ async function addHandbookMember(handbookId: string, userId: string, role: 'admi
     throw error;
   }
   
-  console.log('[addHandbookMember] Successfully added member:', { handbookId, userId, role });
+  // console.log('[addHandbookMember] Successfully added member:', { handbookId, userId, role });
 }
 
 // Backward compatibility alias for API routes
