@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { safeLocalStorage } from "@/lib/safe-storage";
 import Link from "next/link";
 import { CheckCircle2, Mail as MailIcon, Info as InfoIcon, Key } from "lucide-react";
+import { GoogleLoginButton } from './GoogleLoginButton';
 
 interface SignUpFormProps {
   showLoginLink?: boolean;
@@ -286,6 +287,20 @@ export function SignUpForm({ showLoginLink = true, onSuccess, joinCode }: SignUp
         >
           {isLoading ? "Skapar konto..." : (joinCode ? "Skapa konto och gå med" : "Skapa konto")}
         </Button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-gray-500">eller</span>
+          </div>
+        </div>
+
+        <GoogleLoginButton 
+          isLoading={isLoading}
+          joinCode={joinCode}
+        />
       </form>
 
       {showLoginLink && (

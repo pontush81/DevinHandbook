@@ -20,6 +20,9 @@ type AuthContextType = {
     error: Error | null;
     data: Session | null;
   }>;
+  signInWithGoogle: (joinCode?: string | null, redirectTo?: string) => Promise<{
+    error: Error | null;
+  }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{
     error: Error | null;
@@ -445,6 +448,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async (joinCode?: string | null, redirectTo?: string) => {
+    try {
+      // Konstruera redirect URL med join code om det finns
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      let authRedirectTo = `${baseUrl}/auth/callback`;
+      
+      // Lägg till join code som query parameter om det finns
+      if (joinCode) {
+        authRedirectTo += `?join=${encodeURIComponent(joinCode)}`;
+      } else if (redirectTo) {
+        authRedirectTo += `?redirect=${encodeURIComponent(redirectTo)}`;
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: authRedirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      return { error };
+    } catch (error) {
+      console.error('Fel vid Google-inloggning:', error);
+      return { error: error as Error };
+    }
+  };
+
   const signOut = async () => {
     console.log('🚪 AuthContext: Starting logout process...');
     
@@ -609,6 +643,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
     resetPassword,
     updatePassword,
