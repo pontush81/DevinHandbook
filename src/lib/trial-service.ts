@@ -298,6 +298,18 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
     const response = await fetch(`/api/handbook/${handbookId}/trial-status?userId=${userId}`);
     
     if (!response.ok) {
+      // 404 betyder att användaren inte äger handboken - detta är normalt och inte ett fel
+      if (response.status === 404) {
+        // console.log(`[Trial Service] User ${userId} does not own handbook ${handbookId} - returning default status`);
+        return {
+          isInTrial: false,
+          trialDaysRemaining: 0,
+          subscriptionStatus: 'none',
+          trialEndsAt: null,
+          canCreateHandbook: true,
+          hasUsedTrial: false,
+        };
+      }
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
@@ -319,7 +331,10 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
     };
 
   } catch (error) {
-    console.error('Error in getHandbookTrialStatus:', error);
+    // Logga endast icke-404 fel
+    if (!error.message?.includes('404')) {
+      console.error('Error in getHandbookTrialStatus:', error);
+    }
     return {
       isInTrial: false,
       trialDaysRemaining: 0,
