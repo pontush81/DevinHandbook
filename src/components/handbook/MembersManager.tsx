@@ -107,12 +107,12 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     
     // Debug log to see what handbook ID we're creating join code for
     const urlSlug = window.location.pathname.split('/')[1];
-          console.log('🔧 [CreateJoinCode] DEBUG:', {
-        urlSlug,
-        handbookId,
-        currentUserId,
-        mismatch: urlSlug !== handbookId ? 'WARNING: URL och handbok-ID matchar inte!' : 'OK'
-      });
+              console.log('🔧 [CreateJoinCode] DEBUG:', {
+      urlSlug,
+      handbookId,
+      currentUserId,
+      note: 'Slug och handbok-ID är olika typer av identifierare (förväntat)'
+    });
       
       // SAFETY CHECK: Verify we're creating join code for the correct handbook
       // This prevents the bug where join codes are created for wrong handbook
@@ -223,7 +223,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const joinUrl = `${window.location.origin}/signup?join=${joinCodeData.joinCode}`;
       try {
         await navigator.clipboard.writeText(joinUrl);
-        // Silent copy - no notification needed
+        showMessage("Registreringslänk kopierad! 📋"); // Add success feedback
       } catch (error) {
         showMessage("Kunde inte kopiera join-länk", true);
       }
