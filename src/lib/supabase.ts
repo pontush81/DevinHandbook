@@ -801,7 +801,10 @@ export async function testBearerTokenAuth(joinCode: string, role: string = 'view
     for (let storage of storages) {
       const keys = Object.keys(storage);
       for (let key of keys) {
-        if (key.includes('supabase') && key.includes('auth')) {
+        // Förbättrad sökning för olika Supabase auth token-format
+        if (key.includes('auth-token') || 
+            (key.includes('supabase') && key.includes('auth')) ||
+            key.startsWith('sb-') && key.includes('auth')) {
           try {
             const value = storage.getItem(key);
             if (value) {
