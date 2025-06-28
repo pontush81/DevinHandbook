@@ -134,16 +134,25 @@ export default function SignupClient() {
     if (!joinCode || !handbookInfo) return;
 
     // Check if user has confirmed email - if not, they should go through email confirmation flow
-    // Exception: In development, email confirmation might be disabled, so allow join anyway
+    // Exception 1: In development, email confirmation might be disabled, so allow join anyway
+    // Exception 2: For OAuth users (Google, etc.), email is already verified by the provider
     const isDevelopment = process.env.NODE_ENV === 'development';
-    if (!newUser.email_confirmed_at && !isDevelopment) {
+    const isOAuthUser = newUser.app_metadata?.provider !== 'email'; // Google, GitHub, etc.
+    
+    if (!newUser.email_confirmed_at && !isDevelopment && !isOAuthUser) {
       console.log('[Join] User needs email confirmation first, join will be handled by auth callback');
       return;
     } else if (!newUser.email_confirmed_at && isDevelopment) {
       console.log('[Join] Development mode: Proceeding with join despite unconfirmed email');
+    } else if (!newUser.email_confirmed_at && isOAuthUser) {
+      console.log('[Join] OAuth user (provider:', newUser.app_metadata?.provider, ') - email already verified by provider, proceeding with join');
     }
 
     setIsJoining(true);
+    
+    // 🔒 SAFETY: Mark that we're attempting join to prevent duplicate attempts
+    safeLocalStorage.setItem('join_attempt_in_progress', Date.now().toString());
+    
     try {
       // Use fetchWithAuth to automatically include Bearer token when cookies fail
       const response = await fetchWithAuth('/api/handbook/join', {
@@ -160,6 +169,9 @@ export default function SignupClient() {
         console.log('[HandleJoinHandbook] Join successful, setting joinSuccess to true');
         console.log('[HandleJoinHandbook] Response data:', data);
         console.log('[HandleJoinHandbook] HandbookInfo:', handbookInfo);
+        
+        // 🔒 SAFETY: Clear join attempt flag on success
+        safeLocalStorage.removeItem('join_attempt_in_progress');
         
         // Handle both new members and existing members gracefully
         if (data.already_member) {
@@ -231,6 +243,8 @@ export default function SignupClient() {
     } catch (error) {
       console.error('Error joining handbook:', error);
       setJoinCodeError('Ett oväntat fel inträffade. Försök igen senare.');
+      // 🔒 SAFETY: Clear join attempt flag on error
+      safeLocalStorage.removeItem('join_attempt_in_progress');
     } finally {
       setIsJoining(false);
     }

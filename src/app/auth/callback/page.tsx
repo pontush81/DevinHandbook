@@ -76,6 +76,26 @@ function AuthCallbackContent() {
           // Give a bit more time for Google OAuth session to stabilize
           setTimeout(async () => {
             try {
+              // 🔒 SAFETY: Check if signup-client already processed this join
+              const joinAttemptInProgress = safeLocalStorage.getItem('join_attempt_in_progress');
+              if (joinAttemptInProgress) {
+                const attemptTime = parseInt(joinAttemptInProgress);
+                const timeSinceAttempt = Date.now() - attemptTime;
+                
+                // If join attempt is recent (within 30 seconds), skip to prevent duplicate
+                if (timeSinceAttempt < 30000) {
+                  console.log('[Auth Callback] Recent join attempt detected, skipping Google OAuth join to prevent duplicate');
+                  setMessage("Inloggning lyckades! Du dirigeras...");
+                  setTimeout(() => {
+                    if (typeof window !== 'undefined') {
+                      const { smartRedirect } = require('@/lib/redirect-utils');
+                      smartRedirect();
+                    }
+                  }, 1000);
+                  return;
+                }
+              }
+              
               console.log('[Auth Callback] Attempting to join handbook with code:', joinCode);
               
               // Use fetchWithAuth to automatically include Bearer token when cookies fail
@@ -96,11 +116,55 @@ function AuthCallbackContent() {
 
               if (joinResponse.ok && joinData.success) {
                 console.log('[Auth Callback] Join successful for Google OAuth user');
+        
+        // 🔄 TRIGGER MEMBERS LIST REFRESH FOR ADMINS
+        console.log('📢 [Auth Callback] Triggering members list refresh across all pages');
+        
+        const refreshData = {
+          type: 'MEMBER_JOINED',
+          handbookId: joinData.handbook.id,
+          handbookTitle: joinData.handbook.title,
+          userRole: joinData.role,
+          timestamp: Date.now(),
+          source: 'auth_callback_join'
+        };
+        
+        // Method 1: BroadcastChannel (most reliable cross-page)
+        try {
+          if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('handbook-members');
+            channel.postMessage(refreshData);
+            channel.close();
+            console.log('📻 [Auth Callback] Members refresh BroadcastChannel sent');
+          }
+        } catch (error) {
+          console.error('❌ [Auth Callback] BroadcastChannel error:', error);
+        }
+        
+        // Method 2: localStorage event (fallback)
+        try {
+          localStorage.setItem('handbook-members-refresh', JSON.stringify(refreshData));
+          setTimeout(() => {
+            localStorage.removeItem('handbook-members-refresh');
+          }, 1000);
+          console.log('💾 [Auth Callback] Members refresh localStorage event sent');
+        } catch (error) {
+          console.error('❌ [Auth Callback] localStorage error:', error);
+        }
+        
+        // Method 3: Polling marker (ultimate fallback)
+        try {
+          localStorage.setItem('handbook-members-last-update', JSON.stringify(refreshData));
+          console.log('⏰ [Auth Callback] Members polling marker set');
+        } catch (error) {
+          console.error('❌ [Auth Callback] Polling marker error:', error);
+        }
                 setMessage(`Välkommen till "${joinData.handbook.title}"! Du dirigeras dit nu...`);
                 // Clear all join-related flags before redirecting
                 safeLocalStorage.removeItem('joining_handbook_via_code');
                 safeLocalStorage.removeItem('pending_join_code');
                 safeLocalStorage.removeItem('join_process_started');
+                safeLocalStorage.removeItem('join_attempt_in_progress'); // 🔒 SAFETY
                 if (typeof window !== 'undefined') {
                   delete (window as any).__joining_handbook;
                 }
@@ -114,6 +178,7 @@ function AuthCallbackContent() {
                 safeLocalStorage.removeItem('joining_handbook_via_code');
                 safeLocalStorage.removeItem('pending_join_code');
                 safeLocalStorage.removeItem('join_process_started');
+                safeLocalStorage.removeItem('join_attempt_in_progress'); // 🔒 SAFETY
                 if (typeof window !== 'undefined') {
                   delete (window as any).__joining_handbook;
                 }
@@ -128,6 +193,7 @@ function AuthCallbackContent() {
               safeLocalStorage.removeItem('joining_handbook_via_code');
               safeLocalStorage.removeItem('pending_join_code');
               safeLocalStorage.removeItem('join_process_started');
+              safeLocalStorage.removeItem('join_attempt_in_progress'); // 🔒 SAFETY
               if (typeof window !== 'undefined') {
                 delete (window as any).__joining_handbook;
               }
@@ -224,6 +290,7 @@ function AuthCallbackContent() {
                   safeLocalStorage.removeItem('joining_handbook_via_code');
                   safeLocalStorage.removeItem('pending_join_code');
                   safeLocalStorage.removeItem('join_process_started');
+                  safeLocalStorage.removeItem('join_attempt_in_progress'); // 🔒 SAFETY
                   if (typeof window !== 'undefined') {
                     delete (window as any).__joining_handbook;
                   }
@@ -236,6 +303,7 @@ function AuthCallbackContent() {
                   safeLocalStorage.removeItem('joining_handbook_via_code');
                   safeLocalStorage.removeItem('pending_join_code');
                   safeLocalStorage.removeItem('join_process_started');
+                  safeLocalStorage.removeItem('join_attempt_in_progress'); // 🔒 SAFETY
                   if (typeof window !== 'undefined') {
                     delete (window as any).__joining_handbook;
                   }

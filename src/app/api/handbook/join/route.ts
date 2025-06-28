@@ -5,8 +5,21 @@ import { getSessionFromRequestOrCookies } from '@/lib/auth-utils';
 // POST - Join a handbook using a join code
 export async function POST(request: NextRequest) {
   try {
+    // 🔍 ENHANCED DEBUGGING FOR JOIN PROCESS
+    console.log('🚀 [Join API] === JOIN REQUEST STARTED ===');
+    console.log('🔍 [Join API] Timestamp:', new Date().toISOString());
+    console.log('🔍 [Join API] Request URL:', request.url);
+    console.log('🔍 [Join API] Headers present:', {
+      contentType: request.headers.get('content-type'),
+      authorization: !!request.headers.get('authorization'),
+      cookie: !!request.headers.get('cookie'),
+      userAgent: request.headers.get('user-agent')?.slice(0, 50) + '...'
+    });
     
-    const { joinCode, role = 'viewer', userId } = await request.json();
+    const body = await request.json();
+    console.log('📋 [Join API] Request body:', body);
+    
+    const { joinCode, role = 'viewer', userId } = body;
     
     // Development mode: Allow direct userId parameter
     const isDevelopment = process.env.NODE_ENV === 'development';
@@ -94,10 +107,15 @@ export async function POST(request: NextRequest) {
       responseData.role = data.role;
     }
 
+    console.log('✅ [Join API] === JOIN REQUEST COMPLETED SUCCESSFULLY ===');
+    console.log('🎉 [Join API] User successfully joined handbook:', responseData.handbook.title);
+    console.log('👤 [Join API] User ID:', currentUserId);
+    console.log('📝 [Join API] Response data:', responseData);
     return NextResponse.json(responseData);
 
   } catch (error) {
-    console.error('Error in POST /api/handbook/join:', error);
+    console.log('❌ [Join API] === JOIN REQUEST FAILED ===');
+    console.error('💥 [Join API] Error details:', error);
     return NextResponse.json(
       { success: false, message: "Internt serverfel" },
       { status: 500 }

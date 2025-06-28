@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { AlertCircle, UserPlus, Trash2, UserCheck, Key, Copy, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { JoinProcessDebugger } from "@/components/debug/JoinProcessDebugger";
 
 type MemberRole = "admin" | "editor" | "viewer";
 
@@ -351,11 +352,52 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       return results;
     };
     
+    // 🧪 TEST MEMBER JOIN REFRESH FUNCTIONALITY
+    (window as any).testMemberJoinRefresh = (testData?: any) => {
+      const data = testData || {
+        type: 'MEMBER_JOINED',
+        handbookId,
+        handbookTitle: 'Test Handbok',
+        userRole: 'viewer',
+        timestamp: Date.now(),
+        source: 'manual_test'
+      };
+      
+      console.log('🧪 [MembersManager] Testing member join refresh with data:', data);
+      
+      try {
+        // Method 1: BroadcastChannel
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel('handbook-members');
+          channel.postMessage(data);
+          channel.close();
+          console.log('📻 [MembersManager] Test member join BroadcastChannel sent');
+        }
+        
+        // Method 2: localStorage event
+        localStorage.setItem('handbook-members-refresh', JSON.stringify(data));
+        setTimeout(() => {
+          localStorage.removeItem('handbook-members-refresh');
+        }, 1000);
+        console.log('💾 [MembersManager] Test member join localStorage event sent');
+        
+        // Method 3: Polling marker
+        localStorage.setItem('handbook-members-last-update', JSON.stringify(data));
+        console.log('⏰ [MembersManager] Test member join polling marker set');
+        
+        return { success: true, methods: ['BroadcastChannel', 'localStorage', 'polling'], data };
+      } catch (error) {
+        console.error('❌ [MembersManager] Test member join refresh error:', error);
+        return { success: false, error: error.message, data };
+      }
+    };
+    
     console.log('✅ [MembersManager] Test functions exposed:', {
       testBroadcastChannel: 'window.testBroadcastChannel()',
       testLocalStorageEvent: 'window.testLocalStorageEvent()',
       testPollingMarker: 'window.testPollingMarker()',
-      testAllCommunicationMethods: 'window.testAllCommunicationMethods()'
+      testAllCommunicationMethods: 'window.testAllCommunicationMethods()',
+      testMemberJoinRefresh: 'window.testMemberJoinRefresh()'
     });
     
     // Cleanup
@@ -365,12 +407,99 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       delete (window as any).testLocalStorageEvent;
       delete (window as any).testPollingMarker;
       delete (window as any).testAllCommunicationMethods;
+      delete (window as any).testMemberJoinRefresh;
     };
   }, [handbookId, currentUserId]);
 
   useEffect(() => {
     fetchMembers();
     fetchJoinCode();
+    
+    // 🔄 LISTEN FOR NEW MEMBER JOINS FROM OTHER PAGES
+    console.log('👂 [MembersManager] Setting up cross-page member refresh listeners');
+    
+    let membersRefreshChannel: BroadcastChannel | null = null;
+    
+    // Method 1: BroadcastChannel listener (most reliable)
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        membersRefreshChannel = new BroadcastChannel('handbook-members');
+        membersRefreshChannel.onmessage = (event) => {
+          const data = event.data;
+          console.log('📻 [MembersManager] BroadcastChannel message received:', data);
+          
+          if (data.type === 'MEMBER_JOINED' && data.handbookId === handbookId) {
+            console.log(`✅ [MembersManager] New member joined "${data.handbookTitle}" - refreshing list`);
+            showMessage(`🎉 Ny medlem gick med i handboken! Uppdaterar listan...`);
+            fetchMembers();
+          }
+        };
+        console.log('📻 [MembersManager] BroadcastChannel listener initialized');
+      }
+    } catch (error) {
+      console.error('❌ [MembersManager] BroadcastChannel error:', error);
+    }
+    
+    // Method 2: localStorage event listener (fallback)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'handbook-members-refresh' && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          console.log('💾 [MembersManager] localStorage event received:', data);
+          
+          if (data.type === 'MEMBER_JOINED' && data.handbookId === handbookId) {
+            console.log(`✅ [MembersManager] New member joined via localStorage - refreshing list`);
+            showMessage(`🎉 Ny medlem gick med i handboken! Uppdaterar listan...`);
+            fetchMembers();
+          }
+        } catch (error) {
+          console.error('❌ [MembersManager] localStorage event parsing error:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    console.log('💾 [MembersManager] localStorage event listener initialized');
+    
+    // Method 3: Polling for updates (ultimate fallback)
+    const pollInterval = setInterval(() => {
+      try {
+        const lastUpdate = localStorage.getItem('handbook-members-last-update');
+        if (lastUpdate) {
+          const updateData = JSON.parse(lastUpdate);
+          const updateTime = new Date(updateData.timestamp);
+          const now = new Date();
+          const timeDiff = now.getTime() - updateTime.getTime();
+          
+          // Check for updates in the last 30 seconds for this handbook
+          if (timeDiff < 30000 && 
+              updateData.handbookId === handbookId && 
+              updateData.type === 'MEMBER_JOINED') {
+            console.log('⏰ [MembersManager] New member detected via polling - refreshing list');
+            showMessage(`🎉 Ny medlem gick med i handboken! Uppdaterar listan...`);
+            fetchMembers();
+            // Clear the marker to prevent repeated refreshes
+            localStorage.removeItem('handbook-members-last-update');
+          }
+        }
+      } catch (error) {
+        // Silent fail for polling - don't spam console
+      }
+    }, 5000); // Check every 5 seconds
+    
+    console.log('⏰ [MembersManager] Polling for member updates started');
+    
+    // Cleanup function
+    return () => {
+      console.log('🧹 [MembersManager] Cleaning up member refresh listeners');
+      
+      if (membersRefreshChannel) {
+        membersRefreshChannel.close();
+      }
+      
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(pollInterval);
+    };
   }, [fetchMembers, fetchJoinCode]);
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -825,6 +954,13 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
           </>
         )}
       </div>
+      
+      {/* Join Process Debugger - Only in development or for debugging */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-8">
+          <JoinProcessDebugger />
+        </div>
+      )}
 
 
     </div>
