@@ -198,30 +198,161 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       // Fallback till direkt Supabase-anrop om API misslyckas
       try {
         console.log('[MembersManager] Trying fallback approach...');
-        const { data, error } = await supabase
+        const { data: membersData, error: membersError } = await supabase
           .from("handbook_members")
-          .select("id, user_id, role, created_at")
+          .select(`
+            id,
+            user_id,
+            role,
+            created_at,
+            users (
+              email
+            )
+          `)
           .eq("handbook_id", handbookId);
 
-        if (error) throw error;
-
-        const formattedMembers = data.map((member) => ({
+        if (membersError) {
+          console.error('[MembersManager] Fallback also failed:', membersError);
+          throw new Error('Fallback approach failed');
+        }
+        
+        console.log('[MembersManager] Fallback successful, raw data:', membersData);
+        
+        const formattedMembers = (membersData || []).map((member: any) => ({
           id: member.id,
           user_id: member.user_id,
-          email: "E-post ej tillgänglig", // Placeholder när vi inte kan hämta e-post
+          email: member.users?.email || 'Unknown email',
           role: member.role,
-          created_at: member.created_at,
+          created_at: member.created_at
         }));
-
+        
+        console.log('[MembersManager] Fallback formatted members:', formattedMembers);
         setMembers(formattedMembers);
-        console.log('[MembersManager] Fallback successful, showing members without emails');
       } catch (fallbackError) {
-        console.error("Fallback också misslyckades:", fallbackError);
+        console.error('[MembersManager] Both primary and fallback failed:', fallbackError);
         setMembers([]);
       }
     } finally {
       setIsLoading(false);
     }
+  }, [handbookId, currentUserId]);
+
+  // Expose test functions to window for debugging cross-page communication
+  useEffect(() => {
+    console.log('🧪 [MembersManager] Exposing cross-page communication test functions');
+    
+    // Test BroadcastChannel communication
+    (window as any).testBroadcastChannel = (testData?: any) => {
+      const data = testData || {
+        type: 'PERMISSION_REFRESH',
+        handbookId,
+        userId: currentUserId,
+        newRole: 'viewer',
+        timestamp: Date.now(),
+        source: 'test',
+        test: true
+      };
+      
+      console.log('🧪 [MembersManager] Testing BroadcastChannel with data:', data);
+      
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel('handbook-permissions');
+          channel.postMessage(data);
+          channel.close();
+          console.log('✅ [MembersManager] Test BroadcastChannel message sent successfully');
+          return { success: true, method: 'BroadcastChannel', data };
+        } else {
+          console.log('❌ [MembersManager] BroadcastChannel not supported in this browser');
+          return { success: false, error: 'BroadcastChannel not supported', data };
+        }
+      } catch (error) {
+        console.error('❌ [MembersManager] Test BroadcastChannel error:', error);
+        return { success: false, error: error.message, data };
+      }
+    };
+    
+    // Test localStorage communication
+    (window as any).testLocalStorageEvent = (testData?: any) => {
+      const data = testData || {
+        type: 'PERMISSION_REFRESH',
+        handbookId,
+        userId: currentUserId,
+        newRole: 'viewer',
+        timestamp: Date.now(),
+        source: 'test',
+        test: true
+      };
+      
+      console.log('🧪 [MembersManager] Testing localStorage event with data:', data);
+      
+      try {
+        localStorage.setItem('handbook-permission-refresh', JSON.stringify(data));
+        console.log('✅ [MembersManager] Test localStorage data set');
+        
+        setTimeout(() => {
+          localStorage.removeItem('handbook-permission-refresh');
+          console.log('🗑️ [MembersManager] Test localStorage data removed');
+        }, 1000);
+        
+        return { success: true, method: 'localStorage', data };
+      } catch (error) {
+        console.error('❌ [MembersManager] Test localStorage error:', error);
+        return { success: false, error: error.message, data };
+      }
+    };
+    
+    // Test polling marker
+    (window as any).testPollingMarker = (testData?: any) => {
+      const data = testData || {
+        handbookId,
+        userId: currentUserId,
+        timestamp: Date.now(),
+        action: 'test',
+        test: true
+      };
+      
+      console.log('🧪 [MembersManager] Testing polling marker with data:', data);
+      
+      try {
+        localStorage.setItem('handbook-permission-last-update', JSON.stringify(data));
+        console.log('✅ [MembersManager] Test polling marker set');
+        return { success: true, method: 'polling', data };
+      } catch (error) {
+        console.error('❌ [MembersManager] Test polling marker error:', error);
+        return { success: false, error: error.message, data };
+      }
+    };
+    
+    // Test all methods at once
+    (window as any).testAllCommunicationMethods = (testData?: any) => {
+      console.log('🧪 [MembersManager] Testing all cross-page communication methods');
+      
+      const results = {
+        broadcastChannel: (window as any).testBroadcastChannel(testData),
+        localStorage: (window as any).testLocalStorageEvent(testData),
+        polling: (window as any).testPollingMarker(testData)
+      };
+      
+      console.log('📊 [MembersManager] All test results:', results);
+      return results;
+    };
+    
+    console.log('✅ [MembersManager] Test functions exposed:', {
+      testBroadcastChannel: 'window.testBroadcastChannel()',
+      testLocalStorageEvent: 'window.testLocalStorageEvent()',
+      testPollingMarker: 'window.testPollingMarker()',
+      testAllCommunicationMethods: 'window.testAllCommunicationMethods()'
+    });
+    
+    // Cleanup
+    return () => {
+      console.log('🧹 [MembersManager] Cleaning up test functions');
+      delete (window as any).testBroadcastChannel;
+      delete (window as any).testLocalStorageEvent;
+      delete (window as any).testPollingMarker;
+      delete (window as any).testAllCommunicationMethods;
+    };
   }, [handbookId, currentUserId]);
 
   useEffect(() => {

@@ -150,7 +150,9 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     const initBroadcastChannel = () => {
       try {
         if (typeof BroadcastChannel !== 'undefined') {
+          // Add error handling for BroadcastChannel
           broadcastChannel = new BroadcastChannel('handbook-permissions');
+          
           broadcastChannel.onmessage = (event) => {
             try {
               const data = event.data;
@@ -160,12 +162,23 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
                   data.handbookId === initialData.id && 
                   data.userId === user?.id) {
                 console.log('🔄 [ModernHandbookClient] BroadcastChannel permission refresh for current user - refreshing');
-                refreshPermissions();
+                setTimeout(() => {
+                  try {
+                    refreshPermissions();
+                  } catch (error) {
+                    console.error('❌ [ModernHandbookClient] Error during permission refresh:', error);
+                  }
+                }, 100); // Small delay to prevent race conditions
               }
             } catch (error) {
               console.error('❌ [ModernHandbookClient] BroadcastChannel message error:', error);
             }
           };
+          
+          broadcastChannel.onerror = (error) => {
+            console.error('❌ [ModernHandbookClient] BroadcastChannel error:', error);
+          };
+          
           console.log('📻 [ModernHandbookClient] BroadcastChannel initialized successfully');
         } else {
           console.log('⚠️ [ModernHandbookClient] BroadcastChannel not supported');
@@ -177,56 +190,91 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
     // Method 2: localStorage events (fallback)
     const handleStoragePermissionRefresh = (event: StorageEvent) => {
-      console.log('📡 [ModernHandbookClient] Storage event received:', {
-        key: event.key,
-        newValue: event.newValue,
-        oldValue: event.oldValue,
-        url: event.url
-      });
-      
-      if (event.key === 'handbook-permission-refresh' && event.newValue) {
-        try {
-          const refreshData = JSON.parse(event.newValue);
-          console.log('🔗 [ModernHandbookClient] Received cross-page permission refresh:', refreshData);
-          
-          // Check if this refresh is for the current handbook and user
-          if (refreshData.handbookId === initialData.id && refreshData.userId === user?.id) {
-            console.log('🔄 [ModernHandbookClient] Cross-page permission refresh for current user - refreshing');
-            refreshPermissions();
-          } else {
-            console.log('🔍 [ModernHandbookClient] Cross-page refresh not for current user/handbook - ignoring', {
-              eventHandbookId: refreshData.handbookId,
-              currentHandbookId: initialData.id,
-              eventUserId: refreshData.userId,
-              currentUserId: user?.id
-            });
+      try {
+        console.log('📡 [ModernHandbookClient] Storage event received:', {
+          key: event.key,
+          newValue: event.newValue,
+          oldValue: event.oldValue,
+          url: event.url
+        });
+        
+        if (event.key === 'handbook-permission-refresh' && event.newValue) {
+          try {
+            const refreshData = JSON.parse(event.newValue);
+            console.log('🔗 [ModernHandbookClient] Received cross-page permission refresh:', refreshData);
+            
+            // Check if this refresh is for the current handbook and user
+            if (refreshData.handbookId === initialData.id && refreshData.userId === user?.id) {
+              console.log('🔄 [ModernHandbookClient] Cross-page permission refresh for current user - refreshing');
+              setTimeout(() => {
+                try {
+                  refreshPermissions();
+                } catch (error) {
+                  console.error('❌ [ModernHandbookClient] Error during localStorage permission refresh:', error);
+                }
+              }, 100); // Small delay to prevent race conditions
+            } else {
+              console.log('🔍 [ModernHandbookClient] Cross-page refresh not for current user/handbook - ignoring', {
+                eventHandbookId: refreshData.handbookId,
+                currentHandbookId: initialData.id,
+                eventUserId: refreshData.userId,
+                currentUserId: user?.id
+              });
+            }
+          } catch (parseError) {
+            console.error('❌ [ModernHandbookClient] Error parsing localStorage permission refresh:', parseError);
           }
-        } catch (error) {
-          console.error('❌ [ModernHandbookClient] Error parsing localStorage permission refresh:', error);
         }
+      } catch (error) {
+        console.error('❌ [ModernHandbookClient] Storage event handling error:', error);
       }
     };
 
     // Method 3: Periodic permission check (ultimate fallback)
     let permissionPollInterval: NodeJS.Timeout | null = null;
     const startPermissionPolling = () => {
+      // Clear any existing interval first
+      if (permissionPollInterval) {
+        clearInterval(permissionPollInterval);
+      }
+      
       permissionPollInterval = setInterval(() => {
         try {
           const lastUpdate = localStorage.getItem('handbook-permission-last-update');
           if (lastUpdate) {
-            const updateData = JSON.parse(lastUpdate);
-            const updateTime = new Date(updateData.timestamp);
-            const now = new Date();
-            const timeDiff = now.getTime() - updateTime.getTime();
-            
-            // Check for updates in the last 10 seconds that might affect this user
-            if (timeDiff < 10000 && 
-                updateData.handbookId === initialData.id && 
-                updateData.userId === user?.id) {
-              console.log('⏰ [ModernHandbookClient] Permission update detected via polling - refreshing');
-              refreshPermissions();
-              // Clear the update marker to prevent repeated refreshes
-              localStorage.removeItem('handbook-permission-last-update');
+            try {
+              const updateData = JSON.parse(lastUpdate);
+              const updateTime = new Date(updateData.timestamp);
+              const now = new Date();
+              const timeDiff = now.getTime() - updateTime.getTime();
+              
+              // Check for updates in the last 10 seconds that might affect this user
+              if (timeDiff < 10000 && 
+                  updateData.handbookId === initialData.id && 
+                  updateData.userId === user?.id) {
+                console.log('⏰ [ModernHandbookClient] Permission update detected via polling - refreshing');
+                setTimeout(() => {
+                  try {
+                    refreshPermissions();
+                  } catch (error) {
+                    console.error('❌ [ModernHandbookClient] Error during polling permission refresh:', error);
+                  }
+                }, 100);
+                // Clear the update marker to prevent repeated refreshes
+                try {
+                  localStorage.removeItem('handbook-permission-last-update');
+                } catch (removeError) {
+                  console.error('❌ [ModernHandbookClient] Error removing permission marker:', removeError);
+                }
+              }
+            } catch (parseError) {
+              console.error('❌ [ModernHandbookClient] Error parsing permission update data:', parseError);
+              // Clear corrupted data
+              try {
+                localStorage.removeItem('handbook-permission-last-update');
+              } catch (removeError) {
+                console.error('❌ [ModernHandbookClient] Error removing corrupted permission marker:', removeError);
+              }
             }
           }
         } catch (error) {
@@ -367,12 +415,17 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         const isSuperAdmin = profile?.is_superadmin || false;
         console.log('🔍 [ModernHandbookClient] Is superadmin?', isSuperAdmin);
 
-        // Check for testing override parameter
+        // Check for testing override parameter or production environment
         const urlParams = new URLSearchParams(window.location.search);
-        const disableSuperadmin = urlParams.get('test-disable-superadmin') === 'true';
+        const disableSuperadmin = urlParams.get('test-disable-superadmin') === 'true' ||
+                                  urlParams.get('disable-superadmin') === 'true';
         
         if (disableSuperadmin) {
-          console.log('🧪 [ModernHandbookClient] TESTING: Superadmin override disabled via URL parameter');
+          console.log('🧪 [ModernHandbookClient] TESTING: Superadmin override disabled via URL parameter', {
+            urlParam: urlParams.get('test-disable-superadmin') || urlParams.get('disable-superadmin'),
+            environment: process.env.NODE_ENV,
+            hostname: window.location.hostname
+          });
         }
 
         // If superadmin (and not testing), give full access immediately
