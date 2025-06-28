@@ -70,10 +70,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   useEffect(() => {
     setMounted(true);
     
-    // Auto-exit edit mode on mount if user can't edit
-    if (isFirstRender.current && defaultEditMode && !canEdit) {
-      setIsEditMode(false);
-    }
+    // Don't auto-exit edit mode here - let permissions load first
+    // The permission check useEffect will handle this properly
     
     isFirstRender.current = false;
   }, []);
@@ -509,10 +507,13 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         setIsAdmin(isAdmin);
         setCanEdit(canEdit);
         
-        // If user lost edit permissions while in edit mode, exit edit mode
+        // Handle edit mode based on permissions and defaultEditMode
         if (isEditMode && !canEdit) {
           console.log('🚫 [ModernHandbookClient] User lost edit permissions - exiting edit mode');
           setIsEditMode(false);
+        } else if (!isEditMode && defaultEditMode && canEdit) {
+          console.log('✅ [ModernHandbookClient] User has permissions and defaultEditMode=true - entering edit mode');
+          setIsEditMode(true);
         }
         
         console.log('👤 [ModernHandbookClient] User permissions refreshed:', {

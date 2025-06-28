@@ -620,7 +620,7 @@ export default function DashboardPage() {
                               size="sm"
                               asChild
                             >
-                              <Link href={`/${handbook.subdomain}`}>
+                              <Link href={`/${handbook.subdomain}?edit=true`}>
                                 Hantera
                               </Link>
                             </Button>
@@ -725,7 +725,7 @@ export default function DashboardPage() {
                             size="sm"
                             asChild
                           >
-                            <Link href={`/${handbook.subdomain}`}>
+                            <Link href={`/${handbook.subdomain}?edit=true`}>
                               {handbook.userRole === 'admin' ? 'Hantera' : 'Redigera'}
                             </Link>
                           </Button>

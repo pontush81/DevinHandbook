@@ -213,7 +213,7 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                         Visa
                       </a>
                       <Link
-                        href={`/${handbook.slug}`}
+                        href={`/${handbook.slug}?edit=true`}
                         className="text-black hover:underline"
                       >
                         Redigera

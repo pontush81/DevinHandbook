@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic';
 
 interface HandbookPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function HandbookPage({ params }: HandbookPageProps) {
+export default async function HandbookPage({ params, searchParams }: HandbookPageProps) {
   const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
 
   console.log('🎯 [HandbookPage] Loading handbook for slug:', slug);
 
@@ -45,7 +47,7 @@ export default async function HandbookPage({ params }: HandbookPageProps) {
         const retryData = await getHandbookBySlug(slug);
         if (retryData) {
           console.log('✅ [HandbookPage] Found handbook on retry!');
-          return renderHandbook(retryData, slug);
+          return renderHandbook(retryData, slug, resolvedSearchParams);
         }
       }
       
@@ -60,7 +62,7 @@ export default async function HandbookPage({ params }: HandbookPageProps) {
       published: handbookData.published
     });
 
-    return renderHandbook(handbookData, slug);
+    return renderHandbook(handbookData, slug, resolvedSearchParams);
 
   } catch (error) {
     console.error('💥 [HandbookPage] Error loading handbook:', error);
@@ -78,7 +80,7 @@ export default async function HandbookPage({ params }: HandbookPageProps) {
       const fallbackData = await getHandbookBySlug(slug);
       if (fallbackData) {
         console.log('✅ [HandbookPage] Fallback query succeeded!');
-        return renderHandbook(fallbackData, slug);
+        return renderHandbook(fallbackData, slug, resolvedSearchParams);
       }
     } catch (fallbackError) {
       console.error('💥 [HandbookPage] Fallback also failed:', fallbackError);
@@ -88,7 +90,7 @@ export default async function HandbookPage({ params }: HandbookPageProps) {
   }
 }
 
-function renderHandbook(handbookData: any, slug: string) {
+function renderHandbook(handbookData: any, slug: string, searchParams?: { [key: string]: string | string[] | undefined }) {
   // Validate data structure before adaptation
   if (!handbookData.id || !handbookData.title) {
     console.error('❌ [HandbookPage] Invalid handbook data structure:', {
@@ -98,6 +100,9 @@ function renderHandbook(handbookData: any, slug: string) {
     });
     notFound();
   }
+
+  // Check if edit mode should be enabled
+  const defaultEditMode = searchParams?.edit === 'true';
 
   // Adapt data structure for client component
   const adaptedData = {
@@ -118,8 +123,9 @@ function renderHandbook(handbookData: any, slug: string) {
     id: adaptedData.id,
     title: adaptedData.title,
     handbookSlug: adaptedData.handbookSlug,
-    sectionsCount: adaptedData.sections.length
+    sectionsCount: adaptedData.sections.length,
+    defaultEditMode
   });
 
-  return <ModernHandbookClient initialData={adaptedData} />;
+  return <ModernHandbookClient initialData={adaptedData} defaultEditMode={defaultEditMode} />;
 } 
