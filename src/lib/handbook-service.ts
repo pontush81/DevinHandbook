@@ -199,7 +199,7 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
         sections!inner(
           id,
           title,
-          content,
+          description,
           order_index,
           created_at,
           updated_at
