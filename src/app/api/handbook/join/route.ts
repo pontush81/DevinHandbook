@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession } from '@/lib/auth-utils';
+import { getSessionFromRequestOrCookies } from '@/lib/auth-utils';
 
 // POST - Join a handbook using a join code
 export async function POST(request: NextRequest) {
@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 [Join API] NODE_ENV:', process.env.NODE_ENV);
     console.log('🔍 [Join API] Request URL:', request.url);
     console.log('🔍 [Join API] Request headers cookies:', request.headers.get('cookie'));
+    console.log('🔍 [Join API] Request headers authorization:', request.headers.get('authorization'));
     
     const { joinCode, role = 'viewer', userId } = await request.json();
     
@@ -22,25 +23,36 @@ export async function POST(request: NextRequest) {
       currentUserId = userId;
       console.log('[Join API] Development mode: Using provided userId:', currentUserId);
     } else {
-      // Normal mode: Get user from session
-      console.log('🔍 [Join API] Getting server session...');
-      const session = await getServerSession();
-      console.log('🔍 [Join API] Server session result:', {
+      // Normal mode: Get user from session using enhanced authentication
+      console.log('🔍 [Join API] Getting session with enhanced authentication...');
+      const session = await getSessionFromRequestOrCookies(request);
+      console.log('🔍 [Join API] Enhanced session result:', {
         hasSession: !!session,
         hasUser: !!session?.user,
         userId: session?.user?.id,
-        userEmail: session?.user?.email
+        userEmail: session?.user?.email,
+        authMethod: session?.access_token ? 'token' : 'unknown'
       });
       
       if (!session?.user) {
-        console.log('❌ [Join API] No session found, returning 401');
+        console.log('❌ [Join API] No valid session found after trying all authentication methods');
         return NextResponse.json(
-          { success: false, message: "Du måste vara inloggad för att gå med i en handbok" },
+          { 
+            success: false, 
+            message: "Du måste vara inloggad för att gå med i en handbok",
+            debug: {
+              environment: process.env.NODE_ENV,
+              hasCookieHeader: !!request.headers.get('cookie'),
+              hasAuthHeader: !!request.headers.get('authorization'),
+              timestamp: new Date().toISOString()
+            }
+          },
           { status: 401 }
         );
+      } else {
+        currentUserId = session.user.id;
+        console.log('✅ [Join API] Using enhanced authentication userId:', currentUserId);
       }
-      currentUserId = session.user.id;
-      console.log('✅ [Join API] Using session userId:', currentUserId);
     }
     
     if (!joinCode) {

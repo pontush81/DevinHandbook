@@ -7,7 +7,7 @@ import { Database } from '@/types/supabase';
  * Hämtar en session för servern baserad på cookies
  */
 export async function getServerSession() {
-  console.log('🔍 [getServerSession] Starting session check...');
+  console.log('🔍 [getServerSession] Starting enhanced session check...');
   
   const cookieStore = await cookies();
   const allCookies = cookieStore.getAll();
@@ -18,7 +18,7 @@ export async function getServerSession() {
     supabaseCookies: allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-')).map(c => ({ name: c.name, hasValue: !!c.value }))
   });
   
-  // Look for the correct auth token cookies (not the code verifier)
+  // Method 1: Look for the correct auth token cookies (not the code verifier)
   // Supabase uses these cookie patterns:
   // - sb-{project-ref}-auth-token (main auth token)
   // - sb-{project-ref}-auth-token-code-verifier (PKCE verifier - not what we want)
@@ -28,7 +28,7 @@ export async function getServerSession() {
     (c.name.includes('sb-') || c.name.includes('supabase'))
   );
   
-  console.log('🔍 [getServerSession] Looking for auth token cookie (excluding code-verifier)...');
+  console.log('🔍 [getServerSession] Method 1: Looking for auth token cookie...');
   console.log('🔍 [getServerSession] Auth cookie found:', authCookie ? authCookie.name : 'none');
   
   if (authCookie && authCookie.value) {
@@ -41,7 +41,7 @@ export async function getServerSession() {
       console.log('🔍 [getServerSession] Parsed auth data keys:', Object.keys(authData || {}));
       
       if (authData && authData.access_token && authData.user) {
-        console.log('✅ [getServerSession] Valid session found in cookie');
+        console.log('✅ [getServerSession] Method 1: Valid session found in cookie');
         
         // Create a mock session object that matches Supabase session format
         const session = {
@@ -55,18 +55,47 @@ export async function getServerSession() {
         
         return session;
       } else {
-        console.log('❌ [getServerSession] Auth data incomplete:', { 
+        console.log('❌ [getServerSession] Method 1: Auth data incomplete:', { 
           hasAccessToken: !!authData?.access_token, 
           hasUser: !!authData?.user 
         });
       }
     } catch (error) {
-      console.error('❌ [getServerSession] Error parsing auth cookie:', error);
+      console.error('❌ [getServerSession] Method 1: Error parsing auth cookie:', error);
     }
   }
   
-  // Fallback to SSR client
-  console.log('📡 [getServerSession] Using SSR client fallback...');
+  // Method 2: Try to find ANY auth cookie with different patterns
+  console.log('🔍 [getServerSession] Method 2: Searching for any Supabase auth data...');
+  
+  for (const cookie of allCookies) {
+    if ((cookie.name.includes('sb-') || cookie.name.includes('supabase')) && 
+        cookie.name.includes('auth') && 
+        !cookie.name.includes('code-verifier') &&
+        cookie.value) {
+      
+      try {
+        const data = JSON.parse(decodeURIComponent(cookie.value));
+        if (data && data.access_token && data.user) {
+          console.log('✅ [getServerSession] Method 2: Found valid auth data in cookie:', cookie.name);
+          return {
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+            expires_in: data.expires_in,
+            expires_at: data.expires_at,
+            token_type: data.token_type || 'bearer',
+            user: data.user
+          };
+        }
+      } catch (e) {
+        // Not valid JSON, continue searching
+        continue;
+      }
+    }
+  }
+  
+  // Method 3: Fallback to SSR client
+  console.log('📡 [getServerSession] Method 3: Using SSR client fallback...');
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -88,16 +117,23 @@ export async function getServerSession() {
   const { data: { session }, error } = await supabase.auth.getSession();
   
   if (error) {
-    console.error('❌ [getServerSession] Session error:', error);
+    console.error('❌ [getServerSession] Method 3: Session error:', error);
+    console.log('🔍 [getServerSession] All methods failed, returning null');
+    return null;
   }
+
+  if (session) {
+    console.log('✅ [getServerSession] Method 3: SSR client found session');
+    return session;
+  }
+
+  console.log('❌ [getServerSession] All authentication methods failed');
+  console.log('🔍 [getServerSession] Final diagnosis:');
+  console.log('  - Cookie-based auth: Failed');
+  console.log('  - SSR client auth: Failed');
+  console.log('  - Available cookies:', allCookies.map(c => c.name).join(', '));
   
-  console.log('✅ [getServerSession] Session result:', { 
-    hasSession: !!session, 
-    userId: session?.user?.id || 'no session',
-    expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'no expiry'
-  });
-  
-  return session;
+  return null;
 }
 
 /**
@@ -221,4 +257,83 @@ export async function getUserRole(userId: string, handbookId: string): Promise<'
     console.error('Oväntat fel vid hämtning av användarroll:', error);
     return null;
   }
+}
+
+/**
+ * Hämtar session från request headers (Bearer token) som fallback
+ */
+export async function getSessionFromRequest(request: Request): Promise<any> {
+  console.log('🔍 [getSessionFromRequest] Checking for Bearer token authentication...');
+  
+  const authHeader = request.headers.get('authorization');
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7); // Remove "Bearer " prefix
+    console.log('🔑 [getSessionFromRequest] Found Bearer token');
+    
+    try {
+      // Create a Supabase client and verify the token
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() { return []; },
+            setAll() {}
+          },
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        }
+      );
+      
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error('❌ [getSessionFromRequest] Bearer token validation failed:', error);
+        return null;
+      }
+      
+      if (user) {
+        console.log('✅ [getSessionFromRequest] Bearer token is valid for user:', user.id);
+        return {
+          access_token: token,
+          user,
+          token_type: 'bearer'
+        };
+      }
+    } catch (error) {
+      console.error('❌ [getSessionFromRequest] Error validating Bearer token:', error);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Förbättrad session-funktion som försöker både cookies och Bearer tokens
+ */
+export async function getSessionFromRequestOrCookies(request?: Request): Promise<any> {
+  console.log('🔍 [getSessionFromRequestOrCookies] Starting comprehensive auth check...');
+  
+  // Method 1: Try traditional cookie-based session
+  const cookieSession = await getServerSession();
+  if (cookieSession) {
+    console.log('✅ [getSessionFromRequestOrCookies] Cookie-based auth succeeded');
+    return cookieSession;
+  }
+  
+  // Method 2: Try Bearer token if request is provided
+  if (request) {
+    const bearerSession = await getSessionFromRequest(request);
+    if (bearerSession) {
+      console.log('✅ [getSessionFromRequestOrCookies] Bearer token auth succeeded');
+      return bearerSession;
+    }
+  }
+  
+  console.log('❌ [getSessionFromRequestOrCookies] All authentication methods failed');
+  return null;
 } 

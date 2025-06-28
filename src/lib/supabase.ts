@@ -356,10 +356,20 @@ const cookieAwareStorage = {
       // För auth-tokens, sätt också som cookie för bättre persistens
       if (typeof document !== 'undefined' && key.includes('auth')) {
         const isProduction = process.env.NODE_ENV === 'production';
-        const domain = isProduction ? 
-          (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` : 
-           (typeof window !== 'undefined' && window.location.hostname.includes('handbok.org') ? '.handbok.org' : '')) : 
-          '';
+        
+        // Förbättrad domain-logik
+        let domain = '';
+        if (isProduction && typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          
+          // Explicit hantering av olika produktionsdomäner
+          if (hostname === 'www.handbok.org' || hostname === 'handbok.org') {
+            domain = '.handbok.org';
+          } else if (hostname.endsWith('.handbok.org')) {
+            domain = '.handbok.org';
+          }
+          // För andra domäner, använd ingen domain (låt browsern bestämma)
+        }
         
         const cookieOptions = [
           `${key}=${encodeURIComponent(value)}`,
@@ -368,15 +378,26 @@ const cookieAwareStorage = {
           'samesite=lax'
         ];
         
-        if (domain) {
+        // Lägg till domain endast om vi är i produktion och har en giltig domain
+        if (domain && isProduction) {
           cookieOptions.push(`domain=${domain}`);
         }
         
-        if (isProduction) {
+        // Secure flag endast för HTTPS
+        if (isProduction && typeof window !== 'undefined' && window.location.protocol === 'https:') {
           cookieOptions.push('secure');
         }
         
-        document.cookie = cookieOptions.join('; ');
+        const cookieString = cookieOptions.join('; ');
+        console.log(`🍪 [Supabase] Setting auth cookie with options:`, {
+          key: key.substring(0, 20) + '...',
+          domain: domain || 'none',
+          secure: isProduction && typeof window !== 'undefined' && window.location.protocol === 'https:',
+          environment: isProduction ? 'production' : 'development',
+          hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+        });
+        
+        document.cookie = cookieString;
       }
     } catch (error) {
       console.warn(`Storage setItem error for key ${key}:`, error);
@@ -393,10 +414,18 @@ const cookieAwareStorage = {
       // Ta bort cookie om det finns
       if (typeof document !== 'undefined') {
         const isProduction = process.env.NODE_ENV === 'production';
-        const domain = isProduction ? 
-          (process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN ? `.${process.env.NEXT_PUBLIC_HANDBOOK_DOMAIN}` : 
-           (typeof window !== 'undefined' && window.location.hostname.includes('handbok.org') ? '.handbok.org' : '')) : 
-          '';
+        
+        // Samma domain-logik som setItem
+        let domain = '';
+        if (isProduction && typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          
+          if (hostname === 'www.handbok.org' || hostname === 'handbok.org') {
+            domain = '.handbok.org';
+          } else if (hostname.endsWith('.handbok.org')) {
+            domain = '.handbok.org';
+          }
+        }
         
         const cookieOptions = [
           `${key}=`,
@@ -404,11 +433,16 @@ const cookieAwareStorage = {
           'expires=Thu, 01 Jan 1970 00:00:00 GMT'
         ];
         
-        if (domain) {
+        if (domain && isProduction) {
           cookieOptions.push(`domain=${domain}`);
         }
         
         document.cookie = cookieOptions.join('; ');
+        
+        // Försök även utan domain för säkerhets skull
+        if (domain) {
+          document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        }
       }
     } catch (error) {
       console.warn(`Storage removeItem error for key ${key}:`, error);
@@ -617,18 +651,107 @@ export async function diagnoseAuthIssues() {
     diagnostics.sessionStorage = `blocked: ${e.message}`;
   }
   
-  // Testa Supabase session
+  // Hämta aktuell session från Supabase
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
-    diagnostics.authSession = session ? 'active' : 'none';
-    if (error) {
-      diagnostics.authSession = `error: ${error.message}`;
-    }
+    diagnostics.authSession = {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id || null,
+      email: session?.user?.email || null,
+      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
+      error: error?.message || null
+    };
   } catch (e) {
-    diagnostics.authSession = `failed: ${e.message}`;
+    diagnostics.authSession = { error: e.message };
   }
   
   return diagnostics;
+}
+
+// Debug-funktion för att testa cookie-sättning
+export function testCookieAuth() {
+  if (typeof window === 'undefined') {
+    console.log('❌ Cannot test cookies on server side');
+    return;
+  }
+  
+  console.log('🧪 Testing Enhanced Cookie Authentication...');
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Hostname:', window.location.hostname);
+  console.log('Protocol:', window.location.protocol);
+  
+  // Test cookie setting
+  const testKey = 'test-auth-cookie';
+  const testValue = JSON.stringify({
+    access_token: 'test-token-123',
+    user: { id: 'test-user', email: 'test@example.com' },
+    expires_at: Math.floor(Date.now() / 1000) + 3600
+  });
+  
+  // Use the same logic as cookieAwareStorage
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  let domain = '';
+  if (isProduction) {
+    const hostname = window.location.hostname;
+    
+    if (hostname === 'www.handbok.org' || hostname === 'handbok.org') {
+      domain = '.handbok.org';
+    } else if (hostname.endsWith('.handbok.org')) {
+      domain = '.handbok.org';
+    }
+  }
+  
+  const cookieOptions = [
+    `${testKey}=${encodeURIComponent(testValue)}`,
+    'path=/',
+    'max-age=60', // 1 minute for testing
+    'samesite=lax'
+  ];
+  
+  if (domain && isProduction) {
+    cookieOptions.push(`domain=${domain}`);
+  }
+  
+  if (isProduction && window.location.protocol === 'https:') {
+    cookieOptions.push('secure');
+  }
+  
+  const cookieString = cookieOptions.join('; ');
+  console.log('🍪 Setting test cookie:', cookieString);
+  
+  document.cookie = cookieString;
+  
+  // Test reading back
+  setTimeout(() => {
+    const cookies = document.cookie.split(';');
+    const found = cookies.find(c => c.trim().startsWith(testKey + '='));
+    
+    if (found) {
+      console.log('✅ Test cookie found:', found.trim());
+      
+      // Clean up
+      document.cookie = `${testKey}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      if (domain) {
+        document.cookie = `${testKey}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      }
+      console.log('🧹 Test cookie cleaned up');
+    } else {
+      console.log('❌ Test cookie not found in:', document.cookie);
+    }
+    
+    // Test API call
+    console.log('🔍 Testing debug auth API...');
+    fetch('/api/debug/auth')
+      .then(r => r.json())
+      .then(data => {
+        console.log('📡 Debug auth API result:', data);
+      })
+      .catch(err => {
+        console.error('❌ Debug auth API error:', err);
+      });
+  }, 100);
 }
 
 // Add function to upgrade service to latest client as needed
@@ -646,4 +769,16 @@ export function upgradeServiceClient() {
     );
   }
   return getServiceSupabase();
+}
+
+// Expose debug functions globally for testing
+if (typeof window !== 'undefined') {
+  (window as any).testCookieAuth = testCookieAuth;
+  (window as any).diagnoseAuthIssues = diagnoseAuthIssues;
+  (window as any).syncCookiesToLocalStorage = syncCookiesToLocalStorage;
+  
+  console.log('🧪 Auth debug functions available:');
+  console.log('  - window.testCookieAuth() - Test cookie setting');
+  console.log('  - window.diagnoseAuthIssues() - Full auth diagnostics');
+  console.log('  - window.syncCookiesToLocalStorage() - Sync cookies to localStorage');
 }
