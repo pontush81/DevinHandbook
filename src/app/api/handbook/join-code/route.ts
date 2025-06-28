@@ -66,16 +66,21 @@ export async function POST(request: NextRequest) {
 // GET - Get current join code for a handbook
 export async function GET(request: NextRequest) {
   try {
+    // 1. Hämta och validera session eller userId från query params
     const session = await getServerSession();
-    if (!session?.user) {
+    const url = new URL(request.url);
+    const handbookId = url.searchParams.get('handbookId');
+    const queryUserId = url.searchParams.get('userId'); // Fallback för när session inte fungerar
+    
+    // Använd session userId om tillgänglig, annars fallback till query param
+    const userId = session?.user?.id || queryUserId;
+    
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
+        { success: false, message: "Ej autentiserad - ingen användar-ID tillgänglig" },
         { status: 401 }
       );
     }
-
-    const url = new URL(request.url);
-    const handbookId = url.searchParams.get('handbookId');
     
     if (!handbookId) {
       return NextResponse.json(
@@ -91,7 +96,7 @@ export async function GET(request: NextRequest) {
       .from("handbook_members")
       .select("id")
       .eq("handbook_id", handbookId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
 

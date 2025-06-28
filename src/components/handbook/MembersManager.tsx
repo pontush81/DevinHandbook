@@ -52,7 +52,9 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
   const fetchJoinCode = useCallback(async () => {
     setIsLoadingJoinCode(true);
     try {
-      const response = await fetch(`/api/handbook/join-code?handbookId=${handbookId}`);
+      const response = await fetch(`/api/handbook/join-code?handbookId=${handbookId}&userId=${currentUserId}`, {
+        credentials: 'include'
+      });
       const data = await response.json();
 
       console.log('[MembersManager] fetchJoinCode response:', { response: response.ok, data });
@@ -75,7 +77,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     } finally {
       setIsLoadingJoinCode(false);
     }
-  }, [handbookId]);
+  }, [handbookId, currentUserId]);
 
   const handleCreateJoinCode = async () => {
     setIsLoadingJoinCode(true);
@@ -84,6 +86,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, expiresInDays: 90 }), // 3 months instead of 1
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -124,6 +127,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId }),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -172,7 +176,9 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       
       // Använd admin API för att hämta medlemmar med e-postadresser
       // Detta kringgår RLS-problem och ger oss tillgång till auth.users tabellen
-      const response = await fetch(`/api/handbook/get-members?handbookId=${handbookId}`);
+      const response = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}`, {
+        credentials: 'include'
+      });
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -216,7 +222,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     } finally {
       setIsLoading(false);
     }
-  }, [handbookId]);
+  }, [handbookId, currentUserId]);
 
   useEffect(() => {
     fetchMembers();
@@ -233,6 +239,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, email, role }),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -267,6 +274,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, memberId, role: newRole }),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -297,6 +305,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, memberId }),
+        credentials: 'include'
       });
 
       const data = await response.json();

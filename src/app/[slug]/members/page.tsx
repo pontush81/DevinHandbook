@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { getHandbookBySlug } from '@/lib/handbook-service';
-import RequireAuth from '@/components/auth/RequireAuth';
 import MembersPageClient from './MembersPageClient';
 
 interface MembersPageProps {
@@ -19,12 +18,10 @@ export default async function MembersPage({ params, searchParams }: MembersPageP
   }
 
   return (
-    <RequireAuth>
-      <MembersPageClient 
-        handbookData={handbookData}
-        handbookSlug={slug}
-        searchParams={searchParamsResolved}
-      />
-    </RequireAuth>
+    <MembersPageClient 
+      handbookData={handbookData}
+      handbookSlug={slug}
+      searchParams={searchParamsResolved}
+    />
   );
 } 

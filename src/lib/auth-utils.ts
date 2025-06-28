@@ -18,15 +18,27 @@ export async function getServerSession() {
   //   supabaseCookies: allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-')).map(c => ({ name: c.name, hasValue: !!c.value }))
   // });
   
-  // Look for the specific auth token cookie
-  const authCookie = allCookies.find(c => c.name === 'sb-kjsquvjzctdwgjypcjrg-auth-token');
+  // Look for the correct auth token cookies (not the code verifier)
+  // Supabase uses these cookie patterns:
+  // - sb-{project-ref}-auth-token (main auth token)
+  // - sb-{project-ref}-auth-token-code-verifier (PKCE verifier - not what we want)
+  const authCookie = allCookies.find(c => 
+    c.name.includes('auth-token') && 
+    !c.name.includes('code-verifier') && 
+    (c.name.includes('sb-') || c.name.includes('supabase'))
+  );
   
-      if (authCookie && authCookie.value) {
-    // console.log('🔑 [getServerSession] Found auth cookie, parsing session...');
+  // console.log('🔍 [getServerSession] Looking for auth token cookie (excluding code-verifier)...');
+  // console.log('🔍 [getServerSession] Auth cookie found:', authCookie ? authCookie.name : 'none');
+  
+  if (authCookie && authCookie.value) {
+    // console.log('🔑 [getServerSession] Found auth cookie:', authCookie.name);
     
     try {
       // Parse the auth token from cookie
       const authData = JSON.parse(decodeURIComponent(authCookie.value));
+      
+      // console.log('🔍 [getServerSession] Parsed auth data keys:', Object.keys(authData || {}));
       
       if (authData && authData.access_token && authData.user) {
         // console.log('✅ [getServerSession] Valid session found in cookie');
@@ -42,6 +54,11 @@ export async function getServerSession() {
         };
         
         return session;
+      } else {
+        // console.log('❌ [getServerSession] Auth data incomplete:', { 
+        //   hasAccessToken: !!authData?.access_token, 
+        //   hasUser: !!authData?.user 
+        // });
       }
     } catch (error) {
       console.error('❌ [getServerSession] Error parsing auth cookie:', error);
@@ -49,6 +66,7 @@ export async function getServerSession() {
   }
   
   // Fallback to SSR client
+  // console.log('📡 [getServerSession] Using SSR client fallback...');
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

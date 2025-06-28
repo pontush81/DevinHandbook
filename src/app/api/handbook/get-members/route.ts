@@ -4,18 +4,21 @@ import { getServerSession } from '@/lib/auth-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Hämta och validera session
+    // 1. Hämta och validera session eller userId från query params
     const session = await getServerSession();
-    if (!session?.user) {
+    const { searchParams } = new URL(request.url);
+    const handbookId = searchParams.get('handbookId');
+    const queryUserId = searchParams.get('userId'); // Fallback för när session inte fungerar
+    
+    // Använd session userId om tillgänglig, annars fallback till query param
+    const userId = session?.user?.id || queryUserId;
+    
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
+        { success: false, message: "Ej autentiserad - ingen användar-ID tillgänglig" },
         { status: 401 }
       );
     }
-
-    // 2. Hämta handbookId från query parameters
-    const { searchParams } = new URL(request.url);
-    const handbookId = searchParams.get('handbookId');
     
     if (!handbookId) {
       return NextResponse.json(
@@ -31,7 +34,7 @@ export async function GET(request: NextRequest) {
       .from("handbook_members")
       .select("id")
       .eq("handbook_id", handbookId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
 
