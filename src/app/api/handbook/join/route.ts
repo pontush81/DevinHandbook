@@ -26,20 +26,70 @@ export async function POST(request: NextRequest) {
     let currentUserId: string;
     
     if (isDevelopment && userId) {
-      // Development mode: Use provided userId
+      console.log('🔧 [Join API] Development mode: Using provided userId:', userId);
       currentUserId = userId;
     } else {
-      // Normal mode: Get user from session
-      const session = await getSessionFromRequestOrCookies(request);
+      console.log('🔐 [Join API] Production mode: Getting user from session...');
+      
+      // Normal mode: Get user from session with enhanced error handling
+      let session;
+      
+      try {
+        session = await getSessionFromRequestOrCookies(request);
+        console.log('📋 [Join API] Session result:', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id || 'none',
+          authMethod: session?.token_type || 'unknown'
+        });
+      } catch (authError) {
+        console.error('💥 [Join API] Authentication error:', authError);
+        
+        // Check if it's a specific Bearer token error
+        if (authError.message?.includes('missing sub claim') || 
+            authError.message?.includes('bad_jwt') ||
+            authError.message?.includes('invalid claim')) {
+          console.log('🔄 [Join API] Bearer token corrupted, attempting cookie fallback...');
+          
+          // Try cookie-only authentication as fallback
+          try {
+            const { getServerSession } = require('@/lib/auth-utils');
+            session = await getServerSession();
+            console.log('📋 [Join API] Cookie fallback result:', {
+              hasSession: !!session,
+              hasUser: !!session?.user,
+              userId: session?.user?.id || 'none'
+            });
+          } catch (cookieError) {
+            console.error('💥 [Join API] Cookie fallback also failed:', cookieError);
+            session = null;
+          }
+        } else {
+          session = null;
+        }
+      }
       
       if (!session?.user) {
+        console.log('❌ [Join API] No valid session found after all attempts');
         return NextResponse.json(
-          { success: false, message: "Du måste vara inloggad för att gå med i en handbok" },
+          { 
+            success: false, 
+            message: "Du måste vara inloggad för att gå med i en handbok",
+            debug: {
+              authenticationFailed: true,
+              suggestions: [
+                "Försök logga ut och logga in igen",
+                "Rensa cookies och localStorage",
+                "Kontakta support om problemet kvarstår"
+              ]
+            }
+          },
           { status: 401 }
         );
       }
       
       currentUserId = session.user.id;
+      console.log('✅ [Join API] Successfully authenticated user:', currentUserId);
     }
     
     if (!joinCode) {

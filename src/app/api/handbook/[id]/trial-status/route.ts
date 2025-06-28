@@ -19,10 +19,10 @@ export async function GET(
     }
 
     // Try to get session from server-side cookies first
-    const session = await getServerSession(request);
+    const sessionResult = await getServerSession(request);
     
     // If no server session, try to get userId from Bearer token
-    let userId = session?.user?.id || providedUserId;
+    let userId = sessionResult?.user?.id || providedUserId;
     
     // Check if Authorization header has Bearer token
     if (!userId) {
@@ -51,7 +51,7 @@ export async function GET(
       );
     }
 
-    console.log('📊 [Trial Status] Checking status for:', { handbookId, userId, method: session ? 'cookie' : 'bearer' });
+    console.log('📊 [Trial Status] Checking status for:', { handbookId, userId, method: sessionResult ? 'cookie' : 'bearer' });
 
     const supabase = getServiceSupabase();
 

@@ -17,34 +17,32 @@ export async function GET() {
 
     const emailResult = await resend.emails.send({
       from: 'onboarding@resend.dev',
-      to: 'gulmaranbrf@gmail.com',
-      subject: 'Test Email från Handbok.org',
-      html: '<h1>Test</h1><p>Detta är ett test-email.</p>'
+      to: 'pontus.hberg@gmail.com',
+      subject: 'Test från Handbok.org - ' + new Date().toLocaleString('sv-SE'),
+      html: `
+        <h2>Test E-mail från Handbok.org</h2>
+        <p>Detta är ett test-mail skickat ${new Date().toLocaleString('sv-SE')}</p>
+        <p>Om du får detta mail fungerar Resend korrekt! 🎉</p>
+        <hr>
+        <p><small>Skickat från test-resend API endpoint</small></p>
+      `,
     });
 
     console.log('[Test Resend] Email result:', emailResult);
 
     if (emailResult.error) {
       console.error('[Test Resend] Resend error:', emailResult.error);
-      return NextResponse.json({
-        success: false,
-        error: emailResult.error,
-        resendDetails: emailResult
-      }, { status: 500 });
+      return NextResponse.json({ success: false, error: emailResult.error, resendDetails: emailResult }, { status: 400 });
     }
 
-    return NextResponse.json({
-      success: true,
-      emailId: emailResult.data?.id,
-      result: emailResult
-    });
+    return NextResponse.json({ success: true, message: 'E-mail skickat framgångsrikt!', resendDetails: emailResult });
 
   } catch (error) {
     console.error('[Test Resend] Catch error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || 'Unknown error',
+      stack: error.stack
     }, { status: 500 });
   }
 } 

@@ -1073,3 +1073,135 @@ async function refreshAccessToken(): Promise<string | null> {
     return null;
   }
 }
+
+// DEBUG FUNCTION: Test join with user ID (för att debugga authentication problem)
+if (typeof window !== 'undefined') {
+  (window as any).debugJoinWithUserId = async (joinCode: string, userId: string = '9919f4f3-2748-4379-8b8c-790be1d08ae6') => {
+    console.log('🧪 [DEBUG] Testing join with manual userId...', { joinCode, userId });
+    
+    try {
+      const response = await fetch('/api/handbook/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          joinCode,
+          userId // Detta kommer bara fungera i development mode
+        })
+      });
+      
+      const result = await response.json();
+      
+      console.log('🧪 [DEBUG] Join test results:', {
+        status: response.status,
+        ok: response.ok,
+        result
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('🧪 [DEBUG] Join test failed:', error);
+      return { error: error.message };
+    }
+  };
+  
+  console.log('🧪 [DEBUG] Join test function available: window.debugJoinWithUserId(joinCode, userId)');
+}
+
+// RECOVERY FUNCTION: Reset corrupted auth state
+if (typeof window !== 'undefined') {
+  (window as any).recoverAuth = async () => {
+    console.log('🔧 [RECOVERY] Starting auth recovery process...');
+    
+    try {
+      // Step 1: Clear all localStorage auth data
+      console.log('🧹 [RECOVERY] Clearing localStorage...');
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+          localStorage.removeItem(key);
+          console.log('🗑️ [RECOVERY] Removed:', key);
+        }
+      });
+      
+      // Step 2: Clear cookies
+      console.log('🍪 [RECOVERY] Clearing cookies...');
+      document.cookie.split(";").forEach(cookie => {
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+        if (name && (name.startsWith('sb-') || name.includes('supabase'))) {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.handbok.org`;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          console.log('🗑️ [RECOVERY] Cleared cookie:', name);
+        }
+      });
+      
+      // Step 3: Get fresh session
+      console.log('🔄 [RECOVERY] Getting fresh session...');
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.log('❌ [RECOVERY] Session error:', error);
+        console.log('👉 [RECOVERY] Please log in again manually');
+        return { success: false, message: 'Please log in again', error };
+      }
+      
+      if (data.session) {
+        console.log('✅ [RECOVERY] Fresh session obtained!');
+        console.log('👤 [RECOVERY] User:', data.session.user.email);
+        console.log('🔑 [RECOVERY] Token expires:', new Date(data.session.expires_at * 1000));
+        return { success: true, session: data.session };
+      } else {
+        console.log('❌ [RECOVERY] No session available');
+        console.log('👉 [RECOVERY] Please log in again manually');
+        return { success: false, message: 'No session available' };
+      }
+      
+    } catch (error) {
+      console.error('💥 [RECOVERY] Recovery failed:', error);
+      return { success: false, error: error.message };
+    }
+  };
+  
+  console.log('🔧 [RECOVERY] Auth recovery function available: window.recoverAuth()');
+}
+
+// DEBUG FUNCTION: Test medlemssida authentication
+if (typeof window !== 'undefined') {
+  (window as any).debugMembersPageAuth = () => {
+    console.log('🧪 [DEBUG] Testing members page authentication...');
+    
+    // Simulate going to members page
+    console.log('🔍 [DEBUG] Current location:', window.location.href);
+    console.log('🔍 [DEBUG] Testing if user would be authenticated for members page');
+    
+    // Check current session
+    return supabase.auth.getSession().then(({ data, error }) => {
+      console.log('🧪 [DEBUG] Auth check results:', {
+        hasSession: !!data.session,
+        hasUser: !!data.session?.user,
+        userId: data.session?.user?.id || 'none',
+        email: data.session?.user?.email || 'none',
+        error: error?.message || 'none'
+      });
+      
+      if (data.session?.user) {
+        console.log('✅ [DEBUG] User IS authenticated - should be able to access members page');
+        console.log('👤 [DEBUG] User details:', {
+          id: data.session.user.id,
+          email: data.session.user.email,
+          created: data.session.user.created_at
+        });
+        return { authenticated: true, user: data.session.user };
+      } else {
+        console.log('❌ [DEBUG] User NOT authenticated - will be redirected to login');
+        return { authenticated: false, error: error?.message };
+      }
+    }).catch(err => {
+      console.error('💥 [DEBUG] Auth check failed:', err);
+      return { authenticated: false, error: err.message };
+    });
+  };
+  
+  console.log('🧪 [DEBUG] Members page auth test available: window.debugMembersPageAuth()');
+}

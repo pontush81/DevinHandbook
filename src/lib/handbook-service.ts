@@ -135,142 +135,115 @@ export async function createHandbook(
 }
 
 export async function getHandbookBySlug(slug: string): Promise<Handbook | null> {
+  console.log('[Handbook Service] ===== getHandbookBySlug START =====');
+  console.log('[Handbook Service] Requested slug:', slug);
+  
   try {
-    // console.log(`[Handbook Service] Getting handbook by slug: ${slug}`);
-
-    // First, let's check if there are any handbooks with this slug at all (published or not)
-    const { data: allHandbooks, error: debugError } = await (supabase as any)
-      .from('handbooks')
-      .select('id, title, slug, published')
-      .eq('slug', slug);
-
-    if (debugError) {
-      console.error('[Handbook Service] Debug query error:', debugError);
-    } else {
-      console.log(`[Handbook Service] Debug: Found ${allHandbooks?.length || 0} handbooks with slug "${slug}":`, 
-        allHandbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
-      );
-    }
-
-    const { data: handbooks, error } = await (supabase as any)
-      .from('handbooks')
-      .select(`
-        id,
-        title,
-        slug,
-        description,
-        owner_id,
-        published,
-        forum_enabled,
-        created_at,
-        updated_at,
-        sections (
-          id,
-          title,
-          description,
-          order_index,
-          is_public,
-          is_published,
-          pages (
-            id,
-            title,
-            content,
-            slug,
-            order_index
-          )
-        )
-      `)
-      .eq('slug', slug)
-      .eq('published', true)
-      .order('created_at', { ascending: false }); // Most recent first for consistent behavior
-
-    if (error) {
-      console.error('[Handbook Service] Error getting handbook:', error);
+    if (!slug || slug.trim() === '') {
+      console.log('[Handbook Service] ❌ Empty slug provided');
       return null;
     }
 
-    console.log(`[Handbook Service] Published query result: Found ${handbooks?.length || 0} published handbooks with slug "${slug}":`, 
-      handbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
-    );
-
-    if (!handbooks || handbooks.length === 0) {
-      console.log(`[Handbook Service] No published handbook found with slug: ${slug}`);
-      // Check if there's an unpublished version
-      if (allHandbooks && allHandbooks.length > 0) {
-        const unpublished = allHandbooks.find(h => !h.published);
-        if (unpublished) {
-          console.warn(`[Handbook Service] Found unpublished handbook with slug: ${slug} (id: ${unpublished.id})`);
-        }
+    const supabase = getServiceSupabase();
+    
+    // First, let's search for ANY handbooks with this slug (published or unpublished)
+    console.log('[Handbook Service] Step 1: Searching for ALL handbooks with slug...');
+    const debugQuery = supabase
+      .from('handbooks')
+      .select('id, title, slug, subdomain, published')
+      .or(`slug.eq.${slug},subdomain.eq.${slug}`);
+    
+    const { data: debugData, error: debugError } = await debugQuery;
+    
+    if (debugError) {
+      console.error('[Handbook Service] ❌ Debug query error:', debugError);
+      throw new Error(`Database error during debug search: ${debugError.message}`);
+    }
+    
+    console.log(`[Handbook Service] Debug: Found ${debugData?.length || 0} handbooks with slug "${slug}":`, debugData);
+    
+    // Now search only for published handbooks
+    console.log('[Handbook Service] Step 2: Searching for PUBLISHED handbooks...');
+    const { data: publishedData, error: publishedError } = await supabase
+      .from('handbooks')
+      .select('id, title, slug, subdomain, published')
+      .or(`slug.eq.${slug},subdomain.eq.${slug}`)
+      .eq('published', true);
+    
+    if (publishedError) {
+      console.error('[Handbook Service] ❌ Published query error:', publishedError);
+      throw new Error(`Database error during published search: ${publishedError.message}`);
+    }
+    
+    console.log(`[Handbook Service] Published query result: Found ${publishedData?.length || 0} published handbooks with slug "${slug}":`, publishedData);
+    
+    if (!publishedData || publishedData.length === 0) {
+      console.log('[Handbook Service] ❌ No published handbook found with slug:', slug);
+      if (debugData && debugData.length > 0) {
+        console.log('[Handbook Service] 💡 Found unpublished handbooks - they need to be published first:', 
+          debugData.map(h => ({ id: h.id, title: h.title, published: h.published }))
+        );
       }
       return null;
     }
-
-    if (handbooks.length > 1) {
-      console.warn(`[Handbook Service] ⚠️ WARNING: Found ${handbooks.length} published handbooks with same slug "${slug}"! This should not happen.`);
-      handbooks.forEach((h, idx) => {
-        console.warn(`[Handbook Service] [${idx}] ${h.title} (id: ${h.id}, created: ${h.created_at})`);
-      });
-      
-      // CRITICAL BUG FIX: If there are duplicates, use the most recent one (latest created_at)
-      console.warn(`[Handbook Service] 🔧 BUG FIX: Sorting handbooks by created_at to use most recent`);
-      handbooks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      console.warn(`[Handbook Service] 🔧 BUG FIX: Will use handbook: ${handbooks[0].title} (id: ${handbooks[0].id}, created: ${handbooks[0].created_at})`);
-    }
-
-    const handbook = handbooks[0];
-
+    
+    const handbook = publishedData[0];
     console.log(`[Handbook Service] ✅ Using handbook: ${handbook.title} (id: ${handbook.id})`);
     
-    // CRITICAL BUG PREVENTION: Add final validation
-    if (handbook.slug !== slug) {
-      console.error(`[Handbook Service] 🚨 CRITICAL BUG: Handbook slug mismatch!`, {
-        requestedSlug: slug,
-        returnedSlug: handbook.slug,
-        handbookId: handbook.id,
-        handbookTitle: handbook.title
-      });
-      
-      // This should never happen, but if it does, log extensively
-      console.error('[Handbook Service] 🚨 This indicates a serious database inconsistency or query error!');
-      console.error('[Handbook Service] 🚨 Returning null to prevent wrong handbook usage');
-      return null;
-    }
-
-
+    // Get the full handbook with sections
+    console.log('[Handbook Service] Step 3: Fetching full handbook data...');
+    const { data: fullData, error: fullError } = await supabase
+      .from('handbooks')
+      .select(`
+        *,
+        sections!inner(
+          id,
+          title,
+          content,
+          order_index,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('id', handbook.id)
+      .eq('published', true)
+      .single();
     
-    return {
-      id: handbook.id,
-      title: handbook.title,
-      name: handbook.title,
-      subdomain: handbook.slug,
-      slug: handbook.slug,
-      description: handbook.description,
-      owner_id: handbook.owner_id,
-      published: handbook.published,
-      forum_enabled: handbook.forum_enabled,
-      created_at: handbook.created_at,
-      updated_at: handbook.updated_at,
-      sections: handbook.sections?.map((section: any) => ({
-        id: section.id,
-        title: section.title,
-        description: section.description,
-        order_index: section.order_index,
-        handbook_id: handbook.id,
-        is_public: section.is_public,
-        is_published: section.is_published,
-        pages: section.pages?.map((page: any) => ({
-          id: page.id,
-          title: page.title,
-          content: page.content,
-          slug: page.slug,
-          order_index: page.order_index,
-          section_id: section.id
-        })) || []
-      })) || []
-    };
+    if (fullError) {
+      console.error('[Handbook Service] ❌ Full data error:', fullError);
+      if (fullError.code === 'PGRST116') {
+        console.log('[Handbook Service] 💡 Handbook exists but has no sections or other join issue');
+        // Try to get handbook without sections
+        const { data: noSectionsData, error: noSectionsError } = await supabase
+          .from('handbooks')
+          .select('*')
+          .eq('id', handbook.id)
+          .eq('published', true)
+          .single();
+        
+        if (noSectionsError) {
+          console.error('[Handbook Service] ❌ Even simple query failed:', noSectionsError);
+          throw new Error(`Database error: ${noSectionsError.message}`);
+        }
+        
+        console.log('[Handbook Service] ✅ Handbook found without sections');
+        return { ...noSectionsData, sections: [] };
+      }
+      throw new Error(`Database error: ${fullError.message}`);
+    }
+    
+    console.log('[Handbook Service] ✅ Full handbook data retrieved successfully');
+    console.log('[Handbook Service] ===== getHandbookBySlug END =====');
+    return fullData;
+    
   } catch (error) {
-    console.error('[Handbook Service] Unexpected error:', error);
-    return null;
+    console.error('[Handbook Service] 💥 Critical error in getHandbookBySlug:', {
+      error: error.message,
+      stack: error.stack?.split('\n').slice(0, 5).join('\n'),
+      slug
+    });
+    console.log('[Handbook Service] ===== getHandbookBySlug ERROR END =====');
+    throw error;
   }
 }
 

@@ -271,7 +271,32 @@ export async function getSessionFromRequest(request: Request): Promise<any> {
     const token = authHeader.substring(7); // Remove "Bearer " prefix
     console.log('🔑 [getSessionFromRequest] Found Bearer token');
     
+    // Validate token format before attempting to verify
+    if (!token || token.length < 20) {
+      console.log('❌ [getSessionFromRequest] Bearer token too short or empty');
+      return null;
+    }
+    
     try {
+      // Parse JWT payload to check for sub claim before full verification
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        console.log('❌ [getSessionFromRequest] Invalid JWT format');
+        return null;
+      }
+      
+      try {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        if (!payload.sub) {
+          console.log('❌ [getSessionFromRequest] JWT missing sub claim');
+          return null;
+        }
+        console.log('✅ [getSessionFromRequest] JWT has valid sub claim:', payload.sub);
+      } catch (parseError) {
+        console.log('❌ [getSessionFromRequest] Could not parse JWT payload:', parseError.message);
+        return null;
+      }
+      
       // Create a Supabase client and verify the token
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -307,6 +332,8 @@ export async function getSessionFromRequest(request: Request): Promise<any> {
     } catch (error) {
       console.error('❌ [getSessionFromRequest] Error validating Bearer token:', error);
     }
+  } else {
+    console.log('🔍 [getSessionFromRequest] No Bearer token found in Authorization header');
   }
   
   return null;
