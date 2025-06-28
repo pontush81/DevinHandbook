@@ -190,7 +190,7 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     const handbook = publishedData[0];
     console.log(`[Handbook Service] ✅ Using handbook: ${handbook.title} (id: ${handbook.id})`);
     
-    // Get the full handbook with sections
+    // Get the full handbook with sections and pages
     console.log('[Handbook Service] Step 3: Fetching full handbook data...');
     const { data: fullData, error: fullError } = await supabase
       .from('handbooks')
@@ -201,8 +201,23 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
           title,
           description,
           order_index,
+          handbook_id,
+          is_public,
+          is_published,
+          icon,
           created_at,
-          updated_at
+          updated_at,
+          pages (
+            id,
+            title,
+            content,
+            slug,
+            order_index,
+            section_id,
+            is_published,
+            created_at,
+            updated_at
+          )
         )
       `)
       .eq('id', handbook.id)
