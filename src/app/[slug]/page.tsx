@@ -24,6 +24,31 @@ export default async function HandbookPage({ params }: HandbookPageProps) {
       console.log('🔍 [HandbookPage] This will trigger a 404 page');
       console.log('💡 [HandbookPage] Check if handbook exists with this slug in database');
       console.log('💡 [HandbookPage] Check if handbook is published (only published handbooks are returned)');
+      
+      // 🔧 Enhanced error handling for join scenarios
+      console.log('🔧 [HandbookPage] Checking if this is a join scenario...');
+      
+      // For production debugging - log more info about the slug
+      console.log('🔍 [HandbookPage] Slug details:', {
+        slug,
+        slugLength: slug?.length,
+        slugType: typeof slug,
+        isValidSlug: /^[a-zA-Z0-9-_]+$/.test(slug || '')
+      });
+      
+      // Add delay before 404 to allow for database propagation after joins
+      if (slug && slug.length > 0) {
+        console.log('⏱️ [HandbookPage] Adding delay before 404 in case handbook is being created...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Try one more time
+        const retryData = await getHandbookBySlug(slug);
+        if (retryData) {
+          console.log('✅ [HandbookPage] Found handbook on retry!');
+          return renderHandbook(retryData, slug);
+        }
+      }
+      
       notFound();
     }
 
@@ -35,61 +60,66 @@ export default async function HandbookPage({ params }: HandbookPageProps) {
       published: handbookData.published
     });
 
-    // Validate data structure before adaptation
-    if (!handbookData.id || !handbookData.title) {
-      console.error('❌ [HandbookPage] Invalid handbook data structure:', {
-        hasId: !!handbookData.id,
-        hasTitle: !!handbookData.title,
-        data: handbookData
-      });
-      notFound();
-    }
+    return renderHandbook(handbookData, slug);
 
-    // Adapt data structure for client component
-    const adaptedData = {
-      id: handbookData.id,
-      title: handbookData.title || '',
-      subtitle: handbookData.subtitle || '',
-      handbookSlug: handbookData.subdomain || handbookData.slug, // Use subdomain for slug, fallback to slug
-      forum_enabled: handbookData.forum_enabled || false,
-      sections: handbookData.sections || [],
-      theme: handbookData.theme || {
-        primary_color: '#3498db',
-        secondary_color: '#2c3e50',
-        logo_url: null
-      }
-    };
-
-    console.log('🔧 [HandbookPage] Adapted data for client:', {
-      id: adaptedData.id,
-      title: adaptedData.title,
-      handbookSlug: adaptedData.handbookSlug,
-      sectionsCount: adaptedData.sections.length
-    });
-
-    console.log('🚀 [HandbookPage] About to render ModernHandbookClient...');
-    return <ModernHandbookClient initialData={adaptedData} />;
   } catch (error) {
     console.error('💥 [HandbookPage] Error loading handbook:', error);
-    console.error('💥 [HandbookPage] Error stack:', error.stack);
-    console.error('💥 [HandbookPage] Error details:', {
-      name: error.name,
-      message: error.message,
-      cause: error.cause,
-      slug: slug
+    console.log('🔍 [HandbookPage] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      slug,
+      timestamp: new Date().toISOString()
     });
     
-    // Log additional debugging info
-    console.error('🔍 [HandbookPage] Debugging info:');
-    console.error('  - Requested slug:', slug);
-    console.error('  - Error type:', typeof error);
-    console.error('  - Error constructor:', error.constructor.name);
+    // Don't immediately 404 on errors - might be temporary
+    console.log('🔄 [HandbookPage] Attempting graceful recovery...');
     
-    // Check if it's a specific type of error that shouldn't trigger 404
-    if (error.message?.includes('NEXT_HTTP_ERROR_FALLBACK')) {
-      console.error('🚨 [HandbookPage] Next.js HTTP error detected - this might be a server/network issue, not a missing handbook');
+    try {
+      // Try a simpler query as fallback
+      const fallbackData = await getHandbookBySlug(slug);
+      if (fallbackData) {
+        console.log('✅ [HandbookPage] Fallback query succeeded!');
+        return renderHandbook(fallbackData, slug);
+      }
+    } catch (fallbackError) {
+      console.error('💥 [HandbookPage] Fallback also failed:', fallbackError);
     }
     
     notFound();
   }
+}
+
+function renderHandbook(handbookData: any, slug: string) {
+  // Validate data structure before adaptation
+  if (!handbookData.id || !handbookData.title) {
+    console.error('❌ [HandbookPage] Invalid handbook data structure:', {
+      hasId: !!handbookData.id,
+      hasTitle: !!handbookData.title,
+      data: handbookData
+    });
+    notFound();
+  }
+
+  // Adapt data structure for client component
+  const adaptedData = {
+    id: handbookData.id,
+    title: handbookData.title || '',
+    subtitle: handbookData.subtitle || '',
+    handbookSlug: handbookData.subdomain || handbookData.slug, // Use subdomain for slug, fallback to slug
+    forum_enabled: handbookData.forum_enabled || false,
+    sections: handbookData.sections || [],
+    theme: handbookData.theme || {
+      primary_color: '#3498db',
+      secondary_color: '#2c3e50',
+      logo_url: null
+    }
+  };
+
+  console.log('🔧 [HandbookPage] Adapted data for client:', {
+    id: adaptedData.id,
+    title: adaptedData.title,
+    handbookSlug: adaptedData.handbookSlug,
+    sectionsCount: adaptedData.sections.length
+  });
+
+  return <ModernHandbookClient initialData={adaptedData} />;
 } 

@@ -109,7 +109,61 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
     
+    // 🔧 NEW: Ensure user profile exists before attempting join
+    // This fixes the Google OAuth issue where profiles aren't created automatically
+    console.log('🔧 [Join API] Ensuring user profile exists for:', currentUserId);
+    
+    try {
+      // First check if profile exists
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', currentUserId)
+        .maybeSingle();
+      
+      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+        console.error('💥 [Join API] Error checking profile:', profileCheckError);
+      }
+      
+      if (!existingProfile) {
+        console.log('⚠️ [Join API] Profile missing for user, creating one...');
+        
+        // Get user email from auth for profile creation
+        const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(currentUserId);
+        const userEmail = authUser?.user?.email || 'unknown@example.com';
+        
+        if (authError) {
+          console.error('💥 [Join API] Could not get user email from auth:', authError);
+        }
+        
+        // Create profile with admin client to bypass RLS
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: currentUserId,
+            email: userEmail,
+            created_at: new Date().toISOString(),
+            is_superadmin: false
+          });
+        
+        if (createProfileError) {
+          console.error('💥 [Join API] Could not create profile:', createProfileError);
+          
+          // Continue anyway - the join function might handle this
+          console.log('⚠️ [Join API] Continuing with join despite profile creation failure...');
+        } else {
+          console.log('✅ [Join API] Profile created successfully for user:', currentUserId);
+        }
+      } else {
+        console.log('✅ [Join API] Profile already exists for user:', currentUserId);
+      }
+    } catch (profileError) {
+      console.error('💥 [Join API] Error in profile creation logic:', profileError);
+      // Continue anyway
+    }
+    
     // Call the stored function to join handbook
+    console.log('📞 [Join API] Calling join_handbook_with_code function...');
     const { data, error } = await supabase
       .rpc('join_handbook_with_code', {
         join_code: joinCode.trim().toUpperCase(),

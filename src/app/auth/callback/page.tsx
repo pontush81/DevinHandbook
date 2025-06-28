@@ -120,57 +120,58 @@ function AuthCallbackContent() {
         // 🔄 TRIGGER MEMBERS LIST REFRESH FOR ADMINS
         console.log('📢 [Auth Callback] Triggering members list refresh across all pages');
         
-        const refreshData = {
-          type: 'MEMBER_JOINED',
-          handbookId: joinData.handbook.id,
-          handbookTitle: joinData.handbook.title,
-          userRole: joinData.role,
-          timestamp: Date.now(),
-          source: 'auth_callback_join'
-        };
-        
-        // Method 1: BroadcastChannel (most reliable cross-page)
+        // Method 1: BroadcastChannel
         try {
-          if (typeof BroadcastChannel !== 'undefined') {
-            const channel = new BroadcastChannel('handbook-members');
-            channel.postMessage(refreshData);
-            channel.close();
-            console.log('📻 [Auth Callback] Members refresh BroadcastChannel sent');
-          }
-        } catch (error) {
-          console.error('❌ [Auth Callback] BroadcastChannel error:', error);
+          const channel = new BroadcastChannel('handbook-members-refresh');
+          channel.postMessage({ 
+            type: 'refresh-members', 
+            handbookId: joinResponse.handbook?.id,
+            timestamp: Date.now()
+          });
+          console.log('📻 [Auth Callback] Members refresh BroadcastChannel sent');
+          channel.close();
+        } catch (e) {
+          console.log('⚠️ [Auth Callback] BroadcastChannel failed:', e);
         }
         
-        // Method 2: localStorage event (fallback)
+        // Method 2: localStorage event
         try {
-          localStorage.setItem('handbook-members-refresh', JSON.stringify(refreshData));
-          setTimeout(() => {
-            localStorage.removeItem('handbook-members-refresh');
-          }, 1000);
+          localStorage.setItem('handbook-members-refresh', Date.now().toString());
           console.log('💾 [Auth Callback] Members refresh localStorage event sent');
-        } catch (error) {
-          console.error('❌ [Auth Callback] localStorage error:', error);
+        } catch (e) {
+          console.log('⚠️ [Auth Callback] localStorage failed:', e);
         }
         
-        // Method 3: Polling marker (ultimate fallback)
+        // Method 3: Polling marker
         try {
-          localStorage.setItem('handbook-members-last-update', JSON.stringify(refreshData));
+          localStorage.setItem('handbook-permission-last-update', Date.now().toString());
           console.log('⏰ [Auth Callback] Members polling marker set');
-        } catch (error) {
-          console.error('❌ [Auth Callback] Polling marker error:', error);
+        } catch (e) {
+          console.log('⚠️ [Auth Callback] Polling marker failed:', e);
         }
-                setMessage(`Välkommen till "${joinData.handbook.title}"! Du dirigeras dit nu...`);
-                // Clear all join-related flags before redirecting
-                safeLocalStorage.removeItem('joining_handbook_via_code');
-                safeLocalStorage.removeItem('pending_join_code');
-                safeLocalStorage.removeItem('join_process_started');
-                safeLocalStorage.removeItem('join_attempt_in_progress'); // 🔒 SAFETY
-                if (typeof window !== 'undefined') {
-                  delete (window as any).__joining_handbook;
-                }
-                setTimeout(() => {
-                  router.replace(`/${joinData.handbook.slug}`);
-                }, 2000);
+
+        // 🔄 Enhanced redirect logic with better error handling
+        const targetSlug = joinResponse.handbook?.slug;
+        if (targetSlug) {
+          console.log('[Auth Callback] Attempting redirect to handbook:', targetSlug);
+          
+          // Add small delay to ensure database updates are complete
+          setTimeout(() => {
+            try {
+              const targetUrl = `/${targetSlug}`;
+              console.log('[Auth Callback] Redirecting to:', targetUrl);
+              window.location.href = targetUrl;
+            } catch (redirectError) {
+              console.error('[Auth Callback] Redirect failed:', redirectError);
+              // Fallback to dashboard
+              console.log('[Auth Callback] Falling back to dashboard');
+              window.location.href = '/dashboard';
+            }
+          }, 1000); // 1 second delay to ensure DB consistency
+        } else {
+          console.log('[Auth Callback] No handbook slug provided, redirecting to dashboard');
+          window.location.href = '/dashboard';
+        }
               } else {
                 console.error('[Auth Callback] Google OAuth join failed:', joinData);
                 setMessage("Inloggning lyckades, men kunde inte gå med i handboken. Du dirigeras till inloggning...");
