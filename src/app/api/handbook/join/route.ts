@@ -5,6 +5,12 @@ import { getServerSession } from '@/lib/auth-utils';
 // POST - Join a handbook using a join code
 export async function POST(request: NextRequest) {
   try {
+    // Add comprehensive debugging for production
+    console.log('🔍 [Join API] === AUTHENTICATION DEBUGGING ===');
+    console.log('🔍 [Join API] NODE_ENV:', process.env.NODE_ENV);
+    console.log('🔍 [Join API] Request URL:', request.url);
+    console.log('🔍 [Join API] Request headers cookies:', request.headers.get('cookie'));
+    
     const { joinCode, role = 'viewer', userId } = await request.json();
     
     // Development mode: Allow direct userId parameter
@@ -17,14 +23,24 @@ export async function POST(request: NextRequest) {
       console.log('[Join API] Development mode: Using provided userId:', currentUserId);
     } else {
       // Normal mode: Get user from session
+      console.log('🔍 [Join API] Getting server session...');
       const session = await getServerSession();
+      console.log('🔍 [Join API] Server session result:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id,
+        userEmail: session?.user?.email
+      });
+      
       if (!session?.user) {
+        console.log('❌ [Join API] No session found, returning 401');
         return NextResponse.json(
           { success: false, message: "Du måste vara inloggad för att gå med i en handbok" },
           { status: 401 }
         );
       }
       currentUserId = session.user.id;
+      console.log('✅ [Join API] Using session userId:', currentUserId);
     }
     
     if (!joinCode) {

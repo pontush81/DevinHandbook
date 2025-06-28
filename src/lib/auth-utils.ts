@@ -7,16 +7,16 @@ import { Database } from '@/types/supabase';
  * Hämtar en session för servern baserad på cookies
  */
 export async function getServerSession() {
-  // console.log('🔍 [getServerSession] Starting session check...');
+  console.log('🔍 [getServerSession] Starting session check...');
   
   const cookieStore = await cookies();
   const allCookies = cookieStore.getAll();
   
-  // console.log('🍪 [getServerSession] Found cookies:', { 
-  //   count: allCookies.length, 
-  //   names: allCookies.map(c => c.name),
-  //   supabaseCookies: allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-')).map(c => ({ name: c.name, hasValue: !!c.value }))
-  // });
+  console.log('🍪 [getServerSession] Found cookies:', { 
+    count: allCookies.length, 
+    names: allCookies.map(c => c.name),
+    supabaseCookies: allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-')).map(c => ({ name: c.name, hasValue: !!c.value }))
+  });
   
   // Look for the correct auth token cookies (not the code verifier)
   // Supabase uses these cookie patterns:
@@ -28,20 +28,20 @@ export async function getServerSession() {
     (c.name.includes('sb-') || c.name.includes('supabase'))
   );
   
-  // console.log('🔍 [getServerSession] Looking for auth token cookie (excluding code-verifier)...');
-  // console.log('🔍 [getServerSession] Auth cookie found:', authCookie ? authCookie.name : 'none');
+  console.log('🔍 [getServerSession] Looking for auth token cookie (excluding code-verifier)...');
+  console.log('🔍 [getServerSession] Auth cookie found:', authCookie ? authCookie.name : 'none');
   
   if (authCookie && authCookie.value) {
-    // console.log('🔑 [getServerSession] Found auth cookie:', authCookie.name);
+    console.log('🔑 [getServerSession] Found auth cookie:', authCookie.name);
     
     try {
       // Parse the auth token from cookie
       const authData = JSON.parse(decodeURIComponent(authCookie.value));
       
-      // console.log('🔍 [getServerSession] Parsed auth data keys:', Object.keys(authData || {}));
+      console.log('🔍 [getServerSession] Parsed auth data keys:', Object.keys(authData || {}));
       
       if (authData && authData.access_token && authData.user) {
-        // console.log('✅ [getServerSession] Valid session found in cookie');
+        console.log('✅ [getServerSession] Valid session found in cookie');
         
         // Create a mock session object that matches Supabase session format
         const session = {
@@ -55,10 +55,10 @@ export async function getServerSession() {
         
         return session;
       } else {
-        // console.log('❌ [getServerSession] Auth data incomplete:', { 
-        //   hasAccessToken: !!authData?.access_token, 
-        //   hasUser: !!authData?.user 
-        // });
+        console.log('❌ [getServerSession] Auth data incomplete:', { 
+          hasAccessToken: !!authData?.access_token, 
+          hasUser: !!authData?.user 
+        });
       }
     } catch (error) {
       console.error('❌ [getServerSession] Error parsing auth cookie:', error);
@@ -66,7 +66,7 @@ export async function getServerSession() {
   }
   
   // Fallback to SSR client
-  // console.log('📡 [getServerSession] Using SSR client fallback...');
+  console.log('📡 [getServerSession] Using SSR client fallback...');
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -82,7 +82,7 @@ export async function getServerSession() {
     }
   );
 
-  // console.log('📡 [getServerSession] Calling supabase.auth.getSession()...');
+  console.log('📡 [getServerSession] Calling supabase.auth.getSession()...');
   
   // Hämta session
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -91,11 +91,11 @@ export async function getServerSession() {
     console.error('❌ [getServerSession] Session error:', error);
   }
   
-  // console.log('✅ [getServerSession] Session result:', { 
-  //   hasSession: !!session, 
-  //   userId: session?.user?.id || 'no session',
-  //   expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'no expiry'
-  // });
+  console.log('✅ [getServerSession] Session result:', { 
+    hasSession: !!session, 
+    userId: session?.user?.id || 'no session',
+    expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'no expiry'
+  });
   
   return session;
 }
