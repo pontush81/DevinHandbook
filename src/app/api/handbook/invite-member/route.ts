@@ -7,51 +7,30 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Hämta och validera session
+    // 1. Hämta och validera session eller userId från request body
     const session = await getServerSession();
-    if (!session?.user) {
+    const { handbookId, email, role = 'viewer', userId: bodyUserId } = await request.json();
+    
+    // Använd session userId om tillgänglig, annars fallback till request body
+    const userId = session?.user?.id || bodyUserId;
+    
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
+        { success: false, message: "Ej autentiserad - ingen användar-ID tillgänglig" },
         { status: 401 }
       );
     }
 
     // 2. Validera indata
-    const { handbookId, email, role } = await request.json();
-    
-    if (!handbookId || !email || !role) {
+    if (!handbookId || !email) {
       return NextResponse.json(
-        { success: false, message: "Ofullständiga uppgifter" },
-        { status: 400 }
-      );
-    }
-
-    if (!["admin", "editor", "viewer"].includes(role)) {
-      return NextResponse.json(
-        { success: false, message: "Ogiltig roll" },
+        { success: false, message: "handbook_id och email krävs" },
         { status: 400 }
       );
     }
 
     // 3. Kontrollera att användaren har admin-behörighet för handboken
-    const supabase = getServiceSupabase();
-    
-    const { data: adminCheck, error: adminError } = await supabase
-      .from("handbook_members")
-      .select("id")
-      .eq("handbook_id", handbookId)
-      .eq("user_id", session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (adminError) {
-      console.error("Fel vid kontroll av admin-behörighet:", adminError);
-      return NextResponse.json(
-        { success: false, message: "Kunde inte verifiera admin-behörighet" },
-        { status: 500 }
-      );
-    }
-
+    const adminCheck = await isHandbookAdmin(userId, handbookId);
     if (!adminCheck) {
       return NextResponse.json(
         { success: false, message: "Du har inte admin-behörighet för denna handbok" },
@@ -59,197 +38,126 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3.1. Hämta handboksinformation för e-post
-    const { data: handbook, error: handbookError } = await supabase
-      .from("handbooks")
-      .select("title, slug, description")
-      .eq("id", handbookId)
-      .single();
+    const supabase = getServiceSupabase();
 
-    if (handbookError || !handbook) {
-      console.error("Fel vid hämtning av handbok:", handbookError);
-      return NextResponse.json(
-        { success: false, message: "Kunde inte hämta handboksinformation" },
-        { status: 500 }
-      );
-    }
-
-    // 3.2. Hämta admin-användarens information för e-post
-    const { data: adminProfile, error: adminProfileError } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", session.user.id)
-      .single();
-
-    const adminName = adminProfile?.full_name || adminProfile?.email || "Administratör";
-
-    // 4. Hitta användaren baserat på e-post
-    const { data: user, error: userError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (userError) {
-      console.error("Fel vid sökning efter användare:", userError);
-      return NextResponse.json(
-        { success: false, message: "Kunde inte söka efter användaren" },
-        { status: 500 }
-      );
-    }
-
-    let userId: string;
-    let isNewUser = false;
+    // 4. Kontrollera om användaren redan finns i systemet
+    const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email);
     
-    if (!user) {
-      // 5a. Användaren finns inte - skicka inbjudning till ny användare
-      isNewUser = true;
-      
-      // Hämta eller skapa join-kod för handboken
-      let { data: joinCodeData, error: joinCodeError } = await supabase
-        .from("handbooks")
-        .select("join_code")
-        .eq("id", handbookId)
+    if (userError && userError.message !== 'User not found') {
+      console.error('[invite-member] Error checking existing user:', userError);
+      return NextResponse.json(
+        { success: false, message: "Kunde inte kontrollera användarstatus" },
+        { status: 500 }
+      );
+    }
+
+    let targetUserId = existingUser?.user?.id;
+
+    // 5. Om användaren inte finns, skapa en invitation
+    if (!existingUser || !existingUser.user) {
+      // Skapa en invitation i databasen
+      const { data: invitation, error: inviteError } = await supabase
+        .from('handbook_invitations')
+        .insert({
+          handbook_id: handbookId,
+          email: email.toLowerCase(),
+          role,
+          invited_by: userId,
+          status: 'pending'
+        })
+        .select()
         .single();
 
-      if (joinCodeError || !joinCodeData?.join_code) {
-        // Skapa ny join-kod om ingen finns
-        const { error: createJoinCodeError } = await supabase
-          .rpc('create_handbook_join_code', { handbook_id: handbookId, expires_in_days: 30 });
-
-        if (createJoinCodeError) {
-          console.error("Fel vid skapande av join-kod:", createJoinCodeError);
+      if (inviteError) {
+        console.error('[invite-member] Error creating invitation:', inviteError);
+        
+        if (inviteError.code === '23505') { // Unique constraint violation
           return NextResponse.json(
-            { success: false, message: "Kunde inte skapa inbjudningslänk" },
-            { status: 500 }
+            { success: false, message: "En inbjudan till denna e-postadress finns redan" },
+            { status: 400 }
           );
         }
-
-        // Hämta den nya join-koden
-        const { data: newJoinCodeData, error: newJoinCodeError } = await supabase
-          .from("handbooks")
-          .select("join_code")
-          .eq("id", handbookId)
-          .single();
-
-        if (newJoinCodeError || !newJoinCodeData?.join_code) {
-          console.error("Fel vid hämtning av ny join-kod:", newJoinCodeError);
-          return NextResponse.json(
-            { success: false, message: "Kunde inte hämta inbjudningslänk" },
-            { status: 500 }
-          );
-        }
-
-        joinCodeData = newJoinCodeData;
-      }
-
-      // Skicka inbjudnings-e-post till ny användare
-      await sendInvitationEmail({
-        email,
-        handbookTitle: handbook.title,
-        handbookSlug: handbook.slug,
-        handbookDescription: handbook.description,
-        adminName,
-        role,
-        joinCode: joinCodeData.join_code,
-        isNewUser: true
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: `Inbjudan skickad till ${email}. Användaren behöver registrera sig och använda inbjudningslänken för att gå med.`
-      });
-
-    } else {
-      userId = user.id;
-
-      // 5b. Kontrollera om användaren redan är medlem
-      const { data: existingMember, error: memberError } = await supabase
-        .from("handbook_members")
-        .select("id, role")
-        .eq("handbook_id", handbookId)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (memberError) {
-        console.error("Fel vid kontroll av befintligt medlemskap:", memberError);
+        
         return NextResponse.json(
-          { success: false, message: "Kunde inte kontrollera befintligt medlemskap" },
+          { success: false, message: "Kunde inte skapa inbjudan" },
           { status: 500 }
         );
       }
 
-      if (existingMember) {
-        // 6a. Uppdatera roll om användaren redan är medlem
-        const { error: updateError } = await supabase
-          .from("handbook_members")
-          .update({ role })
-          .eq("id", existingMember.id);
-
-        if (updateError) {
-          console.error("Fel vid uppdatering av roll:", updateError);
-          return NextResponse.json(
-            { success: false, message: "Kunde inte uppdatera användarens roll" },
-            { status: 500 }
-          );
-        }
-
-        // Skicka e-post om rolluppdatering om rollen ändrats
-        if (existingMember.role !== role) {
-          await sendRoleUpdateEmail({
-            email,
-            handbookTitle: handbook.title,
-            handbookSlug: handbook.slug,
-            adminName,
-            oldRole: existingMember.role,
-            newRole: role
-          });
-        }
-
-        return NextResponse.json({
-          success: true,
-          message: "Användarens roll har uppdaterats"
-        });
-      } else {
-        // 6b. Lägg till användaren som medlem
-        const { error: insertError } = await supabase
-          .from("handbook_members")
-          .insert({
+      // Försök skicka inbjudan via e-post
+      try {
+        await supabase.auth.admin.inviteUserByEmail(email, {
+          data: {
             handbook_id: handbookId,
-            user_id: userId,
             role,
-            created_at: new Date().toISOString()
-          });
-
-        if (insertError) {
-          console.error("Fel vid tillägg av medlem:", insertError);
-          return NextResponse.json(
-            { success: false, message: "Kunde inte lägga till användaren som medlem" },
-            { status: 500 }
-          );
-        }
-
-        // Skicka välkomst-e-post till befintlig användare
-        await sendInvitationEmail({
-          email,
-          handbookTitle: handbook.title,
-          handbookSlug: handbook.slug,
-          handbookDescription: handbook.description,
-          adminName,
-          role,
-          isNewUser: false
+            invitation_id: invitation.id
+          }
         });
-
-        return NextResponse.json({
-          success: true,
-          message: "Användaren har lagts till som medlem och får en välkomst-e-post"
-        });
+      } catch (emailError) {
+        console.error('[invite-member] Failed to send email invitation:', emailError);
+        // Vi fortsätter även om e-post misslyckades
       }
+
+      return NextResponse.json({
+        success: true,
+        message: "Inbjudan skickad",
+        type: "invitation"
+      });
     }
+
+    // 6. Användaren finns redan - lägg till direkt som medlem
+    targetUserId = existingUser.user.id;
+
+    // Kontrollera om användaren redan är medlem
+    const { data: existingMember, error: memberError } = await supabase
+      .from('handbook_members')
+      .select('id, role')
+      .eq('handbook_id', handbookId)
+      .eq('user_id', targetUserId)
+      .maybeSingle();
+
+    if (memberError) {
+      console.error('[invite-member] Error checking existing member:', memberError);
+      return NextResponse.json(
+        { success: false, message: "Kunde inte kontrollera medlemsstatus" },
+        { status: 500 }
+      );
+    }
+
+    if (existingMember) {
+      return NextResponse.json(
+        { success: false, message: "Användaren är redan medlem i denna handbok" },
+        { status: 400 }
+      );
+    }
+
+    // Lägg till användaren som medlem
+    const { error: addMemberError } = await supabase
+      .from('handbook_members')
+      .insert({
+        handbook_id: handbookId,
+        user_id: targetUserId,
+        role
+      });
+
+    if (addMemberError) {
+      console.error('[invite-member] Error adding member:', addMemberError);
+      return NextResponse.json(
+        { success: false, message: "Kunde inte lägga till medlem" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Medlem tillagd",
+      type: "direct_add"
+    });
+
   } catch (error) {
-    console.error("Oväntat fel vid inbjudan av medlem:", error);
+    console.error('Error in POST /api/handbook/invite-member:', error);
     return NextResponse.json(
-      { success: false, message: "Ett oväntat fel inträffade" },
+      { success: false, message: "Internt serverfel" },
       { status: 500 }
     );
   }

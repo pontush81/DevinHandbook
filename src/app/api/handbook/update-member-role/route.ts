@@ -4,51 +4,31 @@ import { getServerSession } from '@/lib/auth-utils';
 
 export async function PATCH(request: NextRequest) {
   try {
-    // 1. Hämta och validera session
+    // 1. Hämta och validera session eller userId från request body
     const session = await getServerSession();
-    if (!session?.user) {
+    const { handbookId, memberId, role, userId: bodyUserId } = await request.json();
+    
+    // Använd session userId om tillgänglig, annars fallback till request body
+    const userId = session?.user?.id || bodyUserId;
+    
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
+        { success: false, message: "Ej autentiserad - ingen användar-ID tillgänglig" },
         { status: 401 }
       );
     }
 
-    // 2. Validera indata
-    const { handbookId, memberId, role } = await request.json();
-    
     if (!handbookId || !memberId || !role) {
       return NextResponse.json(
-        { success: false, message: "Ofullständiga uppgifter" },
+        { success: false, message: "handbookId, memberId och role krävs" },
         { status: 400 }
       );
     }
 
-    if (!["admin", "editor", "viewer"].includes(role)) {
-      return NextResponse.json(
-        { success: false, message: "Ogiltig roll" },
-        { status: 400 }
-      );
-    }
-
-    // 3. Kontrollera att användaren har admin-behörighet för handboken
     const supabase = getServiceSupabase();
-    
-    const { data: adminCheck, error: adminError } = await supabase
-      .from("handbook_members")
-      .select("id")
-      .eq("handbook_id", handbookId)
-      .eq("user_id", session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
 
-    if (adminError) {
-      console.error("Fel vid kontroll av admin-behörighet:", adminError);
-      return NextResponse.json(
-        { success: false, message: "Kunde inte verifiera admin-behörighet" },
-        { status: 500 }
-      );
-    }
-
+    // Kontrollera att användaren är admin för handboken
+    const adminCheck = await isHandbookAdmin(userId, handbookId);
     if (!adminCheck) {
       return NextResponse.json(
         { success: false, message: "Du har inte admin-behörighet för denna handbok" },
@@ -56,59 +36,33 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 4. Kontrollera att medlemmen finns och tillhör den angivna handboken
-    const { data: member, error: memberError } = await supabase
-      .from("handbook_members")
-      .select("id, user_id")
-      .eq("id", memberId)
-      .eq("handbook_id", handbookId)
-      .maybeSingle();
+    // Uppdatera medlemmens roll
+    const { error } = await supabase
+      .from('handbook_members')
+      .update({ 
+        role,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', memberId)
+      .eq('handbook_id', handbookId);
 
-    if (memberError) {
-      console.error("Fel vid kontroll av medlemskap:", memberError);
+    if (error) {
+      console.error('Error updating member role:', error);
       return NextResponse.json(
-        { success: false, message: "Kunde inte verifiera medlemskap" },
-        { status: 500 }
-      );
-    }
-
-    if (!member) {
-      return NextResponse.json(
-        { success: false, message: "Medlemmen hittades inte" },
-        { status: 404 }
-      );
-    }
-
-    // 5. Förhindra att användaren ändrar sin egen roll från admin
-    if (member.user_id === session.user.id && role !== "admin") {
-      return NextResponse.json(
-        { success: false, message: "Du kan inte ändra din egen roll från administratör" },
-        { status: 403 }
-      );
-    }
-
-    // 6. Uppdatera användarens roll
-    const { error: updateError } = await supabase
-      .from("handbook_members")
-      .update({ role })
-      .eq("id", memberId);
-
-    if (updateError) {
-      console.error("Fel vid uppdatering av roll:", updateError);
-      return NextResponse.json(
-        { success: false, message: "Kunde inte uppdatera användarens roll" },
+        { success: false, message: "Kunde inte uppdatera medlemsroll" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Användarens roll har uppdaterats"
+      message: "Medlemsroll uppdaterad"
     });
+
   } catch (error) {
-    console.error("Oväntat fel vid uppdatering av roll:", error);
+    console.error('Error in PATCH /api/handbook/update-member-role:', error);
     return NextResponse.json(
-      { success: false, message: "Ett oväntat fel inträffade" },
+      { success: false, message: "Internt serverfel" },
       { status: 500 }
     );
   }

@@ -5,15 +5,19 @@ import { getServerSession } from '@/lib/auth-utils';
 // POST - Create/update a join code for a handbook
 export async function POST(request: NextRequest) {
   try {
+    // 1. Hämta och validera session eller userId från request body
     const session = await getServerSession();
-    if (!session?.user) {
+    const { handbookId, expiresInDays = 30, userId: bodyUserId } = await request.json();
+    
+    // Använd session userId om tillgänglig, annars fallback till request body
+    const userId = session?.user?.id || bodyUserId;
+    
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
+        { success: false, message: "Ej autentiserad - ingen användar-ID tillgänglig" },
         { status: 401 }
       );
     }
-
-    const { handbookId, expiresInDays = 30 } = await request.json();
     
     if (!handbookId) {
       return NextResponse.json(
@@ -28,7 +32,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .rpc('create_handbook_join_code', {
         handbook_id: handbookId,
-        user_id: session.user.id,
+        user_id: userId,
         expires_in_days: expiresInDays
       });
 
@@ -149,15 +153,19 @@ export async function GET(request: NextRequest) {
 // DELETE - Deactivate a join code
 export async function DELETE(request: NextRequest) {
   try {
+    // 1. Hämta och validera session eller userId från request body
     const session = await getServerSession();
-    if (!session?.user) {
+    const { handbookId, userId: bodyUserId } = await request.json();
+    
+    // Använd session userId om tillgänglig, annars fallback till request body
+    const userId = session?.user?.id || bodyUserId;
+    
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
+        { success: false, message: "Ej autentiserad - ingen användar-ID tillgänglig" },
         { status: 401 }
       );
     }
-
-    const { handbookId } = await request.json();
     
     if (!handbookId) {
       return NextResponse.json(
@@ -173,7 +181,7 @@ export async function DELETE(request: NextRequest) {
       .from("handbook_members")
       .select("id")
       .eq("handbook_id", handbookId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
 

@@ -85,7 +85,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const response = await fetch("/api/handbook/join-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handbookId, expiresInDays: 90 }), // 3 months instead of 1
+        body: JSON.stringify({ handbookId, expiresInDays: 90, userId: currentUserId }), // 3 months instead of 1
         credentials: 'include'
       });
 
@@ -126,7 +126,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const response = await fetch("/api/handbook/join-code", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handbookId }),
+        body: JSON.stringify({ handbookId, userId: currentUserId }),
         credentials: 'include'
       });
 
@@ -238,7 +238,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const response = await fetch("/api/handbook/invite-member", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handbookId, email, role }),
+        body: JSON.stringify({ handbookId, email, role, userId: currentUserId }),
         credentials: 'include'
       });
 
@@ -273,7 +273,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const response = await fetch("/api/handbook/update-member-role", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handbookId, memberId, role: newRole }),
+        body: JSON.stringify({ handbookId, memberId, role: newRole, userId: currentUserId }),
         credentials: 'include'
       });
 
@@ -304,7 +304,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       const response = await fetch("/api/handbook/remove-member", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handbookId, memberId }),
+        body: JSON.stringify({ handbookId, memberId, userId: currentUserId }),
         credentials: 'include'
       });
 
