@@ -222,7 +222,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     return null;
   }
 
-      // console.log('✅ TrialStatusBar: Should render banner!', {
+  // console.log('✅ TrialStatusBar: Should render banner!', {
   //   isInTrial: trialStatus.isInTrial,
   //   subscriptionStatus: trialStatus.subscriptionStatus,
   //   trialDaysRemaining: trialStatus.trialDaysRemaining,

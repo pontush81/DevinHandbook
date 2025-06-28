@@ -17,7 +17,7 @@ export async function GET(
       );
     }
 
-    console.log('📊 [Handbook Status] Checking status for:', { handbookId, userId });
+    // console.log('📊 [Handbook Status] Checking status for:', { handbookId, userId });
 
     const supabase = getServiceSupabase();
 
@@ -122,7 +122,7 @@ export async function GET(
       }
     }
 
-    console.log('✅ [Handbook Status] Result:', trialStatus);
+    // console.log('✅ [Handbook Status] Result:', trialStatus);
 
     return NextResponse.json(trialStatus);
 

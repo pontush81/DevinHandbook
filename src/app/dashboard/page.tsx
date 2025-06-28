@@ -145,12 +145,18 @@ export default function DashboardPage() {
       const handbooksWithTrialStatus = await Promise.all(
         mappedData.map(async (handbook) => {
           try {
-            // Only fetch trial status for handbooks the user owns or has admin access to
-            if (handbook.userRole === 'admin' || isSuperadmin) {
+            // ONLY fetch trial status for handbooks the user actually OWNS
+            // Never fetch for member handbooks, even for superadmin
+            const isActualOwner = handbook.owner_id && handbook.owner_id === user.id;
+            
+            if (isActualOwner) {
+              // console.log(`📊 Fetching trial status for owned handbook: ${handbook.title} (${handbook.id})`);
               const trialStatus = await getHandbookTrialStatus(user.id, handbook.id);
               return { ...handbook, trialStatus };
+            } else {
+              // console.log(`⏭️ Skipping trial status for non-owned handbook: ${handbook.title} (owner: ${handbook.owner_id || 'unknown'})`);
+              return handbook;
             }
-            return handbook;
           } catch (error) {
             console.error(`Error fetching trial status for handbook ${handbook.id}:`, error);
             return handbook;
@@ -171,7 +177,7 @@ export default function DashboardPage() {
     if (user) {
       fetchHandbooks();
     }
-  }, [user, fetchHandbooks, isSuperadmin]);
+  }, [user?.id, isSuperadmin]);
 
 
 
@@ -207,7 +213,7 @@ export default function DashboardPage() {
     if (user) {
       handleUpgradeSuccess();
     }
-  }, [user, fetchHandbooks, toast]);
+  }, [user, toast]);
 
   const deleteHandbook = async (handbookId: string, title: string) => {
     // Öppna bekräftelsedialog istället för window.confirm

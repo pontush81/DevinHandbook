@@ -36,57 +36,93 @@ export interface TrialReminder {
  * För specifika handböckers status, använd getHandbookTrialStatus()
  */
 export async function getTrialStatus(userId: string): Promise<TrialStatus> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  // console.log('🔍 [getTrialStatus] Checking user-level trial eligibility for:', userId);
+  
   try {
-    console.log('🔍 [getTrialStatus] Checking user-level trial eligibility for:', userId);
-
-    // Använd RPC-funktionen för användarens generella trial-status
-    const { data, error } = await getServiceSupabase
-      .rpc('check_trial_status', { user_uuid: userId });
-
-    if (error) {
-      console.error('Error checking trial status:', error);
-      throw error;
-    }
-
-    const result = data[0];
+    const supabase = getServiceSupabase();
     
-    // Kontrollera om användaren har skapat handböcker tidigare
-    const { data: handbooks, error: handbooksError } = await getServiceSupabase
-      .from('handbooks')
-      .select('id, created_during_trial')
-      .eq('owner_id', userId);
-
-    if (handbooksError) {
-      console.error('Error fetching handbooks:', handbooksError);
+    // Först, kontrollera om användaren är berättigad till trial
+    const isEligible = await isEligibleForTrial(userId);
+    if (!isEligible) {
+      return {
+        isInTrial: false,
+        trialDaysRemaining: 0,
+        subscriptionStatus: 'expired',
+        trialEndsAt: null,
+        canCreateHandbook: false,
+        hasUsedTrial: true,
+      };
     }
 
-    const hasHandbooks = handbooks && handbooks.length > 0;
-    const hasTrialHandbook = handbooks?.some(h => h.created_during_trial) || false;
+    // Hämta användarens trial-information från users-tabellen
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('trial_end_date, has_used_trial')
+      .eq('id', userId)
+      .single();
 
-    console.log('🔍 [getTrialStatus] User trial eligibility:', {
-      isInTrial: result?.is_in_trial || false,
-      trialDaysRemaining: result?.trial_days_remaining || 0,
-      subscriptionStatus: result?.subscription_status || 'none',
-      hasHandbooks,
-      hasTrialHandbook
-    });
+    if (userError) {
+      console.error('[getTrialStatus] Error fetching user data:', userError);
+      throw userError;
+    }
 
-    return {
-      isInTrial: result?.is_in_trial || false,
-      trialDaysRemaining: result?.trial_days_remaining || 0,
-      subscriptionStatus: result?.subscription_status || 'none',
-      trialEndsAt: result?.trial_ends_at || null,
-      canCreateHandbook: true, // Användare kan alltid skapa nya handböcker (som börjar som trial)
-      hasUsedTrial: hasTrialHandbook,
+    // console.log('🔍 [getTrialStatus] User trial eligibility:', {
+    //   userId,
+    //   hasTrialEndDate: !!userData?.trial_end_date,
+    //   hasUsedTrial: userData?.has_used_trial,
+    //   trialEndDate: userData?.trial_end_date
+    // });
+
+    if (!userData?.trial_end_date) {
+      // Användaren har ingen aktiv trial
+      return {
+        isInTrial: false,
+        trialDaysRemaining: 0,
+        subscriptionStatus: userData?.has_used_trial ? 'expired' : 'none',
+        trialEndsAt: null,
+        canCreateHandbook: !userData?.has_used_trial, // Kan skapa om de inte använt trial än
+        hasUsedTrial: userData?.has_used_trial || false,
+      };
+    }
+
+    // Kontrollera om trial fortfarande är aktiv
+    const trialEndDate = new Date(userData.trial_end_date);
+    const now = new Date();
+    const isStillInTrial = trialEndDate > now;
+    const trialDaysRemaining = isStillInTrial ? 
+      Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+    const trialStatus = {
+      isInTrial: isStillInTrial,
+      trialDaysRemaining: Math.max(0, trialDaysRemaining),
+      subscriptionStatus: isStillInTrial ? 'trial' : 'expired',
+      trialEndsAt: userData.trial_end_date,
+      canCreateHandbook: isStillInTrial,
+      hasUsedTrial: true,
     };
+
+    // console.log('[Trial Service] Trial status:', {
+    //   userId,
+    //   isInTrial: trialStatus.isInTrial,
+    //   daysRemaining: trialStatus.trialDaysRemaining,
+    //   status: trialStatus.subscriptionStatus
+    // });
+
+    return trialStatus;
+
   } catch (error) {
-    console.error('Error in getTrialStatus:', error);
+    console.error('Error getting trial status:', error);
+    // Return safe defaults on error
     return {
       isInTrial: false,
       trialDaysRemaining: 0,
-      subscriptionStatus: 'none',
+      subscriptionStatus: 'error',
       trialEndsAt: null,
-      canCreateHandbook: true, // Default till true för att inte blockera
+      canCreateHandbook: false,
       hasUsedTrial: false,
     };
   }
@@ -300,7 +336,7 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
     if (!response.ok) {
       // 404 betyder att användaren inte äger handboken - detta är normalt och inte ett fel
       if (response.status === 404) {
-        // console.log(`[Trial Service] User ${userId} does not own handbook ${handbookId} - returning default status`);
+        // Helt tyst för 404 - detta är förväntat beteende för handböcker användaren inte äger
         return {
           isInTrial: false,
           trialDaysRemaining: 0,
@@ -310,6 +346,8 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
           hasUsedTrial: false,
         };
       }
+      // Endast logga andra typer av fel
+      console.error(`[Trial Service] API request failed: ${response.status} ${response.statusText}`);
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
@@ -331,9 +369,9 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
     };
 
   } catch (error) {
-    // Logga endast icke-404 fel
-    if (!error.message?.includes('404')) {
-      console.error('Error in getHandbookTrialStatus:', error);
+    // Logga endast icke-404 fel och icke-fetch fel
+    if (!error.message?.includes('404') && !error.message?.includes('Failed to fetch')) {
+      console.error('[Trial Service] Error in getHandbookTrialStatus:', error);
     }
     return {
       isInTrial: false,

@@ -3,96 +3,15 @@ require('dotenv').config({ path: '.env.local' });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Bildhantering
+  // Minimal configuration to avoid webpack issues
   images: {
     domains: ['handbok.org', 'www.handbok.org', 'staging.handbok.org'],
     unoptimized: true,
   },
   
-  // Webpack configuration for better stability and development experience
-  webpack: (config, { dev, isServer }) => {
-    // Improve module resolution stability
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-      crypto: false,
-    };
-    
-    // Fix for EditorJS and other client-side libraries
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        // Ensure consistent module resolution
-        '@editorjs/editorjs': require.resolve('@editorjs/editorjs'),
-      };
-    }
-    
-      // Optimize for development
-  if (dev) {
-    // Reduce webpack noise and improve error reporting
-    config.stats = 'errors-warnings';
-    config.infrastructureLogging = {
-      level: 'error',
-    };
-    
-    // Fast Refresh optimizations
-    config.watchOptions = {
-      poll: 1000,
-      aggregateTimeout: 300,
-      ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
-    };
-    
-    // Development cache optimization
-    config.cache = {
-      type: 'filesystem',
-      buildDependencies: {
-        config: [__filename],
-      },
-    };
-    
-    // Reduce build time in development
-    config.optimization = {
-      ...config.optimization,
-      removeAvailableModules: false,
-      removeEmptyChunks: false,
-      splitChunks: false,
-    };
-  }
-    
-    return config;
-  },
+  // No custom webpack config to avoid module resolution issues
   
-  // Experimental features with careful selection
-  experimental: {
-    // Clean experimental config
-  },
-  
-  // Turbopack configuration (stable) - only in development
-  ...(process.env.NODE_ENV === 'development' && {
-    turbopack: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    }
-  }),
-  
-  // Dev optimization
-  onDemandEntries: {
-    // Period (in ms) where the server will keep pages in the buffer
-    maxInactiveAge: 25 * 1000,
-    // Number of pages that should be kept simultaneously without being disposed
-    pagesBufferLength: 2,
-  },
-  
-  // Basic config för att undvika konflikter
-  skipTrailingSlashRedirect: true,
-  skipMiddlewareUrlNormalize: true,
-  
-  // Kompilering och byggkonfiguration
+  // Basic config
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -103,7 +22,6 @@ const nextConfig = {
   // Skapar omskrivningar för subdomäner
   async rewrites() {
     return [
-      // Direkt routing för subdomäner utan /handbook/ prefix
       {
         source: '/((?!edit-handbook|dashboard|create-handbook|login|signup|auth|api).*)',
         has: [
@@ -120,7 +38,6 @@ const nextConfig = {
   // Redirects för subdomäner
   async redirects() {
     return [
-      // Endast apex-domänen ska redirectas till www
       {
         source: '/:path*',
         has: [
@@ -135,7 +52,7 @@ const nextConfig = {
     ];
   },
   
-  // Enkla headers för alla filer
+  // Basic headers
   async headers() {
     return [
       {
@@ -143,50 +60,11 @@ const nextConfig = {
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
-          { key: 'Cache-Control', value: 'public, max-age=3600' }
         ],
       },
-      // Statiska assets (bilder, ikoner, etc.) med längre cache
-      {
-        source: '/icons/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=86400, immutable' }
-        ],
-      },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
-        ],
-      },
-      // PWA-specifika headers
-      {
-        source: '/manifest.json',
-        headers: [
-          { key: 'Content-Type', value: 'application/manifest+json' },
-          { key: 'Cache-Control', value: 'public, max-age=86400' }
-        ],
-      },
-      {
-        source: '/sw.js',
-        headers: [
-          { key: 'Content-Type', value: 'application/javascript' },
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-          { key: 'Service-Worker-Allowed', value: '/' }
-        ],
-      },
-      {
-        source: '/browserconfig.xml',
-        headers: [
-          { key: 'Content-Type', value: 'application/xml' },
-          { key: 'Cache-Control', value: 'public, max-age=86400' }
-        ],
-      }
     ];
   },
   
-  // Komprimering
-  compress: true,
   poweredByHeader: false,
 };
 

@@ -199,7 +199,6 @@ export function AllSectionsView({
   handbookData,
   onUpdateHandbook
 }: AllSectionsViewProps) {
-  // Debug log to check props
   // console.log('🔍 [AllSectionsView] Props received:', {
   //   sectionsCount: sections.length,
   //   isEditMode,
