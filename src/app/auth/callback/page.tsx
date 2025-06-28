@@ -11,13 +11,47 @@ function AuthCallbackContent() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState<string>("");
 
+  // Debug function for testing join code in console
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).testAuthCallbackJoin = async (joinCode: string) => {
+        console.log('[Auth Callback Test] Testing join with code:', joinCode);
+        try {
+          const joinResponse = await fetchWithAuth('/api/handbook/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ joinCode }),
+          });
+          const joinData = await joinResponse.json();
+          console.log('[Auth Callback Test] Join response:', {
+            status: joinResponse.status,
+            ok: joinResponse.ok,
+            data: joinData
+          });
+          return { status: joinResponse.status, ok: joinResponse.ok, data: joinData };
+        } catch (error) {
+          console.error('[Auth Callback Test] Join error:', error);
+          return { error };
+        }
+      };
+      console.log('[Auth Callback] Test function available: window.testAuthCallbackJoin(joinCode)');
+    }
+    
     const handleAuth = async () => {
+      console.log('[Auth Callback] ========== AUTH CALLBACK STARTED ==========');
+      console.log('[Auth Callback] Full URL:', window.location.href);
+      console.log('[Auth Callback] All URL params:', Object.fromEntries(searchParams.entries()));
+      
       // Check for OAuth code parameter (Google OAuth)
       const code = searchParams.get("code");
+      console.log('[Auth Callback] Code parameter:', code);
       
       if (code) {
-        console.log('[Auth Callback] Google OAuth code found, session should already be established');
+        console.log('[Auth Callback] ===== GOOGLE OAUTH FLOW DETECTED =====');
+        console.log('[Auth Callback] Google OAuth code found:', code);
+        console.log('[Auth Callback] Current URL:', window.location.href);
+        console.log('[Auth Callback] Search params object:', searchParams);
+        console.log('[Auth Callback] All search params:', searchParams.toString());
         
         // For Google OAuth, Supabase handles the code exchange automatically
         // The session should already be set when we reach this callback
@@ -25,6 +59,7 @@ function AuthCallbackContent() {
         
         // Check for join code
         let joinCode = searchParams.get("join");
+        console.log('[Auth Callback] Join code from URL params:', joinCode);
         
         if (joinCode) {
           console.log('[Auth Callback] Found join code for Google OAuth:', joinCode);
@@ -44,13 +79,20 @@ function AuthCallbackContent() {
               console.log('[Auth Callback] Attempting to join handbook with code:', joinCode);
               
               // Use fetchWithAuth to automatically include Bearer token when cookies fail
+              console.log('[Auth Callback] Making join request to:', '/api/handbook/join');
+              console.log('[Auth Callback] Join request body:', { joinCode });
+              
               const joinResponse = await fetchWithAuth('/api/handbook/join', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ joinCode }),
               });
 
+              console.log('[Auth Callback] Join response status:', joinResponse.status);
+              console.log('[Auth Callback] Join response headers:', joinResponse.headers);
+              
               const joinData = await joinResponse.json();
+              console.log('[Auth Callback] Join response data:', joinData);
 
               if (joinResponse.ok && joinData.success) {
                 console.log('[Auth Callback] Join successful for Google OAuth user');
@@ -95,6 +137,9 @@ function AuthCallbackContent() {
             }
           }, 2000); // Extra time for Google OAuth session to stabilize
         } else {
+          console.log('[Auth Callback] ===== NO JOIN CODE FOUND FOR GOOGLE OAUTH =====');
+          console.log('[Auth Callback] Join code was:', joinCode);
+          console.log('[Auth Callback] Using standard smart redirect...');
           setMessage("Google inloggning lyckades! Du omdirigeras...");
           // No join code, use normal smart redirect
           setTimeout(() => {
