@@ -150,8 +150,8 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     console.log('[Handbook Service] Step 1: Searching for ALL handbooks with slug...');
     const debugQuery = supabase
       .from('handbooks')
-      .select('id, title, slug, subdomain, published')
-      .or(`slug.eq.${slug},subdomain.eq.${slug}`);
+      .select('id, title, slug, published')
+      .eq('slug', slug);
     
     const { data: debugData, error: debugError } = await debugQuery;
     
@@ -166,8 +166,8 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     console.log('[Handbook Service] Step 2: Searching for PUBLISHED handbooks...');
     const { data: publishedData, error: publishedError } = await supabase
       .from('handbooks')
-      .select('id, title, slug, subdomain, published')
-      .or(`slug.eq.${slug},subdomain.eq.${slug}`)
+      .select('id, title, slug, published')
+      .eq('slug', slug)
       .eq('published', true);
     
     if (publishedError) {

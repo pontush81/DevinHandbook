@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
       try {
         const { data, error } = await supabase
           .from('handbooks')
-          .select('id, title, subdomain, created_at')
-          .eq('subdomain', 'abc')
+          .select('id, title, slug, created_at')
+          .eq('slug', 'abc')
           .single();
         
         if (!error) {
