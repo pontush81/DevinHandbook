@@ -38,8 +38,6 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   initialData,
   defaultEditMode = false
 }) => {
-  // Remove debounce render - it was causing hooks order issues
-  
   const { user, isLoading: authLoading } = useAuth();
   const [handbookData, setHandbookData] = useState(initialData);
   const [currentPageId, setCurrentPageId] = useState<string>('');
@@ -51,6 +49,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const [isBlocked, setIsBlocked] = useState(false);
   const [trialEndedAt, setTrialEndedAt] = useState<string | null>(null);
   const [isHandbookOwner, setIsHandbookOwner] = useState(false);
+  const [permissionRefreshTrigger, setPermissionRefreshTrigger] = useState(0);
 
   // Add missing state variables for dialog management
   const [editingSection, setEditingSection] = useState<Section | null>(null);
@@ -58,33 +57,244 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
   const [openDeleteSectionDialog, setOpenDeleteSectionDialog] = useState(false);
 
-  // Hydration fix - vänta tills komponenten är mounted på klienten
-  useEffect(() => {
-    // Use requestAnimationFrame to ensure DOM is ready
-    const timer = requestAnimationFrame(() => {
-      setMounted(true);
-      setIsLoading(false);
-    });
-
-    return () => cancelAnimationFrame(timer);
-  }, []);
-
-  // Add a backup timer to prevent infinite loading
-  useEffect(() => {
-    const backupTimer = setTimeout(() => {
-      if (!mounted) {
-        // console.log('⏰ [ModernHandbookClient] Backup mount timer triggered');
-        setMounted(true);
-        setIsLoading(false);
-      }
-    }, 1500); // Reduced from 2 seconds
-
-    return () => clearTimeout(backupTimer);
-  }, [mounted]);
-
-  // Reduce logging frequency to prevent render loops
+  const isFirstRender = useRef(true);
   const logRef = useRef<number>(0);
   const logState = useRef<string>('');
+
+  useEffect(() => {
+    setMounted(true);
+    
+    // Auto-exit edit mode on mount if user can't edit
+    if (isFirstRender.current && defaultEditMode && !canEdit) {
+      setIsEditMode(false);
+    }
+    
+    isFirstRender.current = false;
+  }, []);
+
+  // Function to refresh permissions - can be called from outside
+  const refreshPermissions = useCallback(() => {
+    console.log('🔄 [ModernHandbookClient] Permission refresh triggered!');
+    setPermissionRefreshTrigger(prev => {
+      const newValue = prev + 1;
+      console.log('🔄 [ModernHandbookClient] Permission refresh trigger updated:', prev, '=>', newValue);
+      return newValue;
+    });
+  }, []);
+
+  // Expose refresh function globally so other components can use it
+  useEffect(() => {
+    console.log('🌐 [ModernHandbookClient] Exposing global permission refresh function');
+    // @ts-ignore
+    window.refreshHandbookPermissions = refreshPermissions;
+    
+    // Expose testing functions to manually trigger different communication methods
+    // @ts-ignore
+    window.testLocalStorageEvent = (testData = { test: 'manual trigger', timestamp: Date.now() }) => {
+      console.log('🧪 [ModernHandbookClient] Manual localStorage test triggered:', testData);
+      localStorage.setItem('handbook-permission-refresh', JSON.stringify(testData));
+      setTimeout(() => {
+        localStorage.removeItem('handbook-permission-refresh');
+        console.log('🧪 [ModernHandbookClient] Manual localStorage test data removed');
+      }, 1000);
+    };
+    
+    // @ts-ignore
+    window.testBroadcastChannel = (testData = { 
+      type: 'PERMISSION_REFRESH',
+      handbookId: initialData.id,
+      userId: user?.id,
+      test: 'manual trigger',
+      timestamp: Date.now()
+    }) => {
+      console.log('🧪 [ModernHandbookClient] Manual BroadcastChannel test triggered:', testData);
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel('handbook-permissions');
+          channel.postMessage(testData);
+          channel.close();
+          console.log('📻 [ModernHandbookClient] Manual BroadcastChannel test message sent');
+        } else {
+          console.log('⚠️ [ModernHandbookClient] BroadcastChannel not supported');
+        }
+      } catch (error) {
+        console.error('❌ [ModernHandbookClient] Manual BroadcastChannel test error:', error);
+      }
+    };
+    
+    // @ts-ignore
+    window.testPollingMarker = (testData = {
+      handbookId: initialData.id,
+      userId: user?.id,
+      timestamp: Date.now(),
+      action: 'manual_test'
+    }) => {
+      console.log('🧪 [ModernHandbookClient] Manual polling marker test triggered:', testData);
+      localStorage.setItem('handbook-permission-last-update', JSON.stringify(testData));
+      console.log('⏰ [ModernHandbookClient] Manual polling marker set');
+    };
+    
+    // Listen for custom permission change events as fallback
+    const handlePermissionChange = (event: CustomEvent) => {
+      console.log('📢 [ModernHandbookClient] Received permission change event:', event.detail);
+      if (event.detail.userId === user?.id) {
+        console.log('🔄 [ModernHandbookClient] Current user permission changed - refreshing');
+        refreshPermissions();
+      }
+    };
+    
+    // Multi-method cross-page communication system
+    
+    // Method 1: BroadcastChannel API (most reliable)
+    let broadcastChannel: BroadcastChannel | null = null;
+    const initBroadcastChannel = () => {
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          broadcastChannel = new BroadcastChannel('handbook-permissions');
+          broadcastChannel.onmessage = (event) => {
+            try {
+              const data = event.data;
+              console.log('📻 [ModernHandbookClient] BroadcastChannel message received:', data);
+              
+              if (data.type === 'PERMISSION_REFRESH' && 
+                  data.handbookId === initialData.id && 
+                  data.userId === user?.id) {
+                console.log('🔄 [ModernHandbookClient] BroadcastChannel permission refresh for current user - refreshing');
+                refreshPermissions();
+              }
+            } catch (error) {
+              console.error('❌ [ModernHandbookClient] BroadcastChannel message error:', error);
+            }
+          };
+          console.log('📻 [ModernHandbookClient] BroadcastChannel initialized successfully');
+        } else {
+          console.log('⚠️ [ModernHandbookClient] BroadcastChannel not supported');
+        }
+      } catch (error) {
+        console.error('❌ [ModernHandbookClient] BroadcastChannel initialization failed:', error);
+      }
+    };
+
+    // Method 2: localStorage events (fallback)
+    const handleStoragePermissionRefresh = (event: StorageEvent) => {
+      console.log('📡 [ModernHandbookClient] Storage event received:', {
+        key: event.key,
+        newValue: event.newValue,
+        oldValue: event.oldValue,
+        url: event.url
+      });
+      
+      if (event.key === 'handbook-permission-refresh' && event.newValue) {
+        try {
+          const refreshData = JSON.parse(event.newValue);
+          console.log('🔗 [ModernHandbookClient] Received cross-page permission refresh:', refreshData);
+          
+          // Check if this refresh is for the current handbook and user
+          if (refreshData.handbookId === initialData.id && refreshData.userId === user?.id) {
+            console.log('🔄 [ModernHandbookClient] Cross-page permission refresh for current user - refreshing');
+            refreshPermissions();
+          } else {
+            console.log('🔍 [ModernHandbookClient] Cross-page refresh not for current user/handbook - ignoring', {
+              eventHandbookId: refreshData.handbookId,
+              currentHandbookId: initialData.id,
+              eventUserId: refreshData.userId,
+              currentUserId: user?.id
+            });
+          }
+        } catch (error) {
+          console.error('❌ [ModernHandbookClient] Error parsing localStorage permission refresh:', error);
+        }
+      }
+    };
+
+    // Method 3: Periodic permission check (ultimate fallback)
+    let permissionPollInterval: NodeJS.Timeout | null = null;
+    const startPermissionPolling = () => {
+      permissionPollInterval = setInterval(() => {
+        try {
+          const lastUpdate = localStorage.getItem('handbook-permission-last-update');
+          if (lastUpdate) {
+            const updateData = JSON.parse(lastUpdate);
+            const updateTime = new Date(updateData.timestamp);
+            const now = new Date();
+            const timeDiff = now.getTime() - updateTime.getTime();
+            
+            // Check for updates in the last 10 seconds that might affect this user
+            if (timeDiff < 10000 && 
+                updateData.handbookId === initialData.id && 
+                updateData.userId === user?.id) {
+              console.log('⏰ [ModernHandbookClient] Permission update detected via polling - refreshing');
+              refreshPermissions();
+              // Clear the update marker to prevent repeated refreshes
+              localStorage.removeItem('handbook-permission-last-update');
+            }
+          }
+        } catch (error) {
+          console.error('❌ [ModernHandbookClient] Permission polling error:', error);
+        }
+      }, 2000); // Check every 2 seconds
+      
+      console.log('⏰ [ModernHandbookClient] Permission polling started');
+    };
+
+    // Initialize all communication methods
+    initBroadcastChannel();
+    startPermissionPolling();
+    
+    // @ts-ignore
+    window.addEventListener('handbook-permission-change', handlePermissionChange);
+    window.addEventListener('storage', handleStoragePermissionRefresh);
+    
+    return () => {
+      console.log('🧹 [ModernHandbookClient] Cleaning up global permission refresh function');
+      
+      // Clean up BroadcastChannel
+      if (broadcastChannel) {
+        broadcastChannel.close();
+        console.log('📻 [ModernHandbookClient] BroadcastChannel closed');
+      }
+      
+      // Clean up polling interval
+      if (permissionPollInterval) {
+        clearInterval(permissionPollInterval);
+        console.log('⏰ [ModernHandbookClient] Permission polling stopped');
+      }
+      
+      // @ts-ignore
+      delete window.refreshHandbookPermissions;
+      // @ts-ignore
+      delete window.testLocalStorageEvent;
+      // @ts-ignore
+      delete window.testBroadcastChannel;
+      // @ts-ignore
+      delete window.testPollingMarker;
+      // @ts-ignore
+      window.removeEventListener('handbook-permission-change', handlePermissionChange);
+      window.removeEventListener('storage', handleStoragePermissionRefresh);
+    };
+  }, [refreshPermissions, user?.id, initialData.id]);
+
+  // Auto-exit edit mode debug logging
+  useEffect(() => {
+    if (isFirstRender.current) return;
+    
+    if (mounted && !isLoading) {
+      logRef.current++;
+      if (logRef.current <= 3) {
+        // console.log('🔧 Edit mode auto-exit check:', {
+        //   isEditMode,
+        //   canEdit,
+        //   user: !!user,
+        //   authLoading,
+        //   mounted,
+        //   isLoading,
+        //   changeCount: logRef.current
+        // });
+      }
+    }
+  }, [user, authLoading, canEdit, isEditMode, mounted, isLoading, initialData.id]);
+
+  // Reduce logging frequency to prevent render loops
   useEffect(() => {
     const currentState = JSON.stringify({
       user: !!user,
@@ -117,11 +327,23 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
   // Check edit permissions when user loads
   useEffect(() => {
+    console.log('🔍 [ModernHandbookClient] Permission check useEffect triggered:', {
+      user: !!user,
+      authLoading,
+      mounted,
+      permissionRefreshTrigger,
+      isEditMode
+    });
+    
     const checkEditPermissions = async () => {
-      if (!mounted || authLoading) return;
+      if (!mounted || authLoading) {
+        console.log('🔍 [ModernHandbookClient] Permission check skipped:', { mounted, authLoading });
+        return;
+      }
       
       // Handle no user case
       if (!user) {
+        console.log('🔍 [ModernHandbookClient] No user found - setting default permissions');
         setCanEdit(false);
         setIsAdmin(false);
         setIsHandbookOwner(false);
@@ -129,35 +351,51 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
         return;
       }
       
-      try {
-        // First check if user is superadmin
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_superadmin')
-          .eq('id', user.id)
-          .single();
+      console.log('🔍 [ModernHandbookClient] User found - starting permission check for:', user.id);
+      
+              try {
+          console.log('🔍 [ModernHandbookClient] Checking if user is superadmin...');
+          // First check if user is superadmin
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_superadmin')
+            .eq('id', user.id)
+            .single();
+            
+          console.log('🔍 [ModernHandbookClient] Superadmin check result:', { profile, profileError });
 
         const isSuperAdmin = profile?.is_superadmin || false;
+        console.log('🔍 [ModernHandbookClient] Is superadmin?', isSuperAdmin);
 
-        // If superadmin, give full access immediately
-        if (isSuperAdmin) {
-          // console.log('👤 Superadmin detected - granting full access:', {
-          //   userId: user.id,
-          //   handbookId: initialData.id,
-          //   role: 'superadmin',
-          //   isOwner: false, // Not owner but has access
-          //   isAdmin: true,
-          //   canEdit: true
-          // });
+        // Check for testing override parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const disableSuperadmin = urlParams.get('test-disable-superadmin') === 'true';
+        
+        if (disableSuperadmin) {
+          console.log('🧪 [ModernHandbookClient] TESTING: Superadmin override disabled via URL parameter');
+        }
+
+        // If superadmin (and not testing), give full access immediately
+        if (isSuperAdmin && !disableSuperadmin) {
+          console.log('👤 [ModernHandbookClient] Superadmin detected - granting full access');
           
           setIsAdmin(true);
           setCanEdit(true);
           setIsHandbookOwner(false); // Not owner but has access
           setIsLoading(false);
           return;
+        } else if (disableSuperadmin) {
+          console.log('🧪 [ModernHandbookClient] Superadmin override disabled - checking normal permissions');
         }
+        
+        console.log('🔍 [ModernHandbookClient] Not superadmin - checking normal permissions...');
 
         // For non-superadmins, check normal permissions
+        console.log('🔍 [ModernHandbookClient] Checking handbook membership for:', {
+          handbookId: initialData.id,
+          userId: user.id
+        });
+        
         const { data: handbookMembership, error } = await supabase
           .from('handbook_members')
           .select('role')
@@ -165,50 +403,78 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           .eq('user_id', user.id)
           .single();
 
+        console.log('🔍 [ModernHandbookClient] Membership check result:', { handbookMembership, error });
+
         if (error && error.code !== 'PGRST116') {
-          console.error('Error checking handbook membership:', error);
+          console.error('❌ [ModernHandbookClient] Error checking handbook membership:', error);
           return;
         }
 
         // Check if user is owner
+        console.log('🔍 [ModernHandbookClient] Checking handbook ownership...');
+        
         const { data: handbookData, error: handbookError } = await supabase
           .from('handbooks')
           .select('owner_id')
           .eq('id', initialData.id)
           .single();
 
+        console.log('🔍 [ModernHandbookClient] Ownership check result:', { handbookData, handbookError });
+
         if (handbookError) {
-          console.error('Error checking handbook owner:', handbookError);
+          console.error('❌ [ModernHandbookClient] Error checking handbook owner:', handbookError);
           return;
         }
 
         const isOwner = handbookData.owner_id === user.id;
+        console.log('🔍 [ModernHandbookClient] Calculating permissions:', {
+          ownerId: handbookData.owner_id,
+          userId: user.id,
+          membershipRole: handbookMembership?.role || 'none',
+          isOwner
+        });
+        
         setIsHandbookOwner(isOwner);
 
         // User can edit if they're the owner or have admin/editor role
         const isAdmin = isOwner || handbookMembership?.role === 'admin';
         const canEdit = isOwner || handbookMembership?.role === 'admin' || handbookMembership?.role === 'editor';
         
+        console.log('🔍 [ModernHandbookClient] Final permissions calculated:', {
+          isAdmin,
+          canEdit,
+          wasInEditMode: isEditMode
+        });
+        
         setIsAdmin(isAdmin);
         setCanEdit(canEdit);
         
-        // console.log('👤 User permissions:', {
-        //   userId: user.id,
-        //   handbookId: initialData.id,
-        //   role: handbookMembership?.role || 'none',
-        //   isOwner,
-        //   isAdmin,
-        //   canEdit
-        // });
+        // If user lost edit permissions while in edit mode, exit edit mode
+        if (isEditMode && !canEdit) {
+          console.log('🚫 [ModernHandbookClient] User lost edit permissions - exiting edit mode');
+          setIsEditMode(false);
+        }
+        
+        console.log('👤 [ModernHandbookClient] User permissions refreshed:', {
+          userId: user.id,
+          handbookId: initialData.id,
+          role: handbookMembership?.role || 'none',
+          isOwner,
+          isAdmin,
+          canEdit,
+          previousEditMode: isEditMode,
+          permissionRefreshTrigger
+        });
       } catch (error) {
-        console.error('Error checking permissions:', error);
+        console.error('❌ [ModernHandbookClient] Error checking permissions:', error);
       } finally {
+        console.log('🏁 [ModernHandbookClient] Permission check completed - setting isLoading to false');
         setIsLoading(false);
       }
     };
 
     checkEditPermissions();
-  }, [user, authLoading, initialData.id, mounted]);
+  }, [user, authLoading, initialData.id, mounted, permissionRefreshTrigger, isEditMode]);
 
   // Check trial status for users who own handbooks
   useEffect(() => {
@@ -231,7 +497,21 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           return;
         }
 
-        const trialStatus = await getHandbookTrialStatus(user.id, initialData.id);
+        let trialStatus;
+        try {
+          trialStatus = await getHandbookTrialStatus(user.id, initialData.id);
+        } catch (trialError) {
+          console.warn('Could not fetch trial status (user may not have access):', trialError);
+          // Set safe fallback for non-privileged users
+          trialStatus = {
+            isInTrial: false,
+            trialDaysRemaining: 0,
+            subscriptionStatus: 'unknown',
+            trialEndsAt: null,
+            canCreateHandbook: false,
+            hasUsedTrial: false
+          };
+        }
         
         // console.log('🔍 ModernHandbookClient trial check:', {
         //   userId: user.id,

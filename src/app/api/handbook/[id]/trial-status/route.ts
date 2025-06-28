@@ -21,36 +21,75 @@ export async function GET(
 
     const supabase = getServiceSupabase();
 
-    // 1. First check if the user owns this handbook
-    const { data: handbookOwnership, error: ownershipError } = await supabase
+    // 1. First check if the user owns this handbook OR is an admin member
+    const { data: handbookData, error: handbookError } = await supabase
       .from('handbooks')
       .select('id, owner_id, trial_end_date, created_during_trial')
       .eq('id', handbookId)
-      .eq('owner_id', userId)
       .single();
 
-    if (ownershipError || !handbookOwnership) {
+    if (handbookError || !handbookData) {
       return NextResponse.json(
         { 
-          error: 'Handbook not found or access denied',
-          details: ownershipError?.message 
+          error: 'Handbook not found',
+          details: handbookError?.message 
         },
         { status: 404 }
       );
     }
 
-    // 2. Check for handbook-specific subscriptions
-    const { data: subscriptions, error: subError } = await supabase
-      .from('subscriptions')
-      .select('status, plan_type, expires_at, trial_ends_at, cancelled_at')
-      .eq('user_id', userId)
-      .eq('handbook_id', handbookId)
-      .in('status', ['active', 'cancelled'])
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // Check if user is owner, admin member, or any member
+    const isOwner = handbookData.owner_id === userId;
+    let userRole = null;
 
-    if (subError) {
-      console.error('Error checking subscriptions:', subError);
+    if (!isOwner) {
+      const { data: memberData, error: memberError } = await supabase
+        .from('handbook_members')
+        .select('role')
+        .eq('handbook_id', handbookId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!memberError && memberData) {
+        userRole = memberData.role;
+      }
+    }
+
+    // Must be owner or member to access
+    if (!isOwner && !userRole) {
+      return NextResponse.json(
+        { 
+          error: 'Access denied - must be handbook member',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Determine permission level
+    const hasFullAccess = isOwner || userRole === 'admin';
+    const hasBasicAccess = !!userRole; // editor or viewer
+
+    // Use handbookData instead of handbookOwnership
+    const handbookOwnership = handbookData;
+
+    // 2. Check for handbook-specific subscriptions (only for full access users)
+    let subscriptions = null;
+    
+    if (hasFullAccess) {
+      const { data: subData, error: subError } = await supabase
+        .from('subscriptions')
+        .select('status, plan_type, expires_at, trial_ends_at, cancelled_at')
+        .eq('user_id', handbookData.owner_id) // Check owner's subscriptions, not requesting user
+        .eq('handbook_id', handbookId)
+        .in('status', ['active', 'cancelled'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (subError) {
+        console.error('Error checking subscriptions:', subError);
+      } else {
+        subscriptions = subData;
+      }
     }
 
     // 3. Determine trial status
@@ -124,6 +163,24 @@ export async function GET(
 
     // console.log('✅ [Handbook Status] Result:', trialStatus);
 
+    // Return different information based on access level
+    if (hasBasicAccess && !hasFullAccess) {
+      // For viewers/editors: return only basic availability information
+      return NextResponse.json({
+        isInTrial: trialStatus.isInTrial,
+        subscriptionStatus: trialStatus.subscriptionStatus,
+        canCreateHandbook: false, // Only owners/admins can create
+        isPaid: trialStatus.isPaid,
+        hasActiveSubscription: trialStatus.hasActiveSubscription,
+        // Limited information for privacy
+        trialDaysRemaining: trialStatus.isInTrial ? trialStatus.trialDaysRemaining : 0,
+        trialEndsAt: trialStatus.isInTrial ? trialStatus.trialEndsAt : null,
+        hasUsedTrial: false, // Hide this detail
+        subscriptionCount: 0 // Hide this detail
+      });
+    }
+
+    // For owners/admins: return full information
     return NextResponse.json(trialStatus);
 
   } catch (error) {

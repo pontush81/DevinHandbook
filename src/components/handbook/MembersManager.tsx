@@ -262,12 +262,9 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     }
   };
 
-  const handleUpdateRole = async (memberId: string, userId: string, newRole: MemberRole) => {
-    if (userId === currentUserId && newRole !== "admin") {
-      showMessage("Du kan inte ändra din egen roll från administratör.", true);
-      return;
-    }
-
+  const handleUpdateRole = useCallback(async (memberId: string, userId: string, newRole: MemberRole) => {
+    if (updatingId) return;
+    
     setUpdatingId(memberId);
     try {
       const response = await fetch("/api/handbook/update-member-role", {
@@ -279,19 +276,102 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Något gick fel");
+      if (response.ok) {
+        console.log('[MembersManager] Role updated successfully:', { memberId, newRole });
+        
+        // Update local state
+        setMembers(prev => prev.map(member => 
+          member.id === memberId ? { ...member, role: newRole } : member
+        ));
+        
+        // Refresh permissions for the affected user if they're viewing the handbook
+        console.log('🔄 [MembersManager] Attempting permission refresh after role update');
+        console.log('🔍 [MembersManager] Window object keys:', Object.keys(window).filter(k => k.includes('refresh')));
+        
+        // Try multiple methods for cross-page communication
+        let refreshTriggered = false;
+        
+        // Method 1: Direct global function call (works if on same page)
+        // @ts-ignore - Global function added by ModernHandbookClient
+        if (typeof window.refreshHandbookPermissions === 'function') {
+          console.log('✅ [MembersManager] Found global permission refresh function - calling it');
+          window.refreshHandbookPermissions();
+          refreshTriggered = true;
+        } else {
+          console.warn('⚠️ [MembersManager] Global permission refresh function not found on this page');
+        }
+        
+        // Method 2: BroadcastChannel (most reliable cross-page)
+        const refreshData = {
+          type: 'PERMISSION_REFRESH',
+          handbookId,
+          userId,
+          newRole,
+          timestamp: Date.now(),
+          source: 'role_update'
+        };
+        
+        try {
+          if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('handbook-permissions');
+            channel.postMessage(refreshData);
+            channel.close();
+            console.log('📻 [MembersManager] BroadcastChannel message sent successfully');
+          } else {
+            console.log('⚠️ [MembersManager] BroadcastChannel not supported');
+          }
+        } catch (error) {
+          console.error('❌ [MembersManager] BroadcastChannel error:', error);
+        }
+        
+        // Method 3: localStorage events (fallback)
+        console.log('📤 [MembersManager] Setting localStorage data for cross-page communication');
+        localStorage.setItem('handbook-permission-refresh', JSON.stringify(refreshData));
+        
+        // Remove after a delay to ensure event fires across tabs
+        setTimeout(() => {
+          console.log('🗑️ [MembersManager] Removing localStorage data');
+          localStorage.removeItem('handbook-permission-refresh');
+        }, 500);
+        
+        // Method 4: Polling marker (ultimate fallback)
+        const updateMarker = {
+          handbookId,
+          userId,
+          timestamp: Date.now(),
+          action: 'role_update'
+        };
+        localStorage.setItem('handbook-permission-last-update', JSON.stringify(updateMarker));
+        console.log('⏰ [MembersManager] Permission update marker set for polling detection');
+        
+        // Method 5: Custom event (backup for same-page scenarios)
+        console.log('📢 [MembersManager] Dispatching custom event as backup');
+        window.dispatchEvent(new CustomEvent('handbook-permission-change', { 
+          detail: refreshData
+        }));
+        
+        // Method 4: If current user role changed to viewer, redirect to main page
+        if (userId === currentUserId && (newRole === 'viewer' || newRole === 'editor')) {
+          console.log('🔄 [MembersManager] Current user role downgraded - redirecting to main page');
+          setTimeout(() => {
+            const handbookSlug = window.location.pathname.split('/')[1];
+            window.location.href = `/${handbookSlug}`;
+          }, 1500); // Give time for success message
+        }
+        
+        console.log('✅ [MembersManager] Permission refresh triggered via multiple methods');
+        
+        showMessage("Medlemsroll uppdaterad");
+      } else {
+        throw new Error(data.message || "Internt serverfel");
       }
-
-      showMessage("Användarens roll har uppdaterats.");
-      fetchMembers();
     } catch (error) {
-      console.error("Fel vid uppdatering av roll:", error);
-      showMessage(error instanceof Error ? error.message : "Kunde inte uppdatera rollen", true);
+      console.error('Fel vid uppdatering av roll:', error);
+      showMessage(error instanceof Error ? error.message : "Fel vid uppdatering av roll", true);
     } finally {
       setUpdatingId(null);
     }
-  };
+  }, [handbookId, currentUserId, updatingId]);
 
   const handleRemoveMember = async (memberId: string, userId: string) => {
     if (userId === currentUserId) {
@@ -315,6 +395,71 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       }
 
       showMessage("Användaren har tagits bort från handboken.");
+      
+      // Refresh permissions for the affected user if they're viewing the handbook
+      console.log('🔄 [MembersManager] Attempting permission refresh after member removal');
+      
+      // Try multiple methods for cross-page communication
+      // Method 1: Direct global function call (works if on same page)
+      // @ts-ignore - Global function added by ModernHandbookClient
+      if (typeof window.refreshHandbookPermissions === 'function') {
+        console.log('✅ [MembersManager] Found global permission refresh function - calling it');
+        window.refreshHandbookPermissions();
+      } else {
+        console.warn('⚠️ [MembersManager] Global permission refresh function not found on this page');
+      }
+      
+      // Method 2: BroadcastChannel (most reliable cross-page)
+      const refreshData = {
+        type: 'PERMISSION_REFRESH',
+        handbookId,
+        userId,
+        newRole: 'removed',
+        timestamp: Date.now(),
+        source: 'member_removal'
+      };
+      
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel('handbook-permissions');
+          channel.postMessage(refreshData);
+          channel.close();
+          console.log('📻 [MembersManager] BroadcastChannel message sent for member removal');
+        } else {
+          console.log('⚠️ [MembersManager] BroadcastChannel not supported');
+        }
+      } catch (error) {
+        console.error('❌ [MembersManager] BroadcastChannel error:', error);
+      }
+      
+      // Method 3: localStorage events (fallback)
+      console.log('📤 [MembersManager] Setting localStorage data for cross-page communication');
+      localStorage.setItem('handbook-permission-refresh', JSON.stringify(refreshData));
+      
+      // Remove after a delay to ensure event fires across tabs
+      setTimeout(() => {
+        console.log('🗑️ [MembersManager] Removing localStorage data');
+        localStorage.removeItem('handbook-permission-refresh');
+      }, 500);
+      
+      // Method 4: Polling marker (ultimate fallback)
+      const updateMarker = {
+        handbookId,
+        userId,
+        timestamp: Date.now(),
+        action: 'member_removal'
+      };
+      localStorage.setItem('handbook-permission-last-update', JSON.stringify(updateMarker));
+      console.log('⏰ [MembersManager] Permission update marker set for member removal');
+      
+      // Method 5: Custom event (backup for same-page scenarios)
+      console.log('📢 [MembersManager] Dispatching custom event for member removal');
+      window.dispatchEvent(new CustomEvent('handbook-permission-change', { 
+        detail: refreshData
+      }));
+      
+      console.log('✅ [MembersManager] Permission refresh triggered via multiple methods');
+      
       fetchMembers();
     } catch (error) {
       console.error("Fel vid borttagning av medlem:", error);

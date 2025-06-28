@@ -59,9 +59,25 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
         const ownershipData = await ownershipResponse.json();
         setOwnershipStatus(ownershipData.isOwner);
 
-        // Get trial status
-        const trialStatusData = await getHandbookTrialStatus(user.id, handbookId);
-        setTrialStatus(trialStatusData);
+        // Initialize trial status data
+        let trialStatusData = {
+          isInTrial: false,
+          trialDaysRemaining: 0,
+          subscriptionStatus: 'unknown',
+          trialEndsAt: null,
+          canCreateHandbook: false,
+          hasUsedTrial: false
+        };
+
+        // Get trial status with error handling
+        try {
+          trialStatusData = await getHandbookTrialStatus(user.id, handbookId);
+          setTrialStatus(trialStatusData);
+        } catch (trialError) {
+          console.warn('Could not fetch trial status (user may not have access):', trialError);
+          // Use fallback trial status for non-privileged users
+          setTrialStatus(trialStatusData);
+        }
 
         // Get handbook data
         const handbookResponse = await fetch(`/api/debug/handbook-data?handbookId=${handbookId}&userId=${user.id}`);

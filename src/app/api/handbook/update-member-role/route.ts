@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession } from '@/lib/auth-utils';
+import { getServerSession, isHandbookAdmin } from '@/lib/auth-utils';
 
 export async function PATCH(request: NextRequest) {
   try {
