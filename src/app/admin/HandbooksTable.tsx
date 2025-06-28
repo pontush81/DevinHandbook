@@ -204,19 +204,11 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-3">
-                      <a
-                        href={`/handbook/${handbook.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href={`/${handbook.slug}`}
                         className="text-black hover:underline"
                       >
                         Visa
-                      </a>
-                      <Link
-                        href={`/${handbook.slug}?edit=true`}
-                        className="text-black hover:underline"
-                      >
-                        Redigera
                       </Link>
                       <Button
                         onClick={() => revalidateHandbook(handbook.slug)}

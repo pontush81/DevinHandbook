@@ -620,18 +620,9 @@ export default function DashboardPage() {
                               size="sm"
                               asChild
                             >
-                              <Link href={`/${handbook.subdomain}?edit=true`}>
-                                Hantera
+                              <Link href={`/${handbook.subdomain}`}>
+                                Visa
                               </Link>
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => {
-                                window.open(`/${handbook.subdomain}`, '_blank');
-                              }}
-                            >
-                              Visa
                             </Button>
                             <Button 
                               variant="outline" 
@@ -720,24 +711,13 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <div className="flex space-x-2">
-                        {(handbook.userRole === 'admin' || handbook.userRole === 'editor') && (
-                          <Button 
-                            size="sm"
-                            asChild
-                          >
-                            <Link href={`/${handbook.subdomain}?edit=true`}>
-                              {handbook.userRole === 'admin' ? 'Hantera' : 'Redigera'}
-                            </Link>
-                          </Button>
-                        )}
                         <Button 
-                          variant="outline" 
                           size="sm"
-                          onClick={() => {
-                            window.open(`/${handbook.subdomain}`, '_blank');
-                          }}
+                          asChild
                         >
-                          Visa
+                          <Link href={`/${handbook.subdomain}`}>
+                            Visa
+                          </Link>
                         </Button>
                         {handbook.userRole === 'admin' && (
                           <Button 

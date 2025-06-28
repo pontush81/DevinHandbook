@@ -229,14 +229,9 @@ function CreateHandbookContent() {
                       <p className="text-gray-500">handbok.org/{handbook.subdomain}</p>
                     </div>
                     <div className="mt-2 md:mt-0 space-x-2">
-                      <Button asChild variant="outline" size="sm">
-                        <a href={`https://www.handbok.org/${handbook.subdomain}`} target="_blank" rel="noopener noreferrer">
-                          Visa
-                        </a>
-                      </Button>
                       <Button asChild size="sm">
-                        <a href={`/${handbook.subdomain}?edit=true`}>
-                          Redigera
+                        <a href={`/${handbook.subdomain}`}>
+                          Visa
                         </a>
                       </Button>
                     </div>
