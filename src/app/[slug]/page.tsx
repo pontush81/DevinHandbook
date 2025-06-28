@@ -104,7 +104,7 @@ function renderHandbook(handbookData: any, slug: string) {
     id: handbookData.id,
     title: handbookData.title || '',
     subtitle: handbookData.subtitle || '',
-    handbookSlug: handbookData.subdomain || handbookData.slug, // Use subdomain for slug, fallback to slug
+    handbookSlug: handbookData.slug, // Use slug field (subdomain field no longer exists)
     forum_enabled: handbookData.forum_enabled || false,
     sections: handbookData.sections || [],
     theme: handbookData.theme || {
