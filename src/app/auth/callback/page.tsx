@@ -22,19 +22,88 @@ function AuthCallbackContent() {
         // For Google OAuth, Supabase handles the code exchange automatically
         // The session should already be set when we reach this callback
         setStatus("success");
-        setMessage("Google inloggning lyckades! Du omdirigeras...");
         
         // Check for join code
         let joinCode = searchParams.get("join");
         
-        // Small delay to ensure session is established
-        setTimeout(() => {
-          // Use smart redirect for post-login routing
+        if (joinCode) {
+          console.log('[Auth Callback] Found join code for Google OAuth:', joinCode);
+          setMessage("Google inloggning lyckades! Går med i handboken...");
+          
+          // Set flags to prevent smartRedirect from interfering
+          safeLocalStorage.setItem('joining_handbook_via_code', 'true');
+          safeLocalStorage.setItem('pending_join_code', joinCode);
+          safeLocalStorage.setItem('join_process_started', Date.now().toString());
           if (typeof window !== 'undefined') {
-            const { smartRedirect } = require('@/lib/redirect-utils');
-            smartRedirect();
+            (window as any).__joining_handbook = true;
           }
-        }, 1000);
+          
+          // Give a bit more time for Google OAuth session to stabilize
+          setTimeout(async () => {
+            try {
+              console.log('[Auth Callback] Attempting to join handbook with code:', joinCode);
+              
+              // Use fetchWithAuth to automatically include Bearer token when cookies fail
+              const joinResponse = await fetchWithAuth('/api/handbook/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ joinCode }),
+              });
+
+              const joinData = await joinResponse.json();
+
+              if (joinResponse.ok && joinData.success) {
+                console.log('[Auth Callback] Join successful for Google OAuth user');
+                setMessage(`Välkommen till "${joinData.handbook.title}"! Du dirigeras dit nu...`);
+                // Clear all join-related flags before redirecting
+                safeLocalStorage.removeItem('joining_handbook_via_code');
+                safeLocalStorage.removeItem('pending_join_code');
+                safeLocalStorage.removeItem('join_process_started');
+                if (typeof window !== 'undefined') {
+                  delete (window as any).__joining_handbook;
+                }
+                setTimeout(() => {
+                  router.replace(`/${joinData.handbook.slug}`);
+                }, 2000);
+              } else {
+                console.error('[Auth Callback] Google OAuth join failed:', joinData);
+                setMessage("Inloggning lyckades, men kunde inte gå med i handboken. Du dirigeras till inloggning...");
+                // Clear flags and redirect to login with join code
+                safeLocalStorage.removeItem('joining_handbook_via_code');
+                safeLocalStorage.removeItem('pending_join_code');
+                safeLocalStorage.removeItem('join_process_started');
+                if (typeof window !== 'undefined') {
+                  delete (window as any).__joining_handbook;
+                }
+                setTimeout(() => {
+                  router.replace(`/login?verified=true&from=google_oauth&join=${joinCode}`);
+                }, 1500);
+              }
+            } catch (error) {
+              console.error('[Auth Callback] Error joining handbook via Google OAuth:', error);
+              setMessage("Inloggning lyckades, men kunde inte gå med i handboken. Du dirigeras till inloggning...");
+              // Clear flags and redirect to login with join code
+              safeLocalStorage.removeItem('joining_handbook_via_code');
+              safeLocalStorage.removeItem('pending_join_code');
+              safeLocalStorage.removeItem('join_process_started');
+              if (typeof window !== 'undefined') {
+                delete (window as any).__joining_handbook;
+              }
+              setTimeout(() => {
+                router.replace(`/login?verified=true&from=google_oauth&join=${joinCode}`);
+              }, 1500);
+            }
+          }, 2000); // Extra time for Google OAuth session to stabilize
+        } else {
+          setMessage("Google inloggning lyckades! Du omdirigeras...");
+          // No join code, use normal smart redirect
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              const { smartRedirect } = require('@/lib/redirect-utils');
+              smartRedirect();
+            }
+          }, 1000);
+        }
         return;
       }
       
