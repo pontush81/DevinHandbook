@@ -176,12 +176,17 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     setIsLoading(true);
     try {
       console.log('[MembersManager] Fetching members for handbook:', handbookId);
+      console.log('[MembersManager] Using currentUserId:', currentUserId);
+      console.log('[MembersManager] Full API URL:', `/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}`);
       
       // Använd admin API för att hämta medlemmar med e-postadresser
       // Detta kringgår RLS-problem och ger oss tillgång till auth.users tabellen
       const response = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}`, {
         credentials: 'include'
       });
+      
+      console.log('[MembersManager] API response status:', response.status);
+      console.log('[MembersManager] API response ok:', response.ok);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -204,6 +209,38 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         console.log('🔍 Current members state:', membersToSet);
         console.log('🔍 Latest API data:', data);
         return { members: membersToSet, apiData: data };
+      };
+      
+      // Add manual refresh function for testing
+      (window as any).refreshMembers = fetchMembers;
+      
+      // Add test function to check API directly
+      (window as any).testMembersAPI = async () => {
+        console.log('🧪 Testing members API directly...');
+        console.log('🧪 Handbook ID:', handbookId);
+        console.log('🧪 Current User ID:', currentUserId);
+        
+        try {
+          const testResponse = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}`, {
+            credentials: 'include'
+          });
+          
+          console.log('🧪 Test API response status:', testResponse.status);
+          console.log('🧪 Test API response ok:', testResponse.ok);
+          
+          if (!testResponse.ok) {
+            const errorText = await testResponse.text();
+            console.log('🧪 Test API error response:', errorText);
+            return { success: false, error: errorText, status: testResponse.status };
+          }
+          
+          const testData = await testResponse.json();
+          console.log('🧪 Test API success response:', testData);
+          return { success: true, data: testData };
+        } catch (error) {
+          console.error('🧪 Test API error:', error);
+          return { success: false, error: error.message };
+        }
       };
     } catch (error) {
       console.error("Fel vid hämtning av medlemmar:", error);
