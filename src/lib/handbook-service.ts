@@ -147,9 +147,9 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     if (debugError) {
       console.error('[Handbook Service] Debug query error:', debugError);
     } else {
-      // console.log(`[Handbook Service] Debug: Found ${allHandbooks?.length || 0} handbooks with slug "${slug}":`, 
-      //   allHandbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
-      // );
+      console.log(`[Handbook Service] Debug: Found ${allHandbooks?.length || 0} handbooks with slug "${slug}":`, 
+        allHandbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
+      );
     }
 
     const { data: handbooks, error } = await (supabase as any)
@@ -181,28 +181,47 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
         )
       `)
       .eq('slug', slug)
-      .eq('published', true);
+      .eq('published', true)
+      .order('created_at', { ascending: false }); // Most recent first for consistent behavior
 
     if (error) {
       console.error('[Handbook Service] Error getting handbook:', error);
       return null;
     }
 
+    console.log(`[Handbook Service] Published query result: Found ${handbooks?.length || 0} published handbooks with slug "${slug}":`, 
+      handbooks?.map(h => ({ id: h.id, title: h.title, published: h.published })) || []
+    );
+
     if (!handbooks || handbooks.length === 0) {
-      // console.log(`[Handbook Service] No published handbook found with slug: ${slug}`);
+      console.log(`[Handbook Service] No published handbook found with slug: ${slug}`);
       // Check if there's an unpublished version
       if (allHandbooks && allHandbooks.length > 0) {
         const unpublished = allHandbooks.find(h => !h.published);
         if (unpublished) {
-          // console.warn(`[Handbook Service] Found unpublished handbook with slug: ${slug} (id: ${unpublished.id})`);
+          console.warn(`[Handbook Service] Found unpublished handbook with slug: ${slug} (id: ${unpublished.id})`);
         }
       }
       return null;
     }
 
+    if (handbooks.length > 1) {
+      console.warn(`[Handbook Service] ⚠️ WARNING: Found ${handbooks.length} published handbooks with same slug "${slug}"! This should not happen.`);
+      handbooks.forEach((h, idx) => {
+        console.warn(`[Handbook Service] [${idx}] ${h.title} (id: ${h.id}, created: ${h.created_at})`);
+      });
+      
+      // CRITICAL BUG FIX: If there are duplicates, use the most recent one (latest created_at)
+      console.warn(`[Handbook Service] 🔧 BUG FIX: Sorting handbooks by created_at to use most recent`);
+      handbooks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      console.warn(`[Handbook Service] 🔧 BUG FIX: Will use handbook: ${handbooks[0].title} (id: ${handbooks[0].id}, created: ${handbooks[0].created_at})`);
+    }
+
     const handbook = handbooks[0];
 
-    // console.log(`[Handbook Service] Found handbook: ${handbook.title} (id: ${handbook.id})`);
+    console.log(`[Handbook Service] ✅ Using handbook: ${handbook.title} (id: ${handbook.id})`);
+
+
     
     return {
       id: handbook.id,

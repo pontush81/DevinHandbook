@@ -190,7 +190,18 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       console.log('[MembersManager] Fetched members API response:', data);
       console.log('[MembersManager] Members array length:', data.members?.length || 0);
       console.log('[MembersManager] Members array:', data.members);
-      setMembers(data.members || []);
+      
+      // Add debug for setting state
+      const membersToSet = data.members || [];
+      console.log('[MembersManager] Setting members state to:', membersToSet);
+      setMembers(membersToSet);
+      
+      // Add debug function to window for manual inspection
+      (window as any).debugMembers = () => {
+        console.log('🔍 Current members state:', membersToSet);
+        console.log('🔍 Latest API data:', data);
+        return { members: membersToSet, apiData: data };
+      };
     } catch (error) {
       console.error("Fel vid hämtning av medlemmar:", error);
       showMessage("Kunde inte hämta medlemmar. Försök igen senare.", true);
@@ -763,8 +774,14 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
             Inga medlemmar har lagts till ännu.
           </div>
         ) : (
-          <ul className="divide-y space-y-1">
-            {members.map((member) => (
+          <>
+            {/* Debug info */}
+            <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+              <strong>Debug:</strong> Renderar {members.length} medlemmar
+              {members.map(m => ` • ${m.email} (${m.role})`).join('')}
+            </div>
+            <ul className="divide-y space-y-1">
+              {members.map((member) => (
               <li key={member.id} className="py-3 sm:py-4">
                 <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -806,6 +823,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
               </li>
             ))}
           </ul>
+          </>
         )}
       </div>
     </div>
