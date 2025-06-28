@@ -51,6 +51,29 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
   const fetchJoinCode = useCallback(async () => {
     setIsLoadingJoinCode(true);
+    
+    // SAFETY CHECK: Same verification for fetching join codes
+    const urlSlug = window.location.pathname.split('/')[1];
+    try {
+      const verifyResponse = await fetch(`/api/debug/handbook?subdomain=${urlSlug}`);
+      const verifyData = await verifyResponse.json();
+      
+      if (verifyData.success && verifyData.handbook?.id !== handbookId) {
+        console.error('🚨 [FetchJoinCode] CRITICAL: Handbook ID mismatch detected!', {
+          urlSlug,
+          expectedId: verifyData.handbook.id,
+          actualId: handbookId,
+          expectedTitle: verifyData.handbook.title
+        });
+        
+        setJoinCodeData({ joinCode: null, expiresAt: null, isActive: false });
+        setIsLoadingJoinCode(false);
+        return; // Abort join code fetching
+      }
+    } catch (verifyError) {
+      console.warn('⚠️ [FetchJoinCode] Could not verify handbook ID:', verifyError);
+    }
+    
     try {
       const response = await fetch(`/api/handbook/join-code?handbookId=${handbookId}&userId=${currentUserId}`, {
         credentials: 'include'
@@ -81,7 +104,45 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
   const handleCreateJoinCode = async () => {
     setIsLoadingJoinCode(true);
-    try {
+    
+    // Debug log to see what handbook ID we're creating join code for
+    const urlSlug = window.location.pathname.split('/')[1];
+          console.log('🔧 [CreateJoinCode] DEBUG:', {
+        urlSlug,
+        handbookId,
+        currentUserId,
+        mismatch: urlSlug !== handbookId ? 'WARNING: URL och handbok-ID matchar inte!' : 'OK'
+      });
+      
+      // SAFETY CHECK: Verify we're creating join code for the correct handbook
+      // This prevents the bug where join codes are created for wrong handbook
+      try {
+        const verifyResponse = await fetch(`/api/debug/handbook?subdomain=${urlSlug}`);
+        const verifyData = await verifyResponse.json();
+        
+        if (verifyData.success && verifyData.handbook?.id !== handbookId) {
+          console.error('🚨 [CreateJoinCode] CRITICAL: Handbook ID mismatch detected!', {
+            urlSlug,
+            expectedId: verifyData.handbook.id,
+            actualId: handbookId,
+            expectedTitle: verifyData.handbook.title
+          });
+          
+          showMessage(
+            `VARNING: Handbok-ID mismatch! URL "${urlSlug}" tillhör handbok "${verifyData.handbook.title}" (${verifyData.handbook.id}) ` +
+            `men komponenten använder ${handbookId}. Vänligen ladda om sidan.`,
+            true
+          );
+          return; // Abort join code creation
+        }
+        
+        console.log('✅ [CreateJoinCode] Handbook ID verification passed');
+      } catch (verifyError) {
+        console.warn('⚠️ [CreateJoinCode] Could not verify handbook ID:', verifyError);
+        // Continue with join code creation as verification failed, not necessarily wrong handbook
+      }
+      
+      try {
       const response = await fetch("/api/handbook/join-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -777,7 +838,10 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
           <>
             {/* Debug info */}
             <div className="mb-2 p-2 bg-red-50 border border-red-500 rounded text-sm">
-              <strong>🚨 DEBUG:</strong> MembersManager använder handbok-ID: <code>{handbookId}</code><br/>
+              <strong>🚨 CONTEXT DEBUG:</strong><br/>
+              <strong>URL slug:</strong> <code>{window.location.pathname.split('/')[1]}</code><br/>
+              <strong>MembersManager handbok-ID:</strong> <code>{handbookId}</code><br/>
+              <strong>Join-kod handbok-ID:</strong> <code>{joinCodeData.joinCode ? 'Kommer att skapa för denna handbok-ID ovan' : 'Ingen join-kod än'}</code><br/>
               <strong>Renderar:</strong> {members.length} medlemmar
               {members.map(m => ` • ${m.email} (${m.role})`).join('')}
             </div>

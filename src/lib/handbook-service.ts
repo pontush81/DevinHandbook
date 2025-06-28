@@ -220,6 +220,21 @@ export async function getHandbookBySlug(slug: string): Promise<Handbook | null> 
     const handbook = handbooks[0];
 
     console.log(`[Handbook Service] ✅ Using handbook: ${handbook.title} (id: ${handbook.id})`);
+    
+    // CRITICAL BUG PREVENTION: Add final validation
+    if (handbook.slug !== slug) {
+      console.error(`[Handbook Service] 🚨 CRITICAL BUG: Handbook slug mismatch!`, {
+        requestedSlug: slug,
+        returnedSlug: handbook.slug,
+        handbookId: handbook.id,
+        handbookTitle: handbook.title
+      });
+      
+      // This should never happen, but if it does, log extensively
+      console.error('[Handbook Service] 🚨 This indicates a serious database inconsistency or query error!');
+      console.error('[Handbook Service] 🚨 Returning null to prevent wrong handbook usage');
+      return null;
+    }
 
 
     
