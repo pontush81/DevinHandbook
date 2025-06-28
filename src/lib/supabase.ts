@@ -771,18 +771,69 @@ export function upgradeServiceClient() {
   return getServiceSupabase();
 }
 
+// Test smart fetch with automatic token refresh
+export async function testSmartAuth(joinCode: string, role: string = 'viewer') {
+  if (typeof window === 'undefined') {
+    console.log('❌ This function only works in browser');
+    return null;
+  }
+  
+  console.log('🧪 Testing smart authentication with auto-refresh...');
+  
+  try {
+    console.log('🔍 Testing token validation...');
+    const accessToken = await getValidAccessToken();
+    console.log('📊 Access token status:', accessToken ? '✅ Valid' : '❌ None/Invalid');
+    
+    console.log('🚀 Testing smart join API...');
+    const response = await fetchWithAuth('/api/handbook/join', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        joinCode,
+        role
+      })
+    });
+    
+    const result = await response.json();
+    
+    console.log('=== SMART AUTH TEST RESULTS ===');
+    console.log('Status:', response.status);
+    console.log('Success:', response.ok);
+    console.log('Result:', JSON.stringify(result, null, 2));
+    
+    return {
+      status: response.status,
+      ok: response.ok,
+      data: result
+    };
+    
+  } catch (error) {
+    console.error('❌ Smart auth test failed:', error);
+    return {
+      status: 0,
+      ok: false,
+      error: error.message
+    };
+  }
+}
+
 // Expose debug functions globally for testing
 if (typeof window !== 'undefined') {
   (window as any).testCookieAuth = testCookieAuth;
   (window as any).diagnoseAuthIssues = diagnoseAuthIssues;
   (window as any).syncCookiesToLocalStorage = syncCookiesToLocalStorage;
   (window as any).testBearerTokenAuth = testBearerTokenAuth;
+  (window as any).testSmartAuth = testSmartAuth;
   
   console.log('🧪 Auth debug functions available:');
   console.log('  - window.testCookieAuth() - Test cookie setting');
   console.log('  - window.diagnoseAuthIssues() - Full auth diagnostics');
   console.log('  - window.syncCookiesToLocalStorage() - Sync cookies to localStorage');
   console.log('  - window.testBearerTokenAuth(joinCode, role) - Test Bearer token join');
+  console.log('  - window.testSmartAuth(joinCode, role) - Test smart auth with auto-refresh');
 }
 
 // Hjälpfunktion för att testa Bearer token från browser console
@@ -875,8 +926,8 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     return fetch(url, options);
   }
   
-  // Client-side: försök få access token och lägg till som Bearer token
-  const accessToken = getStoredAccessToken();
+  // Client-side: försök få en giltig access token
+  let accessToken = await getValidAccessToken();
   
   if (accessToken) {
     // Lägg till Authorization header
@@ -885,10 +936,40 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     
     console.log('🔑 [fetchWithAuth] Adding Bearer token to request for:', url);
     
-    return fetch(url, {
+    const response = await fetch(url, {
       ...options,
       headers
     });
+    
+    // Om vi fortfarande får 401/403, försök förnya token och försök igen
+    if ((response.status === 401 || response.status === 403) && !url.includes('/auth/')) {
+      console.log('🔄 [fetchWithAuth] Token might be expired, trying to refresh...');
+      
+      // Försök förnya token
+      accessToken = await refreshAccessToken();
+      
+      if (accessToken) {
+        console.log('✅ [fetchWithAuth] Token refreshed, retrying request...');
+        headers.set('Authorization', `Bearer ${accessToken}`);
+        
+        return fetch(url, {
+          ...options,
+          headers
+        });
+      } else {
+        console.log('❌ [fetchWithAuth] Token refresh failed, falling back to cookie auth');
+        // Försök utan Authorization header (förlita sig på cookies)
+        const headersWithoutAuth = new Headers(options.headers);
+        headersWithoutAuth.delete('Authorization');
+        
+        return fetch(url, {
+          ...options,
+          headers: headersWithoutAuth
+        });
+      }
+    }
+    
+    return response;
   } else {
     // Ingen access token, använd vanliga fetch (förlita sig på cookies)
     console.log('⚠️ [fetchWithAuth] No access token found, using regular fetch for:', url);
@@ -929,4 +1010,58 @@ function getStoredAccessToken(): string | null {
   }
   
   return null;
+}
+
+// Kontrollera om en JWT token är expired
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp <= now;
+  } catch (e) {
+    console.error('Error checking token expiration:', e);
+    return true; // Anta att den är expired om vi inte kan validera
+  }
+}
+
+// Få en giltig access token (förnya om nödvändigt)
+async function getValidAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  
+  // Först, försök hämta från storage
+  let accessToken = getStoredAccessToken();
+  
+  if (accessToken && !isTokenExpired(accessToken)) {
+    // Token finns och är inte expired
+    return accessToken;
+  }
+  
+  // Token är expired eller finns inte, försök förnya
+  console.log('🔄 [getValidAccessToken] Token is expired or missing, attempting refresh...');
+  return await refreshAccessToken();
+}
+
+// Förnya access token från Supabase
+async function refreshAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('❌ [refreshAccessToken] Error getting session:', error);
+      return null;
+    }
+    
+    if (data.session && data.session.access_token) {
+      console.log('✅ [refreshAccessToken] Successfully refreshed token');
+      return data.session.access_token;
+    } else {
+      console.log('❌ [refreshAccessToken] No valid session found');
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ [refreshAccessToken] Error refreshing token:', error);
+    return null;
+  }
 }

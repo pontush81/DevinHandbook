@@ -38,6 +38,12 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
   initialData,
   defaultEditMode = false
 }) => {
+  console.log('🎯 [ModernHandbookClient] Component mounting with initialData:', {
+    id: initialData?.id,
+    title: initialData?.title,
+    sectionsCount: initialData?.sections?.length || 0
+  });
+
   const { user, isLoading: authLoading } = useAuth();
   const [handbookData, setHandbookData] = useState(initialData);
   const [currentPageId, setCurrentPageId] = useState<string>('');
@@ -384,6 +390,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
     });
     
     const checkEditPermissions = async () => {
+      try {
       if (!mounted || authLoading) {
         console.log('🔍 [ModernHandbookClient] Permission check skipped:', { mounted, authLoading });
         return;
@@ -518,21 +525,43 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           previousEditMode: isEditMode,
           permissionRefreshTrigger
         });
-      } catch (error) {
-        console.error('❌ [ModernHandbookClient] Error checking permissions:', error);
+      } catch (innerError) {
+        console.error('❌ [ModernHandbookClient] Error checking permissions (inner):', innerError);
+        // Set safe defaults
+        setCanEdit(false);
+        setIsAdmin(false);
+        setIsHandbookOwner(false);
       } finally {
         console.log('🏁 [ModernHandbookClient] Permission check completed - setting isLoading to false');
         setIsLoading(false);
       }
+      } catch (outerError) {
+        console.error('❌ [ModernHandbookClient] Error in permission check function:', outerError);
+        // Set safe defaults
+        setCanEdit(false);
+        setIsAdmin(false);
+        setIsHandbookOwner(false);
+        setIsLoading(false);
+      }
     };
 
-    checkEditPermissions();
+    try {
+      checkEditPermissions();
+    } catch (callError) {
+      console.error('❌ [ModernHandbookClient] Error calling checkEditPermissions:', callError);
+      // Set safe defaults
+      setCanEdit(false);
+      setIsAdmin(false);
+      setIsHandbookOwner(false);
+      setIsLoading(false);
+    }
   }, [user, authLoading, initialData.id, mounted, permissionRefreshTrigger, isEditMode]);
 
   // Check trial status for users who own handbooks
   useEffect(() => {
     const checkTrialStatus = async () => {
-      if (!user || !mounted || authLoading || !isHandbookOwner) return;
+      try {
+        if (!user || !mounted || authLoading || !isHandbookOwner) return;
       
       try {
         // Check if user is superadmin first
@@ -591,9 +620,19 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       } catch (error) {
         console.error('Error checking trial status:', error);
       }
+      } catch (outerError) {
+        console.error('❌ [ModernHandbookClient] Critical error in trial status check:', outerError);
+        // Set safe defaults
+        setIsBlocked(false);
+        setTrialEndedAt(null);
+      }
     };
     
-    checkTrialStatus();
+    try {
+      checkTrialStatus();
+    } catch (callError) {
+      console.error('❌ [ModernHandbookClient] Error calling checkTrialStatus:', callError);
+    }
   }, [user, mounted, authLoading, initialData.id, isHandbookOwner]);
 
   // Handle page selection from search results via URL hash
