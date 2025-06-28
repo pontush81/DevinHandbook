@@ -776,8 +776,9 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         ) : (
           <>
             {/* Debug info */}
-            <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-              <strong>Debug:</strong> Renderar {members.length} medlemmar
+            <div className="mb-2 p-2 bg-red-50 border border-red-500 rounded text-sm">
+              <strong>🚨 DEBUG:</strong> MembersManager använder handbok-ID: <code>{handbookId}</code><br/>
+              <strong>Renderar:</strong> {members.length} medlemmar
               {members.map(m => ` • ${m.email} (${m.role})`).join('')}
             </div>
             <ul className="divide-y space-y-1">
