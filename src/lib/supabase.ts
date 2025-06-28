@@ -776,9 +776,91 @@ if (typeof window !== 'undefined') {
   (window as any).testCookieAuth = testCookieAuth;
   (window as any).diagnoseAuthIssues = diagnoseAuthIssues;
   (window as any).syncCookiesToLocalStorage = syncCookiesToLocalStorage;
+  (window as any).testBearerTokenAuth = testBearerTokenAuth;
   
   console.log('🧪 Auth debug functions available:');
   console.log('  - window.testCookieAuth() - Test cookie setting');
   console.log('  - window.diagnoseAuthIssues() - Full auth diagnostics');
   console.log('  - window.syncCookiesToLocalStorage() - Sync cookies to localStorage');
+  console.log('  - window.testBearerTokenAuth(joinCode, role) - Test Bearer token join');
+}
+
+// Hjälpfunktion för att testa Bearer token från browser console
+export async function testBearerTokenAuth(joinCode: string, role: string = 'viewer') {
+  if (typeof window === 'undefined') {
+    console.log('❌ This function only works in browser');
+    return null;
+  }
+  
+  console.log('🔍 Testing Bearer token authentication...');
+  
+  // Hämta access token från localStorage/sessionStorage
+  function getAccessToken() {
+    const storages = [localStorage, sessionStorage];
+    
+    for (let storage of storages) {
+      const keys = Object.keys(storage);
+      for (let key of keys) {
+        if (key.includes('supabase') && key.includes('auth')) {
+          try {
+            const value = storage.getItem(key);
+            if (value) {
+              const parsed = JSON.parse(value);
+              if (parsed.access_token) {
+                console.log('✅ Found access token in storage key:', key);
+                return parsed.access_token;
+              }
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      }
+    }
+    return null;
+  }
+  
+  const accessToken = getAccessToken();
+  
+  if (!accessToken) {
+    console.log('❌ No access token found in storage');
+    return null;
+  }
+  
+  console.log('🔑 Found access token, testing join API...');
+  
+  try {
+    const response = await fetch('/api/handbook/join', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        joinCode,
+        role
+      })
+    });
+    
+    const result = await response.json();
+    
+    console.log('=== BEARER TOKEN JOIN TEST RESULTS ===');
+    console.log('Status:', response.status);
+    console.log('Success:', response.ok);
+    console.log('Result:', JSON.stringify(result, null, 2));
+    
+    return {
+      status: response.status,
+      ok: response.ok,
+      data: result
+    };
+    
+  } catch (error) {
+    console.error('❌ Bearer token test failed:', error);
+    return {
+      status: 0,
+      ok: false,
+      error: error.message
+    };
+  }
 }
