@@ -350,6 +350,14 @@ export async function smartRedirectWithPolling(
       console.log('[Smart Redirect Polling] User is on settings page, skipping redirect');
       return;
     }
+    
+    // Check if user is already on a handbook page - don't redirect
+    const handbookPagePattern = /^\/[^\/]+$/;
+    const handbookSubPagePattern = /^\/[^\/]+\/(members|meddelanden|notifications)/;
+    if (handbookPagePattern.test(currentPath) || handbookSubPagePattern.test(currentPath)) {
+      console.log('[Smart Redirect Polling] User is already on a handbook page, skipping redirect');
+      return;
+    }
   }
   
   const attemptRedirect = async (): Promise<void> => {

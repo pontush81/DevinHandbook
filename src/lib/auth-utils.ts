@@ -21,7 +21,7 @@ export async function getServerSession() {
   // Look for the specific auth token cookie
   const authCookie = allCookies.find(c => c.name === 'sb-kjsquvjzctdwgjypcjrg-auth-token');
   
-  if (authCookie && authCookie.value) {
+      if (authCookie && authCookie.value) {
     // console.log('🔑 [getServerSession] Found auth cookie, parsing session...');
     
     try {

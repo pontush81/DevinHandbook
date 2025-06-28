@@ -5,6 +5,7 @@ import { Bell, Mail, Check, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NotificationPreferences {
   id: string;
@@ -17,6 +18,7 @@ interface NotificationSettingsProps {
 }
 
 export default function NotificationSettings({ handbookId, handbookName }: NotificationSettingsProps) {
+  const { user } = useAuth();
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,8 +29,10 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
   }, [handbookId]);
 
   async function loadPreferences() {
+    if (!user?.id) return;
+    
     try {
-      const response = await fetch(`/api/notifications/preferences?handbook_id=${handbookId}`);
+      const response = await fetch(`/api/notifications/preferences?handbook_id=${handbookId}&userId=${user.id}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -53,7 +57,7 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
   }
 
   async function savePreferences() {
-    if (!preferences) return;
+    if (!preferences || !user?.id) return;
 
     setSaving(true);
     try {
@@ -64,6 +68,7 @@ export default function NotificationSettings({ handbookId, handbookName }: Notif
         },
         body: JSON.stringify({
           handbook_id: handbookId,
+          user_id: user.id,
           // Map simplified setting to old format for backward compatibility
           email_new_topics: preferences.email_notifications,
           email_new_replies: preferences.email_notifications,

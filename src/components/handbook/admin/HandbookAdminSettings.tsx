@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, MessageSquare, Mail, Users, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 interface HandbookAdminSettingsProps {
@@ -26,6 +26,7 @@ export function HandbookAdminSettings({
   onUpdateHandbook,
   onOpenMembersManager 
 }: HandbookAdminSettingsProps) {
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(false);
@@ -44,8 +45,10 @@ export function HandbookAdminSettings({
   }, [handbookData.id]);
 
   async function loadEmailPreferences() {
+    if (!user?.id) return;
+    
     try {
-      const response = await fetch(`/api/notifications/preferences?handbook_id=${handbookData.id}`);
+      const response = await fetch(`/api/notifications/preferences?handbook_id=${handbookData.id}&userId=${user.id}`);
       const data = await response.json();
 
       if (response.ok && data.preferences) {
@@ -60,6 +63,8 @@ export function HandbookAdminSettings({
   }
 
   async function handleEmailToggle(checked: boolean) {
+    if (!user?.id) return;
+    
     setEmailLoading(true);
     try {
       const response = await fetch('/api/notifications/preferences', {
@@ -69,6 +74,7 @@ export function HandbookAdminSettings({
         },
         body: JSON.stringify({
           handbook_id: handbookData.id,
+          user_id: user.id,
           email_new_topics: checked,
           email_new_replies: checked,
           email_mentions: false,

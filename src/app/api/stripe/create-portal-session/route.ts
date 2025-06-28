@@ -44,7 +44,11 @@ export async function POST(req: NextRequest) {
     if (!subscriptions || subscriptions.length === 0) {
       console.log('[Stripe Portal] No subscriptions found for user');
       return NextResponse.json(
-        { error: 'No subscription found for this user' },
+        { 
+          error: 'No subscription found',
+          message: 'Du har ingen aktiv prenumeration att hantera.',
+          type: 'no_subscription' 
+        },
         { status: 404 }
       );
     }
@@ -65,7 +69,11 @@ export async function POST(req: NextRequest) {
     if (validSubscriptions.length === 0) {
       console.log('[Stripe Portal] No valid (non-cancelled) subscriptions found');
       return NextResponse.json(
-        { error: 'Unable to access subscription management. Your subscription may have been fully cancelled. Please contact support if you need assistance.' },
+        { 
+          error: 'No active subscription',
+          message: 'Din prenumeration är uppsagd eller inaktiv. Kontakta support om du behöver hjälp.',
+          type: 'subscription_cancelled' 
+        },
         { status: 404 }
       );
     }
@@ -73,6 +81,9 @@ export async function POST(req: NextRequest) {
     console.log(`[Stripe Portal] Found ${validSubscriptions.length} valid subscription(s)`);
 
     // Försök skapa portal session med första giltiga Customer ID
+    let lastError = '';
+    let customerNotFoundCount = 0;
+    
     for (const subscription of validSubscriptions) {
       const customerId = subscription.stripe_customer_id;
       console.log(`[Stripe Portal] Trying customer ID: ${customerId} (status: ${subscription.status})`);
@@ -101,11 +112,48 @@ export async function POST(req: NextRequest) {
 
       } catch (stripeError: any) {
         console.error(`[Stripe Portal] Error with customer ${customerId}:`, stripeError.message);
+        lastError = stripeError.message;
         
-        // Om detta är den sista Customer ID:n, returnera fel
+        // Räkna hur många kunder som inte finns
+        if (stripeError.message.includes('No such customer')) {
+          customerNotFoundCount++;
+        }
+        
+        // Om detta är den sista Customer ID:n, returnera specifikt fel
         if (subscription === validSubscriptions[validSubscriptions.length - 1]) {
+          // Specialfall för utvecklingsmiljö
+          if (process.env.NODE_ENV === 'development' && customerNotFoundCount === validSubscriptions.length) {
+            return NextResponse.json(
+              { 
+                error: 'Development mode issue',
+                message: 'I utvecklingsmiljö: Stripe-kunder från produktionsdatabasen finns inte i testläge. Detta är normalt under utveckling.',
+                type: 'development_mode',
+                details: 'Kontakta utvecklare för att skapa test-prenumerationer.'
+              },
+              { status: 404 }
+            );
+          }
+          
+          // Konfigurationsproblem
+          if (stripeError.message.includes('No configuration provided')) {
+            return NextResponse.json(
+              { 
+                error: 'Stripe configuration missing',
+                message: 'Stripe kundportal är inte konfigurerad i testläge. Kontakta administratör.',
+                type: 'configuration_missing'
+              },
+              { status: 500 }
+            );
+          }
+          
+          // Allmänt fel
           return NextResponse.json(
-            { error: 'Unable to access subscription management. Your subscription may have been fully cancelled. Please contact support if you need assistance.' },
+            { 
+              error: 'Portal access unavailable',
+              message: 'Kan inte komma åt prenumerationshantering. Kontakta support för hjälp.',
+              type: 'general_error',
+              details: lastError
+            },
             { status: 404 }
           );
         }
@@ -118,7 +166,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('[Stripe Portal] Error creating portal session:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create portal session' },
+      { 
+        error: 'Server error',
+        message: 'Ett serverfel inträffade. Försök igen eller kontakta support.',
+        type: 'server_error'
+      },
       { status: 500 }
     );
   }

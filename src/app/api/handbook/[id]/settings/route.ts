@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession, getUserRole } from '@/lib/auth-utils';
+import { getUserRole } from '@/lib/auth-utils';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function PUT(
@@ -8,20 +8,18 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const session = await getServerSession();
+    const body = await request.json();
+    const { forum_enabled, userId } = body;
     
-    if (!session?.user) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Du måste vara inloggad' },
-        { status: 401 }
+        { error: 'userId är obligatorisk' },
+        { status: 400 }
       );
     }
 
-    const body = await request.json();
-    const { forum_enabled } = body;
-
     // Check if user is admin of this handbook
-    const userRole = await getUserRole(session.user.id, id);
+    const userRole = await getUserRole(userId, id);
     
     if (userRole !== 'admin') {
       return NextResponse.json(

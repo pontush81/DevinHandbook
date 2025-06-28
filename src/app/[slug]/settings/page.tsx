@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import RequireAuth from '@/components/auth/RequireAuth';
 import SettingsPageClient from './SettingsPageClient';
 import { Loader2 } from 'lucide-react';
 
@@ -19,14 +20,14 @@ interface HandbookData {
   owner_id: string;
 }
 
-export default function SettingsPage({ params }: SettingsPageProps) {
+function SettingsPageContent({ params }: SettingsPageProps) {
   const [slug, setSlug] = useState<string | null>(null);
   const [handbookData, setHandbookData] = useState<HandbookData | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'editor' | 'viewer' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { user, hasSession, isLoading: authLoading } = useAuth();
+  const { user } = useAuth(); // We know user exists because of RequireAuth wrapper
   const router = useRouter();
 
   // Get slug from params
@@ -34,16 +35,10 @@ export default function SettingsPage({ params }: SettingsPageProps) {
     params.then(({ slug }) => setSlug(slug));
   }, [params]);
 
-  // Handle authentication and data loading
+  // Load handbook data
   useEffect(() => {
     async function loadData() {
-      if (authLoading || !slug) return;
-      
-      // Redirect to login if not authenticated
-      if (!hasSession || !user) {
-        router.replace('/login');
-        return;
-      }
+      if (!slug || !user) return;
 
       try {
         setIsLoading(true);
@@ -95,10 +90,10 @@ export default function SettingsPage({ params }: SettingsPageProps) {
     }
 
     loadData();
-  }, [authLoading, slug, hasSession, user, router]);
+  }, [slug, user, router]);
 
   // Show loading state
-  if (authLoading || isLoading || !slug) {
+  if (isLoading || !slug) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-2">
@@ -139,4 +134,12 @@ export default function SettingsPage({ params }: SettingsPageProps) {
   }
 
   return null;
+}
+
+export default function SettingsPage(props: SettingsPageProps) {
+  return (
+    <RequireAuth>
+      <SettingsPageContent {...props} />
+    </RequireAuth>
+  );
 } 

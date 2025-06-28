@@ -4,20 +4,20 @@ import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Du måste vara inloggad' },
-        { status: 401 }
-      );
-    }
-
     const url = new URL(request.url);
     const handbookId = url.searchParams.get('handbook_id');
+    const userId = url.searchParams.get('userId');
 
     if (!handbookId) {
       return NextResponse.json(
         { error: 'handbook_id är obligatorisk' },
+        { status: 400 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId är obligatorisk' },
         { status: 400 }
       );
     }
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       .from('handbook_members')
       .select('id')
       .eq('handbook_id', handbookId)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (memberError || !memberData) {
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const { data: preferences, error: prefError } = await supabase
       .from('user_notification_preferences')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .eq('handbook_id', handbookId)
       .single();
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       const { data: newPreferences, error: createError } = await supabase
         .from('user_notification_preferences')
         .insert({
-          user_id: session.user.id,
+          user_id: userId,
           handbook_id: handbookId,
           email_new_topics: true,
           email_new_replies: true,
@@ -97,22 +97,12 @@ export async function PUT(request: NextRequest) {
   console.log('🔔 PUT /api/notifications/preferences started');
   
   try {
-    const session = await getServerSession();
-    console.log('📝 Session check:', { hasSession: !!session, userId: session?.user?.id });
-    
-    if (!session?.user) {
-      console.log('❌ No valid session found');
-      return NextResponse.json(
-        { error: 'Du måste vara inloggad' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     console.log('📦 Request body:', body);
     
     const {
       handbook_id,
+      user_id,
       email_new_topics,
       email_new_replies,
       email_mentions,
@@ -129,17 +119,25 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    if (!user_id) {
+      console.log('❌ Missing user_id');
+      return NextResponse.json(
+        { error: 'user_id är obligatorisk' },
+        { status: 400 }
+      );
+    }
+
     const supabase = getServiceSupabase();
     console.log('🔗 Supabase client created');
 
     // Verify user has access to this handbook
-    console.log('🔍 Checking handbook access for:', { handbookId: handbook_id, userId: session.user.id });
+    console.log('🔍 Checking handbook access for:', { handbookId: handbook_id, userId: user_id });
     
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('id')
       .eq('handbook_id', handbook_id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', user_id)
       .single();
 
     console.log('👥 Member check result:', { memberData, memberError });
@@ -154,7 +152,7 @@ export async function PUT(request: NextRequest) {
 
     // Prepare update data
     const updateData = {
-      user_id: session.user.id,
+      user_id: user_id,
       handbook_id: handbook_id,
       email_new_topics: email_new_topics ?? true,
       email_new_replies: email_new_replies ?? true,

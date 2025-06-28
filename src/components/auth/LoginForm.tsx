@@ -121,15 +121,22 @@ export function LoginForm({ showSignupLink = true, onSuccess, joinCode }: LoginF
             return;
           }
           
-          // Kontrollera om det finns en return URL från session renewal
+          // Kontrollera om det finns en return URL från session renewal eller redirect parameter
           const urlParams = new URLSearchParams(window.location.search);
           const returnUrl = urlParams.get('return');
+          const redirectUrl = urlParams.get('redirect');
           
           if (returnUrl) {
             console.log("Omdirigerar till return URL:", returnUrl);
             // Återgå till där användaren var innan session renewal
             setTimeout(() => {
               window.location.href = decodeURIComponent(returnUrl);
+            }, 1000);
+          } else if (redirectUrl) {
+            console.log("Omdirigerar till redirect URL:", redirectUrl);
+            // Redirect to the intended page
+            setTimeout(() => {
+              window.location.href = decodeURIComponent(redirectUrl);
             }, 1000);
           } else {
             // Use smart redirect with polling to ensure session is properly established

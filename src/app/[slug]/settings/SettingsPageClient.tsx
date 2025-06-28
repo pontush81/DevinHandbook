@@ -44,7 +44,7 @@ export default function SettingsPageClient({
 
   async function loadEmailPreferences() {
     try {
-      const response = await fetch(`/api/notifications/preferences?handbook_id=${handbookData.id}`);
+      const response = await fetch(`/api/notifications/preferences?handbook_id=${handbookData.id}&userId=${userId}`);
       const data = await response.json();
 
       if (response.ok && data.preferences) {
@@ -67,6 +67,7 @@ export default function SettingsPageClient({
         },
         body: JSON.stringify({
           handbook_id: handbookData.id,
+          user_id: userId,
           email_new_topics: checked,
           email_new_replies: checked,
           email_mentions: false,
@@ -106,7 +107,8 @@ export default function SettingsPageClient({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          forum_enabled: checked
+          forum_enabled: checked,
+          userId: userId
         }),
       });
 
@@ -154,17 +156,45 @@ export default function SettingsPageClient({
       console.log('[Frontend] API response data:', data);
 
       if (!response.ok) {
-        // Hantera specifikt fallet när prenumerationen är helt uppsagd
-        if (response.status === 404 && data.error?.includes('Unable to access subscription management')) {
-          setMessage({
-            type: 'info',
-            text: 'Din prenumeration har sagts upp och kan inte längre hanteras via Stripe. Kontakta support om du har frågor eller vill starta en ny prenumeration.'
-          });
-          setTimeout(() => setMessage(null), 8000);
-          return;
+        // Hantera olika typer av fel baserat på API-responsen
+        switch (data.type) {
+          case 'development_mode':
+            setMessage({
+              type: 'info',
+              text: data.message + ' Detta är normalt under utveckling med testdata.'
+            });
+            break;
+          
+          case 'configuration_missing':
+            setMessage({
+              type: 'error',
+              text: data.message + ' Stripe kundportal behöver konfigureras.'
+            });
+            break;
+          
+          case 'no_subscription':
+            setMessage({
+              type: 'info',
+              text: data.message
+            });
+            break;
+          
+          case 'subscription_cancelled':
+            setMessage({
+              type: 'info',
+              text: data.message
+            });
+            break;
+          
+          default:
+            setMessage({
+              type: 'error',
+              text: data.message || data.error || 'Misslyckades att skapa portal-session'
+            });
         }
         
-        throw new Error(data.error || 'Misslyckades att skapa portal-session');
+        setTimeout(() => setMessage(null), 8000);
+        return;
       }
 
       // Omdirigera till Stripe Customer Portal

@@ -28,6 +28,7 @@ export default function LoginClient() {
   const verified = searchParams.get("verified");
   const fromEmailConfirmation = searchParams.get("from") === "email_confirmation";
   const registrationSuccess = searchParams.get("registration") === "success";
+  const redirectTo = searchParams.get("redirect"); // Handle redirect parameter
   const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
   const [showRegistrationMessage, setShowRegistrationMessage] = useState(false);
   const [showLoggedOutMessage, setShowLoggedOutMessage] = useState(false);
@@ -233,9 +234,25 @@ export default function LoginClient() {
                       }
                       return;
                     }
+                    
+                    // Don't redirect if user is on a settings page or handbook page
+                    if (currentPath.includes('/settings') || 
+                        currentPath.match(/^\/[^\/]+$/) || 
+                        currentPath.match(/^\/[^\/]+\/(members|meddelanden|notifications)/)) {
+                      console.log("User is already on a handbook/settings page, skipping smart redirect");
+                      return;
+                    }
                   }
                   
-                  console.log("No upgrade intention found, using smart redirect...");
+                  console.log("No upgrade intention found, checking for redirect parameter...");
+                  
+                  // Check if there's a redirect parameter to honor
+                  if (redirectTo) {
+                    console.log("Found redirect parameter, redirecting to:", redirectTo);
+                    window.location.href = redirectTo;
+                    return;
+                  }
+                  
                   smartRedirectWithPolling(3, 800);
                   return;
                 } else if (attempts >= maxAttempts) {
@@ -345,9 +362,25 @@ export default function LoginClient() {
                       console.log("User is on create-handbook page, skipping smart redirect");
                       return;
                     }
+                    
+                    // Don't redirect if user is on a settings page or handbook page
+                    if (currentPath.includes('/settings') || 
+                        currentPath.match(/^\/[^\/]+$/) || 
+                        currentPath.match(/^\/[^\/]+\/(members|meddelanden|notifications)/)) {
+                      console.log("User is already on a handbook/settings page, skipping smart redirect");
+                      return;
+                    }
                   }
                   
-                  console.log("No upgrade intention found, using smart redirect...");
+                  console.log("No upgrade intention found, checking for redirect parameter...");
+                  
+                  // Check if there's a redirect parameter to honor
+                  if (redirectTo) {
+                    console.log("Found redirect parameter, redirecting to:", redirectTo);
+                    window.location.href = redirectTo;
+                    return;
+                  }
+                  
                   smartRedirectWithPolling(3, 800);
                   return;
                 } else if (attempts >= maxAttempts) {
