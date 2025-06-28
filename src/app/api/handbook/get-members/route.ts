@@ -72,6 +72,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         members: []
+      }, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
     }
 
@@ -111,6 +117,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       members: membersWithEmails
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
   } catch (error) {
     console.error("Oväntat fel vid hämtning av medlemmar:", error);

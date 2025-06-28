@@ -181,8 +181,14 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       
       // Använd admin API för att hämta medlemmar med e-postadresser
       // Detta kringgår RLS-problem och ger oss tillgång till auth.users tabellen
-      const response = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}`, {
-        credentials: 'include'
+      const response = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}&t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       
       console.log('[MembersManager] API response status:', response.status);
@@ -221,8 +227,14 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         console.log('🧪 Current User ID:', currentUserId);
         
         try {
-          const testResponse = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}`, {
-            credentials: 'include'
+          const testResponse = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}&t=${Date.now()}`, {
+            credentials: 'include',
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
           });
           
           console.log('🧪 Test API response status:', testResponse.status);
