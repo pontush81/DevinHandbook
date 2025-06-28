@@ -455,7 +455,15 @@ const cookieAwareStorage = {
 function createSupabaseClient(): SupabaseClient<Database> {
   // Import and use the singleton from supabase-client.ts to prevent multiple instances
   const { getSupabaseClient } = require('./supabase-client');
-  // console.log('♻️ Supabase: Using singleton from supabase-client');
+  
+  // 📧 DEVELOPMENT EMAIL CONFIGURATION LOGGING
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  
+  if (isDevelopment && isLocalhost) {
+    console.log('📧 [Supabase Auth] DEVELOPMENT MODE: Email confirmation may not work on localhost');
+    console.log('📧 [Supabase Auth] Tip: Test email flows on production or use Google OAuth');
+  }
   
   return getSupabaseClient() as SupabaseClient<Database>;
 }

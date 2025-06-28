@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getServerSession } from '@/lib/auth-utils';
 
 export async function GET(
   request: NextRequest,
@@ -7,17 +8,50 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const providedUserId = searchParams.get('userId');
     const { id: handbookId } = await params;
 
-    if (!userId || !handbookId) {
+    if (!handbookId) {
       return NextResponse.json(
-        { error: 'Missing userId or handbookId' },
+        { error: 'Missing handbookId' },
         { status: 400 }
       );
     }
 
-    // console.log('📊 [Handbook Status] Checking status for:', { handbookId, userId });
+    // Try to get session from server-side cookies first
+    const session = await getServerSession(request);
+    
+    // If no server session, try to get userId from Bearer token
+    let userId = session?.user?.id || providedUserId;
+    
+    // Check if Authorization header has Bearer token
+    if (!userId) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        
+        // Verify the token with Supabase
+        const supabase = getServiceSupabase();
+        try {
+          const { data: { user }, error } = await supabase.auth.getUser(token);
+          if (!error && user) {
+            userId = user.id;
+            console.log('✅ [Trial Status] Authenticated via Bearer token:', userId);
+          }
+        } catch (error) {
+          console.log('❌ [Trial Status] Bearer token verification failed:', error);
+        }
+      }
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Authentication required - no valid session or token found' },
+        { status: 401 }
+      );
+    }
+
+    console.log('📊 [Trial Status] Checking status for:', { handbookId, userId, method: session ? 'cookie' : 'bearer' });
 
     const supabase = getServiceSupabase();
 

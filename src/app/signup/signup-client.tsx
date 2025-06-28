@@ -136,12 +136,17 @@ export default function SignupClient() {
     // Check if user has confirmed email - if not, they should go through email confirmation flow
     // Exception 1: In development, email confirmation might be disabled, so allow join anyway
     // Exception 2: For OAuth users (Google, etc.), email is already verified by the provider
+    // Exception 3: For localhost development, bypass email confirmation entirely
     const isDevelopment = process.env.NODE_ENV === 'development';
+    const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
     const isOAuthUser = newUser.app_metadata?.provider !== 'email'; // Google, GitHub, etc.
+    const bypassEmailConfirmation = isDevelopment && isLocalhost;
     
-    if (!newUser.email_confirmed_at && !isDevelopment && !isOAuthUser) {
+    if (!newUser.email_confirmed_at && !bypassEmailConfirmation && !isOAuthUser) {
       console.log('[Join] User needs email confirmation first, join will be handled by auth callback');
       return;
+    } else if (!newUser.email_confirmed_at && bypassEmailConfirmation) {
+      console.log('[Join] 🏠 LOCALHOST DEV MODE: Bypassing email confirmation entirely');
     } else if (!newUser.email_confirmed_at && isDevelopment) {
       console.log('[Join] Development mode: Proceeding with join despite unconfirmed email');
     } else if (!newUser.email_confirmed_at && isOAuthUser) {

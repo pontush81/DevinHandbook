@@ -1,4 +1,4 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, fetchWithAuth } from '@/lib/supabase';
 
 /**
  * Interface för trial-status - FÖRENKLAD
@@ -330,8 +330,8 @@ function getUrgencyLevel(daysRemaining: number, isInTrial: boolean): 'low' | 'me
  */
 export async function getHandbookTrialStatus(userId: string, handbookId: string): Promise<TrialStatus> {
   try {
-    // Använd API-endpoint istället för direkta databasanrop för att undvika RLS-problem
-    const response = await fetch(`/api/handbook/${handbookId}/trial-status?userId=${userId}`);
+    // Använd fetchWithAuth istället för vanlig fetch för automatisk Bearer token authentication
+    const response = await fetchWithAuth(`/api/handbook/${handbookId}/trial-status?userId=${userId}`);
     
     if (!response.ok) {
       // 404 betyder att användaren inte äger handboken - detta är normalt och inte ett fel
@@ -346,9 +346,20 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
           hasUsedTrial: false,
         };
       }
+      // 403 är också normalt för användare som inte har access - tyst behandling
+      if (response.status === 403) {
+        return {
+          isInTrial: false,
+          trialDaysRemaining: 0,
+          subscriptionStatus: 'none',
+          trialEndsAt: null,
+          canCreateHandbook: true,
+          hasUsedTrial: false,
+        };
+      }
       // Endast logga andra typer av fel
-      console.error(`[Trial Service] API request failed: ${response.status} ${response.statusText}`);
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      console.error(`[Trial Service] API request failed: ${response.status}`);
+      throw new Error(`API request failed: ${response.status}`);
     }
     
     const data = await response.json();
@@ -369,8 +380,8 @@ export async function getHandbookTrialStatus(userId: string, handbookId: string)
     };
 
   } catch (error) {
-    // Logga endast icke-404 fel och icke-fetch fel
-    if (!error.message?.includes('404') && !error.message?.includes('Failed to fetch')) {
+    // Logga endast icke-404/403 fel och icke-fetch fel
+    if (!error.message?.includes('404') && !error.message?.includes('403') && !error.message?.includes('Failed to fetch')) {
       console.error('[Trial Service] Error in getHandbookTrialStatus:', error);
     }
     return {
