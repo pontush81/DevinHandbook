@@ -867,3 +867,66 @@ export async function testBearerTokenAuth(joinCode: string, role: string = 'view
     };
   }
 }
+
+// Smart fetch-funktion som automatiskt lägger till Bearer token för join-requests
+export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  if (typeof window === 'undefined') {
+    // Server-side: använd vanliga fetch
+    return fetch(url, options);
+  }
+  
+  // Client-side: försök få access token och lägg till som Bearer token
+  const accessToken = getStoredAccessToken();
+  
+  if (accessToken) {
+    // Lägg till Authorization header
+    const headers = new Headers(options.headers);
+    headers.set('Authorization', `Bearer ${accessToken}`);
+    
+    console.log('🔑 [fetchWithAuth] Adding Bearer token to request for:', url);
+    
+    return fetch(url, {
+      ...options,
+      headers
+    });
+  } else {
+    // Ingen access token, använd vanliga fetch (förlita sig på cookies)
+    console.log('⚠️ [fetchWithAuth] No access token found, using regular fetch for:', url);
+    return fetch(url, options);
+  }
+}
+
+// Hjälpfunktion för att hämta access token från storage
+function getStoredAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const storages = [localStorage, sessionStorage];
+    
+    for (let storage of storages) {
+      const keys = Object.keys(storage);
+      for (let key of keys) {
+        // Leta efter Supabase auth token-nycklar
+        if (key.includes('auth-token') || 
+            (key.includes('supabase') && key.includes('auth')) ||
+            key.startsWith('sb-') && key.includes('auth')) {
+          try {
+            const value = storage.getItem(key);
+            if (value) {
+              const parsed = JSON.parse(value);
+              if (parsed.access_token) {
+                return parsed.access_token;
+              }
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error getting stored access token:', e);
+  }
+  
+  return null;
+}

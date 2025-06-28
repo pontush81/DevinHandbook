@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CheckCircle, AlertCircle, Key, Book } from 'lucide-react';
 import Link from 'next/link';
+import { fetchWithAuth } from '@/lib/supabase';
 
 interface HandbookInfo {
   id: string;
@@ -71,7 +72,8 @@ export default function JoinPage() {
       if (user && handbookInfo && !isJoining) {
         setIsJoining(true);
         try {
-          const response = await fetch('/api/handbook/join', {
+          // Use fetchWithAuth to automatically include Bearer token when cookies fail
+          const response = await fetchWithAuth('/api/handbook/join', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ joinCode }),

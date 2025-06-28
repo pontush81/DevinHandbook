@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchWithAuth } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, Key, Book, AlertCircle, Loader2 } from "lucide-react";
@@ -78,7 +78,8 @@ export default function LoginClient() {
 
     setIsJoining(true);
     try {
-      const response = await fetch('/api/handbook/join', {
+      // Use fetchWithAuth to automatically include Bearer token when cookies fail
+      const response = await fetchWithAuth('/api/handbook/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ joinCode }),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useLayoutEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchWithAuth } from "@/lib/supabase";
 import { safeLocalStorage } from "@/lib/safe-storage";
 import { useRouter, useSearchParams } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -149,7 +149,8 @@ export default function SignupClient() {
 
     setIsJoining(true);
     try {
-      const response = await fetch('/api/handbook/join', {
+      // Use fetchWithAuth to automatically include Bearer token when cookies fail
+      const response = await fetchWithAuth('/api/handbook/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ joinCode }),

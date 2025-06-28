@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchWithAuth } from "@/lib/supabase";
 import { safeLocalStorage } from "@/lib/safe-storage";
 
 function AuthCallbackContent() {
@@ -94,7 +94,8 @@ function AuthCallbackContent() {
             // Add a small delay to ensure session is properly established
             setTimeout(async () => {
               try {
-                const joinResponse = await fetch('/api/handbook/join', {
+                // Use fetchWithAuth to automatically include Bearer token when cookies fail
+                const joinResponse = await fetchWithAuth('/api/handbook/join', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ joinCode }),
