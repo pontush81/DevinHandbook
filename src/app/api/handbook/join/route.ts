@@ -5,12 +5,6 @@ import { getSessionFromRequestOrCookies } from '@/lib/auth-utils';
 // POST - Join a handbook using a join code
 export async function POST(request: NextRequest) {
   try {
-    // Add comprehensive debugging for production
-    console.log('🔍 [Join API] === AUTHENTICATION DEBUGGING ===');
-    console.log('🔍 [Join API] NODE_ENV:', process.env.NODE_ENV);
-    console.log('🔍 [Join API] Request URL:', request.url);
-    console.log('🔍 [Join API] Request headers cookies:', request.headers.get('cookie'));
-    console.log('🔍 [Join API] Request headers authorization:', request.headers.get('authorization'));
     
     const { joinCode, role = 'viewer', userId } = await request.json();
     
@@ -19,40 +13,20 @@ export async function POST(request: NextRequest) {
     let currentUserId: string;
     
     if (isDevelopment && userId) {
-      // Development mode: Use provided userId (from confirm-user API)
+      // Development mode: Use provided userId
       currentUserId = userId;
-      console.log('[Join API] Development mode: Using provided userId:', currentUserId);
     } else {
-      // Normal mode: Get user from session using enhanced authentication
-      console.log('🔍 [Join API] Getting session with enhanced authentication...');
+      // Normal mode: Get user from session
       const session = await getSessionFromRequestOrCookies(request);
-      console.log('🔍 [Join API] Enhanced session result:', {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userId: session?.user?.id,
-        userEmail: session?.user?.email,
-        authMethod: session?.access_token ? 'token' : 'unknown'
-      });
       
       if (!session?.user) {
-        console.log('❌ [Join API] No valid session found after trying all authentication methods');
         return NextResponse.json(
-          { 
-            success: false, 
-            message: "Du måste vara inloggad för att gå med i en handbok",
-            debug: {
-              environment: process.env.NODE_ENV,
-              hasCookieHeader: !!request.headers.get('cookie'),
-              hasAuthHeader: !!request.headers.get('authorization'),
-              timestamp: new Date().toISOString()
-            }
-          },
+          { success: false, message: "Du måste vara inloggad för att gå med i en handbok" },
           { status: 401 }
         );
-      } else {
-        currentUserId = session.user.id;
-        console.log('✅ [Join API] Using enhanced authentication userId:', currentUserId);
       }
+      
+      currentUserId = session.user.id;
     }
     
     if (!joinCode) {
@@ -72,12 +46,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
     
-    console.log('[Join API] About to call join_handbook_with_code with:', {
-      join_code: joinCode.trim().toUpperCase(),
-      p_user_id: currentUserId,
-      user_role: role
-    });
-    
     // Call the stored function to join handbook
     const { data, error } = await supabase
       .rpc('join_handbook_with_code', {
@@ -85,8 +53,6 @@ export async function POST(request: NextRequest) {
         p_user_id: currentUserId,
         user_role: role
       });
-
-    console.log('[Join API] join_handbook_with_code result:', { data, error });
 
     if (error) {
       console.error('Error joining handbook with code:', error);
@@ -128,7 +94,6 @@ export async function POST(request: NextRequest) {
       responseData.role = data.role;
     }
 
-    console.log('[Join API] Returning successful response:', responseData);
     return NextResponse.json(responseData);
 
   } catch (error) {

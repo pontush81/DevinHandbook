@@ -108,27 +108,23 @@ export default function SignupClient() {
   }, [searchParams]);
 
   const validateJoinCode = async (code: string) => {
-    console.log('[validateJoinCode] Starting validation for:', code);
     setJoinCodeValidating(true);
     setJoinCodeError(null);
     
     try {
       const response = await fetch(`/api/handbook/join?code=${encodeURIComponent(code)}`);
       const data = await response.json();
-      console.log('[validateJoinCode] API response:', { status: response.status, data });
 
       if (response.ok && data.success) {
-        console.log('[validateJoinCode] Setting handbookInfo:', data.handbook);
         setHandbookInfo(data.handbook);
+        console.log(`✅ [Join Code Valid] Du kommer att gå med i handbok: "${data.handbook.title}"`);
       } else {
-        console.log('[validateJoinCode] Setting error:', data.message || 'Ogiltig join-kod');
         setJoinCodeError(data.message || 'Ogiltig join-kod');
       }
     } catch (error) {
       console.error('Error validating join code:', error);
       setJoinCodeError('Kunde inte validera join-kod');
     } finally {
-      console.log('[validateJoinCode] Setting joinCodeValidating to false');
       setJoinCodeValidating(false);
     }
   };
