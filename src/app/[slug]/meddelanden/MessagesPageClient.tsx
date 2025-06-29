@@ -335,9 +335,9 @@ export function MessagesPageClient({
       // Make sure the message stays expanded
       setExpandedMessage(messageId);
       
-      // Reload replies for this message
+      // Reload replies for this message - show all replies including the new one
       console.log('Reloading replies for message:', messageId);
-      await loadReplies(messageId);
+      await loadReplies(messageId, true);
       
       // Update reply count in messages
       setMessages(prev => prev.map(msg => 
@@ -456,9 +456,15 @@ export function MessagesPageClient({
       setExpandedMessage(null);
     } else {
       setExpandedMessage(messageId);
-      // Load replies when expanding message
+      // Smart loading based on reply count
       if (!replies[messageId]) {
-        loadReplies(messageId);
+        const message = messages.find(m => m.id === messageId);
+        const replyCount = message?.reply_count || 0;
+        
+        // For threads with many replies, show recent ones first
+        // For smaller threads, show all immediately
+        const showAll = replyCount <= 15;
+        loadReplies(messageId, showAll);
       }
     }
   }
@@ -583,8 +589,6 @@ export function MessagesPageClient({
 
         {/* Messages section */}
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900">Senaste meddelanden</h3>
-          
           {messages.length === 0 ? (
             <Card className="card">
               <CardContent className="p-8 text-center card-content">
@@ -640,7 +644,17 @@ export function MessagesPageClient({
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => toggleReplyForm(message.id)}
+                          onClick={() => {
+                            toggleReplyForm(message.id);
+                            if (expandedMessage !== message.id) {
+                              setExpandedMessage(message.id);
+                              // Smart loading when opening via Reply in dropdown
+                              if (!replies[message.id]) {
+                                const showAll = message.reply_count <= 15;
+                                loadReplies(message.id, showAll);
+                              }
+                            }
+                          }}
                           className="cursor-pointer"
                         >
                           <Reply className="h-4 w-4 mr-2" />
@@ -702,7 +716,12 @@ export function MessagesPageClient({
                           onClick={() => {
                             toggleReplyForm(message.id);
                             if (expandedMessage !== message.id) {
-                              toggleMessageExpanded(message.id);
+                              setExpandedMessage(message.id);
+                              // Smart loading when opening via Reply button
+                              if (!replies[message.id]) {
+                                const showAll = message.reply_count <= 15;
+                                loadReplies(message.id, showAll);
+                              }
                             }
                           }}
                           className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
@@ -739,7 +758,11 @@ export function MessagesPageClient({
                           <h4 className="font-medium text-gray-900 text-sm">
                             Svar ({message.reply_count})
                           </h4>
-                          {replyInfo[message.id] && replyInfo[message.id].showing_recent && !showingAllReplies[message.id] && (
+                          {/* Show "Load more" button for large threads that aren't fully loaded */}
+                          {replyInfo[message.id] && 
+                           replyInfo[message.id].showing_recent && 
+                           !showingAllReplies[message.id] && 
+                           message.reply_count > 15 && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -757,7 +780,11 @@ export function MessagesPageClient({
                           </div>
                         ) : replies[message.id] && replies[message.id].length > 0 ? (
                           <div className="space-y-3">
-                            {replyInfo[message.id] && replyInfo[message.id].showing_recent && !showingAllReplies[message.id] && (
+                            {/* Show indicator for large threads with partial loading */}
+                            {replyInfo[message.id] && 
+                             replyInfo[message.id].showing_recent && 
+                             !showingAllReplies[message.id] && 
+                             message.reply_count > 15 && (
                               <div className="text-xs text-gray-500 italic mb-2 border-l-2 border-gray-300 pl-2">
                                 Visar de {replies[message.id]?.length || 0} senaste av {replyInfo[message.id].total_count} svar
                               </div>

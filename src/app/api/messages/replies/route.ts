@@ -343,7 +343,8 @@ export async function GET(request: NextRequest) {
       .eq('is_published', true);
 
     const totalCount = count || 0;
-    const showingRecent = totalCount > 5 && !showAll;
+    const REPLY_LIMIT = 15; // Show 15 most recent replies by default
+    const showingRecent = totalCount > REPLY_LIMIT && !showAll;
 
     // 4. Fetch replies for the topic
     let query = supabase
@@ -361,9 +362,9 @@ export async function GET(request: NextRequest) {
       .eq('is_published', true)
       .order('created_at', { ascending: true }); // Chronological order
 
-    // Limit to 5 most recent if not showing all
-    if (!showAll && totalCount > 5) {
-      // Get the 5 most recent by using a subquery approach
+    // Limit to most recent if not showing all
+    if (!showAll && totalCount > REPLY_LIMIT) {
+      // Get the most recent by using a subquery approach
       const { data: recentIds } = await supabase
         .from('forum_posts')
         .select('id')
@@ -371,7 +372,7 @@ export async function GET(request: NextRequest) {
         .neq('id', topicId)
         .eq('is_published', true)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(REPLY_LIMIT);
 
       if (recentIds && recentIds.length > 0) {
         const ids = recentIds.map(r => r.id);
