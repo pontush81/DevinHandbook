@@ -554,12 +554,12 @@ export function MessagesPageClient({
         </div>
       )}
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Smart back navigation */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link 
             href={navigationContext?.href ?? defaultBackLink.href}
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 touch-manipulation"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             {navigationContext?.title ?? defaultBackLink.title}
@@ -567,17 +567,16 @@ export function MessagesPageClient({
         </div>
 
         {/* Header section */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Meddelanden</h1>
-              <p className="text-gray-600">Ställ frågor, dela tips och håll dig uppdaterad</p>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Meddelanden</h1>
+              <p className="text-sm sm:text-base text-gray-600">Ställ frågor, dela tips och håll dig uppdaterad</p>
             </div>
             <div className="flex gap-3 shrink-0">
-
               <Button 
                 onClick={() => openNewMessageForm()} 
-                className="bg-blue-600 hover:bg-blue-700 text-white h-10 px-4 text-sm font-medium"
+                className="bg-blue-600 hover:bg-blue-700 text-white h-10 sm:h-9 px-4 text-sm font-medium touch-manipulation"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Nytt meddelande</span>
@@ -588,7 +587,7 @@ export function MessagesPageClient({
         </div>
 
         {/* Messages section */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {messages.length === 0 ? (
             <Card className="card">
               <CardContent className="p-8 text-center card-content">
@@ -606,11 +605,11 @@ export function MessagesPageClient({
           ) : (
             messages.map((message) => (
               <Card key={message.id} className="hover:shadow-md transition-shadow card" data-ui="card">
-                <CardContent className="p-4 card-content" data-ui="card-content">
+                <CardContent className="p-3 sm:p-4 card-content" data-ui="card-content">
                   {/* Header with title and actions */}
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-lg leading-6">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <h3 className="font-semibold text-gray-900 text-base sm:text-lg leading-tight sm:leading-6">
                         {message.title}
                       </h3>
                     </div>
@@ -621,7 +620,7 @@ export function MessagesPageClient({
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 flex-shrink-0"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -678,75 +677,92 @@ export function MessagesPageClient({
                   </div>
                   
                   {/* Content preview */}
-                  <p className="text-gray-600 text-sm line-clamp-2 mb-4">
+                  <p className="text-gray-600 text-sm sm:text-base line-clamp-2 mb-4">
                     {message.content}
                   </p>
                   
-                  {/* Metadata and Actions row */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <Badge variant="outline" className="text-xs px-2 py-0.5">
+                  {/* Metadata and Actions - Mobile optimized stacked layout */}
+                  <div className="space-y-3">
+                    {/* Metadata row - responsive layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                        <Badge variant="outline" className="text-xs px-2 py-1">
                           {message.category_name}
                         </Badge>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <User className="h-3 w-3" />
-                        <span>{message.author_name}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      {/* Reply count and time */}
-                      <div className="flex items-center space-x-3 text-xs text-gray-500">
-                        <div className="flex items-center space-x-1">
-                          <MessageCircle className="h-3 w-3" />
-                          <span>{message.reply_count}</span>
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{message.author_name}</span>
                         </div>
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           <span>{new Date(message.created_at).toLocaleDateString('sv-SE')}</span>
                         </div>
                       </div>
                       
-                      {/* Action buttons */}
-                      <div className="flex items-center space-x-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => toggleMessageExpanded(message.id)}
-                          className="h-7 px-2 text-xs text-gray-600 hover:text-gray-700 hover:bg-gray-50"
-                        >
-                          <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${expandedMessage === message.id ? 'rotate-180' : ''}`} />
-                          {expandedMessage === message.id ? 'Dölj' : 'Visa'}
-                        </Button>
+                      {/* Reply count - more prominent on mobile */}
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
+                        <MessageCircle className="h-3 w-3" />
+                        <span>{message.reply_count} svar</span>
                       </div>
+                    </div>
+                    
+                    {/* Action buttons row - mobile optimized */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => toggleMessageExpanded(message.id)}
+                        className="h-8 px-3 text-xs sm:text-sm text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                      >
+                        <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${expandedMessage === message.id ? 'rotate-180' : ''}`} />
+                        {expandedMessage === message.id ? 'Dölj' : 'Visa'}
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          toggleReplyForm(message.id);
+                          if (expandedMessage !== message.id) {
+                            setExpandedMessage(message.id);
+                            if (!replies[message.id]) {
+                              const showAll = message.reply_count <= 15;
+                              loadReplies(message.id, showAll);
+                            }
+                          }
+                        }}
+                        className="h-8 px-3 text-xs sm:text-sm text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                      >
+                        <Reply className="h-3 w-3 mr-1" />
+                        Svara
+                      </Button>
                     </div>
                   </div>
 
                   {/* Expanded content */}
                   {expandedMessage === message.id && (
-                    <div className="mt-6 pt-4 border-t border-gray-200">
-                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4">
+                        <p className="text-gray-700 whitespace-pre-wrap text-sm sm:text-base leading-relaxed">
                           {message.content}
                         </p>
                       </div>
 
                       {/* Replies section */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900 text-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <h4 className="font-medium text-gray-900 text-sm sm:text-base">
                             Svar ({message.reply_count})
                           </h4>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                             {/* Reply button - prominently placed in expanded view */}
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => toggleReplyForm(message.id)}
-                              className="h-7 px-3 text-xs text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                              className="h-9 sm:h-8 px-4 text-sm sm:text-xs text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
                             >
-                              <Reply className="h-3 w-3 mr-1" />
+                              <Reply className="h-4 w-4 sm:h-3 sm:w-3 mr-2 sm:mr-1" />
                               {showReplyForm === message.id ? 'Avbryt svar' : 'Svara på detta'}
                             </Button>
                             {/* Show "Load more" button for large threads that aren't fully loaded */}
@@ -758,7 +774,7 @@ export function MessagesPageClient({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => loadReplies(message.id, true)}
-                                className="text-blue-600 hover:text-blue-700 text-xs h-auto p-1"
+                                className="text-blue-600 hover:text-blue-700 text-xs h-auto p-2"
                               >
                                 Visa alla {replyInfo[message.id].total_count} svar
                               </Button>
@@ -767,7 +783,7 @@ export function MessagesPageClient({
                         </div>
                         
                         {loadingReplies[message.id] ? (
-                          <div className="text-center py-4">
+                          <div className="text-center py-6">
                             <div className="text-sm text-gray-500">Laddar svar...</div>
                           </div>
                         ) : replies[message.id] && replies[message.id].length > 0 ? (
@@ -777,16 +793,18 @@ export function MessagesPageClient({
                              replyInfo[message.id].showing_recent && 
                              !showingAllReplies[message.id] && 
                              message.reply_count > 15 && (
-                              <div className="text-xs text-gray-500 italic mb-2 border-l-2 border-gray-300 pl-2">
+                              <div className="text-xs text-gray-500 italic mb-2 border-l-2 border-gray-300 pl-3 py-1">
                                 Visar de {replies[message.id]?.length || 0} senaste av {replyInfo[message.id].total_count} svar
                               </div>
                             )}
                             {replies[message.id].map((reply, index) => (
-                              <div key={reply.id} className="bg-blue-50 rounded-lg p-3 border-l-2 border-blue-600">
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="flex items-center gap-2 text-xs text-gray-600">
-                                    <User className="h-3 w-3" />
-                                    <span className="font-medium">{reply.author_name}</span>
+                              <div key={reply.id} className="bg-blue-50 rounded-lg p-3 sm:p-4 border-l-3 sm:border-l-2 border-blue-600">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
+                                    <div className="flex items-center gap-1">
+                                      <User className="h-3 w-3" />
+                                      <span className="font-medium">{reply.author_name}</span>
+                                    </div>
                                     <span className="text-gray-500">
                                       {new Date(reply.created_at).toLocaleDateString('sv-SE')} {new Date(reply.created_at).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
@@ -796,7 +814,7 @@ export function MessagesPageClient({
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
-                                      className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
+                                      className="text-red-600 hover:text-red-700 h-8 w-8 sm:h-6 sm:w-6 p-0 flex-shrink-0"
                                       onClick={() => handleDeleteReply(reply.id, message.id, reply.author_name)}
                                       disabled={deletingReply === reply.id}
                                       title="Radera svar"
@@ -805,14 +823,14 @@ export function MessagesPageClient({
                                     </Button>
                                   )}
                                 </div>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap leading-relaxed">
                                   {reply.content}
                                 </p>
                               </div>
                             ))}
                           </div>
                         ) : message.reply_count > 0 ? null : (
-                          <div className="text-sm text-gray-500 italic">
+                          <div className="text-sm text-gray-500 italic py-4 text-center">
                             Inga svar än. Bli första att svara!
                           </div>
                         )}
@@ -822,30 +840,40 @@ export function MessagesPageClient({
 
                   {/* Reply form */}
                   {showReplyForm === message.id && (
-                    <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="mt-4 pt-4 border-t border-gray-200">
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-900 mb-3 text-sm">Skriv ett svar</h4>
-                        <div className="space-y-3">
-                          <Input
-                            type="text"
-                            value={replyData.author_name}
-                            onChange={(e) => setReplyData(prev => ({ ...prev, author_name: e.target.value }))}
-                            placeholder="Ditt namn"
-                            className="w-full text-sm"
-                          />
-                          <Textarea
-                            value={replyData.content}
-                            onChange={(e) => setReplyData(prev => ({ ...prev, content: e.target.value }))}
-                            placeholder="Skriv ditt svar här..."
-                            rows={3}
-                            className="w-full resize-none text-sm"
-                          />
-                          <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-gray-900 mb-4 text-sm sm:text-base">Skriv ett svar</h4>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Ditt namn
+                            </label>
+                            <Input
+                              type="text"
+                              value={replyData.author_name}
+                              onChange={(e) => setReplyData(prev => ({ ...prev, author_name: e.target.value }))}
+                              placeholder="Ditt namn"
+                              className="w-full text-sm h-10"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Svar
+                            </label>
+                            <Textarea
+                              value={replyData.content}
+                              onChange={(e) => setReplyData(prev => ({ ...prev, content: e.target.value }))}
+                              placeholder="Skriv ditt svar här..."
+                              rows={4}
+                              className="w-full resize-none text-sm"
+                            />
+                          </div>
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                             <Button
                               size="sm"
                               onClick={() => handleSubmitReply(message.id)}
                               disabled={!replyData.content.trim() || !replyData.author_name.trim() || submittingReply}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-sm h-10 sm:h-8"
                             >
                               {submittingReply ? 'Skickar...' : 'Skicka svar'}
                             </Button>
@@ -853,7 +881,7 @@ export function MessagesPageClient({
                               size="sm"
                               variant="outline"
                               onClick={() => toggleReplyForm(message.id)}
-                              className="text-xs"
+                              className="text-sm h-10 sm:h-8"
                             >
                               Avbryt
                             </Button>

@@ -190,24 +190,21 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
         </div>
 
         {/* Right section - Edit button, Settings button and User menu */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0" data-debug="handbook-header-right">
+        <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-shrink-0" data-debug="handbook-header-right">
           {/* Edit Mode Toggle */}
           {canEdit && (
             <Button
               onClick={onToggleEditMode}
               variant={isEditMode ? "default" : "outline"}
               size="sm"
-              className={`h-8 px-2 sm:px-3 text-xs sm:text-sm font-medium transition-all duration-200 ${
+              className={`h-8 px-1.5 sm:px-2 md:px-3 text-xs font-medium transition-all duration-200 ${
                 isEditMode 
                   ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-sm' 
                   : 'border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">
-                {isEditMode ? 'Spara' : 'Redigera'}
-              </span>
-              <span className="sm:hidden">
+              <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1 md:mr-2" />
+              <span className="hidden md:inline">
                 {isEditMode ? 'Spara' : 'Redigera'}
               </span>
             </Button>
@@ -219,12 +216,11 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
               variant="outline"
               size="sm"
               asChild
-              className="h-8 px-2 sm:px-3 text-xs sm:text-sm font-medium border-blue-300 text-blue-700 hover:bg-blue-50 transition-all duration-200"
+              className="h-8 px-1.5 sm:px-2 md:px-3 text-xs font-medium border-blue-300 text-blue-700 hover:bg-blue-50 transition-all duration-200"
             >
               <Link href={`/${handbookSlug}/settings`}>
-                <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Inställningar</span>
-                <span className="sm:hidden">Inställningar</span>
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1 md:mr-2" />
+                <span className="hidden md:inline">Inställningar</span>
               </Link>
             </Button>
           )}
@@ -235,18 +231,18 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
-                  className="relative h-8 w-8 sm:h-8 sm:w-auto sm:px-2 rounded-full sm:rounded-md"
+                  className="relative h-8 w-8 sm:h-8 sm:w-8 md:w-auto md:px-2 rounded-full md:rounded-md flex-shrink-0"
                   data-debug="handbook-user-trigger"
                 >
                   <SafeAvatar 
                     user={user} 
                     getUserInitials={getUserInitials}
-                    className="h-6 w-6 sm:h-7 sm:w-7"
+                    className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 flex-shrink-0"
                   />
-                  <span className="hidden sm:inline ml-2 text-xs font-medium text-gray-700 truncate max-w-[100px]">
+                  <span className="hidden md:inline ml-2 text-xs font-medium text-gray-700 truncate max-w-[100px]">
                     {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Användare'}
                   </span>
-                  <ChevronDown className="hidden sm:inline h-3 w-3 ml-1" />
+                  <ChevronDown className="hidden md:inline h-3 w-3 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48 sm:w-56 bg-white border border-gray-200 shadow-lg rounded-md mr-2 sm:mr-0" align="end" forceMount>
