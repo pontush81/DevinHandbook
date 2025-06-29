@@ -291,15 +291,16 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
       const subject = `Nytt svar på: ${topic.title}`;
       
       // Generate correct URL based on environment (path-based routing)
+      // Include topic_id to go directly to the specific discussion
       let messageUrl: string;
       const isProduction = process.env.NODE_ENV === 'production';
       
       if (isProduction) {
-        // Production: https://domain.com/handbok-slug/meddelanden
-        messageUrl = `https://${process.env.NEXT_PUBLIC_DOMAIN}/${handbook.slug}/meddelanden`;
+        // Production: https://domain.com/handbok-slug/meddelanden?topic=topic_id
+        messageUrl = `https://${process.env.NEXT_PUBLIC_DOMAIN}/${handbook.slug}/meddelanden?topic=${topic_id}`;
       } else {
-        // Development: http://localhost:3000/handbok-slug/meddelanden
-        messageUrl = `http://localhost:3000/${handbook.slug}/meddelanden`;
+        // Development: http://localhost:3000/handbok-slug/meddelanden?topic=topic_id
+        messageUrl = `http://localhost:3000/${handbook.slug}/meddelanden?topic=${topic_id}`;
       }
       
       const fromEmail = `${handbook.title} <noreply@${process.env.RESEND_DOMAIN || 'yourdomain.com'}>`;
