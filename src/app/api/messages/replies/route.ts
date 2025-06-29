@@ -13,7 +13,7 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
     console.log('[Replies] Processing notification directly:', { type, handbook_id: data.handbook_id, topic_id: data.topic_id });
 
     const supabase = getServiceSupabase();
-    const { handbook_id, topic_id, post_id, author_name, content_preview } = data;
+    const { handbook_id, topic_id, post_id, author_id, author_name, content_preview } = data;
 
     // Get handbook details with retry logic
     let handbook, topic;
@@ -110,16 +110,44 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
     let notificationRecipients: any[] = [];
     
     if (type === 'new_reply') {
-      // Get reply author ID
-      const { data: replyData, error: replyError } = await supabase
-        .from('forum_posts')
-        .select('author_id')
-        .eq('id', post_id)
-        .single();
+      // Use provided author_id or fall back to database lookup
+      let replyAuthorId = author_id;
+      
+      if (!replyAuthorId) {
+        console.log('[Replies] No author_id provided, looking up in database...');
+        // Get reply author ID with retry logic for timing issues
+        let replyData;
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+          const { data, error } = await supabase
+            .from('forum_posts')
+            .select('author_id')
+            .eq('id', post_id)
+            .single();
 
-      if (replyError || !replyData) {
-        console.error('[Replies] Reply not found:', replyError);
-        return;
+          if (!error && data) {
+            replyData = data;
+            break;
+          }
+          
+          retryCount++;
+          console.log(`[Replies] Reply not found on attempt ${retryCount}, retrying...`, error);
+          
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 500 * retryCount)); // Exponential backoff
+          }
+        }
+
+        if (!replyData) {
+          console.error('[Replies] Reply not found after', maxRetries, 'attempts for post_id:', post_id);
+          return;
+        }
+        
+        replyAuthorId = replyData.author_id;
+      } else {
+        console.log('[Replies] Using provided author_id:', replyAuthorId);
       }
 
       // Get all unique participants in this topic
@@ -142,7 +170,7 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
       });
 
       // Remove the current reply author (they don't need notification of their own reply)
-      uniqueParticipants.delete(replyData.author_id);
+      uniqueParticipants.delete(replyAuthorId);
 
       console.log('[Replies] Participants to notify:', Array.from(uniqueParticipants));
 
@@ -595,13 +623,14 @@ export async function POST(request: NextRequest) {
           handbook_id: topic.handbook_id,
           topic_id: topic_id,
           post_id: reply.id,
+          author_id: userId, // Pass author_id directly to avoid database lookup
           author_name: author_name.trim(),
           content_preview: content.trim()
         });
       } catch (error) {
         console.error('[Replies] Notification failed but reply was created successfully:', error);
       }
-    }, 100); // 100ms delay to ensure database consistency
+    }, 1000); // 1 second delay to ensure database consistency
 
     return NextResponse.json({
       success: true,
