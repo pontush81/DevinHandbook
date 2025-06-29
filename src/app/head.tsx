@@ -9,11 +9,11 @@ export default function Head() {
       <meta property="og:description" content="Skapa en digital handbok för din bostadsrättsförening" />
       <meta property="og:type" content="website" />
       <meta property="og:url" content="https://handbok.org" />
-      <meta property="og:image" content="https://handbok.org/og-image.png" />
+      <meta property="og:image" content="/og-image.jpg" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
       <meta name="twitter:description" content="Skapa en digital handbok för din bostadsrättsförening" />
-      <meta name="twitter:image" content="https://handbok.org/og-image.png" />
+      <meta name="twitter:image" content="/og-image.jpg" />
       
       {/* Nödfalls-CSS som laddas direkt i head */}
       <style dangerouslySetInnerHTML={{ __html: `

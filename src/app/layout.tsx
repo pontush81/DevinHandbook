@@ -30,7 +30,7 @@ export default function RootLayout({
         <meta property="og:url" content="https://handbok.org/" />
         <meta property="og:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
         <meta property="og:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 1490 kr per år." />
-        <meta property="og:image" content="https://handbok.org/og-image.jpg" />
+        <meta property="og:image" content="/og-image.jpg" />
         <meta property="og:locale" content="sv_SE" />
         <meta property="og:site_name" content="Handbok.org" />
         
@@ -39,7 +39,7 @@ export default function RootLayout({
         <meta property="twitter:url" content="https://handbok.org/" />
         <meta property="twitter:title" content="Handbok.org - Digital handbok för bostadsrättsföreningar" />
         <meta property="twitter:description" content="Skapa en digital handbok för din bostadsrättsförening. Samla all viktig information på ett ställe. Endast 1490 kr per år." />
-        <meta property="twitter:image" content="https://handbok.org/og-image.jpg" />
+        <meta property="twitter:image" content="/og-image.jpg" />
         
         {/* Additional SEO */}
         <meta name="robots" content="index, follow" />
@@ -75,7 +75,7 @@ export default function RootLayout({
               "@type": "Organization",
               "name": "Handbok.org",
               "url": "https://handbok.org",
-              "logo": "https://handbok.org/logo.png",
+              "logo": "/logo.png",
               "description": "Digital handbok för bostadsrättsföreningar",
               "address": {
                 "@type": "PostalAddress",

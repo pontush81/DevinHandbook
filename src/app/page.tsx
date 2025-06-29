@@ -604,7 +604,7 @@ export default function HomePage() {
                   "url": "https://handbok.org",
                   "logo": {
                     "@type": "ImageObject",
-                    "url": "https://handbok.org/logo.png"
+                    "url": "/logo.png"
                   }
                 },
                 "author": {
