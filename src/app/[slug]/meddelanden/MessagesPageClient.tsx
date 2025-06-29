@@ -215,7 +215,7 @@ export function MessagesPageClient({
     setLoadingReplies(prev => ({ ...prev, [messageId]: true }));
     
     try {
-      const url = `/api/messages/replies?topic_id=${messageId}${showAll ? '&show_all=true' : ''}`;
+      const url = `/api/messages/replies?topic_id=${messageId}&userId=${user?.id}${showAll ? '&show_all=true' : ''}`;
       console.log('Loading replies from:', url);
       
       const response = await fetch(url);
@@ -262,7 +262,7 @@ export function MessagesPageClient({
       
       console.log('Sending payload:', payload);
 
-      const response = await fetch('/api/messages', {
+      const response = await fetch(`/api/messages?userId=${user?.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,7 +309,7 @@ export function MessagesPageClient({
 
     setSubmittingReply(true);
     try {
-      const response = await fetch('/api/messages/replies', {
+      const response = await fetch(`/api/messages/replies?userId=${user?.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ export function MessagesPageClient({
 
     setDeletingMessage(messageId);
     try {
-      const response = await fetch(`/api/messages?id=${messageId}`, {
+      const response = await fetch(`/api/messages?id=${messageId}&userId=${user?.id}`, {
         method: 'DELETE',
       });
 
@@ -402,7 +402,7 @@ export function MessagesPageClient({
 
     setDeletingReply(replyId);
     try {
-      const response = await fetch(`/api/messages/replies?reply_id=${replyId}`, {
+      const response = await fetch(`/api/messages/replies?reply_id=${replyId}&userId=${user?.id}`, {
         method: 'DELETE',
       });
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserRole } from '@/lib/auth-utils';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createDefaultForumCategories } from '@/lib/handbook-service';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 
 export async function PUT(
   request: NextRequest,
@@ -9,15 +10,27 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { forum_enabled, userId } = body;
     
-    if (!userId) {
+    // Verify authentication first
+    console.log('🔐 [Handbook Settings] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
+    
+    if (!authResult.userId) {
+      console.log('❌ [Handbook Settings] Authentication failed - no userId found');
       return NextResponse.json(
-        { error: 'userId är obligatorisk' },
-        { status: 400 }
+        AUTH_RESPONSES.UNAUTHENTICATED,
+        { status: AUTH_RESPONSES.UNAUTHENTICATED.status }
       );
     }
+
+    console.log('✅ [Handbook Settings] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+    
+    const body = await request.json();
+    const { forum_enabled } = body;
+    const userId = authResult.userId; // Use authenticated userId
 
     // Check if user is admin of this handbook
     const userRole = await getUserRole(userId, id);
