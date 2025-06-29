@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession } from '@/lib/auth-utils';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 import { Resend } from 'resend';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -243,8 +243,8 @@ async function sendRoleUpdateEmail({
 export async function PATCH(request: NextRequest) {
   try {
     // 1. Hämta och validera session
-    const session = await getServerSession();
-    if (!session?.user) {
+    const authResult = await getHybridAuth(request);
+    if (!authResult.userId) {
       return NextResponse.json(
         { success: false, message: "Ej autentiserad" },
         { status: 401 }
@@ -257,7 +257,7 @@ export async function PATCH(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('is_superadmin')
-      .eq('id', session.user.id)
+      .eq('id', authResult.userId)
       .maybeSingle();
 
     if (profileError || !profile?.is_superadmin) {
@@ -302,12 +302,12 @@ export async function PATCH(request: NextRequest) {
     const { data: adminProfile, error: adminProfileError } = await supabase
       .from('profiles')
       .select('first_name, last_name')
-      .eq('id', session.user.id)
+      .eq('id', authResult.userId)
       .maybeSingle();
 
     const adminName = adminProfile?.first_name && adminProfile?.last_name 
       ? `${adminProfile.first_name} ${adminProfile.last_name}`
-      : session.user.email || 'En administratör';
+      : authResult.userEmail || 'En administratör';
 
     // 6. Kontrollera att användaren finns
     const { data: targetUser, error: userError } = await supabase.auth.admin.getUserById(userId);
@@ -433,8 +433,8 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // 1. Hämta och validera session
-    const session = await getServerSession();
-    if (!session?.user) {
+    const authResult = await getHybridAuth(request);
+    if (!authResult.userId) {
       return NextResponse.json(
         { success: false, message: "Ej autentiserad" },
         { status: 401 }
@@ -447,7 +447,7 @@ export async function DELETE(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('is_superadmin')
-      .eq('id', session.user.id)
+      .eq('id', authResult.userId)
       .maybeSingle();
 
     if (profileError || !profile?.is_superadmin) {

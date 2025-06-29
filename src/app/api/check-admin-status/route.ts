@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 
 /**
  * API-rutt för att kontrollera om inloggad användare är admin för en specifik handbok
@@ -10,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     // Hämta handbok_id från query-parametrar
     const { searchParams } = new URL(req.url);
-    const handbookId = searchParams.get('handbook_id');
+    const handbookId = searchParams.get('handbook_id') || searchParams.get('handbookId');
 
     if (!handbookId) {
       return NextResponse.json(
@@ -19,31 +18,23 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    // Hämta användarens session från cookies med ny SSR API
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
+    console.log('🔐 [Check Admin Status] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(req);
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      console.error('[check-admin-status] Sessionsfel:', sessionError);
+    if (!authResult.userId) {
+      console.log('❌ [Check Admin Status] Authentication failed - no userId found');
       return NextResponse.json(
         { error: "Användaren är inte inloggad", isAdmin: false },
         { status: 401 }
       );
     }
     
-    const userId = session.user.id;
+    console.log('✅ [Check Admin Status] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+    
+    const userId = authResult.userId;
     
     // Använd admin-klienten för att kringgå RLS-begränsningar
     const adminClient = getAdminClient();

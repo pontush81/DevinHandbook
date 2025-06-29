@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '@/lib/auth-utils';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {

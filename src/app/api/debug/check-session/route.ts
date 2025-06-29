@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession } from '@/lib/auth-utils';
+import { getHybridAuth } from '@/lib/standard-auth';
 
 export async function GET(request: NextRequest) {
   try {
     // Hämta session från server
-    const serverSession = await getServerSession();
+    const authResult = await getHybridAuth(request);
     
     // Hämta session med service client
     const supabase = getServiceSupabase();
@@ -31,14 +31,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       timestamp: new Date().toISOString(),
-      serverSession: serverSession ? {
-        userId: serverSession.user?.id,
-        email: serverSession.user?.email,
-        expiresAt: serverSession.expires_at,
-        createdAt: serverSession.user?.created_at
-      } : null,
+      authResult: {
+        userId: authResult.userId,
+        userEmail: authResult.userEmail,
+        authMethod: authResult.authMethod,
+        hasAuth: !!authResult.userId
+      },
       allUsers: allUsers,
-      sessionExists: !!serverSession,
+      authExists: !!authResult.userId,
       cookieInfo: {
         headers: Object.fromEntries(request.headers.entries()),
         cookies: request.headers.get('cookie')

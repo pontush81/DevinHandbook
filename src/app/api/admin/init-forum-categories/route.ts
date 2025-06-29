@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '@/lib/auth-utils';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createDefaultForumCategories } from '@/lib/handbook-service';
 
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession();
-    if (!session?.user) {
+    const authResult = await getHybridAuth(request);
+    if (!authResult.userId) {
       return NextResponse.json(
         { error: 'Du måste vara inloggad' },
         { status: 401 }
       );
     }
+    
+    const userId = authResult.userId;
 
     const body = await request.json();
     const { handbook_id } = body;
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
       .from('handbook_members')
       .select('role')
       .eq('handbook_id', handbook_id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (memberError || !memberData || memberData.role !== 'admin') {

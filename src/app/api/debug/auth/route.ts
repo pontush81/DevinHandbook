@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '@/lib/auth-utils';
+import { getHybridAuth } from '@/lib/standard-auth';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const allCookies = cookieStore.getAll();
     
     // Get session
-    const session = await getServerSession();
+    const authResult = await getHybridAuth(request);
     
     // Get request headers
     const authHeader = request.headers.get('authorization');
@@ -36,12 +36,12 @@ export async function GET(request: NextRequest) {
             valueLength: c.value?.length || 0
           }))
       },
-      session: {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userId: session?.user?.id || null,
-        userEmail: session?.user?.email || null,
-        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null
+      authResult: {
+        hasAuth: !!authResult.userId,
+        method: authResult.authMethod,
+        userId: authResult.userId || null,
+        userEmail: authResult.userEmail || null,
+        rawData: authResult
       }
     };
     

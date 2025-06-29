@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession } from '@/lib/auth-utils';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const providedUserId = searchParams.get('userId');
     const { id: handbookId } = await params;
 
     if (!handbookId) {
@@ -18,40 +16,24 @@ export async function GET(
       );
     }
 
-    // Try to get session from server-side cookies first
-    const sessionResult = await getServerSession(request);
+    console.log('🔐 [Trial Status] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
     
-    // If no server session, try to get userId from Bearer token
-    let userId = sessionResult?.user?.id || providedUserId;
-    
-    // Check if Authorization header has Bearer token
-    if (!userId) {
-      const authHeader = request.headers.get('authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        
-        // Verify the token with Supabase
-        const supabase = getServiceSupabase();
-        try {
-          const { data: { user }, error } = await supabase.auth.getUser(token);
-          if (!error && user) {
-            userId = user.id;
-            console.log('✅ [Trial Status] Authenticated via Bearer token:', userId);
-          }
-        } catch (error) {
-          console.log('❌ [Trial Status] Bearer token verification failed:', error);
-        }
-      }
-    }
-
-    if (!userId) {
+    if (!authResult.userId) {
+      console.log('❌ [Trial Status] Authentication failed - no userId found');
       return NextResponse.json(
         { error: 'Authentication required - no valid session or token found' },
         { status: 401 }
       );
     }
 
-    console.log('📊 [Trial Status] Checking status for:', { handbookId, userId, method: sessionResult ? 'cookie' : 'bearer' });
+    console.log('✅ [Trial Status] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+    
+    const userId = authResult.userId;
+    console.log('📊 [Trial Status] Checking status for:', { handbookId, userId, method: authResult.authMethod });
 
     const supabase = getServiceSupabase();
 

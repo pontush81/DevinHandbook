@@ -1,32 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase';
-import { getServerSession } from '@/lib/auth-utils';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 import { checkIsSuperAdmin } from '@/lib/user-utils';
 import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
     // Kontrollera autentisering och admin-status
-    const session = await getServerSession();
-    if (!session?.user) {
+    console.log('🔐 [Admin User Stats] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
+    
+    if (!authResult.userId) {
+      console.log('❌ [Admin User Stats] Authentication failed - no userId found');
       return NextResponse.json(
         { error: "Ej autentiserad" },
         { status: 401 }
       );
     }
 
+    console.log('✅ [Admin User Stats] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+
     const isSuperAdmin = await checkIsSuperAdmin(
       supabase,
-      session.user.id,
-      session.user.email || ''
+      authResult.userId,
+      authResult.userEmail || ''
     );
 
     if (!isSuperAdmin) {
+      console.log('❌ [Admin User Stats] User is not super admin');
       return NextResponse.json(
         { error: "Ej behörig" },
         { status: 403 }
       );
     }
+    
+    console.log('✅ [Admin User Stats] Super admin access confirmed');
 
     const adminClient = getAdminClient();
     

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchWithAuth } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -54,7 +54,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     setIsLoadingJoinCode(true);
     
     try {
-      const response = await fetch(`/api/handbook/join-code?handbookId=${handbookId}&userId=${currentUserId}`, {
+      const response = await fetchWithAuth(`/api/handbook/join-code?handbookId=${handbookId}&userId=${currentUserId}`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -85,7 +85,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     setIsLoadingJoinCode(true);
       
       try {
-      const response = await fetch("/api/handbook/join-code", {
+      const response = await fetchWithAuth("/api/handbook/join-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, expiresInDays: 90, userId: currentUserId }), // 3 months instead of 1
@@ -126,7 +126,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
   const handleDeactivateJoinCode = async () => {
     setIsLoadingJoinCode(true);
     try {
-      const response = await fetch("/api/handbook/join-code", {
+      const response = await fetchWithAuth("/api/handbook/join-code", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, userId: currentUserId }),
@@ -181,7 +181,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
       
       // Använd admin API för att hämta medlemmar med e-postadresser
       // Detta kringgår RLS-problem och ger oss tillgång till auth.users tabellen
-      const response = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}&t=${Date.now()}`, {
+      const response = await fetchWithAuth(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}&t=${Date.now()}`, {
         credentials: 'include',
         cache: 'no-cache',
         headers: {
@@ -227,7 +227,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
         console.log('🧪 Current User ID:', currentUserId);
         
         try {
-          const testResponse = await fetch(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}&t=${Date.now()}`, {
+          const testResponse = await fetchWithAuth(`/api/handbook/get-members?handbookId=${handbookId}&userId=${currentUserId}&t=${Date.now()}`, {
             credentials: 'include',
             cache: 'no-cache',
             headers: {
@@ -557,7 +557,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/handbook/invite-member", {
+      const response = await fetchWithAuth("/api/handbook/invite-member", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, email, role, userId: currentUserId }),
@@ -589,7 +589,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
     
     setUpdatingId(memberId);
     try {
-      const response = await fetch("/api/handbook/update-member-role", {
+      const response = await fetchWithAuth("/api/handbook/update-member-role", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, memberId, role: newRole, userId: currentUserId }),
@@ -703,7 +703,7 @@ export function MembersManager({ handbookId, currentUserId }: MembersManagerProp
 
     setUpdatingId(memberId);
     try {
-      const response = await fetch("/api/handbook/remove-member", {
+      const response = await fetchWithAuth("/api/handbook/remove-member", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handbookId, memberId, userId: currentUserId }),

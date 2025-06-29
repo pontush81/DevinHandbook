@@ -1,18 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '@/lib/auth-utils';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createDefaultForumCategories } from '@/lib/handbook-service';
 
 export async function POST(request: NextRequest) {
   try {
     // Check authentication - only authenticated users
-    const session = await getServerSession();
-    if (!session?.user) {
+    console.log('🔐 [Admin Fix Categories] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
+    
+    if (!authResult.userId) {
+      console.log('❌ [Admin Fix Categories] Authentication failed - no userId found');
       return NextResponse.json(
         { error: 'Du måste vara inloggad' },
         { status: 401 }
       );
     }
+
+    console.log('✅ [Admin Fix Categories] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+    
+    const userId = authResult.userId;
 
     const supabase = getServiceSupabase();
 
@@ -26,7 +36,7 @@ export async function POST(request: NextRequest) {
         handbook_members!inner(user_id, role)
       `)
       .eq('forum_enabled', true)
-      .eq('handbook_members.user_id', session.user.id)
+      .eq('handbook_members.user_id', userId)
       .eq('handbook_members.role', 'admin');
 
     if (handbooksError) {

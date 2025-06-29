@@ -1,41 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
-import { getServerSession } from '@/lib/auth';
+import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Local server session function
-async function getServerSession() {
-  const cookieStore = await cookies();
-  
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
 
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error('Error getting session:', error);
-      return null;
-    }
-    return session;
-  } catch (error) {
-    console.error('Error in getServerSession:', error);
-    return null;
-  }
-}
 
 async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any) {
   try {
@@ -243,13 +214,23 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
 export async function GET(request: NextRequest) {
   try {
     // 1. Check authentication
-    const session = await getServerSession();
-    if (!session?.user) {
+    console.log('🔐 [Messages/Replies GET] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
+    
+    if (!authResult.userId) {
+      console.log('❌ [Messages/Replies GET] Authentication failed - no userId found');
       return NextResponse.json(
         { error: 'Du måste vara inloggad för att läsa svar' },
         { status: 401 }
       );
     }
+
+    console.log('✅ [Messages/Replies GET] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+    
+    const userId = authResult.userId;
 
     const url = new URL(request.url);
     const topicId = url.searchParams.get('topic_id');
@@ -283,7 +264,7 @@ export async function GET(request: NextRequest) {
       .from('handbook_members')
       .select('id')
       .eq('handbook_id', topic.handbook_id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (memberError || !memberData) {
@@ -366,13 +347,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 1. Check authentication
-    const session = await getServerSession();
-    if (!session?.user) {
+    console.log('🔐 [Messages/Replies POST] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
+    
+    if (!authResult.userId) {
+      console.log('❌ [Messages/Replies POST] Authentication failed - no userId found');
       return NextResponse.json(
         { error: 'Du måste vara inloggad för att svara' },
         { status: 401 }
       );
     }
+
+    console.log('✅ [Messages/Replies POST] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+    
+    const userId = authResult.userId;
 
     const body = await request.json();
     const { topic_id, content, author_name } = body;
@@ -413,7 +404,7 @@ export async function POST(request: NextRequest) {
       .from('handbook_members')
       .select('id')
       .eq('handbook_id', topic.handbook_id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (memberError || !memberData) {
@@ -430,9 +421,9 @@ export async function POST(request: NextRequest) {
         topic_id,
         handbook_id: topic.handbook_id,
         content: content.trim(),
-        author_id: session.user.id,
+        author_id: userId,
         author_name: author_name.trim(),
-        author_email: session.user.email,
+        author_email: authResult.userEmail || null,
         created_at: new Date().toISOString()
       })
       .select()
@@ -495,13 +486,23 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // 1. Check authentication
-    const session = await getServerSession();
-    if (!session?.user) {
+    console.log('🔐 [Messages/Replies DELETE] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
+    
+    if (!authResult.userId) {
+      console.log('❌ [Messages/Replies DELETE] Authentication failed - no userId found');
       return NextResponse.json(
         { error: 'Du måste vara inloggad för att radera svar' },
         { status: 401 }
       );
     }
+
+    console.log('✅ [Messages/Replies DELETE] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+    
+    const userId = authResult.userId;
 
     const url = new URL(request.url);
     const replyId = url.searchParams.get('reply_id');
@@ -539,7 +540,7 @@ export async function DELETE(request: NextRequest) {
       .from('handbook_members')
       .select('id, role')
       .eq('handbook_id', replyData.forum_topics.handbook_id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (memberError || !memberData) {
@@ -550,7 +551,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 4. Check if user is author or admin
-    const isAuthor = replyData.author_id === session.user.id;
+    const isAuthor = replyData.author_id === userId;
     const isAdmin = memberData.role === 'admin';
 
     if (!isAuthor && !isAdmin) {
