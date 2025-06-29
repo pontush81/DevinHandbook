@@ -184,30 +184,38 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
         console.error('[Replies] Failed to get user emails via RPC:', emailError);
         console.log('[Replies] Trying fallback method...');
         
-        // Fallback: try to get emails from forum_posts.author_email where available
-        const { data: fallbackEmails } = await supabase
-          .from('forum_posts')
-          .select('author_id, author_email')
-          .eq('topic_id', topic_id)
-          .not('author_email', 'is', null);
+        // Fallback: Use development email for testing
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Replies] Development mode: Using test email for all participants');
+          Array.from(uniqueParticipants).forEach(userId => {
+            userEmailMap.set(userId, 'pontus.hberg@gmail.com');
+          });
+        } else {
+          // Production fallback: try to get emails from forum_posts.author_email where available
+          const { data: fallbackEmails } = await supabase
+            .from('forum_posts')
+            .select('author_id, author_email')
+            .eq('topic_id', topic_id)
+            .not('author_email', 'is', null);
 
-        // Also try to get the topic author's email
-        const { data: topicData } = await supabase
-          .from('forum_topics')
-          .select('author_id, author_email')
-          .eq('id', topic_id)
-          .single();
+          // Also try to get the topic author's email
+          const { data: topicData } = await supabase
+            .from('forum_topics')
+            .select('author_id, author_email')
+            .eq('id', topic_id)
+            .single();
 
-        // Build email map from fallback data
-        if (topicData?.author_email) {
-          userEmailMap.set(topicData.author_id, topicData.author_email);
-        }
-        
-        fallbackEmails?.forEach((post: any) => {
-          if (post.author_email) {
-            userEmailMap.set(post.author_id, post.author_email);
+          // Build email map from fallback data
+          if (topicData?.author_email) {
+            userEmailMap.set(topicData.author_id, topicData.author_email);
           }
-        });
+          
+          fallbackEmails?.forEach((post: any) => {
+            if (post.author_email) {
+              userEmailMap.set(post.author_id, post.author_email);
+            }
+          });
+        }
 
         console.log('[Replies] Fallback method found', userEmailMap.size, 'email addresses');
       } else {
