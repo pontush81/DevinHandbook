@@ -718,24 +718,27 @@ export function MessagesPageClient({
                         {expandedMessage === message.id ? 'Dölj' : 'Visa'}
                       </Button>
                       
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          toggleReplyForm(message.id);
-                          if (expandedMessage !== message.id) {
-                            setExpandedMessage(message.id);
-                            if (!replies[message.id]) {
-                              const showAll = message.reply_count <= 15;
-                              loadReplies(message.id, showAll);
+                      {/* Only show reply button if message is NOT expanded */}
+                      {expandedMessage !== message.id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            toggleReplyForm(message.id);
+                            if (expandedMessage !== message.id) {
+                              setExpandedMessage(message.id);
+                              if (!replies[message.id]) {
+                                const showAll = message.reply_count <= 15;
+                                loadReplies(message.id, showAll);
+                              }
                             }
-                          }
-                        }}
-                        className="h-8 px-3 text-xs sm:text-sm text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-                      >
-                        <Reply className="h-3 w-3 mr-1" />
-                        Svara
-                      </Button>
+                          }}
+                          className="h-8 px-3 text-xs sm:text-sm text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                        >
+                          <Reply className="h-3 w-3 mr-1" />
+                          Svara
+                        </Button>
+                      )}
                     </div>
                   </div>
 
