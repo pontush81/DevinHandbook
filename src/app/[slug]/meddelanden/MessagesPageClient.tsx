@@ -83,17 +83,6 @@ export function MessagesPageClient({
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [accessLoading, setAccessLoading] = useState(true);
-
-  // Safety timeout to prevent infinite loading
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      console.warn('⚠️ [MessagesPageClient] Safety timeout triggered - forcing loading to false');
-      setLoading(false);
-      setAccessLoading(false);
-    }, 10000); // 10 seconds timeout
-
-    return () => clearTimeout(timeout);
-  }, []);
   const [showNewMessageForm, setShowNewMessageForm] = useState(false);
 
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -128,14 +117,7 @@ export function MessagesPageClient({
   // Separate effect for access checking when user changes
   useEffect(() => {
     async function checkAccess() {
-      console.log('🔍 [MessagesPageClient] Access check started:', {
-        handbookId,
-        userId: user?.id || 'none',
-        userPresent: !!user
-      });
-
       if (!handbookId || !user?.id) {
-        console.log('🔍 [MessagesPageClient] No handbook or user - denying access');
         setHasAccess(false);
         setUserRole(null);
         setAccessLoading(false);
@@ -179,15 +161,14 @@ export function MessagesPageClient({
         }
 
         // No access
-        console.log('🔍 [MessagesPageClient] User access denied - not a member and handbook not public');
+        console.log('User access denied - not a member and handbook not public');
         setHasAccess(false);
         setUserRole(null);
       } catch (error) {
-        console.error('🔍 [MessagesPageClient] Error checking handbook access:', error);
+        console.error('Error checking handbook access:', error);
         setHasAccess(false);
         setUserRole(null);
       } finally {
-        console.log('🔍 [MessagesPageClient] Setting accessLoading to false');
         setAccessLoading(false);
       }
     }
@@ -201,16 +182,8 @@ export function MessagesPageClient({
   }, [handbookId, user?.id, hasAccess]);
 
   async function loadMessagesAndCategories() {
-    console.log('📋 [MessagesPageClient] loadMessagesAndCategories called:', {
-      handbookId,
-      userId: user?.id || 'none',
-      hasAccess,
-      loading
-    });
-
     if (!handbookId || !user?.id || !hasAccess) {
-      console.log('📋 [MessagesPageClient] Skipping load - missing requirements');
-      setLoading(false); // Important: Set loading to false even if we skip
+      setLoading(false);
       return;
     }
 
@@ -256,9 +229,8 @@ export function MessagesPageClient({
       console.log('Messages loaded:', formattedMessages);
       setMessages(formattedMessages);
     } catch (error) {
-      console.error('📋 [MessagesPageClient] Error loading messages and categories:', error);
+      console.error('Error loading messages and categories:', error);
     } finally {
-      console.log('📋 [MessagesPageClient] Setting loading to false');
       setLoading(false);
     }
   }
@@ -532,25 +504,12 @@ export function MessagesPageClient({
     }
   }
 
-  // Debug loading states
-  console.log('🐛 [MessagesPageClient] Loading states:', {
-    loading,
-    authLoading,
-    accessLoading,
-    hasUser: !!user,
-    hasAccess,
-    userRole
-  });
-
   if (loading || authLoading || accessLoading) {
     return (
       <div className="bg-white flex items-center justify-center py-16">
         <div className="text-center">
           <MessageCircle className="h-8 w-8 text-blue-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Laddar meddelanden...</p>
-          <p className="text-xs text-gray-400 mt-2">
-            Loading: {loading ? 'messages' : ''} {authLoading ? 'auth' : ''} {accessLoading ? 'access' : ''}
-          </p>
         </div>
       </div>
     );
