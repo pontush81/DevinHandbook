@@ -15,27 +15,55 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
     const supabase = getServiceSupabase();
     const { handbook_id, topic_id, post_id, author_name, content_preview } = data;
 
-    // Get handbook details
-    const { data: handbook, error: handbookError } = await supabase
-      .from('handbooks')
-      .select('title, slug')
-      .eq('id', handbook_id)
-      .single();
+    // Get handbook details with retry logic
+    let handbook, topic;
+    
+    try {
+      const { data: handbookData, error: handbookError } = await supabase
+        .from('handbooks')
+        .select('title, slug')
+        .eq('id', handbook_id)
+        .single();
 
-    if (handbookError || !handbook) {
-      console.error('[Replies] Handbook not found:', handbookError);
+      if (handbookError || !handbookData) {
+        console.error('[Replies] Handbook not found:', handbookError);
+        return;
+      }
+      handbook = handbookData;
+    } catch (error) {
+      console.error('[Replies] Database error fetching handbook:', error);
       return;
     }
 
-    // Get topic details
-    const { data: topic, error: topicError } = await supabase
-      .from('forum_topics')
-      .select('title, author_id')
-      .eq('id', topic_id)
-      .single();
+    // Get topic details with retry logic
+    try {
+      const { data: topicData, error: topicError } = await supabase
+        .from('forum_topics')
+        .select('title, author_id')
+        .eq('id', topic_id)
+        .single();
 
-    if (topicError || !topic) {
-      console.error('[Replies] Topic not found:', topicError);
+      if (topicError || !topicData) {
+        console.error('[Replies] Topic not found:', topicError);
+        // Try a brief retry in case of timing issues
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { data: retryTopicData, error: retryTopicError } = await supabase
+          .from('forum_topics')
+          .select('title, author_id')
+          .eq('id', topic_id)
+          .single();
+          
+        if (retryTopicError || !retryTopicData) {
+          console.error('[Replies] Topic still not found after retry:', retryTopicError);
+          return;
+        }
+        topic = retryTopicData;
+      } else {
+        topic = topicData;
+      }
+    } catch (error) {
+      console.error('[Replies] Database error fetching topic:', error);
       return;
     }
 
@@ -266,7 +294,14 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
 
     console.log('[Replies] Notification processing complete');
   } catch (error) {
-    console.error('[Replies] Error in notification processing:', error);
+    console.error('[Replies] Error in notification processing:', {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3) : undefined,
+      data: { handbook_id: data?.handbook_id, topic_id: data?.topic_id, type }
+    });
+    
+    // Don't let notification errors crash anything
+    // The reply was already created successfully
   }
 }
 
@@ -552,16 +587,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Send notification asynchronously (don't block the response)
-    setImmediate(() => {
-      sendNotificationDirect('new_reply', {
-        type: 'new_reply',
-        handbook_id: topic.handbook_id,
-        topic_id: topic_id,
-        post_id: reply.id,
-        author_name: author_name.trim(),
-        content_preview: content.trim()
-      });
-    });
+    // Use setTimeout instead of setImmediate for better stability
+    setTimeout(async () => {
+      try {
+        await sendNotificationDirect('new_reply', {
+          type: 'new_reply',
+          handbook_id: topic.handbook_id,
+          topic_id: topic_id,
+          post_id: reply.id,
+          author_name: author_name.trim(),
+          content_preview: content.trim()
+        });
+      } catch (error) {
+        console.error('[Replies] Notification failed but reply was created successfully:', error);
+      }
+    }, 100); // 100ms delay to ensure database consistency
 
     return NextResponse.json({
       success: true,
