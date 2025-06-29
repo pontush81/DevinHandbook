@@ -289,7 +289,19 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
     
     if (emailRecipients.length > 0) {
       const subject = `Nytt svar på: ${topic.title}`;
-      const messageUrl = `https://${handbook.slug}.${process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/meddelanden`;
+      
+      // Generate correct URL based on environment (path-based routing)
+      let messageUrl: string;
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      if (isProduction) {
+        // Production: https://domain.com/handbok-slug/meddelanden
+        messageUrl = `https://${process.env.NEXT_PUBLIC_DOMAIN}/${handbook.slug}/meddelanden`;
+      } else {
+        // Development: http://localhost:3000/handbok-slug/meddelanden
+        messageUrl = `http://localhost:3000/${handbook.slug}/meddelanden`;
+      }
+      
       const fromEmail = `${handbook.title} <noreply@${process.env.RESEND_DOMAIN || 'yourdomain.com'}>`;
 
       console.log('[Replies] Sending emails from:', fromEmail);
