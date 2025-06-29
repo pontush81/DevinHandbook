@@ -712,26 +712,6 @@ export function MessagesPageClient({
                       <div className="flex items-center space-x-1">
                         <Button 
                           variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            toggleReplyForm(message.id);
-                            if (expandedMessage !== message.id) {
-                              setExpandedMessage(message.id);
-                              // Smart loading when opening via Reply button
-                              if (!replies[message.id]) {
-                                const showAll = message.reply_count <= 15;
-                                loadReplies(message.id, showAll);
-                              }
-                            }
-                          }}
-                          className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Reply className="h-3 w-3 mr-1" />
-                          Svara
-                        </Button>
-                        
-                        <Button 
-                          variant="ghost" 
                           size="sm" 
                           onClick={() => toggleMessageExpanded(message.id)}
                           className="h-7 px-2 text-xs text-gray-600 hover:text-gray-700 hover:bg-gray-50"
@@ -758,20 +738,32 @@ export function MessagesPageClient({
                           <h4 className="font-medium text-gray-900 text-sm">
                             Svar ({message.reply_count})
                           </h4>
-                          {/* Show "Load more" button for large threads that aren't fully loaded */}
-                          {replyInfo[message.id] && 
-                           replyInfo[message.id].showing_recent && 
-                           !showingAllReplies[message.id] && 
-                           message.reply_count > 15 && (
+                          <div className="flex items-center gap-2">
+                            {/* Reply button - prominently placed in expanded view */}
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() => loadReplies(message.id, true)}
-                              className="text-blue-600 hover:text-blue-700 text-xs h-auto p-1"
+                              onClick={() => toggleReplyForm(message.id)}
+                              className="h-7 px-3 text-xs text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
                             >
-                              Visa alla {replyInfo[message.id].total_count} svar
+                              <Reply className="h-3 w-3 mr-1" />
+                              {showReplyForm === message.id ? 'Avbryt svar' : 'Svara på detta'}
                             </Button>
-                          )}
+                            {/* Show "Load more" button for large threads that aren't fully loaded */}
+                            {replyInfo[message.id] && 
+                             replyInfo[message.id].showing_recent && 
+                             !showingAllReplies[message.id] && 
+                             message.reply_count > 15 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => loadReplies(message.id, true)}
+                                className="text-blue-600 hover:text-blue-700 text-xs h-auto p-1"
+                              >
+                                Visa alla {replyInfo[message.id].total_count} svar
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         
                         {loadingReplies[message.id] ? (
