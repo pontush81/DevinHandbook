@@ -5,7 +5,7 @@ import { getNavigationContext, getDefaultBackLink } from '@/lib/navigation-utils
 
 interface MessagesPageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; topic?: string; redirect_after_login?: string }>;
 }
 
 export default async function MessagesPage({ params, searchParams }: MessagesPageProps) {
@@ -21,10 +21,13 @@ export default async function MessagesPage({ params, searchParams }: MessagesPag
     notFound();
   }
 
-  // Get navigation context
+  // Get navigation context and extract topic parameter
   const urlSearchParams = new URLSearchParams(searchParamsResolved);
   const navigationContext = getNavigationContext(urlSearchParams, slug);
   const defaultBackLink = getDefaultBackLink(slug, handbookData.title);
+  
+  // Extract topic ID for direct linking
+  const topicId = searchParamsResolved.topic || null;
 
   console.log('✅ [MessagesPage] Handbook loaded:', {
     id: handbookData.id,
@@ -47,6 +50,7 @@ export default async function MessagesPage({ params, searchParams }: MessagesPag
       theme={handbookData.theme}
       navigationContext={navigationContext}
       defaultBackLink={defaultBackLink}
+      initialTopicId={topicId}
     />
   );
 } 

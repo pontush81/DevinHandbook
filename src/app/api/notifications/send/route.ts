@@ -215,7 +215,9 @@ export async function POST(request: NextRequest) {
       ? `Nytt meddelande: ${title || topic.title}`
       : `Nytt svar på: ${topic.title}`;
 
-    const messageUrl = `https://${handbook.slug}.${process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/meddelanden`;
+    // Create direct link to the specific topic with redirect handling
+    const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000';
+    const messageUrl = `https://${handbook.slug}.${baseUrl}/meddelanden?topic=${topic_id}&redirect_after_login=true`;
     const fromEmail = `${handbook.title} <noreply@${process.env.RESEND_DOMAIN || 'yourdomain.com'}>`;
     
     // Common reply-to address for better email management

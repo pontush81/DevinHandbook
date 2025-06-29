@@ -65,6 +65,7 @@ interface MessagesPageClientProps {
   };
   navigationContext: NavigationContext | null;
   defaultBackLink: NavigationContext;
+  initialTopicId?: string | null;
 }
 
 export function MessagesPageClient({ 
@@ -73,7 +74,8 @@ export function MessagesPageClient({
   handbookSlug,
   theme,
   navigationContext,
-  defaultBackLink
+  defaultBackLink,
+  initialTopicId
 }: MessagesPageClientProps) {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
@@ -180,6 +182,35 @@ export function MessagesPageClient({
   useEffect(() => {
     loadMessagesAndCategories();
   }, [handbookId, user?.id, hasAccess]);
+
+  // Handle initial topic expansion when coming from email link
+  useEffect(() => {
+    if (initialTopicId && messages.length > 0 && !loading) {
+      const topicExists = messages.some(message => message.id === initialTopicId);
+      if (topicExists) {
+        console.log('🎯 [MessagesPageClient] Auto-expanding topic from email link:', initialTopicId);
+        setExpandedMessage(initialTopicId);
+        loadReplies(initialTopicId);
+        
+        // Scroll to the topic after a brief delay to ensure DOM is updated
+        setTimeout(() => {
+          const element = document.getElementById(`message-${initialTopicId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 500);
+      }
+    }
+  }, [initialTopicId, messages, loading]);
+
+  // Save current URL for redirect after login when user is not authenticated
+  useEffect(() => {
+    if (!authLoading && !user && typeof window !== 'undefined' && initialTopicId) {
+      const currentUrl = window.location.href;
+      console.log('💾 [MessagesPageClient] Saving URL for post-login redirect:', currentUrl);
+      sessionStorage.setItem('redirect_after_login', currentUrl);
+    }
+  }, [authLoading, user, initialTopicId]);
 
   async function loadMessagesAndCategories() {
     if (!handbookId || !user?.id || !hasAccess) {
@@ -630,7 +661,7 @@ export function MessagesPageClient({
             </Card>
           ) : (
             messages.map((message) => (
-              <Card key={message.id} className="hover:shadow-md transition-shadow card" data-ui="card">
+              <Card key={message.id} id={`message-${message.id}`} className="hover:shadow-md transition-shadow card" data-ui="card">
                 <CardContent className="p-3 sm:p-4 card-content" data-ui="card-content">
                   {/* Header with title and actions */}
                   <div className="flex items-start justify-between mb-3">

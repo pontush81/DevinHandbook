@@ -361,12 +361,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false); // Viktigt: Sätt isLoading till false när användaren är inloggad
-        // console.log('🏁 AuthContext: Set isLoading to false after INITIAL_SESSION');
-        // console.log('🏁 AuthContext: Current state after update:', {
-        //   hasSession: !!session,
-        //   hasUser: !!user,
-        //   isLoading: false
-        // });
+        
+        // Hantera redirect efter inloggning för e-postlänkar
+        if (event === 'SIGNED_IN' && typeof window !== 'undefined') {
+          const redirectUrl = sessionStorage.getItem('redirect_after_login');
+          if (redirectUrl) {
+            console.log('🔄 [AuthContext] Redirecting to saved URL after login:', redirectUrl);
+            sessionStorage.removeItem('redirect_after_login');
+            // Vänta lite för att säkerställa att auth state är uppdaterat
+            setTimeout(() => {
+              window.location.href = redirectUrl;
+            }, 100);
+          }
+        }
         
         // Säkerställ att användarprofilen finns
         if (session?.user?.id && session?.user?.email) {
