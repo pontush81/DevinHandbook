@@ -901,18 +901,18 @@ export function MessagesPageClient({
 
       {/* New Message Dialog */}
       <Dialog open={showNewMessageForm} onOpenChange={setShowNewMessageForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden bg-white shadow-2xl border border-gray-200 rounded-lg z-50 mx-4 dialog-content flex flex-col" style={{backgroundColor: 'white'}}>
-          <DialogHeader className="space-y-3 pb-4 border-b border-gray-100 flex-shrink-0">
-            <DialogTitle className="text-xl font-semibold text-gray-900">
+        <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden bg-white shadow-2xl border border-gray-200 rounded-lg z-50 mx-2 sm:mx-4 dialog-content flex flex-col" style={{backgroundColor: 'white'}}>
+          <DialogHeader className="space-y-2 sm:space-y-3 pb-3 sm:pb-4 border-b border-gray-100 flex-shrink-0">
+            <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900">
               Skapa nytt meddelande
             </DialogTitle>
-            <DialogDescription className="text-gray-600">
+            <DialogDescription className="text-sm sm:text-base text-gray-600">
               Skriv ditt meddelande nedan. Det kommer att synas för alla som har tillgång till handboken.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="overflow-y-auto flex-1 px-1 min-h-0">
-            <div className="space-y-6 py-4">
+          <div className="overflow-y-auto flex-1 px-0 sm:px-1 min-h-0">
+            <div className="space-y-4 sm:space-y-6 py-3 sm:py-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Kategori
@@ -924,7 +924,7 @@ export function MessagesPageClient({
                     setFormData(prev => ({ ...prev, category_id: value }));
                   }}
                 >
-                  <SelectTrigger className="w-full bg-white border-gray-300" style={{backgroundColor: 'white'}}>
+                  <SelectTrigger className="w-full h-10 sm:h-9 bg-white border-gray-300 text-sm sm:text-base" style={{backgroundColor: 'white'}}>
                     <SelectValue placeholder="Välj kategori" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border border-gray-200 shadow-lg z-[60]" style={{backgroundColor: 'white'}}>
@@ -932,7 +932,7 @@ export function MessagesPageClient({
                       <SelectItem value="" disabled>Inga kategorier tillgängliga</SelectItem>
                     ) : (
                       categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id} className="hover:bg-gray-50">
+                        <SelectItem key={category.id} value={category.id} className="hover:bg-gray-50 text-sm sm:text-base">
                           {category.name}
                         </SelectItem>
                       ))
@@ -960,7 +960,7 @@ export function MessagesPageClient({
                   value={formData.author_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, author_name: e.target.value }))}
                   placeholder="Ange ditt namn"
-                  className="w-full bg-white border-gray-300"
+                  className="w-full h-10 sm:h-9 bg-white border-gray-300 text-sm sm:text-base"
                   style={{backgroundColor: 'white'}}
                 />
               </div>
@@ -974,7 +974,7 @@ export function MessagesPageClient({
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Vad handlar ditt meddelande om?"
-                  className="w-full bg-white border-gray-300"
+                  className="w-full h-10 sm:h-9 bg-white border-gray-300 text-sm sm:text-base"
                   style={{backgroundColor: 'white'}}
                 />
               </div>
@@ -988,20 +988,20 @@ export function MessagesPageClient({
                   onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Skriv ditt meddelande här..."
                   rows={6}
-                  className="w-full resize-none bg-white border-gray-300"
+                  className="w-full resize-none bg-white border-gray-300 text-sm sm:text-base"
                   style={{backgroundColor: 'white'}}
                 />
               </div>
             </div>
           </div>
 
-          <DialogFooter className="pt-4 border-t border-gray-100 mt-0 flex-shrink-0">
+          <DialogFooter className="pt-3 sm:pt-4 border-t border-gray-100 mt-0 flex-shrink-0">
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 space-y-2 sm:space-y-0 space-y-reverse w-full">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowNewMessageForm(false)}
-                className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
+                className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto h-10 sm:h-9 text-sm font-medium"
                 style={{backgroundColor: 'white'}}
               >
                 Avbryt
@@ -1010,7 +1010,7 @@ export function MessagesPageClient({
                 type="button"
                 onClick={handleSubmitMessage}
                 disabled={!formData.title || !formData.content || !formData.author_name || !formData.category_id || submitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300 disabled:cursor-not-allowed w-full sm:w-auto"
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300 disabled:cursor-not-allowed w-full sm:w-auto h-10 sm:h-9 text-sm font-medium"
               >
                 {submitting ? 'Skickar...' : 'Skicka meddelande'}
               </Button>
