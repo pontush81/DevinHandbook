@@ -489,7 +489,7 @@ export const EditorJSComponent: React.FC<EditorJSComponentProps> = ({
                       formData.append('handbook_id', handbookId);
                     }
                     
-                    // Get current session for authorization header
+                    // Get current user for authorization header
                     let authHeaders: Record<string, string> = {};
                     try {
                       const { supabase } = await import('@/lib/supabase');

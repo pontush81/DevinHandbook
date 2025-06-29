@@ -26,11 +26,19 @@ export async function getStandardSession(request?: NextRequest) {
       }
     );
 
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const { data: { user }, error } = await supabase.auth.getUser();
     
-    if (!error && session?.user) {
+    if (!error && user) {
       console.log('✅ [StandardAuth] Cookie authentication successful');
-      return session;
+      // Create session-like object for compatibility
+      return {
+        user,
+        access_token: 'authenticated-user',
+        token_type: 'authenticated',
+        expires_at: Date.now() + 3600000,
+        expires_in: 3600,
+        refresh_token: null
+      };
     }
     
     console.log('⚠️ [StandardAuth] Cookie authentication failed, trying alternatives...');

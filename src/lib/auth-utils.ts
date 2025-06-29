@@ -111,20 +111,27 @@ export async function getServerSession() {
     }
   );
 
-  console.log('📡 [getServerSession] Calling supabase.auth.getSession()...');
+  console.log('📡 [getServerSession] Calling supabase.auth.getUser()...');
   
-  // Hämta session
-  const { data: { session }, error } = await supabase.auth.getSession();
+  // Hämta autentiserad användare (säkrare än getSession)
+  const { data: { user }, error } = await supabase.auth.getUser();
   
   if (error) {
-    console.error('❌ [getServerSession] Method 3: Session error:', error);
+    console.error('❌ [getServerSession] Method 3: User auth error:', error);
     console.log('🔍 [getServerSession] All methods failed, returning null');
     return null;
   }
 
-  if (session) {
-    console.log('✅ [getServerSession] Method 3: SSR client found session');
-    return session;
+  if (user) {
+    console.log('✅ [getServerSession] Method 3: SSR client found authenticated user');
+    return {
+      user,
+      access_token: 'authenticated-user',
+      token_type: 'authenticated',
+      expires_at: Date.now() + 3600000,
+      expires_in: 3600,
+      refresh_token: null
+    };
   }
 
   console.log('❌ [getServerSession] All authentication methods failed');

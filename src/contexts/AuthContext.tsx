@@ -239,21 +239,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('📡 [AuthContext] Getting current session from Supabase...');
         
         try {
-          const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+          // Use getUser() for security instead of getSession()
+          const { data: { user }, error } = await supabase.auth.getUser();
           
-          console.log('📡 [AuthContext] getSession() result:', {
-            hasSession: !!currentSession,
-            hasUser: !!currentSession?.user,
-            userId: currentSession?.user?.id || 'none',
+          console.log('📡 [AuthContext] getUser() result:', {
+            hasUser: !!user,
+            userId: user?.id || 'none',
             error: error?.message || 'none'
           });
           
+          // If we have a user, get the session for compatibility
+          let currentSession = null;
+          if (user && !error) {
+            const { data: { session } } = await supabase.auth.getSession();
+            currentSession = session;
+          }
+          
           if (error) {
-            console.error('❌ [AuthContext] Error getting session:', error);
+            console.error('❌ [AuthContext] Error getting user:', error);
             
             // Om det är en auth error, rensa korrupt session data
             if (error.message?.includes('Invalid') || error.message?.includes('expired') || error.message?.includes('jwt')) {
-              console.log('🧹 [AuthContext] Clearing corrupted session data...');
+              console.log('🧹 [AuthContext] Clearing corrupted auth data...');
               try {
                 await supabase.auth.signOut();
               } catch (cleanupError) {
@@ -264,9 +271,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(null);
             setUser(null);
             console.log('❌ [AuthContext] Set user and session to null due to error');
-          } else if (currentSession) {
-            console.log('✅ [AuthContext] Found active session', {
-              userId: currentSession.user?.id,
+          } else if (user && currentSession) {
+            console.log('✅ [AuthContext] Found authenticated user with session', {
+              userId: user.id,
               expiresAt: currentSession.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'unknown'
             });
             
@@ -298,26 +305,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(null);
               }
             } else {
-              console.log('✅ [AuthContext] Session is valid, setting user state');
+              console.log('✅ [AuthContext] User and session are valid, setting state');
               setSession(currentSession);
-              setUser(currentSession.user);
+              setUser(user);
               console.log('✅ [AuthContext] User and session state updated');
               
               // Säkerställ att användarprofilen finns
-              if (currentSession.user.id && currentSession.user.email) {
-                createUserProfileIfNeeded(currentSession.user.id, currentSession.user.email).catch(err => {
+              if (user.id && user.email) {
+                createUserProfileIfNeeded(user.id, user.email).catch(err => {
                   console.warn('[AuthContext] Profile creation warning:', err);
                 });
               }
             }
           } else {
-            console.log('ℹ️ [AuthContext] No active session found');
+            console.log('ℹ️ [AuthContext] No authenticated user found');
             setSession(null);
             setUser(null);
-            console.log('ℹ️ [AuthContext] Set user and session to null (no session)');
+            console.log('ℹ️ [AuthContext] Set user and session to null (no user)');
           }
-        } catch (sessionError) {
-          console.error('❌ [AuthContext] Exception during getSession:', sessionError);
+        } catch (userError) {
+          console.error('❌ [AuthContext] Exception during getUser:', userError);
           setSession(null);
           setUser(null);
         }
@@ -542,8 +549,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 Försöker återställa autentisering...');
       setIsLoading(true);
       
-      // 1. Försök hämta session
-      const { data: { session }, error } = await supabase.auth.getSession();
+      // 1. Försök hämta autentiserad användare (säkrare än getSession)
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      // Om vi har en användare, hämta session för kompatibilitet
+      let session = null;
+      if (user && !error) {
+        const { data: { session: userSession } } = await supabase.auth.getSession();
+        session = userSession;
+      }
       
       if (error) {
         console.error('Fel vid hämtning av session:', error);
@@ -552,14 +566,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof document !== 'undefined' && document.cookie.includes('sb-auth')) {
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession();
+          const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser();
           
-          if (!retryError && retrySession) {
+          if (!retryError && retryUser) {
+            const { data: { session: retrySession } } = await supabase.auth.getSession();
             setSession(retrySession);
-            setUser(retrySession.user);
+            setUser(retryUser);
             
-            if (retrySession.user.id && retrySession.user.email) {
-              await createUserProfileIfNeeded(retrySession.user.id, retrySession.user.email);
+            if (retryUser.id && retryUser.email) {
+              await createUserProfileIfNeeded(retryUser.id, retryUser.email);
             }
             
             return {
@@ -618,10 +633,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // 5. Session är giltig, uppdatera state
       setSession(session);
-      setUser(session.user);
+      setUser(user);
       
-      if (session.user.id && session.user.email) {
-        await createUserProfileIfNeeded(session.user.id, session.user.email);
+      if (user.id && user.email) {
+        await createUserProfileIfNeeded(user.id, user.email);
       }
       
       return {
