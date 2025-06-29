@@ -204,7 +204,7 @@ export async function isHandbookEditor(userId: string, handbookId: string): Prom
 }
 
 /**
- * Kontrollerar om en användare har åtkomst till en viss handbok (admin, editor eller viewer)
+ * Kontrollerar om en användare har åtkomst till en viss handbok (admin, editor, viewer eller publik)
  */
 export async function hasHandbookAccess(userId: string, handbookId: string): Promise<boolean> {
   if (!userId || !handbookId) return false;
@@ -212,19 +212,32 @@ export async function hasHandbookAccess(userId: string, handbookId: string): Pro
   try {
     const supabase = getServiceSupabase();
     
-    const { data, error } = await supabase
+    // First check if user is a member
+    const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('id')
       .eq('handbook_id', handbookId)
       .eq('user_id', userId)
       .maybeSingle();
       
-    if (error) {
-      console.error('Fel vid kontroll av handbok åtkomst:', error);
-      return false;
+    if (!memberError && memberData) {
+      // User is a member - grant access
+      return true;
     }
     
-    return !!data;
+    // If not a member, check if handbook is published/public
+    const { data: handbookData, error: handbookError } = await supabase
+      .from('handbooks')
+      .select('published')
+      .eq('id', handbookId)
+      .single();
+      
+    if (!handbookError && handbookData?.published) {
+      // Handbook is published - grant access to logged-in users
+      return true;
+    }
+    
+    return false;
   } catch (error) {
     console.error('Oväntat fel vid kontroll av handbok åtkomst:', error);
     return false;

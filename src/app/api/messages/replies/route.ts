@@ -320,14 +320,33 @@ export async function GET(request: NextRequest) {
     }
 
     // Check user access to the handbook
+    // First check if user is a member
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('id')
       .eq('handbook_id', topic.handbook_id)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (memberError || !memberData) {
+    let hasAccess = false;
+    if (!memberError && memberData) {
+      // User is a member - grant access
+      hasAccess = true;
+    } else {
+      // If not a member, check if handbook is published/public
+      const { data: handbookData, error: handbookError } = await supabase
+        .from('handbooks')
+        .select('published')
+        .eq('id', topic.handbook_id)
+        .single();
+        
+      if (!handbookError && handbookData?.published) {
+        // Handbook is published - grant access to logged-in users
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
       return NextResponse.json(
         { error: 'Du har inte behörighet att läsa detta meddelande' },
         { status: 403 }
@@ -461,14 +480,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Check user access to the handbook
+    // First check if user is a member
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('id')
       .eq('handbook_id', topic.handbook_id)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (memberError || !memberData) {
+    let hasAccess = false;
+    if (!memberError && memberData) {
+      // User is a member - grant access
+      hasAccess = true;
+    } else {
+      // If not a member, check if handbook is published/public
+      const { data: handbookData, error: handbookError } = await supabase
+        .from('handbooks')
+        .select('published')
+        .eq('id', topic.handbook_id)
+        .single();
+        
+      if (!handbookError && handbookData?.published) {
+        // Handbook is published - grant access to logged-in users
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
       return NextResponse.json(
         { error: 'Du har inte behörighet att svara på detta meddelande' },
         { status: 403 }

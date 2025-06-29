@@ -127,18 +127,43 @@ export function MessagesPageClient({
       try {
         console.log('Checking user access for handbook:', handbookId);
         
-        // Client-side access check using direct Supabase query
-        const { data: memberData, error } = await supabase
+        // First check if user is a member of the handbook
+        const { data: memberData, error: memberError } = await supabase
           .from('handbook_members')
           .select('id, role')
           .eq('handbook_id', handbookId)
           .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!memberError && memberData) {
+          // User is a member - grant access
+          console.log('User access granted via membership:', memberData.role);
+          setHasAccess(true);
+          setUserRole(memberData.role);
+          setAccessLoading(false);
+          return;
+        }
+
+        // If not a member, check if handbook is published/public
+        const { data: handbookData, error: handbookError } = await supabase
+          .from('handbooks')
+          .select('published')
+          .eq('id', handbookId)
           .single();
 
-        const userHasAccess = !error && !!memberData;
-        console.log('User access result:', userHasAccess);
-        setHasAccess(userHasAccess);
-        setUserRole(memberData?.role || null);
+        if (!handbookError && handbookData?.published) {
+          // Handbook is published - grant access to logged-in users
+          console.log('User access granted via published handbook');
+          setHasAccess(true);
+          setUserRole('viewer'); // Default role for public access
+          setAccessLoading(false);
+          return;
+        }
+
+        // No access
+        console.log('User access denied - not a member and handbook not public');
+        setHasAccess(false);
+        setUserRole(null);
       } catch (error) {
         console.error('Error checking handbook access:', error);
         setHasAccess(false);
@@ -521,10 +546,10 @@ export function MessagesPageClient({
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">
             <Lock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Åtkomst nekad</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Åtkomst krävs</h1>
             <p className="text-gray-600 mb-6">
-              Du har inte behörighet att komma åt meddelandena för denna handbok. 
-              Kontakta en administratör för att få tillgång.
+              För att komma åt meddelandena behöver du antingen vara medlem i handboken 
+              eller så måste handboken vara publicerad. Kontakta administratören för att få tillgång.
             </p>
             <div className="flex gap-3 justify-center">
               <Link href="/dashboard">
