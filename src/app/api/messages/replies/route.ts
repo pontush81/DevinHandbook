@@ -656,26 +656,23 @@ export async function POST(request: NextRequest) {
       // Don't fail the whole operation for this
     }
 
-    // 6. Send notification asynchronously (don't block the response)
-    // Use setTimeout instead of setImmediate for better stability
-    console.log('🔔 [Replies POST] About to schedule notification for reply:', reply.id);
-    setTimeout(async () => {
-      console.log('🔔 [Replies POST] Notification timeout fired, calling sendNotificationDirect...');
-      try {
-        await sendNotificationDirect('new_reply', {
-          type: 'new_reply',
-          handbook_id: topic.handbook_id,
-          topic_id: topic_id,
-          post_id: reply.id,
-          author_id: userId, // Pass author_id directly to avoid database lookup
-          author_name: author_name.trim(),
-          content_preview: content.trim()
-        });
-        console.log('✅ [Replies POST] Notification completed successfully');
-      } catch (error) {
-        console.error('❌ [Replies POST] Notification failed but reply was created successfully:', error);
-      }
-    }, 1000); // 1 second delay to ensure database consistency
+    // 6. Send notification immediately (database consistency is ensured by sequential operations above)
+    console.log('🔔 [Replies POST] About to send notification for reply:', reply.id);
+    try {
+      await sendNotificationDirect('new_reply', {
+        type: 'new_reply',
+        handbook_id: topic.handbook_id,
+        topic_id: topic_id,
+        post_id: reply.id,
+        author_id: userId, // Pass author_id directly to avoid database lookup
+        author_name: author_name.trim(),
+        content_preview: content.trim()
+      });
+      console.log('✅ [Replies POST] Notification completed successfully');
+    } catch (error) {
+      console.error('❌ [Replies POST] Notification failed but reply was created successfully:', error);
+      // Don't fail the whole request for notification errors
+    }
 
     return NextResponse.json({
       success: true,
