@@ -758,16 +758,6 @@ export function MessagesPageClient({
                             Svar ({message.reply_count})
                           </h4>
                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            {/* Reply button - prominently placed in expanded view */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleReplyForm(message.id)}
-                              className="h-9 sm:h-8 px-4 text-sm sm:text-xs text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-                            >
-                              <Reply className="h-4 w-4 sm:h-3 sm:w-3 mr-2 sm:mr-1" />
-                              {showReplyForm === message.id ? 'Avbryt svar' : 'Svara på detta'}
-                            </Button>
                             {/* Show "Load more" button for large threads that aren't fully loaded */}
                             {replyInfo[message.id] && 
                              replyInfo[message.id].showing_recent && 
@@ -837,6 +827,19 @@ export function MessagesPageClient({
                             Inga svar än. Bli första att svara!
                           </div>
                         )}
+                        
+                        {/* Reply button - placed after all replies */}
+                        <div className="pt-3 border-t border-gray-100">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleReplyForm(message.id)}
+                            className="h-9 sm:h-8 px-4 text-sm sm:text-xs text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                          >
+                            <Reply className="h-4 w-4 sm:h-3 sm:w-3 mr-2 sm:mr-1" />
+                            {showReplyForm === message.id ? 'Avbryt svar' : 'Svara på detta'}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
