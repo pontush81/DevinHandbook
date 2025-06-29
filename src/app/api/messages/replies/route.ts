@@ -10,7 +10,13 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any) {
   try {
-    console.log('[Replies] Processing notification directly:', { type, handbook_id: data.handbook_id, topic_id: data.topic_id });
+    console.log('🔔 [sendNotificationDirect] START - Processing notification:', { 
+      type, 
+      handbook_id: data.handbook_id, 
+      topic_id: data.topic_id,
+      post_id: data.post_id,
+      author_id: data.author_id 
+    });
 
     const supabase = getServiceSupabase();
     const { handbook_id, topic_id, post_id, author_id, author_name, content_preview } = data;
@@ -185,10 +191,17 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
         console.log('[Replies] Trying fallback method...');
         
         // Fallback: Use development email for testing
+        console.log('🔔 [sendNotificationDirect] NODE_ENV check:', { 
+          NODE_ENV: process.env.NODE_ENV, 
+          isNotProduction: process.env.NODE_ENV !== 'production' 
+        });
+        
         if (process.env.NODE_ENV !== 'production') {
-          console.log('[Replies] Development mode: Using test email for all participants');
+          console.log('🔔 [sendNotificationDirect] Development mode: Using test email for all participants');
+          console.log('🔔 [sendNotificationDirect] Participants before mapping:', Array.from(uniqueParticipants));
           Array.from(uniqueParticipants).forEach(userId => {
             userEmailMap.set(userId, 'pontus.hberg@gmail.com');
+            console.log('🔔 [sendNotificationDirect] Mapped user', userId, 'to pontus.hberg@gmail.com');
           });
         } else {
           // Production fallback: try to get emails from forum_posts.author_email where available
@@ -243,10 +256,11 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
         }));
     }
 
-    console.log('[Replies] Processing', notificationRecipients.length, 'recipients');
-    console.log('[Replies] Recipients details:', notificationRecipients.map(r => ({ 
+    console.log('🔔 [sendNotificationDirect] Processing', notificationRecipients.length, 'recipients');
+    console.log('🔔 [sendNotificationDirect] Recipients details:', notificationRecipients.map(r => ({ 
       email: r.email, 
-      shouldSendEmail: r.shouldSendEmail 
+      shouldSendEmail: r.shouldSendEmail,
+      userId: r.userId
     })));
 
     // Create in-app notifications first
@@ -270,7 +284,8 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
     // Send emails to those who want them
     const emailRecipients = notificationRecipients.filter(r => r.shouldSendEmail);
     
-    console.log('[Replies] Email recipients:', emailRecipients.length);
+    console.log('📧 [sendNotificationDirect] Email recipients:', emailRecipients.length);
+    console.log('📧 [sendNotificationDirect] Email recipients list:', emailRecipients.map(r => r.email));
     
     if (emailRecipients.length > 0) {
       const subject = `Nytt svar på: ${topic.title}`;
@@ -283,7 +298,12 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
 
       for (const recipient of emailRecipients) {
         try {
-          console.log('[Replies] Sending email to:', recipient.email);
+          console.log('📧 [sendNotificationDirect] Sending email to:', recipient.email);
+          console.log('📧 [sendNotificationDirect] Email details:', { 
+            from: fromEmail, 
+            subject: subject,
+            messageUrl: messageUrl 
+          });
           
           const emailResult = await resend.emails.send({
             from: fromEmail,
@@ -308,7 +328,15 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
             `
           });
           
-          console.log('[Replies] Email sent successfully:', emailResult?.data?.id || 'no-id');
+          console.log('✅ [sendNotificationDirect] Email sent successfully:', {
+            emailId: emailResult?.data?.id || 'no-id',
+            recipient: recipient.email,
+            hasError: !!emailResult?.error
+          });
+          
+          if (emailResult?.error) {
+            console.error('❌ [sendNotificationDirect] Resend API error:', emailResult.error);
+          }
           
           // Mark as email sent
           await supabase
@@ -328,12 +356,18 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
       }
     }
 
-    console.log('[Replies] Notification processing complete');
+    console.log('🏁 [sendNotificationDirect] Notification processing complete successfully');
   } catch (error) {
-    console.error('[Replies] Error in notification processing:', {
+    console.error('❌ [sendNotificationDirect] FATAL ERROR in notification processing:', {
       error: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3) : undefined,
-      data: { handbook_id: data?.handbook_id, topic_id: data?.topic_id, type }
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5) : undefined,
+      data: { 
+        handbook_id: data?.handbook_id, 
+        topic_id: data?.topic_id, 
+        post_id: data?.post_id,
+        author_id: data?.author_id,
+        type 
+      }
     });
     
     // Don't let notification errors crash anything
@@ -624,7 +658,9 @@ export async function POST(request: NextRequest) {
 
     // 6. Send notification asynchronously (don't block the response)
     // Use setTimeout instead of setImmediate for better stability
+    console.log('🔔 [Replies POST] About to schedule notification for reply:', reply.id);
     setTimeout(async () => {
+      console.log('🔔 [Replies POST] Notification timeout fired, calling sendNotificationDirect...');
       try {
         await sendNotificationDirect('new_reply', {
           type: 'new_reply',
@@ -635,8 +671,9 @@ export async function POST(request: NextRequest) {
           author_name: author_name.trim(),
           content_preview: content.trim()
         });
+        console.log('✅ [Replies POST] Notification completed successfully');
       } catch (error) {
-        console.error('[Replies] Notification failed but reply was created successfully:', error);
+        console.error('❌ [Replies POST] Notification failed but reply was created successfully:', error);
       }
     }, 1000); // 1 second delay to ensure database consistency
 
