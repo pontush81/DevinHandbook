@@ -668,7 +668,7 @@ export function MessagesPageClient({
                     {message.content}
                   </p>
                   
-                  {/* Metadata row */}
+                  {/* Metadata and Actions row */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 text-xs text-gray-500">
                       <div className="flex items-center space-x-1">
@@ -681,14 +681,45 @@ export function MessagesPageClient({
                         <span>{message.author_name}</span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3 text-xs text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <MessageCircle className="h-3 w-3" />
-                        <span>{message.reply_count}</span>
+                    <div className="flex items-center space-x-3">
+                      {/* Reply count and time */}
+                      <div className="flex items-center space-x-3 text-xs text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <MessageCircle className="h-3 w-3" />
+                          <span>{message.reply_count}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{new Date(message.created_at).toLocaleDateString('sv-SE')}</span>
+                        </div>
                       </div>
+                      
+                      {/* Action buttons */}
                       <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{new Date(message.created_at).toLocaleDateString('sv-SE')}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            toggleReplyForm(message.id);
+                            if (expandedMessage !== message.id) {
+                              toggleMessageExpanded(message.id);
+                            }
+                          }}
+                          className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Reply className="h-3 w-3 mr-1" />
+                          Svara
+                        </Button>
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => toggleMessageExpanded(message.id)}
+                          className="h-7 px-2 text-xs text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                        >
+                          <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${expandedMessage === message.id ? 'rotate-180' : ''}`} />
+                          {expandedMessage === message.id ? 'Dölj' : 'Visa'}
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -823,8 +854,8 @@ export function MessagesPageClient({
 
       {/* New Message Dialog */}
       <Dialog open={showNewMessageForm} onOpenChange={setShowNewMessageForm}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden !bg-white shadow-2xl border border-gray-200 rounded-lg z-50 mx-4 dialog-content">
-          <DialogHeader className="space-y-3 pb-4 border-b border-gray-100">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden bg-white shadow-2xl border border-gray-200 rounded-lg z-50 mx-4 dialog-content flex flex-col" style={{backgroundColor: 'white'}}>
+          <DialogHeader className="space-y-3 pb-4 border-b border-gray-100 flex-shrink-0">
             <DialogTitle className="text-xl font-semibold text-gray-900">
               Skapa nytt meddelande
             </DialogTitle>
@@ -833,7 +864,7 @@ export function MessagesPageClient({
             </DialogDescription>
           </DialogHeader>
           
-          <div className="overflow-y-auto max-h-[calc(85vh-180px)] px-1">
+          <div className="overflow-y-auto flex-1 px-1 min-h-0">
             <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
@@ -846,10 +877,10 @@ export function MessagesPageClient({
                     setFormData(prev => ({ ...prev, category_id: value }));
                   }}
                 >
-                  <SelectTrigger className="w-full !bg-white border-gray-300">
+                  <SelectTrigger className="w-full bg-white border-gray-300" style={{backgroundColor: 'white'}}>
                     <SelectValue placeholder="Välj kategori" />
                   </SelectTrigger>
-                  <SelectContent className="!bg-white border border-gray-200 shadow-lg z-[60]">
+                  <SelectContent className="bg-white border border-gray-200 shadow-lg z-[60]" style={{backgroundColor: 'white'}}>
                     {categories.length === 0 ? (
                       <SelectItem value="" disabled>Inga kategorier tillgängliga</SelectItem>
                     ) : (
@@ -882,7 +913,8 @@ export function MessagesPageClient({
                   value={formData.author_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, author_name: e.target.value }))}
                   placeholder="Ange ditt namn"
-                  className="w-full !bg-white border-gray-300"
+                  className="w-full bg-white border-gray-300"
+                  style={{backgroundColor: 'white'}}
                 />
               </div>
 
@@ -895,7 +927,8 @@ export function MessagesPageClient({
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Vad handlar ditt meddelande om?"
-                  className="w-full !bg-white border-gray-300"
+                  className="w-full bg-white border-gray-300"
+                  style={{backgroundColor: 'white'}}
                 />
               </div>
 
@@ -908,19 +941,21 @@ export function MessagesPageClient({
                   onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Skriv ditt meddelande här..."
                   rows={6}
-                  className="w-full resize-none !bg-white border-gray-300"
+                  className="w-full resize-none bg-white border-gray-300"
+                  style={{backgroundColor: 'white'}}
                 />
               </div>
             </div>
           </div>
 
-          <DialogFooter className="pt-4 border-t border-gray-100 mt-0">
+          <DialogFooter className="pt-4 border-t border-gray-100 mt-0 flex-shrink-0">
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 space-y-2 sm:space-y-0 space-y-reverse w-full">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowNewMessageForm(false)}
-                className="!bg-white border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
+                className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
+                style={{backgroundColor: 'white'}}
               >
                 Avbryt
               </Button>

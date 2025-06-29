@@ -398,7 +398,7 @@ export default function SettingsPageClient({
                 <div className="min-w-0 flex-1">
                   <h4 className="font-medium text-gray-900 text-sm sm:text-base">E-post</h4>
                   <p className="text-xs sm:text-sm text-gray-600">
-                    Få meddelanden via e-post
+                    Få aviseringar via e-post
                   </p>
                 </div>
               </div>
