@@ -94,10 +94,10 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
         return;
       }
 
-      // Get all unique participants in this topic with their emails
+      // Get all unique participants in this topic
       const { data: participants, error: participantsError } = await supabase
         .from('forum_posts')
-        .select('author_id, author_email')
+        .select('author_id')
         .eq('topic_id', topic_id);
 
       if (participantsError) {
@@ -105,19 +105,65 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
         return;
       }
 
-      // Create a map of user_id to email from participants
-      const userEmailMap = new Map();
+      // Create set of unique participants - ALWAYS include the topic author
       const uniqueParticipants = new Set([topic.author_id]);
       
+      // Add all other participants who have replied
       participants?.forEach(p => {
-        if (p.author_email) {
-          userEmailMap.set(p.author_id, p.author_email);
-          uniqueParticipants.add(p.author_id);
-        }
+        uniqueParticipants.add(p.author_id);
       });
 
-      // Remove the current reply author
+      // Remove the current reply author (they don't need notification of their own reply)
       uniqueParticipants.delete(replyData.author_id);
+
+      console.log('[Replies] Participants to notify:', Array.from(uniqueParticipants));
+
+      // Get email addresses for all participants from auth.users via RPC
+      const { data: userEmails, error: emailError } = await supabase
+        .rpc('get_user_emails_by_ids', { user_ids: Array.from(uniqueParticipants) });
+
+      let userEmailMap = new Map();
+
+      if (emailError) {
+        console.error('[Replies] Failed to get user emails via RPC:', emailError);
+        console.log('[Replies] Trying fallback method...');
+        
+        // Fallback: try to get emails from forum_posts.author_email where available
+        const { data: fallbackEmails } = await supabase
+          .from('forum_posts')
+          .select('author_id, author_email')
+          .eq('topic_id', topic_id)
+          .not('author_email', 'is', null);
+
+        // Also try to get the topic author's email
+        const { data: topicData } = await supabase
+          .from('forum_topics')
+          .select('author_id, author_email')
+          .eq('id', topic_id)
+          .single();
+
+        // Build email map from fallback data
+        if (topicData?.author_email) {
+          userEmailMap.set(topicData.author_id, topicData.author_email);
+        }
+        
+        fallbackEmails?.forEach((post: any) => {
+          if (post.author_email) {
+            userEmailMap.set(post.author_id, post.author_email);
+          }
+        });
+
+        console.log('[Replies] Fallback method found', userEmailMap.size, 'email addresses');
+      } else {
+        console.log('[Replies] User emails found via RPC:', userEmails?.length || 0);
+        
+        // Create email map from RPC results
+        userEmails?.forEach((user: any) => {
+          if (user.email) {
+            userEmailMap.set(user.id, user.email);
+          }
+        });
+      }
 
       notificationRecipients = enrichedMembers
         .filter(member => 
@@ -134,6 +180,10 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
     }
 
     console.log('[Replies] Processing', notificationRecipients.length, 'recipients');
+    console.log('[Replies] Recipients details:', notificationRecipients.map(r => ({ 
+      email: r.email, 
+      shouldSendEmail: r.shouldSendEmail 
+    })));
 
     // Create in-app notifications first
     for (const recipient of notificationRecipients.filter(r => r.shouldCreateAppNotification)) {
@@ -156,14 +206,22 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
     // Send emails to those who want them
     const emailRecipients = notificationRecipients.filter(r => r.shouldSendEmail);
     
+    console.log('[Replies] Email recipients:', emailRecipients.length);
+    
     if (emailRecipients.length > 0) {
       const subject = `Nytt svar på: ${topic.title}`;
       const messageUrl = `https://${handbook.slug}.${process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/meddelanden`;
       const fromEmail = `${handbook.title} <noreply@${process.env.RESEND_DOMAIN || 'yourdomain.com'}>`;
 
+      console.log('[Replies] Sending emails from:', fromEmail);
+      console.log('[Replies] Message URL:', messageUrl);
+      console.log('[Replies] Subject:', subject);
+
       for (const recipient of emailRecipients) {
         try {
-          await resend.emails.send({
+          console.log('[Replies] Sending email to:', recipient.email);
+          
+          const emailResult = await resend.emails.send({
             from: fromEmail,
             to: recipient.email,
             subject: subject,
@@ -185,6 +243,8 @@ async function sendNotificationDirect(type: 'new_topic' | 'new_reply', data: any
               </div>
             `
           });
+          
+          console.log('[Replies] Email sent successfully:', emailResult?.data?.id || 'no-id');
           
           // Mark as email sent
           await supabase
