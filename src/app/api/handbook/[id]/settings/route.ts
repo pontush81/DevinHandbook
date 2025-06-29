@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserRole } from '@/lib/auth-utils';
 import { getServiceSupabase } from '@/lib/supabase';
+import { createDefaultForumCategories } from '@/lib/handbook-service';
 
 export async function PUT(
   request: NextRequest,
@@ -30,6 +31,19 @@ export async function PUT(
 
     const supabase = getServiceSupabase();
 
+    // If enabling forum, check if categories exist and create them if not
+    if (forum_enabled) {
+      const { data: existingCategories } = await supabase
+        .from('forum_categories')
+        .select('id')
+        .eq('handbook_id', id);
+
+      if (!existingCategories || existingCategories.length === 0) {
+        console.log('Creating default forum categories for handbook:', id);
+        await createDefaultForumCategories(id);
+      }
+    }
+
     // Update handbook settings
     const { data: updatedHandbook, error: updateError } = await supabase
       .from('handbooks')
@@ -51,7 +65,10 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      handbook: updatedHandbook
+      handbook: updatedHandbook,
+      message: forum_enabled 
+        ? 'Forum aktiverat och kategorier skapade'
+        : 'Forum inaktiverat'
     });
 
   } catch (error) {

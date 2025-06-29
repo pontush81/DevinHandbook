@@ -755,19 +755,43 @@ async function createDefaultSections(handbookId: string) {
 }
 
 // Helper function to create default forum categories
-async function createDefaultForumCategories(handbookId: string) {
+export async function createDefaultForumCategories(handbookId: string) {
   const defaultCategories = [
     {
       name: 'Allmänt',
-      description: 'Allmänna diskussioner',
-      color: '#3498db',
+      description: 'Allmänna diskussioner och frågor',
+      icon: 'MessageCircle',
       order_index: 1
     },
     {
-      name: 'Meddelanden',
-      description: 'Viktiga meddelanden från styrelsen',
-      color: '#e74c3c',
+      name: 'Tekniska frågor',
+      description: 'Fel, reparationer och underhåll',
+      icon: 'Settings',
       order_index: 2
+    },
+    {
+      name: 'Gemensamma utrymmen', 
+      description: 'Tvättstuga, förråd, trapphus',
+      icon: 'Home',
+      order_index: 3
+    },
+    {
+      name: 'Styrelseärenden',
+      description: 'Frågor och information från styrelsen',
+      icon: 'Users',
+      order_index: 4
+    },
+    {
+      name: 'Grannsämja',
+      description: 'Boenderelaterade frågor och tips',
+      icon: 'Heart',
+      order_index: 5
+    },
+    {
+      name: 'Förslag',
+      description: 'Förbättringsförslag och idéer',
+      icon: 'Lightbulb',
+      order_index: 6
     }
   ];
 
@@ -776,7 +800,8 @@ async function createDefaultForumCategories(handbookId: string) {
       .from('forum_categories')
       .insert({
         ...category,
-        handbook_id: handbookId
+        handbook_id: handbookId,
+        is_active: true
       });
   }
 }

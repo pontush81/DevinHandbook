@@ -542,6 +542,7 @@ export const getAdminClient = () => {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
+          detectSessionInUrl: false
         },
       }
     );

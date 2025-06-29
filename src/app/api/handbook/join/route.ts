@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
-import { getSessionFromRequestOrCookies } from '@/lib/auth-utils';
+import { getServiceSupabase, getAdminClient } from '@/lib/supabase';
+import { getHybridAuth } from '@/lib/standard-auth';
 
 // POST - Join a handbook using a join code
 export async function POST(request: NextRequest) {
@@ -9,88 +9,32 @@ export async function POST(request: NextRequest) {
     console.log('🚀 [Join API] === JOIN REQUEST STARTED ===');
     console.log('🔍 [Join API] Timestamp:', new Date().toISOString());
     console.log('🔍 [Join API] Request URL:', request.url);
-    console.log('🔍 [Join API] Headers present:', {
-      contentType: request.headers.get('content-type'),
-      authorization: !!request.headers.get('authorization'),
-      cookie: !!request.headers.get('cookie'),
-      userAgent: request.headers.get('user-agent')?.slice(0, 50) + '...'
-    });
     
     const body = await request.json();
     console.log('📋 [Join API] Request body:', body);
     
-    const { joinCode, role = 'viewer', userId } = body;
+    const { joinCode, role = 'viewer' } = body;
     
-    // Development mode: Allow direct userId parameter
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    let currentUserId: string;
+    // Use standardized hybrid authentication
+    console.log('🔐 [Join API] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
     
-    if (isDevelopment && userId) {
-      console.log('🔧 [Join API] Development mode: Using provided userId:', userId);
-      currentUserId = userId;
-    } else {
-      console.log('🔐 [Join API] Production mode: Getting user from session...');
-      
-      // Normal mode: Get user from session with enhanced error handling
-      let session;
-      
-      try {
-        session = await getSessionFromRequestOrCookies(request);
-        console.log('📋 [Join API] Session result:', {
-          hasSession: !!session,
-          hasUser: !!session?.user,
-          userId: session?.user?.id || 'none',
-          authMethod: session?.token_type || 'unknown'
-        });
-      } catch (authError) {
-        console.error('💥 [Join API] Authentication error:', authError);
-        
-        // Check if it's a specific Bearer token error
-        if (authError.message?.includes('missing sub claim') || 
-            authError.message?.includes('bad_jwt') ||
-            authError.message?.includes('invalid claim')) {
-          console.log('🔄 [Join API] Bearer token corrupted, attempting cookie fallback...');
-          
-          // Try cookie-only authentication as fallback
-          try {
-            const { getServerSession } = require('@/lib/auth-utils');
-            session = await getServerSession();
-            console.log('📋 [Join API] Cookie fallback result:', {
-              hasSession: !!session,
-              hasUser: !!session?.user,
-              userId: session?.user?.id || 'none'
-            });
-          } catch (cookieError) {
-            console.error('💥 [Join API] Cookie fallback also failed:', cookieError);
-            session = null;
-          }
-        } else {
-          session = null;
-        }
-      }
-      
-      if (!session?.user) {
-        console.log('❌ [Join API] No valid session found after all attempts');
-        return NextResponse.json(
-          { 
-            success: false, 
-            message: "Du måste vara inloggad för att gå med i en handbok",
-            debug: {
-              authenticationFailed: true,
-              suggestions: [
-                "Försök logga ut och logga in igen",
-                "Rensa cookies och localStorage",
-                "Kontakta support om problemet kvarstår"
-              ]
-            }
-          },
-          { status: 401 }
-        );
-      }
-      
-      currentUserId = session.user.id;
-      console.log('✅ [Join API] Successfully authenticated user:', currentUserId);
+    if (!authResult.userId) {
+      console.log('❌ [Join API] Authentication failed - no userId found');
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: "Du måste vara inloggad för att gå med i en handbok",
+        },
+        { status: 401 }
+      );
     }
+    
+    const currentUserId = authResult.userId;
+    console.log('✅ [Join API] Successfully authenticated user:', {
+      userId: currentUserId,
+      method: authResult.authMethod
+    });
     
     if (!joinCode) {
       return NextResponse.json(
@@ -107,6 +51,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use admin client for auth operations and service client for database operations
+    const adminClient = getAdminClient();
     const supabase = getServiceSupabase();
     
     // 🔧 NEW: Ensure user profile exists before attempting join
@@ -129,7 +75,7 @@ export async function POST(request: NextRequest) {
         console.log('⚠️ [Join API] Profile missing for user, creating one...');
         
         // Get user email from auth for profile creation
-        const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(currentUserId);
+        const { data: authUser, error: authError } = await adminClient.auth.admin.getUserById(currentUserId);
         const userEmail = authUser?.user?.email || 'unknown@example.com';
         
         if (authError) {

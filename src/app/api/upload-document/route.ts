@@ -1,21 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession, isHandbookAdmin } from '@/lib/auth-utils';
+import { getHybridAuth, isHandbookAdmin } from '@/lib/standard-auth';
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Check authentication
-    const session = await getServerSession();
-    if (!session?.user) {
+    // 1. Check authentication with hybrid auth
+    console.log('🔐 [Upload Document] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
+    
+    if (!authResult.userId) {
+      console.log('❌ [Upload Document] Authentication failed - no userId found');
       return NextResponse.json(
         { success: 0, message: 'Authentication required' },
         { status: 401 }
       );
     }
 
+    console.log('✅ [Upload Document] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const handbookId = formData.get('handbook_id') as string;
+    
+    console.log('📝 [Upload Document] Processing upload:', {
+      hasFile: !!file,
+      fileName: file?.name || 'none',
+      fileSize: file?.size || 0,
+      fileType: file?.type || 'unknown',
+      handbookId: handbookId || 'missing'
+    });
     
     if (!file) {
       return NextResponse.json(
@@ -33,20 +49,27 @@ export async function POST(request: NextRequest) {
 
     // Validate handbook_id format (basic security check)
     if (!/^[a-zA-Z0-9-_]+$/.test(handbookId)) {
+      console.log('❌ [Upload Document] Invalid handbook_id format:', handbookId);
       return NextResponse.json(
         { success: 0, message: 'Invalid handbook ID format' },
         { status: 400 }
       );
     }
 
+    console.log('🔍 [Upload Document] Checking admin privileges for handbook:', handbookId);
+
     // 2. Check if user is admin for this handbook
-    const isAdmin = await isHandbookAdmin(session.user.id, handbookId);
-    if (!isAdmin) {
+    const hasAdminAccess = await isHandbookAdmin(authResult.userId, handbookId);
+    
+    if (!hasAdminAccess) {
+      console.log('❌ [Upload Document] User lacks admin privileges');
       return NextResponse.json(
         { success: 0, message: 'Admin permissions required for file upload' },
         { status: 403 }
       );
     }
+
+    console.log('✅ [Upload Document] Admin privileges confirmed');
 
     // Validate file type - document types
     const validTypes = [
@@ -63,6 +86,7 @@ export async function POST(request: NextRequest) {
     ];
     
     if (!validTypes.includes(file.type)) {
+      console.log('❌ [Upload Document] Invalid file type:', file.type);
       return NextResponse.json(
         { 
           success: 0, 
@@ -75,6 +99,7 @@ export async function POST(request: NextRequest) {
     // Validate file size (max 10MB for documents)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
+      console.log('❌ [Upload Document] File too large:', file.size);
       return NextResponse.json(
         { success: 0, message: 'File too large. Maximum size is 10MB.' },
         { status: 400 }
@@ -86,6 +111,8 @@ export async function POST(request: NextRequest) {
     const fileExt = originalName.split('.').pop() || 'pdf';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = `${handbookId}/documents/${fileName}`;
+
+    console.log('📤 [Upload Document] Uploading to storage:', filePath);
 
     // Use service role client to bypass RLS policies
     const supabase = getServiceSupabase();
@@ -99,7 +126,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('Supabase upload error:', uploadError);
+      console.error('❌ [Upload Document] Supabase upload error:', uploadError);
       return NextResponse.json(
         { success: 0, message: 'Failed to upload document' },
         { status: 500 }
@@ -112,11 +139,14 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(filePath);
 
     if (!urlData?.publicUrl) {
+      console.error('❌ [Upload Document] Failed to get public URL');
       return NextResponse.json(
         { success: 0, message: 'Failed to get document URL' },
         { status: 500 }
       );
     }
+
+    console.log('✅ [Upload Document] Document uploaded successfully:', urlData.publicUrl);
 
     // Return EditorJS AttachesTool expected format
     return NextResponse.json({
@@ -130,7 +160,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Document upload error:', error);
+    console.error('❌ [Upload Document] Unexpected error:', error);
     return NextResponse.json(
       { success: 0, message: 'Internal server error' },
       { status: 500 }

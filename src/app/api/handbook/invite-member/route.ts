@@ -1,25 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession, isHandbookAdmin } from '@/lib/auth-utils';
+import { getServiceSupabase, getAdminClient } from '@/lib/supabase';
+import { getHybridAuth, isHandbookAdmin } from '@/lib/standard-auth';
 import { Resend } from 'resend';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Hämta och validera session eller userId från request body
-    const session = await getServerSession();
-    const { handbookId, email, role = 'viewer', userId: bodyUserId } = await request.json();
+    // 1. Hämta och validera session med hybrid authentication
+    console.log('🔐 [Invite Member] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
     
-    // Använd session userId om tillgänglig, annars fallback till request body
-    const userId = session?.user?.id || bodyUserId;
-    
-    if (!userId) {
+    if (!authResult.userId) {
+      console.log('❌ [Invite Member] Authentication failed - no userId found');
       return NextResponse.json(
         { success: false, message: "Ej autentiserad - ingen användar-ID tillgänglig" },
         { status: 401 }
       );
     }
+
+    console.log('✅ [Invite Member] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
+
+    // 2. Parse request data
+    const { handbookId, email, role = 'viewer' } = await request.json();
 
     // 2. Validera indata
     if (!handbookId || !email) {
@@ -29,22 +35,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('🔍 [Invite Member] Checking admin privileges for handbook:', handbookId);
+
     // 3. Kontrollera att användaren har admin-behörighet för handboken
-    const adminCheck = await isHandbookAdmin(userId, handbookId);
-    if (!adminCheck) {
+    const hasAdminAccess = await isHandbookAdmin(authResult.userId, handbookId);
+    
+    if (!hasAdminAccess) {
+      console.log('❌ [Invite Member] User lacks admin privileges');
       return NextResponse.json(
         { success: false, message: "Du har inte admin-behörighet för denna handbok" },
         { status: 403 }
       );
     }
 
+    console.log('✅ [Invite Member] Admin privileges confirmed');
+
+    // Use admin client for auth operations and service client for database operations
+    const adminClient = getAdminClient();
     const supabase = getServiceSupabase();
 
     // 4. Kontrollera om användaren redan finns i systemet
-    const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    console.log('🔍 [Invite Member] Checking if user exists in system...');
     
-    if (userError && userError.message !== 'User not found') {
-      console.error('[invite-member] Error checking existing user:', userError);
+    // Since getUserByEmail doesn't exist, we need to search through users
+    let existingUser = null;
+    let userError = null;
+    
+    try {
+      // Get all users and search for the email
+      // Note: This is not ideal for large user bases, but it's the only way with current Supabase admin API
+      const { data: usersData, error: searchError } = await adminClient.auth.admin.listUsers();
+      
+      if (searchError) {
+        userError = searchError;
+        console.error('❌ [Invite Member] Error listing users:', searchError);
+      } else if (usersData?.users) {
+        // Find user by email
+        const foundUser = usersData.users.find(user => user.email?.toLowerCase() === email.toLowerCase());
+        if (foundUser) {
+          existingUser = { user: foundUser };
+          console.log('✅ [Invite Member] User found in system:', foundUser.id);
+        } else {
+          console.log('ℹ️ [Invite Member] User not found in system');
+        }
+      }
+    } catch (searchError) {
+      console.error('❌ [Invite Member] Exception searching for user:', searchError);
+      userError = searchError;
+    }
+    
+    if (userError) {
+      console.error('❌ [Invite Member] Error checking existing user:', userError);
       return NextResponse.json(
         { success: false, message: "Kunde inte kontrollera användarstatus" },
         { status: 500 }
@@ -55,6 +96,7 @@ export async function POST(request: NextRequest) {
 
     // 5. Om användaren inte finns, skapa en invitation
     if (!existingUser || !existingUser.user) {
+      console.log('⚠️ [Invite Member] User not found, creating invitation...');
       // Skapa en invitation i databasen
       const { data: invitation, error: inviteError } = await supabase
         .from('handbook_invitations')
@@ -62,14 +104,14 @@ export async function POST(request: NextRequest) {
           handbook_id: handbookId,
           email: email.toLowerCase(),
           role,
-          invited_by: userId,
+          invited_by: authResult.userId,
           status: 'pending'
         })
         .select()
         .single();
 
       if (inviteError) {
-        console.error('[invite-member] Error creating invitation:', inviteError);
+        console.error('❌ [Invite Member] Error creating invitation:', inviteError);
         
         if (inviteError.code === '23505') { // Unique constraint violation
           return NextResponse.json(
@@ -85,19 +127,22 @@ export async function POST(request: NextRequest) {
       }
 
       // Försök skicka inbjudan via e-post
+      console.log('📧 [Invite Member] Sending email invitation...');
       try {
-        await supabase.auth.admin.inviteUserByEmail(email, {
+        await adminClient.auth.admin.inviteUserByEmail(email, {
           data: {
             handbook_id: handbookId,
             role,
             invitation_id: invitation.id
           }
         });
+        console.log('✅ [Invite Member] Email invitation sent successfully');
       } catch (emailError) {
-        console.error('[invite-member] Failed to send email invitation:', emailError);
+        console.error('⚠️ [Invite Member] Failed to send email invitation:', emailError);
         // Vi fortsätter även om e-post misslyckades
       }
 
+      console.log('✅ [Invite Member] Invitation created successfully');
       return NextResponse.json({
         success: true,
         message: "Inbjudan skickad",
@@ -106,6 +151,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Användaren finns redan - lägg till direkt som medlem
+    console.log('✅ [Invite Member] User exists, adding as member directly...');
     targetUserId = existingUser.user.id;
 
     // Kontrollera om användaren redan är medlem
@@ -117,7 +163,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (memberError) {
-      console.error('[invite-member] Error checking existing member:', memberError);
+      console.error('❌ [Invite Member] Error checking existing member:', memberError);
       return NextResponse.json(
         { success: false, message: "Kunde inte kontrollera medlemsstatus" },
         { status: 500 }
@@ -125,6 +171,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingMember) {
+      console.log('⚠️ [Invite Member] User is already a member');
       return NextResponse.json(
         { success: false, message: "Användaren är redan medlem i denna handbok" },
         { status: 400 }
@@ -141,13 +188,14 @@ export async function POST(request: NextRequest) {
       });
 
     if (addMemberError) {
-      console.error('[invite-member] Error adding member:', addMemberError);
+      console.error('❌ [Invite Member] Error adding member:', addMemberError);
       return NextResponse.json(
         { success: false, message: "Kunde inte lägga till medlem" },
         { status: 500 }
       );
     }
 
+    console.log('✅ [Invite Member] Member added successfully');
     return NextResponse.json({
       success: true,
       message: "Medlem tillagd",
@@ -155,7 +203,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error in POST /api/handbook/invite-member:', error);
+    console.error('❌ [Invite Member] Unexpected error:', error);
     return NextResponse.json(
       { success: false, message: "Internt serverfel" },
       { status: 500 }

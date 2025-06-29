@@ -1,66 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSession, isHandbookAdmin } from '@/lib/auth-utils';
+import { getHybridAuth, isHandbookAdmin } from '@/lib/standard-auth';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🖼️ [Upload Image] Request received');
     
-    // 1. Check authentication - try both cookies and Authorization header
-    let session = null;
-    let userId: string | null = null;
+    // 1. Check authentication with hybrid auth (handles cookies, Bearer tokens, and query params)
+    console.log('🔐 [Upload Image] Authenticating user with hybrid auth...');
+    const authResult = await getHybridAuth(request);
     
-    // Try cookie-based authentication first
-    session = await getServerSession();
-    console.log('🔐 [Upload Image] Cookie session check:', { 
-      hasSession: !!session, 
-      userId: session?.user?.id || 'no user' 
-    });
-    
-    // If no cookie session, try Authorization header
-    if (!session) {
-      console.log('🔑 [Upload Image] Trying Authorization header fallback...');
-      const authHeader = request.headers.get('authorization');
-      
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        console.log('📝 [Upload Image] Found Bearer token, verifying...');
-        
-        try {
-          // Create a Supabase client and verify the token
-          const { createClient } = await import('@supabase/supabase-js');
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-          );
-          
-          const { data: { user }, error } = await supabase.auth.getUser(token);
-          
-          if (error) {
-            console.error('❌ [Upload Image] Token verification failed:', error);
-          } else if (user) {
-            console.log('✅ [Upload Image] Token verified successfully for user:', user.id);
-            userId = user.id;
-            // Create a session-like object for compatibility
-            session = { user: { id: user.id, email: user.email } };
-          }
-        } catch (tokenError) {
-          console.error('❌ [Upload Image] Error verifying token:', tokenError);
-        }
-      } else {
-        console.log('📝 [Upload Image] No Authorization header found');
-      }
-    } else {
-      userId = session.user?.id || null;
-    }
-    
-    if (!session?.user || !userId) {
-      console.log('❌ [Upload Image] No valid authentication found');
+    if (!authResult.userId) {
+      console.log('❌ [Upload Image] Authentication failed - no userId found');
       return NextResponse.json(
         { success: 0, message: 'Authentication required' },
         { status: 401 }
       );
     }
+
+    console.log('✅ [Upload Image] Successfully authenticated user:', {
+      userId: authResult.userId,
+      method: authResult.authMethod
+    });
 
     const formData = await request.formData();
     const image = formData.get('image') as File;
@@ -71,7 +32,7 @@ export async function POST(request: NextRequest) {
       imageSize: image?.size || 0,
       imageType: image?.type || 'unknown',
       handbookId: handbookId || 'missing',
-      userId
+      userId: authResult.userId
     });
 
     if (!image) {
@@ -99,23 +60,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('🔍 [Upload Image] Checking admin privileges for handbook:', handbookId);
+
     // 2. Check if user is admin for this handbook
-    console.log('🔍 [Upload Image] Checking admin permissions...');
-    const isAdmin = await isHandbookAdmin(userId, handbookId);
+    const hasAdminAccess = await isHandbookAdmin(authResult.userId, handbookId);
     
-    if (!isAdmin) {
-      console.log('❌ [Upload Image] User is not admin for handbook');
+    if (!hasAdminAccess) {
+      console.log('❌ [Upload Image] User lacks admin privileges');
       return NextResponse.json(
         { success: 0, message: 'Admin access required for this handbook' },
         { status: 403 }
       );
     }
 
-    console.log('✅ [Upload Image] Admin check passed, proceeding with upload...');
+    console.log('✅ [Upload Image] Admin privileges confirmed, proceeding with upload...');
 
     // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(image.type)) {
+      console.log('❌ [Upload Image] Invalid file type:', image.type);
       return NextResponse.json(
         { success: 0, message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' },
         { status: 400 }
@@ -125,6 +88,7 @@ export async function POST(request: NextRequest) {
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (image.size > maxSize) {
+      console.log('❌ [Upload Image] File too large:', image.size);
       return NextResponse.json(
         { success: 0, message: 'File too large. Maximum size is 5MB.' },
         { status: 400 }
@@ -135,6 +99,8 @@ export async function POST(request: NextRequest) {
     const fileExt = image.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = `${handbookId}/images/${fileName}`;
+
+    console.log('📤 [Upload Image] Uploading to storage:', filePath);
 
     // Use service role client to bypass RLS policies
     const supabase = getServiceSupabase();
@@ -148,7 +114,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('Supabase upload error:', uploadError);
+      console.error('❌ [Upload Image] Supabase upload error:', uploadError);
       return NextResponse.json(
         { success: 0, message: 'Failed to upload image' },
         { status: 500 }
@@ -161,11 +127,14 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(filePath);
 
     if (!urlData?.publicUrl) {
+      console.error('❌ [Upload Image] Failed to get public URL');
       return NextResponse.json(
         { success: 0, message: 'Failed to get image URL' },
         { status: 500 }
       );
     }
+
+    console.log('✅ [Upload Image] Image uploaded successfully:', urlData.publicUrl);
 
     // Return EditorJS expected format
     return NextResponse.json({
@@ -180,7 +149,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Image upload error:', error);
+    console.error('❌ [Upload Image] Unexpected error:', error);
     return NextResponse.json(
       { success: 0, message: 'Internal server error' },
       { status: 500 }

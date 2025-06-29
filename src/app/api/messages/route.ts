@@ -1,38 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from '@/lib/auth';
+import { getHybridAuth, hasHandbookAccess, isHandbookAdmin, AUTH_RESPONSES } from '@/lib/standard-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { Database } from '@/types/supabase';
-
-// Local server session function
-async function getServerSession() {
-  const cookieStore = await cookies();
-  
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error('Error getting session:', error);
-      return null;
-    }
-    return session;
-  } catch (error) {
-    console.error('Error in getServerSession:', error);
-    return null;
-  }
-}
 
 async function sendNotification(type: 'new_topic' | 'new_reply', data: any) {
   try {
@@ -48,132 +16,139 @@ async function sendNotification(type: 'new_topic' | 'new_reply', data: any) {
     });
 
     // Anropa notifikations-API:et direkt utan webhook-autentisering
-    const notificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/notifications/send`;
+    const notificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications/send`;
+    console.log('[Messages] Calling notification URL:', notificationUrl);
     
     const response = await fetch(notificationUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authHeader
+        'Authorization': authHeader, // Service key för intern auth
+        'x-webhook-auth': process.env.WEBHOOK_SECRET || 'dev-secret'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        type,
+        data,
+        source: 'messages-api'
+      })
+    });
+
+    const result = await response.json();
+    console.log('[Messages] Notification response:', {
+      status: response.status,
+      ok: response.ok,
+      result
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to send notification:', errorText);
-    } else {
-      console.log('Notification sent successfully');
+      console.error('[Messages] Notification failed:', result);
     }
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('[Messages] Notification error:', error);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Check authentication
-    const session = await getServerSession();
-    if (!session?.user) {
+    console.log('🔍 [Messages API] Starting message creation...');
+    
+    // Use hybrid authentication (supports cookies, query params, Bearer tokens)
+    const { userId, session, authMethod } = await getHybridAuth(request);
+    
+    console.log('🔍 [Messages API] Auth result:', {
+      hasUserId: !!userId,
+      hasSession: !!session,
+      authMethod,
+      userId: userId || 'none'
+    });
+
+    if (!userId) {
+      console.log('❌ [Messages API] No valid authentication found');
       return NextResponse.json(
-        { error: 'Du måste vara inloggad för att skriva meddelanden' },
-        { status: 401 }
+        AUTH_RESPONSES.UNAUTHENTICATED,
+        { status: AUTH_RESPONSES.UNAUTHENTICATED.status }
       );
     }
 
     const body = await request.json();
-    const { title, content, author_name, category_id, handbook_id } = body;
+    const { title, content, category_id, handbook_id, author_name } = body;
 
-    // 2. Validate required fields
-    if (!title || !content || !author_name || !category_id || !handbook_id) {
+    console.log('🔍 [Messages API] Request data:', {
+      title: title?.substring(0, 50) + '...',
+      content: content?.substring(0, 100) + '...',
+      category_id,
+      handbook_id,
+      author_name,
+      user_id: userId
+    });
+
+    // Validation
+    if (!title || !content || !category_id || !handbook_id) {
       return NextResponse.json(
-        { error: 'Alla fält är obligatoriska' },
+        { error: 'Alla fält är obligatoriska (title, content, category_id, handbook_id)' },
         { status: 400 }
+      );
+    }
+
+    // Check handbook access
+    const hasAccess = await hasHandbookAccess(userId, handbook_id);
+    if (!hasAccess) {
+      console.log('❌ [Messages API] User lacks handbook access');
+      return NextResponse.json(
+        AUTH_RESPONSES.HANDBOOK_ACCESS_DENIED,
+        { status: AUTH_RESPONSES.HANDBOOK_ACCESS_DENIED.status }
       );
     }
 
     const supabase = getServiceSupabase();
 
-    // 3. Check user has access to the handbook
-    const { data: memberData, error: memberError } = await supabase
-      .from('handbook_members')
-      .select('id')
-      .eq('handbook_id', handbook_id)
-      .eq('user_id', session.user.id)
-      .single();
-
-    if (memberError || !memberData) {
-      return NextResponse.json(
-        { error: 'Du har inte behörighet att skriva meddelanden i denna handbok' },
-        { status: 403 }
-      );
-    }
-
-    // 4. Verify category belongs to the handbook
-    const { data: category, error: categoryError } = await supabase
-      .from('forum_categories')
-      .select('id')
-      .eq('id', category_id)
-      .eq('handbook_id', handbook_id)
-      .single();
-
-    if (categoryError || !category) {
-      return NextResponse.json(
-        { error: 'Ogiltig kategori' },
-        { status: 400 }
-      );
-    }
-
-    // 5. Create the topic
-    const { data: topic, error: topicError } = await supabase
+    // Create the topic
+    const { data: topicData, error: topicError } = await supabase
       .from('forum_topics')
       .insert({
-        handbook_id,
+        title,
+        content,
+        author_id: userId,
+        author_name: author_name || 'Anonym',
+        author_email: session?.user?.email || '',
         category_id,
-        title: title.trim(),
-        content: content.trim(),
-        author_id: session.user.id,
-        author_name: author_name.trim(),
-        author_email: session.user.email,
-        created_at: new Date().toISOString()
+        handbook_id,
+        reply_count: 0
       })
       .select()
       .single();
 
-    if (topicError) {
-      console.error('Error creating topic:', topicError);
+    if (topicError || !topicData) {
+      console.error('❌ [Messages API] Database error:', topicError);
       return NextResponse.json(
-        { error: 'Kunde inte skapa meddelandet' },
+        { error: 'Kunde inte skapa meddelandet. Försök igen.' },
         { status: 500 }
       );
     }
 
-    // 6. Send notification asynchronously (don't block the response)
-    setImmediate(() => {
-      sendNotification('new_topic', {
-        type: 'new_topic',
-        handbook_id,
-        topic_id: topic.id,
-        author_name: author_name.trim(),
-        content_preview: content.trim(),
-        title: title.trim()
-      });
+    console.log('✅ [Messages API] Topic created successfully:', topicData.id);
+
+    // Send notification asynchronously
+    sendNotification('new_topic', {
+      handbook_id,
+      topic_id: topicData.id,
+      author_name: author_name || 'Anonym',
+      title,
+      content_preview: content.substring(0, 200)
+    }).catch(error => {
+      console.error('[Messages API] Notification failed:', error);
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      topic: {
-        id: topic.id,
-        title: topic.title,
-        content: topic.content,
-        author_name: topic.author_name,
-        created_at: topic.created_at
-      }
+    return NextResponse.json({
+      success: true,
+      topic: topicData,
+      message: 'Meddelandet skapades framgångsrikt!'
     });
+
   } catch (error) {
-    console.error('Error in POST /api/messages:', error);
+    console.error('❌ [Messages API] Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Internt serverfel' },
+      { error: 'Ett oväntat fel inträffade. Försök igen.' },
       { status: 500 }
     );
   }
@@ -181,53 +156,47 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // 1. Check authentication
-    const session = await getServerSession();
-    if (!session?.user) {
+    console.log('🔍 [Messages API] Starting message deletion...');
+    
+    // Use hybrid authentication
+    const { userId, authMethod } = await getHybridAuth(request);
+
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Du måste vara inloggad för att radera meddelanden' },
-        { status: 401 }
+        AUTH_RESPONSES.UNAUTHENTICATED,
+        { status: AUTH_RESPONSES.UNAUTHENTICATED.status }
       );
     }
 
-    const url = new URL(request.url);
-    const messageId = url.searchParams.get('id');
+    const { searchParams } = new URL(request.url);
+    const messageId = searchParams.get('id');
 
     if (!messageId) {
       return NextResponse.json(
-        { error: 'Meddelande-ID är obligatoriskt' },
+        { error: 'Message ID är obligatorisk' },
         { status: 400 }
       );
     }
 
     const supabase = getServiceSupabase();
 
-    // 2. Get the message and check permissions
-    const { data: message, error: messageError } = await supabase
+    // Get the message to check ownership and handbook access
+    const { data: message, error: fetchError } = await supabase
       .from('forum_topics')
-      .select('id, author_id, handbook_id')
+      .select('author_id, handbook_id')
       .eq('id', messageId)
       .single();
 
-    if (messageError || !message) {
+    if (fetchError || !message) {
       return NextResponse.json(
         { error: 'Meddelandet hittades inte' },
         { status: 404 }
       );
     }
 
-    // 3. Check if user has permission to delete (author or admin)
-    const isAuthor = message.author_id === session.user.id;
-    
-    // Check if user is admin of the handbook
-    const { data: memberData, error: memberError } = await supabase
-      .from('handbook_members')
-      .select('role')
-      .eq('handbook_id', message.handbook_id)
-      .eq('user_id', session.user.id)
-      .single();
-
-    const isAdmin = memberData?.role === 'admin';
+    // Check if user is the author or has admin access to the handbook
+    const isAuthor = message.author_id === userId;
+    const isAdmin = !isAuthor && await isHandbookAdmin(userId, message.handbook_id);
 
     if (!isAuthor && !isAdmin) {
       return NextResponse.json(
@@ -236,42 +205,31 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 4. Delete all replies first (cascade)
-    const { error: repliesError } = await supabase
-      .from('forum_posts')
-      .delete()
-      .eq('topic_id', messageId);
-
-    if (repliesError) {
-      console.error('Error deleting replies:', repliesError);
-      return NextResponse.json(
-        { error: 'Kunde inte radera svaren' },
-        { status: 500 }
-      );
-    }
-
-    // 5. Delete the topic
-    const { error: topicError } = await supabase
+    // Delete the message (cascade will handle replies)
+    const { error: deleteError } = await supabase
       .from('forum_topics')
       .delete()
       .eq('id', messageId);
 
-    if (topicError) {
-      console.error('Error deleting topic:', topicError);
+    if (deleteError) {
+      console.error('❌ [Messages API] Delete error:', deleteError);
       return NextResponse.json(
-        { error: 'Kunde inte radera meddelandet' },
+        { error: 'Kunde inte radera meddelandet. Försök igen.' },
         { status: 500 }
       );
     }
 
+    console.log('✅ [Messages API] Message deleted successfully');
+
     return NextResponse.json({
       success: true,
-      message: 'Meddelandet har raderats'
+      message: 'Meddelandet raderades framgångsrikt!'
     });
+
   } catch (error) {
-    console.error('Error in DELETE /api/messages:', error);
+    console.error('❌ [Messages API] Delete error:', error);
     return NextResponse.json(
-      { error: 'Internt serverfel' },
+      { error: 'Ett oväntat fel inträffade. Försök igen.' },
       { status: 500 }
     );
   }
