@@ -187,9 +187,9 @@ export function ModernSidebar({
   const categorizedSections = groupSectionsByCategory(sections);
 
   return (
-    <Sidebar variant="sidebar" collapsible="offcanvas" className="mt-16 border-r border-gray-200">
-      <SidebarContent className="bg-gray-50/50">
-        <div className="flex-1 overflow-auto py-4">
+    <Sidebar variant="sidebar" collapsible="offcanvas" className="mt-16 border-r border-gray-200 h-[calc(100vh-4rem)]">
+      <SidebarContent className="bg-gray-50/50 h-full">
+        <div className="flex-1 overflow-y-auto py-4 h-full">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -225,10 +225,10 @@ export function ModernSidebar({
                     <SidebarMenuButton asChild>
                       <Link 
                         href={`/${handbookSlug}/meddelanden`}
-                        className={`group hover:bg-orange-50 hover:border-orange-200 transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50`}
+                        className="group hover:bg-orange-50 hover:border-orange-200 transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50 text-gray-900"
                       >
                         <MessageCircle 
-                          className={`h-4 w-4 text-orange-600 group-hover:scale-110 transition-transform duration-200`} 
+                          className="h-4 w-4 text-orange-600 group-hover:scale-110 transition-transform duration-200" 
                         />
                         <div className="flex-1 min-w-0">
                           <span className="font-medium text-gray-900 truncate block">
