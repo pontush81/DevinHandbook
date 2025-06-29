@@ -23,8 +23,7 @@ async function sendNotification(type: 'new_topic' | 'new_reply', data: any) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authHeader, // Service key för intern auth
-        'x-webhook-auth': process.env.WEBHOOK_SECRET || 'dev-secret'
+        'Authorization': `Bearer ${process.env.SUPABASE_WEBHOOK_SECRET || 'dev-secret'}`
       },
       body: JSON.stringify({
         type,
