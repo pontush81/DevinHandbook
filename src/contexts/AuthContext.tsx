@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { showToast } from '@/components/ui/use-toast';
 import { safeLocalStorage } from '@/lib/safe-storage';
+import { clearUserCache } from '@/lib/api-helpers';
 
 type AuthContextType = {
   user: User | null;
@@ -392,6 +393,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (event === 'SIGNED_OUT') {
         console.log('🚪 [AuthContext] User signed out');
+        // Clear API cache when user signs out
+        clearUserCache();
         setSession(null);
         setUser(null);
         setIsLoading(false); // Viktigt: Sätt isLoading till false även när utloggad
@@ -496,12 +499,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('🚪 AuthContext: Starting logout process...');
     
     try {
-      // 1. Rensa state först
+      // 1. Clear API cache before clearing state
+      clearUserCache(user?.id);
+      
+      // 2. Rensa state först
       setSession(null);
       setUser(null);
       setIsLoading(true);
 
-      // 2. Logga ut från Supabase (låter Supabase hantera cookie-rensning)
+      // 3. Logga ut från Supabase (låter Supabase hantera cookie-rensning)
       await supabase.auth.signOut();
       
       console.log('✅ AuthContext: Logout completed successfully');
@@ -512,7 +518,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
     
-    // 3. Omdirigera till login direkt
+    // 4. Omdirigera till login direkt
     router.push("/login?logged_out=true");
   };
 

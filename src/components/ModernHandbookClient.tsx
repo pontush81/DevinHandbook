@@ -14,7 +14,7 @@ import { MainFooter } from '@/components/layout/MainFooter';
 import { MembersManager } from '@/components/handbook/MembersManager';
 import { TrialStatusBar } from '@/components/trial/TrialStatusBar';
 import { BlockedAccountScreen } from '@/components/trial/BlockedAccountScreen';
-import { getHandbookTrialStatus } from '@/lib/trial-service';
+import { getCachedTrialStatus, getCachedOwnership } from '@/lib/api-helpers';
 import { HandbookDebugInfo } from '@/components/debug/HandbookDebugInfo';
 
 interface ModernHandbookClientProps {
@@ -468,25 +468,15 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           return;
         }
 
-        // Check if user is owner
+        // Check if user is owner using cached API
         console.log('🔍 [ModernHandbookClient] Checking handbook ownership...');
         
-        const { data: handbookData, error: handbookError } = await supabase
-          .from('handbooks')
-          .select('owner_id')
-          .eq('id', initialData.id)
-          .single();
+        const ownershipData = await getCachedOwnership(initialData.id, user.id);
+        const isOwner = ownershipData.isOwner;
 
-        console.log('🔍 [ModernHandbookClient] Ownership check result:', { handbookData, handbookError });
-
-        if (handbookError) {
-          console.error('❌ [ModernHandbookClient] Error checking handbook owner:', handbookError);
-          return;
-        }
-
-        const isOwner = handbookData.owner_id === user.id;
+        console.log('🔍 [ModernHandbookClient] Ownership check result:', { isOwner });
         console.log('🔍 [ModernHandbookClient] Calculating permissions:', {
-          ownerId: handbookData.owner_id,
+          ownerId: ownershipData.ownerId,
           userId: user.id,
           membershipRole: handbookMembership?.role || 'none',
           isOwner
@@ -582,7 +572,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
         let trialStatus;
         try {
-          trialStatus = await getHandbookTrialStatus(user.id, initialData.id);
+          trialStatus = await getCachedTrialStatus(initialData.id, user.id);
         } catch (trialError) {
           console.warn('Could not fetch trial status (user may not have access):', trialError);
           // Set safe fallback for non-privileged users

@@ -24,21 +24,22 @@ export function DashboardNav() {
         return;
       }
       
+      // Undvik dubbelkontroll för samma användare
+      if (lastUserId === user.id) {
+        return;
+      }
+      
       // Kontrollera om det är en ny användare
       if (lastUserId && lastUserId !== user.id) {
         // Ny användare - rensa cache
         clearAdminStatusCache();
       }
       
-      // Undvik dubbelkontroll för samma användare
-      if (lastUserId === user.id) {
-        return;
-      }
-      
+      // Sätt lastUserId INNAN vi gör API-anropet för att undvika race conditions
       setLastUserId(user.id);
       
       try {
-        const isAdmin = await checkIsSuperAdminClient();
+        const isAdmin = await checkIsSuperAdminClient(user.id);
         setIsSuperAdmin(isAdmin);
       } catch (error) {
         console.error("Fel vid kontroll av admin-status:", error);
@@ -47,7 +48,7 @@ export function DashboardNav() {
     };
 
     checkAdminStatus();
-  }, [user?.id, lastUserId]); // Ändrat dependency till user.id istället för hela user objektet
+  }, [user?.id]); // Tog bort lastUserId från dependency array för att undvika loops
 
   const handleSignOut = async () => {
     // Rensa admin-cache vid utloggning

@@ -76,7 +76,7 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
 
         try {
           // Använd den nya säkra funktionen för att kontrollera superadmin-status
-          const isSuperAdminResult = await checkIsSuperAdminClient();
+          const isSuperAdminResult = await checkIsSuperAdminClient(user.id);
 
           if (isSuperAdminResult) {
             setIsSuperAdmin(true);

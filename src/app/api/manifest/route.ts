@@ -95,28 +95,28 @@ export async function GET(request: NextRequest) {
         handbookData.title.substring(0, 12) : 
         handbookData.title,
       "description": `${handbookData.title} - Din digitala handbok, alltid tillgänglig offline`,
-      "start_url": `/${slug}`,
+      "start_url": `/${slug}/`,
       "scope": `/${slug}/`,
-      "shortcuts": [
+              "shortcuts": [
         {
           "name": "Visa handbok",
           "short_name": "Handbok",
           "description": `Öppna ${handbookData.title}`,
-          "url": `/${slug}`,
+          "url": `/${slug}/`,
           "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
         },
         ...(handbookData.forum_enabled ? [{
           "name": "Meddelanden",
           "short_name": "Meddelanden",
           "description": "Öppna forum och meddelanden",
-          "url": `/${slug}/meddelanden`,
+          "url": `/${slug}/meddelanden/`,
           "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
         }] : []),
         {
           "name": "Medlemmar",
           "short_name": "Medlemmar",
           "description": "Hantera medlemmar",
-          "url": `/${slug}/members`,
+          "url": `/${slug}/members/`,
           "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
         }
       ]

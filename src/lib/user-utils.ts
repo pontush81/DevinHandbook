@@ -212,27 +212,30 @@ const CACHE_DURATION = 30000; // 30 sekunder cache
  * Denna funktion använder vår säkra endpoint istället för direkta databasanrop
  * Inkluderar cachning för att undvika spam-requests
  */
-export async function checkIsSuperAdminClient(): Promise<boolean> {
+export async function checkIsSuperAdminClient(userId?: string): Promise<boolean> {
   try {
     if (typeof window === 'undefined') {
       // På server-sidan, använd den gamla funktionen
       return false;
     }
 
-    // Försök hämta user ID för cache-kontroll från befintlig client
-    let currentUserId = null;
-    try {
-      const { getSupabaseClient } = await import('@/lib/supabase-client');
-      const supabase = getSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      currentUserId = user?.id || null;
-    } catch {
-      // Ignorera cache om vi inte kan hämta user ID
+    // Använd passad userId eller försök hämta från session som fallback
+    let currentUserId = userId;
+    if (!currentUserId) {
+      try {
+        const { getSupabaseClient } = await import('@/lib/supabase-client');
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        currentUserId = user?.id || null;
+      } catch {
+        // Ingen user ID - kan inte använda cache
+        currentUserId = null;
+      }
     }
 
-    // Kontrollera cache först
+    // Kontrollera cache först om vi har user ID
     const now = Date.now();
-    if (adminStatusCache && 
+    if (currentUserId && adminStatusCache && 
         adminStatusCache.userId === currentUserId && 
         (now - adminStatusCache.timestamp) < CACHE_DURATION) {
       return adminStatusCache.isAdmin;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getHandbookTrialStatus } from '@/lib/trial-service';
+import { getCachedTrialStatus, getCachedOwnership } from '@/lib/api-helpers';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,9 +54,8 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
 
     const fetchDebugData = async () => {
       try {
-        // Check ownership
-        const ownershipResponse = await fetch(`/api/handbook/${handbookId}/ownership?userId=${user.id}`);
-        const ownershipData = await ownershipResponse.json();
+        // Check ownership using cached API
+        const ownershipData = await getCachedOwnership(handbookId, user.id);
         setOwnershipStatus(ownershipData.isOwner);
 
         // Initialize trial status data
@@ -69,9 +68,9 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
           hasUsedTrial: false
         };
 
-        // Get trial status with error handling
+        // Get trial status with error handling using cached API
         try {
-          trialStatusData = await getHandbookTrialStatus(user.id, handbookId);
+          trialStatusData = await getCachedTrialStatus(handbookId, user.id);
           setTrialStatus(trialStatusData);
         } catch (trialError) {
           console.warn('Could not fetch trial status (user may not have access):', trialError);

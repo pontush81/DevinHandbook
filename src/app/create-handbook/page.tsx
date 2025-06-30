@@ -74,7 +74,7 @@ function CreateHandbookContent() {
       const checkSuperadmin = async () => {
         console.log('🎯 [CreateHandbook] Checking superadmin status for user:', user.id);
         try {
-          const isSuperAdmin = await checkIsSuperAdminClient();
+          const isSuperAdmin = await checkIsSuperAdminClient(user.id);
           console.log('🎯 [CreateHandbook] Superadmin check result:', isSuperAdmin);
           setIsSuperadmin(isSuperAdmin);
         } catch (error) {

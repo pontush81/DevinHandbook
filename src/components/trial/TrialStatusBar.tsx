@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Clock, AlertTriangle, CreditCard, Gift, X, Shield } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getCachedTrialStatus, getCachedOwnership } from '@/lib/api-helpers';
 
 interface TrialStatus {
   isInTrial: boolean;
@@ -63,7 +63,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Check if user is superadmin
+  // Check if user is superadmin using cached admin check
   useEffect(() => {
     async function checkSuperAdminStatus() {
       if (!userId) {
@@ -72,21 +72,11 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
       }
 
       try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('is_superadmin')
-          .eq('id', userId)
-          .single();
-
-        if (error) {
-          console.error('TrialStatusBar: Error checking superadmin status:', error);
-          setIsSuperAdmin(false);
-          return;
-        }
-
-        setIsSuperAdmin(profile?.is_superadmin || false);
+        const { checkIsSuperAdminClient } = await import('@/lib/user-utils');
+        const isAdmin = await checkIsSuperAdminClient(userId);
+        setIsSuperAdmin(isAdmin);
       } catch (error) {
-        console.error('TrialStatusBar: Exception checking superadmin status:', error);
+        console.error('TrialStatusBar: Error checking superadmin status:', error);
         setIsSuperAdmin(false);
       }
     }
@@ -94,7 +84,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     checkSuperAdminStatus();
   }, [userId]);
 
-  // Check if user owns this handbook
+  // Check if user owns this handbook using cached ownership
   useEffect(() => {
     async function checkHandbookOwnership() {
       if (!userId || !handbookId) {
@@ -103,22 +93,10 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
       }
 
       try {
-        const { data: handbookData, error } = await supabase
-          .from('handbooks')
-          .select('owner_id')
-          .eq('id', handbookId)
-          .single();
-
-        if (error) {
-          console.error('TrialStatusBar: Error checking handbook ownership:', error);
-          setIsHandbookOwner(false);
-          return;
-        }
-
-        const isOwner = handbookData.owner_id === userId;
-        setIsHandbookOwner(isOwner);
+        const ownershipData = await getCachedOwnership(handbookId, userId);
+        setIsHandbookOwner(ownershipData.isOwner);
       } catch (error) {
-        console.error('TrialStatusBar: Exception checking ownership:', error);
+        console.error('TrialStatusBar: Error checking handbook ownership:', error);
         setIsHandbookOwner(false);
       }
     }
@@ -126,7 +104,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     checkHandbookOwnership();
   }, [userId, handbookId]);
 
-  // Fetch trial status function
+  // Fetch trial status function using cached API
   const fetchTrialStatus = async () => {
     if (!userId || isHandbookOwner === false) {
       console.log('🚫 TrialStatusBar: Early return - no userId or not owner:', { userId, isHandbookOwner });
@@ -142,22 +120,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     try {
       setIsLoading(true);
       
-      // Force cache refresh by adding timestamp
-      const url = `/api/handbook/${handbookId}/trial-status?userId=${userId}&t=${Date.now()}`;
-      
-      const response = await fetch(url, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch trial status');
-      }
-      
-      const status = await response.json();
-      console.log('🎯 TrialStatusBar received status:', status);
+      const status = await getCachedTrialStatus(handbookId, userId);
       setTrialStatus(status);
     } catch (err) {
       console.error('TrialStatusBar: Error fetching trial status:', err);
@@ -178,9 +141,9 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
   useEffect(() => {
     fetchTrialStatus();
     
-    // Only set up interval if user owns the handbook
+    // Only set up interval if user owns the handbook - longer interval since we have caching
     if (isHandbookOwner === true) {
-      const interval = setInterval(fetchTrialStatus, 5 * 60 * 1000);
+      const interval = setInterval(fetchTrialStatus, 15 * 60 * 1000); // 15 minutes instead of 5
       return () => clearInterval(interval);
     }
   }, [userId, isHandbookOwner, handbookId, refreshTrigger]);

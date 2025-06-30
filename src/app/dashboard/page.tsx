@@ -64,7 +64,7 @@ export default function DashboardPage() {
     const fetchSuperadmin = async () => {
       if (!user?.id || !user?.email) return;
       try {
-        const isSuperAdmin = await checkIsSuperAdminClient();
+        const isSuperAdmin = await checkIsSuperAdminClient(user.id);
         setIsSuperadmin(isSuperAdmin);
       } catch (error) {
         console.error("Error checking superadmin status:", error);

@@ -5,11 +5,11 @@ import { Metadata } from 'next';
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const { slug } = params;
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
   const handbookData = await getHandbookBySlug(slug);
   
   if (!handbookData) {
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function Layout({ children, params }: LayoutProps) {
-  const { slug } = params;
+  const { slug } = await params;
   
   // Hämta handbok-data för att verifiera att handboken finns
   const handbookData = await getHandbookBySlug(slug);
