@@ -55,15 +55,16 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Stripe Portal] Found ${subscriptions.length} subscription(s) for user`);
 
-    // Filtera bort uppsagda prenumerationer och försök med varje Customer ID
+    // Filtera bort uppsagda prenumerationer och manuella/test customer ID:n
     const validSubscriptions = subscriptions.filter(sub => {
       const isActive = sub.status === 'active';
       const isCancelled = sub.metadata?.cancel_at_period_end === true;
       const hasCustomerId = sub.stripe_customer_id;
+      const isRealStripeCustomer = hasCustomerId && !sub.stripe_customer_id.includes('manual');
       
-      console.log(`[Stripe Portal] Subscription check: status=${sub.status}, cancelled=${isCancelled}, hasCustomerId=${!!hasCustomerId}`);
+      console.log(`[Stripe Portal] Subscription check: status=${sub.status}, cancelled=${isCancelled}, hasCustomerId=${!!hasCustomerId}, isRealStripeCustomer=${isRealStripeCustomer}, customerId=${sub.stripe_customer_id}`);
       
-      return hasCustomerId && isActive && !isCancelled;
+      return hasCustomerId && isActive && !isCancelled && isRealStripeCustomer;
     });
 
     if (validSubscriptions.length === 0) {
@@ -80,88 +81,89 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Stripe Portal] Found ${validSubscriptions.length} valid subscription(s)`);
 
-    // Försök skapa portal session med första giltiga Customer ID
-    let lastError = '';
-    let customerNotFoundCount = 0;
-    
-    for (const subscription of validSubscriptions) {
+    // Sortera prenumerationer så att nyaste kommer först (live Stripe är nyare än test)
+    const sortedSubscriptions = validSubscriptions.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    console.log(`[Stripe Portal] Sorted subscriptions by date, trying newest first`);
+
+    // Först - verifiera vilka customer ID:n som faktiskt finns i Stripe
+    const validCustomerIds = [];
+    for (const subscription of sortedSubscriptions) {
       const customerId = subscription.stripe_customer_id;
-      console.log(`[Stripe Portal] Trying customer ID: ${customerId} (status: ${subscription.status})`);
-      
       try {
-        // Verifiera att customer finns i Stripe innan vi skapar portal session
         const customer = await stripe.customers.retrieve(customerId);
-        
-        if (customer.deleted) {
+        if (!customer.deleted) {
+          console.log(`[Stripe Portal] Verified customer ${customerId} exists in Stripe`);
+          validCustomerIds.push(subscription);
+        } else {
           console.log(`[Stripe Portal] Customer ${customerId} is deleted in Stripe, skipping`);
-          continue;
         }
-
-        // Skapa Stripe customer portal session
-        const portalSession = await stripe.billingPortal.sessions.create({
-          customer: customerId,
-          return_url: returnUrl,
-        });
-
-        console.log(`[Stripe Portal] Successfully created portal session: ${portalSession.id} for customer: ${customerId}`);
-
-        return NextResponse.json({
-          url: portalSession.url,
-          sessionId: portalSession.id
-        });
-
-      } catch (stripeError: any) {
-        console.error(`[Stripe Portal] Error with customer ${customerId}:`, stripeError.message);
-        lastError = stripeError.message;
-        
-        // Räkna hur många kunder som inte finns
-        if (stripeError.message.includes('No such customer')) {
-          customerNotFoundCount++;
-        }
-        
-        // Om detta är den sista Customer ID:n, returnera specifikt fel
-        if (subscription === validSubscriptions[validSubscriptions.length - 1]) {
-          // Specialfall för utvecklingsmiljö
-          if (process.env.NODE_ENV === 'development' && customerNotFoundCount === validSubscriptions.length) {
-            return NextResponse.json(
-              { 
-                error: 'Development mode issue',
-                message: 'I utvecklingsmiljö: Stripe-kunder från produktionsdatabasen finns inte i testläge. Detta är normalt under utveckling.',
-                type: 'development_mode',
-                details: 'Kontakta utvecklare för att skapa test-prenumerationer.'
-              },
-              { status: 404 }
-            );
-          }
-          
-          // Konfigurationsproblem
-          if (stripeError.message.includes('No configuration provided')) {
-            return NextResponse.json(
-              { 
-                error: 'Stripe configuration missing',
-                message: 'Stripe kundportal är inte konfigurerad i testläge. Kontakta administratör.',
-                type: 'configuration_missing'
-              },
-              { status: 500 }
-            );
-          }
-          
-          // Allmänt fel
-          return NextResponse.json(
-            { 
-              error: 'Portal access unavailable',
-              message: 'Kan inte komma åt prenumerationshantering. Kontakta support för hjälp.',
-              type: 'general_error',
-              details: lastError
-            },
-            { status: 404 }
-          );
-        }
-        
-        // Annars fortsätt med nästa Customer ID
-        continue;
+      } catch (error: any) {
+        console.log(`[Stripe Portal] Customer ${customerId} does not exist in Stripe, skipping`);
       }
     }
+
+    if (validCustomerIds.length === 0) {
+      console.log('[Stripe Portal] No valid customers found in Stripe');
+      return NextResponse.json(
+        { 
+          error: 'No valid subscription',
+          message: 'Inga giltiga prenumerationer hittades i Stripe. Kontakta support för hjälp.',
+          type: 'no_valid_customers'
+        },
+        { status: 404 }
+      );
+    }
+
+    console.log(`[Stripe Portal] Found ${validCustomerIds.length} valid customer(s) in Stripe`);
+
+    // Skapa portal session med första giltiga customer
+    const subscription = validCustomerIds[0];
+    const customerId = subscription.stripe_customer_id;
+    
+    try {
+      console.log(`[Stripe Portal] Creating portal session for verified customer: ${customerId}`);
+
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+      });
+
+      console.log(`[Stripe Portal] Successfully created portal session: ${portalSession.id}`);
+
+      return NextResponse.json({
+        url: portalSession.url,
+        sessionId: portalSession.id
+      });
+
+    } catch (stripeError: any) {
+      console.error(`[Stripe Portal] Error creating portal session:`, stripeError.message);
+      
+      // Konfigurationsproblem
+      if (stripeError.message.includes('No configuration provided')) {
+        return NextResponse.json(
+          { 
+            error: 'Stripe configuration missing',
+            message: 'Stripe kundportal är inte konfigurerad. Kontakta administratör.',
+            type: 'configuration_missing'
+          },
+          { status: 500 }
+        );
+      }
+
+      // Allmänt fel
+      return NextResponse.json(
+        { 
+          error: 'Portal session creation failed',
+          message: 'Kunde inte skapa prenumerationshantering. Kontakta support för hjälp.',
+          type: 'creation_failed',
+          details: stripeError.message
+        },
+                 { status: 500 }
+       );
+     }
 
   } catch (error) {
     console.error('[Stripe Portal] Error creating portal session:', error);
