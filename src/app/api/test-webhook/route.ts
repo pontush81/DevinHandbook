@@ -1,46 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleTrialUpgrade } from '../stripe/webhook/route';
+import { createClient } from '@supabase/supabase-js';
+import { handleTrialUpgrade } from '@/app/api/stripe/webhook/route';
+import { requireDevOrStagingEnvironment, logSecurityEvent } from '@/lib/security-utils';
 
 /**
  * Test-endpoint för att simulera Stripe webhook-anrop
  * Används för att testa betalningsflödet utan att behöva gå genom faktisk Stripe-betalning
  */
 export async function POST(req: NextRequest) {
+  // Säkerhetskontroll - endast tillgänglig i dev/staging
+  const securityCheck = requireDevOrStagingEnvironment('test-webhook');
+  if (securityCheck) {
+    return securityCheck;
+  }
+
+  logSecurityEvent('test-webhook-access', { 
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString() 
+  });
+
   try {
-    console.log('[Test Webhook] Simulating Stripe checkout.session.completed event');
+    console.log('🧪 [Test Webhook] Starting test webhook simulation...');
     
-    // Simulerad Stripe session data
-    const mockStripeSession = {
-      id: 'cs_test_' + Date.now(),
-      object: 'checkout.session',
-      payment_status: 'paid',
-      customer: 'cus_test_' + Date.now(),
-      subscription: 'sub_test_' + Date.now(),
-      amount_total: 49900, // 499 kr
-      currency: 'sek',
-      metadata: {
-        userId: '9919f4f3-2748-4379-8b8c-790be1d08ae6',
-        handbookId: '545e8dce-f400-4c16-9f42-02de06055c6b', // Webhook test handbok ID
-        planType: 'monthly'
-      }
-    };
+    const body = await req.json();
+    const { userId, testType = 'trial_upgrade' } = body;
     
-    // Anropa webhook-hanteringen
-    await handleTrialUpgrade(mockStripeSession.metadata.userId, mockStripeSession);
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Test webhook executed successfully',
-      sessionId: mockStripeSession.id 
-    });
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId is required for test webhook' },
+        { status: 400 }
+      );
+    }
+
+    // Simulera olika typer av webhook-events
+    switch (testType) {
+      case 'trial_upgrade':
+        console.log('🧪 [Test Webhook] Simulating trial upgrade for user:', userId);
+        
+        // Skapa mock Stripe session data
+        const mockStripeSession = {
+          id: `cs_test_${Date.now()}`,
+          customer: `cus_test_${userId}`,
+          mode: 'subscription',
+          payment_status: 'paid',
+          metadata: {
+            handbook_name: 'Test Handbok',
+            handbook_slug: `test-handbok-${Date.now()}`,
+            user_id: userId
+          }
+        };
+
+        await handleTrialUpgrade(userId, mockStripeSession);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Test trial upgrade webhook processed successfully',
+          testType,
+          userId,
+          mockData: mockStripeSession
+        });
+        
+      default:
+        return NextResponse.json(
+          { error: `Unknown test type: ${testType}` },
+          { status: 400 }
+        );
+    }
     
   } catch (error) {
-    console.error('[Test Webhook] Error:', error);
-    console.error('[Test Webhook] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    }, { status: 500 });
+    console.error('🧪 [Test Webhook] Error:', error);
+    return NextResponse.json(
+      { 
+        error: 'Test webhook failed', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      },
+      { status: 500 }
+    );
   }
 } 

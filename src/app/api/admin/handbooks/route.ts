@@ -1,12 +1,35 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getHybridAuth } from '@/lib/standard-auth';
+import { checkIsSuperAdmin } from '@/lib/user-utils';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Använd samma approach som users API - hämta direkt med service supabase
-    const supabase = getServiceSupabase();
+    // 1. Autentisera användaren
+    const authResult = await getHybridAuth(request);
+    if (!authResult.userId) {
+      return NextResponse.json(
+        { success: false, message: "Ej autentiserad" },
+        { status: 401 }
+      );
+    }
 
-    // Hämta alla handböcker med de kolumner som faktiskt finns
+    // 2. Kontrollera superadmin-behörighet
+    const supabase = getServiceSupabase();
+    const isSuperAdmin = await checkIsSuperAdmin(
+      supabase,
+      authResult.userId,
+      authResult.userEmail || ''
+    );
+
+    if (!isSuperAdmin) {
+      return NextResponse.json(
+        { success: false, message: "Du har inte superadmin-behörighet" },
+        { status: 403 }
+      );
+    }
+
+    // 3. Hämta handböcker (nu säkert)
     const { data: handbooks, error: handbooksError } = await supabase
       .from('handbooks')
       .select('id, title, slug, created_at, published, owner_id, organization_name')

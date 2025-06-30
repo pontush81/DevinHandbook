@@ -1,9 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkIsSuperAdmin } from '@/lib/user-utils';
+import { getHybridAuth } from '@/lib/standard-auth';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export async function DELETE(request: NextRequest) {
   try {
+    // 1. Autentisera användaren
+    const authResult = await getHybridAuth(request);
+    if (!authResult.userId) {
+      return NextResponse.json(
+        { success: false, message: "Ej autentiserad" },
+        { status: 401 }
+      );
+    }
+
+    // 2. Kontrollera superadmin-behörighet
+    const supabase = getServiceSupabase();
+    const isSuperAdmin = await checkIsSuperAdmin(
+      supabase,
+      authResult.userId,
+      authResult.userEmail || ''
+    );
+
+    if (!isSuperAdmin) {
+      return NextResponse.json(
+        { success: false, message: "Du har inte superadmin-behörighet för att radera handböcker" },
+        { status: 403 }
+      );
+    }
+
+    // 3. Validera indata
+    const { handbookId } = await request.json();
+    
+    if (!handbookId) {
+      return NextResponse.json({ error: 'Handbook ID is required' }, { status: 400 });
+    }
+
+    console.log('🗑️ Superadmin', authResult.userId, 'starting deletion of handbook:', handbookId);
+
     // Create Supabase client with service role for admin operations
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -12,23 +47,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Supabase configuration missing' }, { status: 500 });
     }
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // For now, we'll skip auth check in development
-    // In production, you'd want to verify the request comes from an authenticated superadmin
-    
-    const { handbookId } = await request.json();
-    
-    if (!handbookId) {
-      return NextResponse.json({ error: 'Handbook ID is required' }, { status: 400 });
-    }
-
-    console.log('🗑️ Starting deletion of handbook:', handbookId);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Delete all related data in correct order due to foreign key constraints
     
     // 1. Get all section IDs for this handbook first
-    const { data: sections, error: sectionsQueryError } = await supabase
+    const { data: sections, error: sectionsQueryError } = await supabaseAdmin
       .from('sections')
       .select('id')
       .eq('handbook_id', handbookId);
@@ -43,7 +67,7 @@ export async function DELETE(request: NextRequest) {
 
     // 2. Delete pages first (they reference sections)
     if (sectionIds.length > 0) {
-      const { error: pagesError } = await supabase
+      const { error: pagesError } = await supabaseAdmin
         .from('pages')
         .delete()
         .in('section_id', sectionIds);
@@ -56,7 +80,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 3. Delete sections (they reference handbooks)
-    const { error: sectionsError } = await supabase
+    const { error: sectionsError } = await supabaseAdmin
       .from('sections')
       .delete()
       .eq('handbook_id', handbookId);
@@ -68,7 +92,7 @@ export async function DELETE(request: NextRequest) {
     console.log('✅ Deleted sections');
 
     // 4. Delete handbook members
-    const { error: membersError } = await supabase
+    const { error: membersError } = await supabaseAdmin
       .from('handbook_members')
       .delete()
       .eq('handbook_id', handbookId);
@@ -80,7 +104,7 @@ export async function DELETE(request: NextRequest) {
     console.log('✅ Deleted handbook members');
 
     // 5. Delete trial activities if any
-    const { error: trialError } = await supabase
+    const { error: trialError } = await supabaseAdmin
       .from('trial_activities')
       .delete()
       .eq('handbook_id', handbookId);
@@ -93,7 +117,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 6. Finally delete the handbook itself
-    const { error: handbookError } = await supabase
+    const { error: handbookError } = await supabaseAdmin
       .from('handbooks')
       .delete()
       .eq('id', handbookId);
@@ -103,7 +127,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to delete handbook' }, { status: 500 });
     }
 
-    console.log('✅ Successfully deleted handbook:', handbookId);
+    console.log('✅ Superadmin', authResult.userId, 'successfully deleted handbook:', handbookId);
 
     return NextResponse.json({ 
       success: true, 

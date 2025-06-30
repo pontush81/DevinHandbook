@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ocrService } from '@/lib/ocr-service';
+import { requireDevOrStagingEnvironment } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
+  // Säkerhetskontroll - endast tillgänglig i dev/staging
+  const securityCheck = requireDevOrStagingEnvironment('test-ocr');
+  if (securityCheck) {
+    return securityCheck;
+  }
+
   try {
     console.log('🧪 Testing OCR configuration...');
     

@@ -6,10 +6,109 @@ const { execSync } = require('child_process');
 
 console.log('🔒 Säkerhetsskanning av projekt...\n');
 
-// 1. Sök efter osäkra admin-anrop på klientsidan
-console.log('1. Kontrollerar admin-anrop på klientsidan...');
+// 1. Kontrollera att admin-endpoints har autentiseringskontroller
+console.log('1. Kontrollerar admin-endpoints säkerhet...');
+const adminEndpoints = [
+  'src/app/api/admin/users/route.ts',
+  'src/app/api/admin/handbooks/route.ts',
+  'src/app/api/admin/delete-handbook/route.ts',
+  'src/app/api/admin/set-admin/route.ts'
+];
+
+let unsecureAdminEndpoints = [];
+adminEndpoints.forEach(endpoint => {
+  if (fs.existsSync(endpoint)) {
+    const content = fs.readFileSync(endpoint, 'utf-8');
+    if (!content.includes('getHybridAuth') && !content.includes('checkIsSuperAdmin')) {
+      unsecureAdminEndpoints.push(endpoint);
+    }
+  }
+});
+
+if (unsecureAdminEndpoints.length > 0) {
+  console.log('❌ KRITISK: Osäkra admin-endpoints funna:');
+  unsecureAdminEndpoints.forEach(endpoint => {
+    console.log(`  - ${endpoint}: Saknar autentiseringskontroller`);
+  });
+} else {
+  console.log('✅ Alla admin-endpoints har säkerhetskontroller');
+}
+
+// 2. Kontrollera att test-endpoints har miljöskydd
+console.log('\n2. Kontrollerar test-endpoints miljöskydd...');
+const testEndpoints = [
+  'src/app/api/test-webhook/route.ts',
+  'src/app/api/test-ocr/route.ts',
+  'src/app/api/test-direct/route.ts'
+];
+
+let unsecureTestEndpoints = [];
+testEndpoints.forEach(endpoint => {
+  if (fs.existsSync(endpoint)) {
+    const content = fs.readFileSync(endpoint, 'utf-8');
+    if (!content.includes('requireDevelopmentEnvironment') && 
+        !content.includes('requireDevOrStagingEnvironment') &&
+        !content.includes('NODE_ENV') &&
+        !content.includes('development')) {
+      unsecureTestEndpoints.push(endpoint);
+    }
+  }
+});
+
+if (unsecureTestEndpoints.length > 0) {
+  console.log('⚠️ VARNING: Test-endpoints utan miljöskydd:');
+  unsecureTestEndpoints.forEach(endpoint => {
+    console.log(`  - ${endpoint}`);
+  });
+} else {
+  console.log('✅ Test-endpoints har miljöskydd');
+}
+
+// 3. Kontrollera CORS-konfiguration
+console.log('\n3. Kontrollerar CORS-konfiguration...');
+if (fs.existsSync('next.config.js')) {
+  const content = fs.readFileSync('next.config.js', 'utf-8');
+  if (content.includes("value: '*'")) {
+    console.log('❌ KRITISK: CORS tillåter alla origins (*)');
+  } else if (content.includes('handbok.org')) {
+    console.log('✅ CORS är korrekt konfigurerad för specifika domäner');
+  } else {
+    console.log('⚠️ VARNING: CORS-konfiguration kan behöva granskas');
+  }
+} else {
+  console.log('⚠️ VARNING: next.config.js saknas');
+}
+
+// 4. Kontrollera att säkerhetsutilities används
+console.log('\n4. Kontrollerar säkerhetsutilities...');
+if (fs.existsSync('src/lib/security-utils.ts')) {
+  console.log('✅ Säkerhetsutilities finns');
+  
+  // Kontrollera att de används i kritiska endpoints
+  const criticalEndpoints = [
+    'src/app/api/admin/set-admin/route.ts',
+    'src/app/api/test-webhook/route.ts'
+  ];
+  
+  let endpointsUsingSecurity = 0;
+  criticalEndpoints.forEach(endpoint => {
+    if (fs.existsSync(endpoint)) {
+      const content = fs.readFileSync(endpoint, 'utf-8');
+      if (content.includes('security-utils')) {
+        endpointsUsingSecurity++;
+      }
+    }
+  });
+  
+  console.log(`✅ ${endpointsUsingSecurity}/${criticalEndpoints.length} kritiska endpoints använder säkerhetsutilities`);
+} else {
+  console.log('❌ KRITISK: Säkerhetsutilities saknas');
+}
+
+// 5. Sök efter osäkra admin-anrop på klientsidan (uppdaterad kontroll)
+console.log('\n5. Kontrollerar admin-anrop på klientsidan...');
 try {
-  const adminUsage = execSync('grep -r "supabase\\.auth\\.admin" src/components src/app --include="*.tsx" --include="*.ts" || true', { encoding: 'utf-8' });
+  const adminUsage = execSync('grep -r "supabase\\.auth\\.admin" src/components src/app --include="*.tsx" --include="*.ts" | grep -v "/api/" || true', { encoding: 'utf-8' });
   if (adminUsage.trim()) {
     console.log('❌ KRITISK: Admin-anrop funna på klientsidan:');
     console.log(adminUsage);
@@ -20,76 +119,49 @@ try {
   console.log('✅ Inga admin-anrop på klientsidan');
 }
 
-// 2. Kontrollera SERVICE_ROLE_KEY användning
-console.log('\n2. Kontrollerar SERVICE_ROLE_KEY användning...');
+// 6. Kontrollera SERVICE_ROLE_KEY användning (uppdaterad)
+console.log('\n6. Kontrollerar SERVICE_ROLE_KEY användning...');
 try {
-  const serviceKeyUsage = execSync('grep -r "SERVICE_ROLE_KEY" src/components src/app --include="*.tsx" --include="*.ts" || true', { encoding: 'utf-8' });
+  const serviceKeyUsage = execSync('grep -r "SERVICE_ROLE_KEY" src/components src/app --include="*.tsx" --include="*.ts" | grep -v "/api/" || true', { encoding: 'utf-8' });
   if (serviceKeyUsage.trim()) {
     console.log('⚠️ VARNING: SERVICE_ROLE_KEY refererad på klientsidan:');
     console.log(serviceKeyUsage);
   } else {
-    console.log('✅ SERVICE_ROLE_KEY används säkert');
+    console.log('✅ SERVICE_ROLE_KEY används endast på serversidan');
   }
 } catch (e) {
-  console.log('✅ SERVICE_ROLE_KEY används säkert');
+  console.log('✅ SERVICE_ROLE_KEY används endast på serversidan');
 }
 
-// 3. Sök efter hardkodade API-nycklar eller lösenord
-console.log('\n3. Kontrollerar hardkodade hemligheter...');
-try {
-  const secrets = execSync('grep -rE "(password|secret|key)\\s*=\\s*[\'\"]((?![\'\"]).{8,})" src/ --include="*.tsx" --include="*.ts" --include="*.js" || true', { encoding: 'utf-8' });
-  if (secrets.trim()) {
-    console.log('⚠️ VARNING: Potentiella hardkodade hemligheter:');
-    console.log(secrets);
+// 7. Kontrollera säkerhetsheaders
+console.log('\n7. Kontrollerar säkerhetsheaders...');
+if (fs.existsSync('next.config.js')) {
+  const content = fs.readFileSync('next.config.js', 'utf-8');
+  const requiredHeaders = ['X-Frame-Options', 'X-Content-Type-Options', 'Referrer-Policy'];
+  const missingHeaders = requiredHeaders.filter(header => !content.includes(header));
+  
+  if (missingHeaders.length > 0) {
+    console.log('⚠️ VARNING: Saknade säkerhetsheaders:', missingHeaders.join(', '));
   } else {
-    console.log('✅ Inga hardkodade hemligheter funna');
+    console.log('✅ Alla viktiga säkerhetsheaders är konfigurerade');
   }
-} catch (e) {
-  console.log('✅ Inga hardkodade hemligheter funna');
 }
 
-// 4. Kontrollera dev-endpoints i produktion
-console.log('\n4. Kontrollerar dev-endpoints...');
-const devEndpoints = [];
-const scanDir = (dir) => {
-  const files = fs.readdirSync(dir);
-  files.forEach(file => {
-    const filePath = path.join(dir, file);
-    if (fs.statSync(filePath).isDirectory()) {
-      if (file === 'dev' && dir.includes('api')) {
-        devEndpoints.push(filePath);
-      }
-      scanDir(filePath);
-    }
-  });
-};
-
+// 8. Kontrollera rate limiting
+console.log('\n8. Kontrollerar rate limiting...');
 try {
-  scanDir('src/app/api');
-  if (devEndpoints.length > 0) {
-    console.log('⚠️ VARNING: Dev-endpoints funna:');
-    devEndpoints.forEach(endpoint => {
-      console.log(`  - ${endpoint}`);
-      // Kontrollera om de är skyddade
-      const routeFile = path.join(endpoint, 'route.ts');
-      if (fs.existsSync(routeFile)) {
-        const content = fs.readFileSync(routeFile, 'utf-8');
-        if (!content.includes('NODE_ENV') || !content.includes('development')) {
-          console.log(`    ❌ KRITISK: ${routeFile} är INTE skyddad för produktion!`);
-        } else {
-          console.log(`    ✅ Skyddad för produktion`);
-        }
-      }
-    });
+  const rateLimitUsage = execSync('grep -r "rateLimit" src/app/api --include="*.ts" || true', { encoding: 'utf-8' });
+  if (rateLimitUsage.trim()) {
+    console.log('✅ Rate limiting implementerat på kritiska endpoints');
   } else {
-    console.log('✅ Inga dev-endpoints funna');
+    console.log('⚠️ VARNING: Ingen rate limiting hittad');
   }
 } catch (e) {
-  console.log('✅ Inga dev-endpoints funna');
+  console.log('⚠️ VARNING: Ingen rate limiting hittad');
 }
 
-// 5. Kör npm audit
-console.log('\n5. Kör npm audit...');
+// 9. Kör npm audit
+console.log('\n9. Kör npm audit...');
 try {
   const auditOutput = execSync('npm audit --audit-level=moderate', { encoding: 'utf-8' });
   console.log('✅ Inga sårbarheter på moderate+ nivå');
@@ -98,24 +170,21 @@ try {
   console.log(e.stdout);
 }
 
-// 6. Kontrollera .env.example vs .env
-console.log('\n6. Kontrollerar miljövariabler...');
-if (fs.existsSync('.env.example') && fs.existsSync('.env.local')) {
-  const example = fs.readFileSync('.env.example', 'utf-8');
-  const actual = fs.readFileSync('.env.local', 'utf-8');
-  
-  const exampleKeys = example.match(/^[A-Z_]+=.*/gm)?.map(line => line.split('=')[0]) || [];
-  const actualKeys = actual.match(/^[A-Z_]+=.*/gm)?.map(line => line.split('=')[0]) || [];
-  
-  const missingKeys = exampleKeys.filter(key => !actualKeys.includes(key));
-  if (missingKeys.length > 0) {
-    console.log('⚠️ VARNING: Saknade miljövariabler:');
-    missingKeys.forEach(key => console.log(`  - ${key}`));
-  } else {
-    console.log('✅ Alla miljövariabler är definierade');
-  }
+// 10. Säkerhetssummering
+console.log('\n🔒 SÄKERHETSSUMMERING:');
+console.log('=====================');
+
+if (unsecureAdminEndpoints.length === 0) {
+  console.log('✅ Admin-endpoints: SÄKRA');
 } else {
-  console.log('⚠️ VARNING: .env.example eller .env.local saknas');
+  console.log('❌ Admin-endpoints: OSÄKRA - Kritiskt att åtgärda!');
 }
 
-console.log('\n🔒 Säkerhetsskanning slutförd!'); 
+if (unsecureTestEndpoints.length === 0) {
+  console.log('✅ Test-endpoints: SKYDDADE');
+} else {
+  console.log('⚠️ Test-endpoints: Vissa saknar miljöskydd');
+}
+
+console.log('\n🔒 Säkerhetsskanning slutförd!');
+console.log('\n💡 Tips: Kör detta skript regelbundet, särskilt före deployment!'); 

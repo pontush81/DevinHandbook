@@ -1,9 +1,36 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getHybridAuth } from '@/lib/standard-auth';
+import { checkIsSuperAdmin } from '@/lib/user-utils';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // 1. Autentisera användaren
+    const authResult = await getHybridAuth(request);
+    if (!authResult.userId) {
+      return NextResponse.json(
+        { success: false, message: "Ej autentiserad" },
+        { status: 401 }
+      );
+    }
+
+    // 2. Kontrollera superadmin-behörighet
     const supabase = getServiceSupabase();
+    const isSuperAdmin = await checkIsSuperAdmin(
+      supabase,
+      authResult.userId,
+      authResult.userEmail || ''
+    );
+
+    if (!isSuperAdmin) {
+      return NextResponse.json(
+        { success: false, message: "Du har inte superadmin-behörighet för att lista användare" },
+        { status: 403 }
+      );
+    }
+
+    // 3. Hämta användare (nu säkert)
+    console.log('🔐 Superadmin', authResult.userId, 'fetching user list');
     
     // Hämta alla användare från auth
     const { data, error } = await supabase.auth.admin.listUsers();
