@@ -43,11 +43,11 @@ Fullständig eliminering av "subdomain" terminologi från kodbasen eftersom vi a
   - Skapad ny component med all UI-logik
   - Använder `handbookSlug` för navigation
 
-### 6. Notifications Pages ✅
-- **Handbook-specific**: `src/app/[slug]/notifications/page.tsx`
-  - Server component som använder `getHandbookBySlug`
-  - Skickar korrekt props till notification components
-- **General**: `src/app/notifications/page.tsx` - oförändrad (korrekt)
+### 6. Notifications Integration ✅
+- **Moved to Messages Page**: Notification settings now integrated directly into messages page
+  - Better UX - settings where they're actually used
+  - No separate notifications page needed for handbook-specific settings
+- **General**: `src/app/notifications/page.tsx` - unchanged (global notifications)
 
 ### 7. Database Schema ✅
 ```sql
@@ -60,8 +60,7 @@ COMMENT ON COLUMN handbooks.slug IS 'URL path segment for handbook (path-based r
 ```
 ✅ Korrekt path-baserad routing:
 /brf-segerstaden                    → handbook home
-/brf-segerstaden/meddelanden        → messages
-/brf-segerstaden/notifications      → notification settings
+/brf-segerstaden/meddelanden        → messages (with integrated notification settings)
 
 ❌ Tidigare förvirrande terminology:
 params.subdomain = "brf-segerstaden"  (Misleading name för path-based routing)

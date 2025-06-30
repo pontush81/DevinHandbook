@@ -3,7 +3,6 @@ export type NavigationSource =
   | 'settings' 
   | 'members' 
   | 'messages' 
-  | 'notifications'
   | 'admin'
   | null;
 
@@ -29,11 +28,6 @@ const NAVIGATION_CONTEXTS: Record<string, NavigationContext> = {
     source: 'messages',
     title: 'Tillbaka till meddelanden', 
     href: '/meddelanden'
-  },
-  notifications: {
-    source: 'notifications',
-    title: 'Tillbaka till notifikationer',
-    href: '/notifications'
   },
   admin: {
     source: 'admin',

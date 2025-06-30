@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal, Settings, ArrowLeft, ArrowUp } from 'lucide-react';
+import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal, Settings, ArrowLeft, ArrowUp, Bell } from 'lucide-react';
 import Link from 'next/link';
 
 import { supabase } from '@/lib/supabase';
@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { NavigationContext } from '@/lib/navigation-utils';
+import NotificationSettings from '@/components/NotificationSettings';
 
 
 
@@ -118,6 +119,7 @@ export function MessagesPageClient({
   
   // UI state
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
   // Separate effect for access checking when user changes
   useEffect(() => {
@@ -707,6 +709,15 @@ export function MessagesPageClient({
             </div>
             <div className="flex gap-3 shrink-0">
               <Button 
+                variant="outline"
+                onClick={() => setShowNotificationSettings(true)}
+                className="h-10 sm:h-9 px-3 sm:px-4 text-sm font-medium touch-manipulation"
+                title="Notifikationsinställningar"
+              >
+                <Bell className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Notifikationer</span>
+              </Button>
+              <Button 
                 onClick={() => openNewMessageForm()} 
                 className="bg-blue-600 hover:bg-blue-700 text-white h-10 sm:h-9 px-4 text-sm font-medium touch-manipulation"
               >
@@ -1179,6 +1190,38 @@ export function MessagesPageClient({
         </DialogContent>
       </Dialog>
 
+      {/* Notification Settings Dialog */}
+      <Dialog open={showNotificationSettings} onOpenChange={setShowNotificationSettings}>
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg max-h-[90vh] overflow-hidden bg-white shadow-2xl border border-gray-200 rounded-lg z-50">
+          <DialogHeader className="space-y-2 pb-4 border-b border-gray-100">
+            <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Bell className="h-5 w-5 text-blue-600" />
+              Notifikationsinställningar
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600">
+              Hantera hur du vill få notifikationer för meddelanden i {handbookTitle}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <NotificationSettings 
+              handbookId={handbookId}
+              handbookName={handbookTitle}
+              compact={true}
+            />
+          </div>
+
+          <DialogFooter className="pt-4 border-t border-gray-100">
+            <Button
+              type="button"
+              onClick={() => setShowNotificationSettings(false)}
+              className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+            >
+              Stäng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { User, LogOut, Edit, Settings, ChevronDown, Bell, Users } from 'lucide-react';
+import { User, LogOut, Edit, Settings, ChevronDown, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 
@@ -267,13 +267,6 @@ export const HandbookHeader: React.FC<HandbookHeaderProps> = React.memo(({
                   </Link>
                 </DropdownMenuItem>
               )}
-              
-              <DropdownMenuItem className="min-h-[44px] sm:min-h-[36px]">
-                <Link href={handbookSlug ? `/${handbookSlug}/notifications` : "/notifications"} className="flex items-center w-full">
-                  <Bell className="mr-3 h-4 w-4" />
-                  <span className="text-sm">Notifikationer</span>
-                </Link>
-              </DropdownMenuItem>
               
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="min-h-[44px] sm:min-h-[36px]">
