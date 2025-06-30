@@ -1445,6 +1445,7 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
       <div className="max-w-6xl mx-auto p-3">
         <TrialStatusBar 
           userId={user.id} 
+          userEmail={user.email}
           handbookId={handbookData.id}
           className=""
           onUpgrade={() => {

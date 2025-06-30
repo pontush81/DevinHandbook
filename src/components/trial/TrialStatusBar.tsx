@@ -16,6 +16,7 @@ interface TrialStatus {
 
 interface TrialStatusBarProps {
   userId: string;
+  userEmail?: string;
   handbookId?: string;
   className?: string;
   onUpgrade?: () => void;
@@ -55,11 +56,11 @@ function formatTrialEndDate(trialEndsAt: string | null): string {
   });
 }
 
-export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }: TrialStatusBarProps) {
+export function TrialStatusBar({ userId, userEmail, handbookId, className = '', onUpgrade }: TrialStatusBarProps) {
   const [isVisible, setIsVisible] = useState(true);
 
   // Professional React Query hooks - automatic caching, deduplication, and error handling
-  const { data: adminStatus } = useAdminStatus(userId);
+  const { data: adminStatus } = useAdminStatus(userId, userEmail);
   const { data: ownershipData } = useHandbookOwnership(handbookId, userId);
   const { data: trialStatus, isLoading } = useHandbookTrialStatus(handbookId, userId);
 
@@ -89,7 +90,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
       channel.removeEventListener('message', handlePaymentComplete);
       channel.close();
       if (window.refreshTrialStatus) {
-        delete window.refreshTrialStatus;
+        window.refreshTrialStatus = undefined as any;
       }
     };
   }, [handbookId]);
@@ -239,7 +240,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
             <div className="min-w-0 flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
                 <h3 className="font-semibold text-yellow-900 text-sm sm:text-base">Trial slutar snart</h3>
-                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 text-xs w-fit">
+                <Badge variant="default" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 text-xs w-fit">
                   {trialStatus.trialDaysRemaining} dag{trialStatus.trialDaysRemaining !== 1 ? 'ar' : ''} kvar
                 </Badge>
               </div>

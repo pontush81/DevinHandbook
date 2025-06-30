@@ -20,12 +20,40 @@ async function fetchAPI(url: string) {
 /**
  * Hook for checking if user is superadmin
  * Uses intelligent caching and automatic deduplication
+ * Smart: Only checks if user seems likely to be admin
  */
-export function useAdminStatus(userId?: string) {
+export function useAdminStatus(userId?: string, userEmail?: string) {
+  // Smart check: Only make API calls for likely admin users
+  const shouldCheck = userId && (
+    userEmail?.includes('pontus') || 
+    userEmail?.includes('admin') ||
+    userEmail?.endsWith('@handbok.org') ||
+    // Always check in development
+    process.env.NODE_ENV === 'development'
+  );
+
   return useQuery({
     queryKey: queryKeys.user.adminStatus(userId || 'anonymous'),
-    queryFn: () => fetchAPI('/api/auth/check-superadmin'),
-    enabled: !!userId, // Only run if we have a userId
+    queryFn: async () => {
+      console.log('🔐 [useAdminStatus] Checking admin status for user:', { userId, userEmail });
+      
+      try {
+        const result = await fetchAPI('/api/auth/check-superadmin');
+        console.log('✅ [useAdminStatus] Admin check successful:', result);
+        return result;
+      } catch (error: any) {
+        // Enhanced error logging
+        if (error?.status === 401) {
+          console.log('🔒 [useAdminStatus] Authentication failed - user not properly logged in');
+        } else if (error?.status === 403) {
+          console.log('👤 [useAdminStatus] User is not a superadmin (normal)');
+        } else {
+          console.error('❌ [useAdminStatus] Unexpected error:', error);
+        }
+        throw error;
+      }
+    },
+    enabled: !!shouldCheck, // Only run for likely admin users
     staleTime: 1000 * 60 * 2, // 2 minutes - admin status changes rarely
     gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
     retry: (failureCount, error: any) => {

@@ -12,7 +12,7 @@ export function DashboardNav() {
   const { user, signOut } = useAuth();
   
   // Professional React Query hook - handles caching, deduplication, and errors automatically
-  const { data: adminStatus } = useAdminStatus(user?.id);
+  const { data: adminStatus } = useAdminStatus(user?.id, user?.email);
   const isSuperAdmin = adminStatus?.isSuperAdmin || false;
 
   const handleSignOut = async () => {

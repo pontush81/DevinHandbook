@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function TestTrialPage() {
   const [testUserId] = useState('123e4567-e89b-12d3-a456-426614174000');
+  const [testUserEmail] = useState('test@example.com');
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -25,6 +26,7 @@ export default function TestTrialPage() {
               <h3 className="text-lg font-semibold">Demo Trial Status Bar</h3>
               <TrialStatusBar 
                 userId={testUserId}
+                userEmail={testUserEmail}
                 className="border"
                 onUpgrade={() => {
                   alert('Uppgradering klickad!');
