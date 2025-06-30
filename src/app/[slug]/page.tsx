@@ -2,6 +2,7 @@ import { getHandbookBySlug } from '@/lib/handbook-service';
 import React from 'react';
 import { ModernHandbookClient } from '@/components/ModernHandbookClient';
 import { DynamicManifest } from '@/components/DynamicManifest';
+import InstallPrompt from '@/components/InstallPrompt';
 import { notFound } from 'next/navigation';
 import { Handbook } from '@/types/handbook';
 
@@ -132,6 +133,7 @@ function renderHandbook(handbookData: any, slug: string, searchParams?: { [key: 
     <>
       <DynamicManifest handbookSlug={slug} />
       <ModernHandbookClient initialData={adaptedData} defaultEditMode={defaultEditMode} />
+      <InstallPrompt handbookTitle={handbookData.title} />
     </>
   );
 } 
