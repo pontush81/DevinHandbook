@@ -42,6 +42,15 @@ export default function SettingsPageClient({
     loadEmailPreferences();
   }, [handbookData.id]);
 
+  // Sync forum enabled state with prop changes
+  useEffect(() => {
+    console.log('🔄 [Settings] Syncing forum state with handbookData:', { 
+      propValue: handbookData.forum_enabled, 
+      currentState: forumEnabled 
+    });
+    setForumEnabled(handbookData.forum_enabled || false);
+  }, [handbookData.forum_enabled]);
+
   async function loadEmailPreferences() {
     try {
       const response = await fetch(`/api/notifications/preferences?handbook_id=${handbookData.id}&userId=${userId}`);
@@ -99,7 +108,12 @@ export default function SettingsPageClient({
   }
 
   async function handleForumToggle(checked: boolean) {
+    console.log('🔄 [Settings] Forum toggle clicked:', { current: forumEnabled, new: checked });
     setForumUpdating(true);
+    
+    // Optimistically update UI immediately
+    setForumEnabled(checked);
+    
     try {
       // Hämta access token för robust autentisering
       const { createClient } = await import('@supabase/supabase-js');
@@ -119,6 +133,7 @@ export default function SettingsPageClient({
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
       
+      console.log('📡 [Settings] Sending API request to update forum setting...');
       const response = await fetch(`/api/handbook/${handbookData.id}/settings`, {
         method: 'PUT',
         headers,
@@ -128,18 +143,26 @@ export default function SettingsPageClient({
         }),
       });
 
+      const responseData = await response.json();
+      console.log('📡 [Settings] API response:', { status: response.status, data: responseData });
+
       if (response.ok) {
-        setForumEnabled(checked);
+        // Confirm the state update (already done optimistically)
+        console.log('✅ [Settings] Forum setting updated successfully:', checked);
         setMessage({ 
           type: 'success', 
           text: checked ? 'Meddelanden aktiverade' : 'Meddelanden inaktiverade' 
         });
         setTimeout(() => setMessage(null), 3000);
       } else {
-        throw new Error('Failed to update forum setting');
+        // Revert optimistic update on error
+        setForumEnabled(!checked);
+        throw new Error(responseData.message || 'Failed to update forum setting');
       }
     } catch (error) {
-      console.error('Error updating forum setting:', error);
+      console.error('❌ [Settings] Error updating forum setting:', error);
+      // Revert optimistic update on error
+      setForumEnabled(!checked);
       setMessage({ 
         type: 'error', 
         text: 'Kunde inte uppdatera meddelandeinställning' 
@@ -305,7 +328,11 @@ export default function SettingsPageClient({
                 </div>
                 <div className="flex items-center gap-3 justify-between sm:justify-end">
                   <button
-                    onClick={() => handleForumToggle(!forumEnabled)}
+                    key={`forum-toggle-${forumEnabled}`}
+                    onClick={() => {
+                      console.log('🎯 [Settings] Toggle button clicked:', { current: forumEnabled, will_set: !forumEnabled });
+                      handleForumToggle(!forumEnabled);
+                    }}
                     disabled={forumUpdating}
                     className={`
                       relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0
