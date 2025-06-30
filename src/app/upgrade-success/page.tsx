@@ -58,11 +58,35 @@ function UpgradeSuccessContent() {
         const result = await response.json();
         console.log('[Upgrade Success] Auto-fix result:', result);
         
-        // Tvinga uppdatering av sidan om handboken är i trial-läge
+        // Notify all tabs about payment completion using BroadcastChannel
         if (handbookId) {
+          console.log('[Upgrade Success] Broadcasting payment completion...');
+          const channel = new BroadcastChannel('payment-status');
+          channel.postMessage({
+            type: 'payment-completed',
+            handbookId: handbookId,
+            userId: user.id,
+            timestamp: Date.now()
+          });
+          channel.close();
+
+          // Also trigger refresh function if available (for current tab)
           setTimeout(() => {
-            window.location.reload();
-          }, 3000);
+            if (typeof window !== 'undefined' && window.refreshTrialStatus) {
+              console.log('[Upgrade Success] Triggering trial status refresh...');
+              window.refreshTrialStatus();
+            } else {
+              console.log('[Upgrade Success] Global refresh function not available, using fallback');
+              // Fallback: try to refresh trial status via direct API call
+              fetch(`/api/handbook/${handbookId}/trial-status?userId=${user.id}&t=${Date.now()}`, {
+                cache: 'no-store'
+              }).then(() => {
+                console.log('[Upgrade Success] Trial status API called as fallback');
+              }).catch(err => {
+                console.warn('[Upgrade Success] Fallback API call failed:', err);
+              });
+            }
+          }, 2000); // Give webhook time to process
         }
         
       } catch (error) {

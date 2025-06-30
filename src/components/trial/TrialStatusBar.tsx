@@ -21,6 +21,13 @@ interface TrialStatusBarProps {
   onUpgrade?: () => void;
 }
 
+// Global function to refresh trial status - used by upgrade-success page
+declare global {
+  interface Window {
+    refreshTrialStatus: () => void;
+  }
+}
+
 // Formaterar datum för visning
 function formatTrialEndDate(trialEndsAt: string | null): string {
   if (!trialEndsAt) return 'Okänt datum';
@@ -54,6 +61,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
   const [isLoading, setIsLoading] = useState(true);
   const [isHandbookOwner, setIsHandbookOwner] = useState<boolean | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Check if user is superadmin
   useEffect(() => {
@@ -118,53 +126,56 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     checkHandbookOwnership();
   }, [userId, handbookId]);
 
-  useEffect(() => {
-    async function fetchTrialStatus() {
-      if (!userId || isHandbookOwner === false) {
-        console.log('🚫 TrialStatusBar: Early return - no userId or not owner:', { userId, isHandbookOwner });
-        setIsLoading(false);
-        return;
-      }
-      
-      // Wait for ownership check to complete
-      if (isHandbookOwner === null) {
-        // console.log('🔄 TrialStatusBar: Waiting for ownership check...');
-        return;
-      }
-      
-      try {
-        setIsLoading(true);
-        // console.log('🎯 TrialStatusBar: Fetching trial status...', { userId, handbookId, isHandbookOwner });
-        
-        // Fetch trial status from handbook-specific API (now simplified)
-                  // console.log('🎯 TrialStatusBar: Calling handbook-specific API:', `/api/handbook/${handbookId}/trial-status?userId=${userId}`);
-        const url = `/api/handbook/${handbookId}/trial-status?userId=${userId}`;
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch trial status');
-        }
-        
-        const status = await response.json();
-                  // console.log('🎯 TrialStatusBar received status:', status);
-        setTrialStatus(status);
-      } catch (err) {
-        console.error('TrialStatusBar: Error fetching trial status:', err);
-        // Sätt default värden vid fel
-        setTrialStatus({
-          isInTrial: false,
-          trialDaysRemaining: 0,
-          subscriptionStatus: 'none',
-          trialEndsAt: null,
-          canCreateHandbook: true,
-          hasUsedTrial: false
-        });
-      } finally {
-        setIsLoading(false);
-      }
+  // Fetch trial status function
+  const fetchTrialStatus = async () => {
+    if (!userId || isHandbookOwner === false) {
+      console.log('🚫 TrialStatusBar: Early return - no userId or not owner:', { userId, isHandbookOwner });
+      setIsLoading(false);
+      return;
     }
+    
+    // Wait for ownership check to complete
+    if (isHandbookOwner === null) {
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Force cache refresh by adding timestamp
+      const url = `/api/handbook/${handbookId}/trial-status?userId=${userId}&t=${Date.now()}`;
+      
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch trial status');
+      }
+      
+      const status = await response.json();
+      console.log('🎯 TrialStatusBar received status:', status);
+      setTrialStatus(status);
+    } catch (err) {
+      console.error('TrialStatusBar: Error fetching trial status:', err);
+      // Sätt default värden vid fel
+      setTrialStatus({
+        isInTrial: false,
+        trialDaysRemaining: 0,
+        subscriptionStatus: 'none',
+        trialEndsAt: null,
+        canCreateHandbook: true,
+        hasUsedTrial: false
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTrialStatus();
     
     // Only set up interval if user owns the handbook
@@ -172,7 +183,35 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
       const interval = setInterval(fetchTrialStatus, 5 * 60 * 1000);
       return () => clearInterval(interval);
     }
-  }, [userId, isHandbookOwner, handbookId]);
+  }, [userId, isHandbookOwner, handbookId, refreshTrigger]);
+
+  // Setup BroadcastChannel to listen for payment completion
+  useEffect(() => {
+    const channel = new BroadcastChannel('payment-status');
+    
+    const handlePaymentComplete = (event: MessageEvent) => {
+      if (event.data.type === 'payment-completed' && event.data.handbookId === handbookId) {
+        console.log('🎉 TrialStatusBar: Payment completed, refreshing trial status');
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+
+    channel.addEventListener('message', handlePaymentComplete);
+
+    // Setup global function
+    window.refreshTrialStatus = () => {
+      console.log('🔄 TrialStatusBar: Manual refresh triggered');
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    return () => {
+      channel.removeEventListener('message', handlePaymentComplete);
+      channel.close();
+      if (window.refreshTrialStatus) {
+        delete window.refreshTrialStatus;
+      }
+    };
+  }, [handbookId]);
 
   const handleUpgrade = () => {
     if (onUpgrade) {
