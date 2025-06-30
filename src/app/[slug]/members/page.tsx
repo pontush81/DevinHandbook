@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getHandbookBySlug } from '@/lib/handbook-service';
+import { DynamicManifest } from '@/components/DynamicManifest';
 import MembersPageClient from './MembersPageClient';
 
 interface MembersPageProps {
@@ -18,10 +19,13 @@ export default async function MembersPage({ params, searchParams }: MembersPageP
   }
 
   return (
-    <MembersPageClient 
-      handbookData={handbookData}
-      handbookSlug={slug}
-      searchParams={searchParamsResolved}
-    />
+    <>
+      <DynamicManifest handbookSlug={slug} />
+      <MembersPageClient 
+        handbookData={handbookData}
+        handbookSlug={slug}
+        searchParams={searchParamsResolved}
+      />
+    </>
   );
 } 

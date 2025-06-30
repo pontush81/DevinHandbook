@@ -1,0 +1,44 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bookGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded background -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGradient)"/>
+  
+  <!-- Book/Handbook icon -->
+  <g transform="translate(128, 96)">
+    <!-- Book cover -->
+    <rect x="0" y="0" width="256" height="320" rx="16" fill="url(#bookGradient)" stroke="#e2e8f0" stroke-width="2"/>
+    
+    <!-- Book spine -->
+    <rect x="0" y="0" width="24" height="320" rx="16" fill="#cbd5e1"/>
+    
+    <!-- Lines representing text -->
+    <rect x="48" y="48" width="160" height="8" rx="4" fill="#64748b"/>
+    <rect x="48" y="72" width="120" height="6" rx="3" fill="#94a3b8"/>
+    <rect x="48" y="96" width="140" height="6" rx="3" fill="#94a3b8"/>
+    <rect x="48" y="120" width="100" height="6" rx="3" fill="#94a3b8"/>
+    
+    <!-- Document/page lines -->
+    <rect x="48" y="160" width="180" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="48" y="176" width="160" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="48" y="192" width="170" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="48" y="208" width="140" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="48" y="224" width="150" height="4" rx="2" fill="#cbd5e1"/>
+    
+    <!-- Small 'H' for Handbok -->
+    <text x="200" y="280" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#2563eb">H</text>
+  </g>
+  
+  <!-- Subtle shadow -->
+  <rect x="128" y="96" width="256" height="320" rx="16" fill="black" opacity="0.1" transform="translate(8, 8)"/>
+</svg> 

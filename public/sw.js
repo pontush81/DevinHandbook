@@ -1,10 +1,10 @@
-const CACHE_NAME = 'handbok-pwa-v2';
-const STATIC_CACHE = 'handbok-static-v2';
-const DYNAMIC_CACHE = 'handbok-dynamic-v2';
+const CACHE_NAME = 'handbok-pwa-v3';
+const STATIC_CACHE = 'handbok-static-v3';
+const DYNAMIC_CACHE = 'handbok-dynamic-v3';
 
 const urlsToCache = [
   '/',
-  '/manifest.json',
+  '/api/manifest',
   '/icon-192x192.png',
   '/icon-512x512.png',
   '/apple-touch-icon.png',
@@ -88,8 +88,13 @@ async function handleRequest(request) {
       return await networkFirstStrategy(request, STATIC_CACHE);
     }
     
-    // Hantera API-anrop med network-only
+    // Hantera API-anrop
     if (url.pathname.startsWith('/api/')) {
+      // Special handling for manifest API - cache for longer
+      if (url.pathname.includes('/api/manifest')) {
+        return await manifestCacheStrategy(request);
+      }
+      // Other API calls use network-only
       return await fetch(request);
     }
     
@@ -172,6 +177,86 @@ async function cacheFirstStrategy(request, cacheName) {
     return networkResponse;
   } catch (error) {
     throw error;
+  }
+}
+
+// Manifest cache strategi: cache manifest API-svar för längre tid
+async function manifestCacheStrategy(request) {
+  try {
+    // Försök hämta från cache först
+    const cachedResponse = await caches.match(request);
+    
+    // Kontrollera om cache är färsk (mindre än 1 timme gammal)
+    if (cachedResponse) {
+      const cachedTime = cachedResponse.headers.get('sw-cached-time');
+      if (cachedTime && (Date.now() - parseInt(cachedTime)) < 3600000) { // 1 timme
+        console.log('PWA: Hämtar manifest från cache (färsk):', request.url);
+        return cachedResponse;
+      }
+    }
+    
+    // Hämta från nätverk
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      // Skapa en modifierad response med tidsstämpel
+      const responseBody = await networkResponse.clone().text();
+      const newResponse = new Response(responseBody, {
+        status: networkResponse.status,
+        statusText: networkResponse.statusText,
+        headers: {
+          ...Object.fromEntries(networkResponse.headers.entries()),
+          'sw-cached-time': Date.now().toString()
+        }
+      });
+      
+      // Cacha den nya responsen
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, newResponse.clone());
+      console.log('PWA: Cachade manifest från nätverk:', request.url);
+      
+      return networkResponse; // Returnera original response
+    }
+    
+    // Om nätverk misslyckas men vi har cachad version
+    if (cachedResponse) {
+      console.log('PWA: Använder gammal cached manifest (nätverk misslyckades):', request.url);
+      return cachedResponse;
+    }
+    
+    throw new Error(`Network response status: ${networkResponse.status}`);
+    
+  } catch (error) {
+    // Fallback till cachad version om tillgänglig
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      console.log('PWA: Använder cached manifest som fallback:', request.url);
+      return cachedResponse;
+    }
+    
+    // Sista utväg: returnera en basic manifest
+    console.log('PWA: Returnerar basic manifest som sista utväg');
+    return new Response(
+      JSON.stringify({
+        "name": "Handbok",
+        "short_name": "Handbok",
+        "start_url": "/",
+        "display": "standalone",
+        "theme_color": "#2563eb",
+        "background_color": "#ffffff",
+        "icons": [
+          {
+            "src": "/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+          }
+        ]
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/manifest+json' }
+      }
+    );
   }
 }
 

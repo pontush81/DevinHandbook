@@ -1,5 +1,6 @@
 import { getHandbookBySlug } from '@/lib/handbook-service';
 import { MessagesPageClient } from './MessagesPageClient';
+import { DynamicManifest } from '@/components/DynamicManifest';
 import { notFound } from 'next/navigation';
 import { getNavigationContext, getDefaultBackLink } from '@/lib/navigation-utils';
 
@@ -43,14 +44,17 @@ export default async function MessagesPage({ params, searchParams }: MessagesPag
   }
 
   return (
-    <MessagesPageClient 
-      handbookId={handbookData.id}
-      handbookTitle={handbookData.title}
-      handbookSlug={handbookData.slug}
-      theme={handbookData.theme}
-      navigationContext={navigationContext}
-      defaultBackLink={defaultBackLink}
-      initialTopicId={topicId}
-    />
+    <>
+      <DynamicManifest handbookSlug={slug} />
+      <MessagesPageClient 
+        handbookId={handbookData.id}
+        handbookTitle={handbookData.title}
+        handbookSlug={handbookData.slug}
+        theme={handbookData.theme}
+        navigationContext={navigationContext}
+        defaultBackLink={defaultBackLink}
+        initialTopicId={topicId}
+      />
+    </>
   );
 } 
