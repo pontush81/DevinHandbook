@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { checkIsSuperAdmin } from "@/lib/user-utils";
+import { checkIsSuperAdminClient } from "@/lib/user-utils";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -75,11 +75,8 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
         }
 
         try {
-          const isSuperAdminResult = await checkIsSuperAdmin(
-            supabase,
-            user.id,
-            user.email || ''
-          );
+          // Använd den nya säkra funktionen för att kontrollera superadmin-status
+          const isSuperAdminResult = await checkIsSuperAdminClient();
 
           if (isSuperAdminResult) {
             setIsSuperAdmin(true);

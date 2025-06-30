@@ -3,19 +3,34 @@ import { createClient } from '@supabase/supabase-js';
 import { checkIsSuperAdmin } from '@/lib/user-utils';
 import { getHybridAuth } from '@/lib/standard-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { requireSecureContext, rateLimit, logSecurityEvent } from '@/lib/security-utils';
 
 export async function DELETE(request: NextRequest) {
   try {
-    // 1. Autentisera användaren
+    // 1. Säkerhetskontroller
+    const securityContextCheck = requireSecureContext(request);
+    if (securityContextCheck) {
+      return securityContextCheck;
+    }
+
+    const rateLimitCheck = rateLimit(request, 3, 600000); // Max 3 requests per 10 minuter
+    if (rateLimitCheck) {
+      return rateLimitCheck;
+    }
+
+    // 2. Autentisera användaren
     const authResult = await getHybridAuth(request);
     if (!authResult.userId) {
+      logSecurityEvent('unauthorized-handbook-delete-attempt', {
+        ip: request.ip || 'unknown'
+      });
       return NextResponse.json(
         { success: false, message: "Ej autentiserad" },
         { status: 401 }
       );
     }
 
-    // 2. Kontrollera superadmin-behörighet
+    // 3. Kontrollera superadmin-behörighet
     const supabase = getServiceSupabase();
     const isSuperAdmin = await checkIsSuperAdmin(
       supabase,
@@ -24,13 +39,17 @@ export async function DELETE(request: NextRequest) {
     );
 
     if (!isSuperAdmin) {
+      logSecurityEvent('unauthorized-handbook-delete-attempt', {
+        attemptedBy: authResult.userId,
+        ip: request.ip || 'unknown'
+      });
       return NextResponse.json(
         { success: false, message: "Du har inte superadmin-behörighet för att radera handböcker" },
         { status: 403 }
       );
     }
 
-    // 3. Validera indata
+    // 4. Validera indata
     const { handbookId } = await request.json();
     
     if (!handbookId) {
@@ -38,6 +57,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     console.log('🗑️ Superadmin', authResult.userId, 'starting deletion of handbook:', handbookId);
+    
+    // Logga säkerhetshändelse
+    logSecurityEvent('handbook-deletion-initiated', {
+      adminUserId: authResult.userId,
+      handbookId,
+      ip: request.ip || 'unknown'
+    });
 
     // Create Supabase client with service role for admin operations
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -128,6 +154,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     console.log('✅ Superadmin', authResult.userId, 'successfully deleted handbook:', handbookId);
+    
+    // Logga framgångsrik borttagning
+    logSecurityEvent('handbook-deletion-completed', {
+      adminUserId: authResult.userId,
+      handbookId,
+      ip: request.ip || 'unknown'
+    });
 
     return NextResponse.json({ 
       success: true, 

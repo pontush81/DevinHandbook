@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { checkIsSuperAdmin } from "@/lib/user-utils";
+import { checkIsSuperAdminClient } from "@/lib/user-utils";
 import { useToast } from '@/components/ui/use-toast';
 import { getProPricing } from '@/lib/pricing';
 import { getTrialStatus, getHandbookTrialStatus, TrialStatus } from '@/lib/trial-service';
@@ -64,11 +64,7 @@ export default function DashboardPage() {
     const fetchSuperadmin = async () => {
       if (!user?.id || !user?.email) return;
       try {
-        const isSuperAdmin = await checkIsSuperAdmin(
-          supabase as any, 
-          user.id, 
-          user.email
-        );
+        const isSuperAdmin = await checkIsSuperAdminClient();
         setIsSuperadmin(isSuperAdmin);
       } catch (error) {
         console.error("Error checking superadmin status:", error);

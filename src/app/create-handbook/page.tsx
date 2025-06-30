@@ -4,11 +4,12 @@ import React, { useEffect, useState, Suspense, useCallback, useMemo, useRef } fr
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
-import { checkIsSuperAdmin } from "@/lib/user-utils";
+import { checkIsSuperAdminClient } from "@/lib/user-utils";
 import { CreateHandbookForm } from "./components/CreateHandbookForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Database } from '@/types/supabase';
+import { getTrialStatus } from '@/lib/trial-service';
 
 // Type från den riktiga databasen
 type HandbookRow = Database['public']['Tables']['handbooks']['Row'];
@@ -31,6 +32,7 @@ function CreateHandbookContent() {
   const [isLoadingHandbooks, setIsLoadingHandbooks] = useState(true);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [hasCheckedHandbooks, setHasCheckedHandbooks] = useState(false);
+  const [userTrialStatus, setUserTrialStatus] = useState<any>(null);
   
   // Use refs to prevent unnecessary re-renders
   const hasInitialized = useRef(false);
@@ -72,11 +74,7 @@ function CreateHandbookContent() {
       const checkSuperadmin = async () => {
         console.log('🎯 [CreateHandbook] Checking superadmin status for user:', user.id);
         try {
-          const isSuperAdmin = await checkIsSuperAdmin(
-            supabase, 
-            user.id, 
-            user.email || ''
-          );
+          const isSuperAdmin = await checkIsSuperAdminClient();
           console.log('🎯 [CreateHandbook] Superadmin check result:', isSuperAdmin);
           setIsSuperadmin(isSuperAdmin);
         } catch (error) {
@@ -127,6 +125,22 @@ function CreateHandbookContent() {
       fetchHandbooks();
     }
   }, [user?.id, hasCheckedHandbooks]);
+
+  // Check trial status when user is available  
+  useEffect(() => {
+    if (user?.id) {
+      checkTrialStatus();
+    }
+  }, [user?.id]);
+
+  const checkTrialStatus = async () => {
+    try {
+      const trialStatus = await getTrialStatus(user!.id);
+      setUserTrialStatus(trialStatus);
+    } catch (error) {
+      console.error('Error checking trial status:', error);
+    }
+  };
 
   // Handle force new handbook parameter
   useEffect(() => {
@@ -271,7 +285,13 @@ function CreateHandbookContent() {
         
         <Card className="shadow-lg border-0">
           <CardContent className="p-6 md:p-8 lg:p-12">
-            {user && <CreateHandbookForm forceNew={forceNewHandbook} />}
+            {user && <CreateHandbookForm 
+              user={user}
+              isSuperadmin={isSuperadmin}
+              userTrialStatus={userTrialStatus}
+              existingHandbooks={handbooks}
+              isLoadingHandbooks={isLoadingHandbooks}
+            />}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
                 🎯 Du blir automatiskt admin när handboken är klar

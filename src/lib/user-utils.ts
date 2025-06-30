@@ -196,4 +196,30 @@ export async function checkIsSuperAdmin(
     console.error('[checkIsSuperAdmin] Oväntat fel:', error);
     return false;
   }
+}
+
+/**
+ * Klientsida-funktion för att kontrollera superadmin-status via säker API
+ * Denna funktion använder vår säkra endpoint istället för direkta databasanrop
+ */
+export async function checkIsSuperAdminClient(): Promise<boolean> {
+  try {
+    if (typeof window === 'undefined') {
+      // På server-sidan, använd den gamla funktionen
+      return false;
+    }
+
+    const response = await fetch('/api/auth/check-superadmin');
+    
+    if (!response.ok) {
+      console.log('[checkIsSuperAdminClient] API responded with error:', response.status);
+      return false;
+    }
+    
+    const data = await response.json();
+    return data.isSuperAdmin || false;
+  } catch (error) {
+    console.error('[checkIsSuperAdminClient] Fel vid kontroll av superadmin-status:', error);
+    return false;
+  }
 } 
