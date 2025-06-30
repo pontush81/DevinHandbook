@@ -209,7 +209,37 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
       return false;
     }
 
-    const response = await fetch('/api/auth/check-superadmin');
+    // Method 1: Try standard request first
+    let response = await fetch('/api/auth/check-superadmin');
+    
+    // Method 2: If that fails, try with Authorization header
+    if (!response.ok && response.status === 401) {
+      console.log('[checkIsSuperAdminClient] Cookie auth failed, trying with access token...');
+      
+      try {
+        // Try to get access token from Supabase client
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.access_token) {
+          console.log('[checkIsSuperAdminClient] Found access token, retrying with Authorization header...');
+          
+          response = await fetch('/api/auth/check-superadmin', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+      } catch (tokenError) {
+        console.log('[checkIsSuperAdminClient] Could not get access token:', tokenError);
+      }
+    }
     
     if (!response.ok) {
       console.log('[checkIsSuperAdminClient] API responded with error:', response.status);

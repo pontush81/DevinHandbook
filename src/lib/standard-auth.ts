@@ -11,8 +11,15 @@ export async function getStandardSession(request?: NextRequest) {
   try {
     // Method 1: Try cookies first (standard SSR approach)
     console.log('🔍 [StandardAuth] Attempting cookie-based authentication...');
+    console.log('🔍 [StandardAuth] Environment:', process.env.NODE_ENV);
+    console.log('🔍 [StandardAuth] Vercel Environment:', process.env.VERCEL_ENV);
     
     const cookieStore = await cookies();
+    
+    // Log available cookies (without sensitive data)
+    const allCookies = cookieStore.getAll();
+    const cookieNames = allCookies.map(c => c.name);
+    console.log('🔍 [StandardAuth] Available cookies:', cookieNames);
     
     const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,7 +27,9 @@ export async function getStandardSession(request?: NextRequest) {
       {
         cookies: {
           get(name: string) {
-            return cookieStore.get(name)?.value;
+            const value = cookieStore.get(name)?.value;
+            console.log(`🔍 [StandardAuth] Cookie ${name}:`, value ? 'present' : 'missing');
+            return value;
           },
         },
       }
@@ -28,8 +37,12 @@ export async function getStandardSession(request?: NextRequest) {
 
     const { data: { user }, error } = await supabase.auth.getUser();
     
+    if (error) {
+      console.log('⚠️ [StandardAuth] Cookie auth error:', error.message);
+    }
+    
     if (!error && user) {
-      console.log('✅ [StandardAuth] Cookie authentication successful');
+      console.log('✅ [StandardAuth] Cookie authentication successful for user:', user.id);
       // Create session-like object for compatibility
       return {
         user,

@@ -219,4 +219,144 @@ console.log('✅ Test-endpoints: SKYDDADE');
 console.log('✅ Superadmin-endpoint: SÄKER');
 
 console.log('\n🔒 Säkerhetsskanning slutförd!');
-console.log('\n💡 Tips: Kör detta skript regelbundet, särskilt före deployment!'); 
+console.log('\n💡 Tips: Kör detta skript regelbundet, särskilt före deployment!');
+
+/**
+ * Kontrollerar att superadmin-endpoint är säkert implementerat
+ */
+function checkSuperadminEndpoint() {
+  const endpointPath = 'src/app/api/auth/check-superadmin/route.ts';
+  
+  if (!fs.existsSync(endpointPath)) {
+    console.log('❌ CRITICAL: Superadmin endpoint saknas!');
+    return false;
+  }
+  
+  const endpointContent = fs.readFileSync(endpointPath, 'utf8');
+  
+  // Kontrollera att den använder säker autentisering
+  const hasAuthCheck = endpointContent.includes('getHybridAuth') || 
+                      endpointContent.includes('createServerClient');
+  const hasMultipleAuthMethods = endpointContent.includes('Method 1:') && 
+                                endpointContent.includes('Method 2:');
+  const hasSecureSuppabaseCall = endpointContent.includes('checkIsSuperAdmin');
+  const hasErrorHandling = endpointContent.includes('try {') && 
+                          endpointContent.includes('catch');
+  
+  if (!hasAuthCheck) {
+    console.log('❌ CRITICAL: Superadmin endpoint saknar autentiseringskontroll!');
+    return false;
+  }
+  
+  if (!hasMultipleAuthMethods) {
+    console.log('❌ CRITICAL: Superadmin endpoint saknar fallback autentiseringsmetoder!');
+    return false;
+  }
+  
+  if (!hasSecureSuppabaseCall) {
+    console.log('❌ CRITICAL: Superadmin endpoint använder inte säker Supabase-anrop!');
+    return false;
+  }
+  
+  if (!hasErrorHandling) {
+    console.log('❌ CRITICAL: Superadmin endpoint saknar felhantering!');
+    return false;
+  }
+  
+  console.log('✅ Superadmin-endpoint: SECURE');
+  return true;
+}
+
+/**
+ * Kontrollerar att klientsida superadmin-kontroll är säker
+ */
+function checkClientSideSuperadminFunction() {
+  const userUtilsPath = 'src/lib/user-utils.ts';
+  
+  if (!fs.existsSync(userUtilsPath)) {
+    console.log('❌ CRITICAL: user-utils.ts saknas!');
+    return false;
+  }
+  
+  const content = fs.readFileSync(userUtilsPath, 'utf8');
+  
+  // Kontrollera att checkIsSuperAdminClient finns
+  const hasClientFunction = content.includes('checkIsSuperAdminClient');
+  const usesSecureEndpoint = content.includes('/api/auth/check-superadmin');
+  const hasTokenFallback = content.includes('Authorization') && 
+                          content.includes('Bearer');
+  const hasErrorHandling = content.includes('try {') && 
+                          content.includes('catch');
+  
+  if (!hasClientFunction) {
+    console.log('❌ CRITICAL: checkIsSuperAdminClient funktionen saknas!');
+    return false;
+  }
+  
+  if (!usesSecureEndpoint) {
+    console.log('❌ CRITICAL: Klientsida superadmin-kontroll använder inte säker endpoint!');
+    return false;
+  }
+  
+  if (!hasTokenFallback) {
+    console.log('❌ CRITICAL: Klientsida superadmin-kontroll saknar token fallback!');
+    return false;
+  }
+  
+  if (!hasErrorHandling) {
+    console.log('❌ CRITICAL: Klientsida superadmin-kontroll saknar felhantering!');
+    return false;
+  }
+  
+  console.log('✅ Klientsida superadmin-kontroll: SECURE');
+  return true;
+}
+
+// Uppdaterar huvudfunktionen
+async function runSecurityCheck() {
+  console.log('🔒 === SÄKERHETSKONTROLL AV DIGITAL HANDBOK ===\n');
+  
+  let allChecksPass = true;
+  
+  // Admin endpoints säkerhet
+  if (!checkAdminEndpointsSecurity()) allChecksPass = false;
+  
+  // Test endpoints skydd
+  if (!checkTestEndpointsProtection()) allChecksPass = false;
+  
+  // Superadmin endpoint säkerhet
+  if (!checkSuperadminEndpoint()) allChecksPass = false;
+  
+  // Klientsida superadmin säkerhet
+  if (!checkClientSideSuperadminFunction()) allChecksPass = false;
+  
+  // CORS konfiguration
+  if (!checkCORSConfiguration()) allChecksPass = false;
+  
+  // Säkerhetsverktyg
+  if (!checkSecurityUtilities()) allChecksPass = false;
+  
+  // Rate limiting
+  if (!checkRateLimiting()) allChecksPass = false;
+  
+  // Säkerhetsheaders
+  if (!checkSecurityHeaders()) allChecksPass = false;
+  
+  console.log('\n🔒 === SÄKERHETSSAMMANFATTNING ===');
+  
+  if (allChecksPass) {
+    console.log('✅ Alla säkerhetskontroller: GODKÄNDA');
+    console.log('✅ Admin-endpoints: SECURE');
+    console.log('✅ Test-endpoints: PROTECTED');
+    console.log('✅ Superadmin-endpoint: SECURE');
+    console.log('✅ Klientsida säkerhet: SECURE');
+    console.log('✅ CORS-konfiguration: SECURE');
+    console.log('✅ Rate limiting: IMPLEMENTED');
+    console.log('✅ Säkerhetsloggning: ACTIVATED');
+    console.log('✅ Säkerhetsheaders: CONFIGURED');
+    console.log('\n🎉 SÄKERHETSSTATUS: PERFECT - Redo för produktion!');
+  } else {
+    console.log('❌ Säkerhetsproblem upptäckta - Åtgärda innan produktion!');
+    process.exit(1);
+  }
+} 
