@@ -1,4 +1,4 @@
-/* Messages Page Styles */
+/* Messages Page Styles - Enhanced 2025 Design */
 
 .messages-page {
   background-color: white;
@@ -159,119 +159,137 @@
   }
 }
 
-/* Message cards - CRITICAL FIX for Card component styling */
-.messages-page .space-y-4 > * + * {
-  margin-top: 1rem;
+/* Enhanced Message Cards - Modern Design */
+.messages-page .space-y-4 > * + *,
+.messages-page .space-y-6 > * + * {
+  margin-top: 1.5rem;
 }
 
-/* Restore Card component styling that was lost in refactoring */
+@media (min-width: 640px) {
+  .messages-page .space-y-6 > * + * {
+    margin-top: 2rem;
+  }
+}
+
+/* Main message cards with improved styling */
 .messages-page [data-component="card"],
 .messages-page .card {
   background: white;
-  border: 1px solid #e5e7eb; /* gray-200 */
-  border-radius: 0.5rem; /* rounded-lg */
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); /* shadow-sm */
-  transition: box-shadow 0.2s ease-in-out;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px; /* More rounded for modern look */
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .messages-page [data-component="card"]:hover,
 .messages-page .card:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+  box-shadow: 0 8px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+  transform: translateY(-1px);
 }
 
-/* Target the actual Card components from the UI library */
-.messages-page [role="region"],
-.messages-page [data-radix-collection-item] {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  transition: box-shadow 0.2s ease-in-out;
+/* Enhanced border-left styling for message categories */
+.messages-page .border-l-4 {
+  border-left-width: 4px;
 }
 
-.messages-page [role="region"]:hover,
-.messages-page [data-radix-collection-item]:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+.messages-page .border-l-blue-500 {
+  border-left-color: #3b82f6;
 }
 
-/* More specific targeting for messages */
-.messages-page .space-y-4 > div {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  transition: box-shadow 0.2s ease-in-out;
+/* User avatar styling */
+.messages-page .w-10.h-10.rounded-full {
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
 }
 
-.messages-page .space-y-4 > div:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+/* Avatar gradient backgrounds */
+.bg-gradient-to-br.from-blue-500.to-purple-600 {
+  background: linear-gradient(to bottom right, #3b82f6, #9333ea);
 }
 
-/* Message card content padding */
-.messages-page .space-y-4 > div > div {
-  padding: 1rem; /* p-4 */
+.bg-gradient-to-br.from-green-500.to-teal-600 {
+  background: linear-gradient(to bottom right, #10b981, #0d9488);
 }
 
-.message-card {
-  background: white;
-  border: 1px solid var(--color-gray-100);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s;
+/* Message content styling */
+.messages-page .ml-13 {
+  margin-left: 3.25rem; /* Space for avatar + gap */
 }
 
-.message-card:hover {
-  box-shadow: var(--shadow-md);
+@media (max-width: 640px) {
+  .messages-page .ml-13 {
+    margin-left: 0; /* Remove left margin on mobile for better space usage */
+  }
 }
 
-.message-card-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-gray-900);
-  margin-bottom: var(--spacing-md);
-  line-height: 1.5;
+/* Conversation thread styling */
+.messages-page .border-l-2.border-gray-200 {
+  border-left-color: #e5e7eb;
+  border-left-width: 2px;
 }
 
-.message-card-content {
-  color: var(--color-gray-600);
-  font-size: var(--font-size-sm);
-  line-height: 1.4;
-  margin-bottom: var(--spacing-md);
-  /* Limit to 2 lines */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.messages-page .border-l-2.border-blue-300 {
+  border-left-color: #93c5fd;
+  border-left-width: 2px;
 }
 
-.message-metadata {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
+/* Reply cards enhanced styling */
+.messages-page .bg-white.rounded-lg.border.border-gray-200 {
+  transition: all 0.15s ease;
+  border-radius: 8px;
 }
 
-.new-message-button {
-  background-color: var(--color-blue-600);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  transition: background-color 0.2s;
-  height: 2.5rem;
-  flex-shrink: 0;
+.messages-page .bg-white.rounded-lg.border.border-gray-200:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.05);
 }
 
-.new-message-button:hover {
-  background-color: var(--color-blue-700);
+/* Empty state styling */
+.messages-page .border-dashed.border-2.border-gray-200 {
+  border-style: dashed;
+  border-width: 2px;
+  border-color: #d1d5db;
 }
 
-/* Success toast */
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  .messages-page .p-4 {
+    padding: 1rem;
+  }
+  
+  .messages-page .p-6 {
+    padding: 1.25rem;
+  }
+  
+  /* Better touch targets */
+  .messages-page button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Adjust avatar size on mobile */
+  .messages-page .w-10.h-10 {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  
+  .messages-page .w-8.h-8 {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  
+  /* Better spacing for conversation threads */
+  .messages-page .ml-4 {
+    margin-left: 0.75rem;
+  }
+  
+  .messages-page .pl-4 {
+    padding-left: 0.75rem;
+  }
+}
+
+/* Success toast remains the same */
 .success-toast {
   position: fixed;
   top: var(--spacing-md);
@@ -282,4 +300,55 @@
   padding: var(--spacing-lg) var(--spacing-xl);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+}
+
+/* Enhanced sticky elements */
+.messages-page .sticky {
+  position: sticky;
+  z-index: 10;
+}
+
+/* Better focus states */
+.messages-page button:focus-visible,
+.messages-page input:focus-visible,
+.messages-page textarea:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.messages-page .animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Badge improvements */
+.messages-page .bg-blue-50.text-blue-700.border-blue-200 {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+/* Hover states for interactive elements */
+.messages-page .hover\\:bg-blue-50:hover {
+  background-color: #eff6ff;
+}
+
+.messages-page .hover\\:text-blue-700:hover {
+  color: #1d4ed8;
+}
+
+/* Smooth transitions for all interactive elements */
+.messages-page * {
+  transition-property: color, background-color, border-color, transform, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 } 

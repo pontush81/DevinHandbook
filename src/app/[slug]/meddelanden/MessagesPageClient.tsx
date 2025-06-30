@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal, Settings, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Plus, Clock, User, Send, X, ChevronDown, ChevronUp, Reply, Lock, Trash2, MoreHorizontal, Settings, ArrowLeft, ArrowUp } from 'lucide-react';
 import Link from 'next/link';
 
 import { supabase } from '@/lib/supabase';
@@ -115,6 +115,9 @@ export function MessagesPageClient({
     author_name: ''
   });
   const [submittingReply, setSubmittingReply] = useState(false);
+  
+  // UI state
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Separate effect for access checking when user changes
   useEffect(() => {
@@ -202,6 +205,16 @@ export function MessagesPageClient({
       }
     }
   }, [initialTopicId, messages, loading]);
+
+  // Handle scroll for scroll-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Save current URL for redirect after login when user is not authenticated
   useEffect(() => {
@@ -523,6 +536,18 @@ export function MessagesPageClient({
         const showAll = replyCount <= 15;
         loadReplies(messageId, showAll);
       }
+      
+      // Scroll to message after a short delay to allow for expansion
+      setTimeout(() => {
+        const messageElement = document.getElementById(`message-${messageId}`);
+        if (messageElement) {
+          messageElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+        }
+      }, 150);
     }
   }
 
@@ -531,8 +556,58 @@ export function MessagesPageClient({
       setShowReplyForm(null);
       setReplyData({ content: '', author_name: '' });
     } else {
+      // Ensure message is expanded first
+      if (expandedMessage !== messageId) {
+        setExpandedMessage(messageId);
+        // Load replies if not already loaded
+        if (!replies[messageId]) {
+          const message = messages.find(m => m.id === messageId);
+          const replyCount = message?.reply_count || 0;
+          const showAll = replyCount <= 15;
+          loadReplies(messageId, showAll);
+        }
+      }
+      
       setShowReplyForm(messageId);
+      
+      // Scroll to reply form after a short delay to allow for DOM updates
+      setTimeout(() => {
+        // Try to find the reply form and scroll it into view
+        const messageElement = document.getElementById(`message-${messageId}`);
+        if (messageElement) {
+          const replyForm = messageElement.querySelector('[data-reply-form]') as HTMLElement;
+          if (replyForm) {
+            replyForm.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          } else {
+            // Fallback: scroll to bottom of message
+            messageElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'end',
+              inline: 'nearest'
+            });
+          }
+          
+          // Focus the first input in the reply form
+          setTimeout(() => {
+            const firstInput = messageElement.querySelector('input[type="text"]') as HTMLInputElement;
+            if (firstInput) {
+              firstInput.focus();
+            }
+          }, 300);
+        }
+      }, 200);
     }
+  }
+
+  function scrollToTop() {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }
 
   if (loading || authLoading || accessLoading) {
@@ -644,9 +719,9 @@ export function MessagesPageClient({
         </div>
 
         {/* Messages section */}
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-4 sm:space-y-6">
           {messages.length === 0 ? (
-            <Card className="card">
+            <Card className="card border-dashed border-2 border-gray-200">
               <CardContent className="p-8 text-center card-content">
                 <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Inga meddelanden än</h3>
@@ -660,307 +735,329 @@ export function MessagesPageClient({
               </CardContent>
             </Card>
           ) : (
-            messages.map((message) => (
-              <Card key={message.id} id={`message-${message.id}`} className="hover:shadow-md transition-shadow card" data-ui="card">
-                <CardContent className="p-3 sm:p-4 card-content" data-ui="card-content">
-                  {/* Header with title and actions */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0 pr-2">
-                      <h3 className="font-semibold text-gray-900 text-base sm:text-lg leading-tight sm:leading-6">
-                        {message.title}
-                      </h3>
-                    </div>
-                    
-                    {/* Mobile-friendly actions dropdown */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 flex-shrink-0"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem 
-                          onClick={() => toggleMessageExpanded(message.id)}
-                          className="cursor-pointer"
-                        >
-                          {expandedMessage === message.id ? (
+            messages.map((message, index) => (
+              <div key={message.id} id={`message-${message.id}`} className="group">
+                {/* Main message card with improved styling */}
+                <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500 bg-white shadow-sm">
+                  <CardContent className="p-4 sm:p-6">
+                    {/* Header section with better spacing */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0 pr-3">
+                        <div className="flex items-center gap-3 mb-2">
+                          {/* User avatar placeholder with initials */}
+                          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                            {message.author_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-gray-900 text-lg leading-tight mb-1 group-hover:text-blue-700 transition-colors">
+                              {message.title}
+                            </h3>
+                            <div className="flex items-center gap-3 text-sm text-gray-500">
+                              <span className="font-medium text-gray-700">{message.author_name}</span>
+                              <span>•</span>
+                              <time dateTime={message.created_at}>
+                                {new Date(message.created_at).toLocaleDateString('sv-SE', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </time>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Actions dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem 
+                            onClick={() => toggleMessageExpanded(message.id)}
+                            className="cursor-pointer"
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            {expandedMessage === message.id ? 'Minimera' : 'Visa hela tråden'}
+                          </DropdownMenuItem>
+                          {(message.author_id === user?.id || userRole === 'admin') && (
                             <>
-                              <ChevronUp className="h-4 w-4 mr-2" />
-                              Dölj detaljer
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="h-4 w-4 mr-2" />
-                              Visa detaljer
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteMessage(message.id, message.title)}
+                                disabled={deletingMessage === message.id}
+                                className="cursor-pointer text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {deletingMessage === message.id ? 'Raderar...' : 'Radera'}
+                              </DropdownMenuItem>
                             </>
                           )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            toggleReplyForm(message.id);
-                            if (expandedMessage !== message.id) {
-                              setExpandedMessage(message.id);
-                              // Smart loading when opening via Reply in dropdown
-                              if (!replies[message.id]) {
-                                const showAll = message.reply_count <= 15;
-                                loadReplies(message.id, showAll);
-                              }
-                            }
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <Reply className="h-4 w-4 mr-2" />
-                          Svara
-                        </DropdownMenuItem>
-                        {(message.author_id === user?.id || userRole === 'admin') && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteMessage(message.id, message.title)}
-                              disabled={deletingMessage === message.id}
-                              className="cursor-pointer text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {deletingMessage === message.id ? 'Raderar...' : 'Radera'}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                  {/* Content preview */}
-                  <p className="text-gray-600 text-sm sm:text-base line-clamp-2 mb-4">
-                    {message.content}
-                  </p>
-                  
-                  {/* Metadata and Actions - Mobile optimized stacked layout */}
-                  <div className="space-y-3">
-                    {/* Metadata row - responsive layout */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                        <Badge variant="outline" className="text-xs px-2 py-1">
-                          {message.category_name}
-                        </Badge>
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>{message.author_name}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{new Date(message.created_at).toLocaleDateString('sv-SE')}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Reply count - more prominent on mobile */}
-                      <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
-                        <MessageCircle className="h-3 w-3" />
-                        <span>{message.reply_count} svar</span>
-                      </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                     
-                    {/* Action buttons row - mobile optimized */}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => toggleMessageExpanded(message.id)}
-                        className="h-8 px-3 text-xs sm:text-sm text-gray-600 hover:text-gray-700 hover:bg-gray-50"
-                      >
-                        <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${expandedMessage === message.id ? 'rotate-180' : ''}`} />
-                        {expandedMessage === message.id ? 'Dölj' : 'Visa'}
-                      </Button>
-                      
-                      {/* Only show reply button if message is NOT expanded */}
-                      {expandedMessage !== message.id && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            toggleReplyForm(message.id);
-                            if (expandedMessage !== message.id) {
-                              setExpandedMessage(message.id);
-                              if (!replies[message.id]) {
-                                const showAll = message.reply_count <= 15;
-                                loadReplies(message.id, showAll);
-                              }
-                            }
-                          }}
-                          className="h-8 px-3 text-xs sm:text-sm text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-                        >
-                          <Reply className="h-3 w-3 mr-1" />
-                          Svara
-                        </Button>
-                      )}
+                    {/* Content preview with better typography */}
+                    <div className="mb-4 ml-13 sm:ml-13">
+                      <p className="text-gray-600 text-base leading-relaxed line-clamp-3">
+                        {message.content}
+                      </p>
                     </div>
-                  </div>
+                    
+                                         {/* Metadata bar with improved design and spacing */}
+                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between ml-13 sm:ml-13 mt-1 gap-2 sm:gap-0">
+                       <div className="flex items-center gap-4">
+                         <Badge 
+                           variant="secondary" 
+                           className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium px-2 py-1"
+                         >
+                           {message.category_name}
+                         </Badge>
+                       </div>
+                       
+                       {/* Interaction stats with responsive spacing */}
+                       <div className="flex items-center gap-3 sm:gap-4 text-sm text-gray-500">
+                         <div className="flex items-center gap-2">
+                           <MessageCircle className="h-4 w-4" />
+                           <span className="font-medium">{message.reply_count}</span>
+                           <span className="hidden sm:inline">svar</span>
+                         </div>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => toggleMessageExpanded(message.id)}
+                           className="h-8 px-2 sm:px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors text-xs sm:text-sm"
+                         >
+                           {expandedMessage === message.id ? (
+                             <>
+                               <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                               <span className="hidden sm:inline">Dölj</span>
+                               <span className="sm:hidden">↑</span>
+                             </>
+                           ) : (
+                             <>
+                               <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                               <span className="hidden sm:inline">Visa tråd</span>
+                               <span className="sm:hidden">Visa</span>
+                             </>
+                           )}
+                         </Button>
+                       </div>
+                     </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Expanded content */}
-                  {expandedMessage === message.id && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4">
-                        <p className="text-gray-700 whitespace-pre-wrap text-sm sm:text-base leading-relaxed">
-                          {message.content}
-                        </p>
-                      </div>
+                {/* Expanded conversation view */}
+                {expandedMessage === message.id && (
+                  <div className="mt-4 ml-4 border-l-2 border-gray-200 pl-4">
+                    {/* Full message content */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {message.content}
+                      </p>
+                    </div>
 
-                      {/* Replies section */}
-                      <div className="space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <h4 className="font-medium text-gray-900 text-sm sm:text-base">
-                            Svar ({message.reply_count})
-                          </h4>
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            {/* Show "Load more" button for large threads that aren't fully loaded */}
-                            {replyInfo[message.id] && 
-                             replyInfo[message.id].showing_recent && 
-                             !showingAllReplies[message.id] && 
-                             message.reply_count > 15 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => loadReplies(message.id, true)}
-                                className="text-blue-600 hover:text-blue-700 text-xs h-auto p-2"
-                              >
-                                Visa alla {replyInfo[message.id].total_count} svar
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {loadingReplies[message.id] ? (
-                          <div className="text-center py-6">
-                            <div className="text-sm text-gray-500">Laddar svar...</div>
-                          </div>
-                        ) : replies[message.id] && replies[message.id].length > 0 ? (
-                          <div className="space-y-3">
-                            {/* Show indicator for large threads with partial loading */}
-                            {replyInfo[message.id] && 
-                             replyInfo[message.id].showing_recent && 
-                             !showingAllReplies[message.id] && 
-                             message.reply_count > 15 && (
-                              <div className="text-xs text-gray-500 italic mb-2 border-l-2 border-gray-300 pl-3 py-1">
-                                Visar de {replies[message.id]?.length || 0} senaste av {replyInfo[message.id].total_count} svar
-                              </div>
-                            )}
-                            {replies[message.id].map((reply, index) => (
-                              <div key={reply.id} className="bg-blue-50 rounded-lg p-3 sm:p-4 border-l-3 sm:border-l-2 border-blue-600">
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
-                                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
-                                    <div className="flex items-center gap-1">
-                                      <User className="h-3 w-3" />
-                                      <span className="font-medium">{reply.author_name}</span>
-                                    </div>
-                                    <span className="text-gray-500">
-                                      {new Date(reply.created_at).toLocaleDateString('sv-SE')} {new Date(reply.created_at).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                  {/* Delete button for replies */}
-                                  {(reply.author_id === user?.id || userRole === 'admin') && (
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="text-red-600 hover:text-red-700 h-8 w-8 sm:h-6 sm:w-6 p-0 flex-shrink-0"
-                                      onClick={() => handleDeleteReply(reply.id, message.id, reply.author_name)}
-                                      disabled={deletingReply === reply.id}
-                                      title="Radera svar"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                                <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                  {reply.content}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : message.reply_count > 0 ? null : (
-                          <div className="text-sm text-gray-500 italic py-4 text-center">
-                            Inga svar än. Bli första att svara!
-                          </div>
-                        )}
-                        
-                        {/* Reply button - placed after all replies */}
-                        <div className="pt-3 border-t border-gray-100">
+                    {/* Replies section with better structure */}
+                    <div className="space-y-4">
+                      {/* Replies header */}
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <Reply className="h-4 w-4" />
+                          Svar ({message.reply_count})
+                        </h4>
+                        {replyInfo[message.id] && 
+                         replyInfo[message.id].showing_recent && 
+                         !showingAllReplies[message.id] && 
+                         message.reply_count > 15 && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => toggleReplyForm(message.id)}
-                            className="h-9 sm:h-8 px-4 text-sm sm:text-xs text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                            onClick={() => loadReplies(message.id, true)}
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
                           >
-                            <Reply className="h-4 w-4 sm:h-3 sm:w-3 mr-2 sm:mr-1" />
-                            {showReplyForm === message.id ? 'Avbryt svar' : 'Svara på detta'}
+                            Visa alla {replyInfo[message.id].total_count} svar
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {/* Loading state */}
+                      {loadingReplies[message.id] ? (
+                        <div className="text-center py-8">
+                          <div className="inline-flex items-center gap-2 text-gray-500">
+                            <MessageCircle className="h-4 w-4 animate-spin" />
+                            <span>Laddar svar...</span>
+                          </div>
+                        </div>
+                      ) : replies[message.id] && replies[message.id].length > 0 ? (
+                        <div className="space-y-3">
+                          {/* Partial loading indicator */}
+                          {replyInfo[message.id] && 
+                           replyInfo[message.id].showing_recent && 
+                           !showingAllReplies[message.id] && 
+                           message.reply_count > 15 && (
+                            <div className="text-xs text-gray-500 italic border-l-2 border-blue-200 pl-3 py-2 bg-blue-50 rounded-r">
+                              Visar de {replies[message.id]?.length || 0} senaste av {replyInfo[message.id].total_count} svar
+                            </div>
+                          )}
+                          
+                          {/* Reply threads */}
+                          {replies[message.id].map((reply, replyIndex) => (
+                            <div key={reply.id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  {/* Reply user avatar */}
+                                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                                    {reply.author_name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-900 text-sm">{reply.author_name}</span>
+                                    <span className="text-gray-500 text-xs ml-2">
+                                      {new Date(reply.created_at).toLocaleDateString('sv-SE', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                                {/* Reply delete button */}
+                                {(reply.author_id === user?.id || userRole === 'admin') && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                                    onClick={() => handleDeleteReply(reply.id, message.id, reply.author_name)}
+                                    disabled={deletingReply === reply.id}
+                                    title="Radera svar"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                              <p className="text-gray-700 text-sm leading-relaxed ml-11 whitespace-pre-wrap">
+                                {reply.content}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : message.reply_count > 0 ? null : (
+                        <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                          <MessageCircle className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">Inga svar än. Bli första att svara!</p>
+                        </div>
+                      )}
+                      
+                      {/* Sticky reply button at the bottom of conversation */}
+                      <div className="sticky bottom-0 bg-white border-t border-gray-200 pt-4 -mx-4 px-4 -mb-4 pb-4">
+                        <Button
+                          variant={showReplyForm === message.id ? "secondary" : "default"}
+                          size="sm"
+                          onClick={() => toggleReplyForm(message.id)}
+                          className={`w-full justify-center ${
+                            showReplyForm === message.id 
+                              ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
+                        >
+                          <Reply className="h-4 w-4 mr-2" />
+                          {showReplyForm === message.id ? 'Avbryt svar' : 'Skriv ett svar'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                                 {/* Reply form - now appears immediately after the button */}
+                 {showReplyForm === message.id && (
+                   <div className="mt-4 ml-4 border-l-2 border-blue-300 pl-4" data-reply-form>
+                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Send className="h-4 w-4 text-blue-600" />
+                        Skriv ditt svar
+                      </h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ditt namn
+                          </label>
+                          <Input
+                            type="text"
+                            value={replyData.author_name}
+                            onChange={(e) => setReplyData(prev => ({ ...prev, author_name: e.target.value }))}
+                            placeholder="Ditt namn"
+                            className="w-full h-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ditt svar
+                          </label>
+                          <Textarea
+                            value={replyData.content}
+                            onChange={(e) => setReplyData(prev => ({ ...prev, content: e.target.value }))}
+                            placeholder="Skriv ditt svar här..."
+                            rows={4}
+                            className="w-full resize-none bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSubmitReply(message.id)}
+                            disabled={!replyData.content.trim() || !replyData.author_name.trim() || submittingReply}
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1 h-10"
+                          >
+                            {submittingReply ? (
+                              <>
+                                <MessageCircle className="h-4 w-4 mr-2 animate-spin" />
+                                Skickar...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Skicka svar
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleReplyForm(message.id)}
+                            className="sm:w-auto h-10 border-gray-300"
+                          >
+                            Avbryt
                           </Button>
                         </div>
                       </div>
                     </div>
-                  )}
-
-                  {/* Reply form */}
-                  {showReplyForm === message.id && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-900 mb-4 text-sm sm:text-base">Skriv ett svar</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Ditt namn
-                            </label>
-                            <Input
-                              type="text"
-                              value={replyData.author_name}
-                              onChange={(e) => setReplyData(prev => ({ ...prev, author_name: e.target.value }))}
-                              placeholder="Ditt namn"
-                              className="w-full text-sm h-10"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Svar
-                            </label>
-                            <Textarea
-                              value={replyData.content}
-                              onChange={(e) => setReplyData(prev => ({ ...prev, content: e.target.value }))}
-                              placeholder="Skriv ditt svar här..."
-                              rows={4}
-                              className="w-full resize-none text-sm"
-                            />
-                          </div>
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                            <Button
-                              size="sm"
-                              onClick={() => handleSubmitReply(message.id)}
-                              disabled={!replyData.content.trim() || !replyData.author_name.trim() || submittingReply}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-sm h-10 sm:h-8"
-                            >
-                              {submittingReply ? 'Skickar...' : 'Skicka svar'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => toggleReplyForm(message.id)}
-                              className="text-sm h-10 sm:h-8"
-                            >
-                              Avbryt
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </div>
+                )}
+              </div>
             ))
           )}
         </div>
         
         {/* Note: Admin notification controls removed - users manage their own settings via Settings page */}
       </div>
+
+      {/* Scroll to top button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          aria-label="Scroll till toppen"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
 
       {/* New Message Dialog */}
       <Dialog open={showNewMessageForm} onOpenChange={setShowNewMessageForm}>
