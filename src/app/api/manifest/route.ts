@@ -4,7 +4,28 @@ import { getHandbookBySlug } from '@/lib/handbook-service';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const slug = searchParams.get('slug');
+    let slug = searchParams.get('slug');
+    
+    // Om ingen slug skickas som parameter, försök att extrahera den från referer
+    if (!slug) {
+      const referer = request.headers.get('referer');
+      if (referer) {
+        try {
+          const refererUrl = new URL(referer);
+          const pathSegments = refererUrl.pathname.split('/').filter(Boolean);
+          
+          // Om det finns path-segment som inte är kända system-sidor, använd det som slug
+          const systemPaths = ['api', 'login', 'signup', 'dashboard', 'create-handbook', 'admin', 'auth', 'contact', 'terms', 'privacy', 'success', 'upgrade', 'join', 'handbook-demo', 'debug', 'test', 'search', 'notifications', 'gdpr', 'legal', 'handbook-settings', 'reset-password', 'clear-auth', 'resend-confirmation', 'cookie-policy', 'cookie-settings', 'upgrade-success', 'ocr-test', 'pwa-test', 'test-sidebar', 'test-toast', 'test-trial', 'test-search'];
+          
+          if (pathSegments.length > 0 && !systemPaths.includes(pathSegments[0])) {
+            slug = pathSegments[0];
+            console.log(`[Manifest API] Detected slug from referer: ${slug}`);
+          }
+        } catch (error) {
+          console.log(`[Manifest API] Could not parse referer: ${referer}`);
+        }
+      }
+    }
 
     // Base manifest for the main site
     const baseManifest = {
@@ -41,12 +62,13 @@ export async function GET(request: NextRequest) {
       "prefer_related_applications": false
     };
 
-    // If no slug provided, return base manifest
+    // If no slug found, return base manifest
     if (!slug) {
+      console.log(`[Manifest API] No slug found, returning base manifest`);
       return NextResponse.json(baseManifest, {
         headers: {
           'Content-Type': 'application/manifest+json',
-          'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+          'Cache-Control': 'public, max-age=60' // Very short cache for dynamic behavior
         }
       });
     }
@@ -60,7 +82,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(baseManifest, {
         headers: {
           'Content-Type': 'application/manifest+json',
-          'Cache-Control': 'public, max-age=300' // Cache for 5 minutes for failed lookups
+          'Cache-Control': 'public, max-age=60' // Very short cache for dynamic behavior
         }
       });
     }
@@ -100,12 +122,12 @@ export async function GET(request: NextRequest) {
       ]
     };
 
-    console.log(`[Manifest API] Generated custom manifest for: ${handbookData.title}`);
+    console.log(`[Manifest API] Generated custom manifest for: ${handbookData.title} with start_url: /${slug}`);
     
     return NextResponse.json(handbookManifest, {
       headers: {
         'Content-Type': 'application/manifest+json',
-        'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+        'Cache-Control': 'public, max-age=60' // Very short cache for dynamic behavior
       }
     });
 
@@ -150,7 +172,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(baseManifest, {
       headers: {
         'Content-Type': 'application/manifest+json',
-        'Cache-Control': 'public, max-age=300'
+        'Cache-Control': 'public, max-age=60' // Very short cache for dynamic behavior
       }
     });
   }

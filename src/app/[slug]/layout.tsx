@@ -25,7 +25,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: handbookData.title,
       statusBarStyle: 'default',
     },
-    manifest: `/api/manifest?slug=${slug}`,
     openGraph: {
       title: `${handbookData.title} - Digital Handbok`,
       description: `${handbookData.title} - Din digitala handbok, alltid tillgänglig offline`,
