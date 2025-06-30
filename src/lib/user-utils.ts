@@ -219,14 +219,11 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
       return false;
     }
 
-    // Försök hämta user ID för cache-kontroll
+    // Försök hämta user ID för cache-kontroll från befintlig client
     let currentUserId = null;
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const { getSupabaseClient } = await import('@/lib/supabase-client');
+      const supabase = getSupabaseClient();
       const { data: { user } } = await supabase.auth.getUser();
       currentUserId = user?.id || null;
     } catch {
@@ -247,12 +244,9 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
     // Method 2: If that fails, try with Authorization header
     if (!response.ok && response.status === 401) {
       try {
-        // Try to get access token from Supabase client
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        // Try to get access token from existing Supabase client
+        const { getSupabaseClient } = await import('@/lib/supabase-client');
+        const supabase = getSupabaseClient();
         
         const { data: { session } } = await supabase.auth.getSession();
         

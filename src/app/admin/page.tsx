@@ -76,8 +76,29 @@ export default function AdminDashboardPage() {
     try {
       setIsLoadingData(true);
       
-      // Fetch handbooks
-      const response = await fetch('/api/admin/handbooks');
+      // Helper function to create auth headers
+      const createAuthHeaders = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            return {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            };
+          }
+        } catch {}
+        return { 'Content-Type': 'application/json' };
+      };
+      
+      // Fetch handbooks with auth headers
+      let response = await fetch('/api/admin/handbooks');
+      
+      // If unauthorized, try with auth header
+      if (!response.ok && response.status === 401) {
+        const headers = await createAuthHeaders();
+        response = await fetch('/api/admin/handbooks', { headers });
+      }
+      
       let handbooksData: Handbook[] = [];
       
       if (response.ok) {
@@ -96,25 +117,26 @@ export default function AdminDashboardPage() {
       let allUsers: User[] = [];
       
       try {
-        console.log("Fetching users via API...");
-        const response = await fetch('/api/admin/users');
+        let usersResponse = await fetch('/api/admin/users');
         
-        if (response.ok) {
-          const apiResult = await response.json();
+        // If unauthorized, try with auth header
+        if (!usersResponse.ok && usersResponse.status === 401) {
+          const headers = await createAuthHeaders();
+          usersResponse = await fetch('/api/admin/users', { headers });
+        }
+        
+        if (usersResponse.ok) {
+          const apiResult = await usersResponse.json();
           if (apiResult.data && Array.isArray(apiResult.data)) {
             allUsers = apiResult.data;
             setUsers(allUsers);
-            console.log(`Successfully fetched ${allUsers.length} users`);
           } else {
-            console.error("API returned invalid data format:", apiResult);
             setUsers([]);
           }
         } else {
-          console.error("API request failed with status:", response.status);
           setUsers([]);
         }
       } catch (userError) {
-        console.error("Error fetching users:", userError);
         setUsers([]);
       }
 
@@ -183,7 +205,6 @@ export default function AdminDashboardPage() {
       setRecentActivities(activities.slice(0, 10));
 
     } catch (err: unknown) {
-      console.error("Error fetching data:", err);
       setError("Kunde inte hämta data. Kontrollera att du har superadmin-behörighet.");
     } finally {
       setIsLoadingData(false);
