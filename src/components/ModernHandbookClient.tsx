@@ -14,7 +14,7 @@ import { MainFooter } from '@/components/layout/MainFooter';
 import { MembersManager } from '@/components/handbook/MembersManager';
 import { TrialStatusBar } from '@/components/trial/TrialStatusBar';
 import { BlockedAccountScreen } from '@/components/trial/BlockedAccountScreen';
-import { getCachedTrialStatus, getCachedOwnership } from '@/lib/api-helpers';
+import { useHandbookTrialStatus, useHandbookOwnership } from '@/hooks/useApi';
 import { HandbookDebugInfo } from '@/components/debug/HandbookDebugInfo';
 
 interface ModernHandbookClientProps {
@@ -468,10 +468,11 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
           return;
         }
 
-        // Check if user is owner using cached API
+        // Check if user is owner using API (React Query will cache automatically)
         console.log('🔍 [ModernHandbookClient] Checking handbook ownership...');
         
-        const ownershipData = await getCachedOwnership(initialData.id, user.id);
+        const ownershipResponse = await fetch(`/api/handbook/${initialData.id}/ownership?userId=${user.id}`);
+        const ownershipData = await ownershipResponse.json();
         const isOwner = ownershipData.isOwner;
 
         console.log('🔍 [ModernHandbookClient] Ownership check result:', { isOwner });
@@ -572,7 +573,8 @@ export const ModernHandbookClient: React.FC<ModernHandbookClientProps> = ({
 
         let trialStatus;
         try {
-          trialStatus = await getCachedTrialStatus(initialData.id, user.id);
+          const trialResponse = await fetch(`/api/handbook/${initialData.id}/trial-status?userId=${user.id}`);
+          trialStatus = await trialResponse.json();
         } catch (trialError) {
           console.warn('Could not fetch trial status (user may not have access):', trialError);
           // Set safe fallback for non-privileged users

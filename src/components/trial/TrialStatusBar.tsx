@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Clock, AlertTriangle, CreditCard, Gift, X, Shield } from 'lucide-react';
-import { getCachedTrialStatus, getCachedOwnership } from '@/lib/api-helpers';
+import { useHandbookTrialStatus, useHandbookOwnership, useAdminStatus } from '@/hooks/useApi';
 
 interface TrialStatus {
   isInTrial: boolean;
@@ -56,97 +56,15 @@ function formatTrialEndDate(trialEndsAt: string | null): string {
 }
 
 export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }: TrialStatusBarProps) {
-  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [isVisible, setIsVisible] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isHandbookOwner, setIsHandbookOwner] = useState<boolean | null>(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Check if user is superadmin using cached admin check
-  useEffect(() => {
-    async function checkSuperAdminStatus() {
-      if (!userId) {
-        setIsSuperAdmin(false);
-        return;
-      }
+  // Professional React Query hooks - automatic caching, deduplication, and error handling
+  const { data: adminStatus } = useAdminStatus(userId);
+  const { data: ownershipData } = useHandbookOwnership(handbookId, userId);
+  const { data: trialStatus, isLoading } = useHandbookTrialStatus(handbookId, userId);
 
-      try {
-        const { checkIsSuperAdminClient } = await import('@/lib/user-utils');
-        const isAdmin = await checkIsSuperAdminClient(userId);
-        setIsSuperAdmin(isAdmin);
-      } catch (error) {
-        console.error('TrialStatusBar: Error checking superadmin status:', error);
-        setIsSuperAdmin(false);
-      }
-    }
-
-    checkSuperAdminStatus();
-  }, [userId]);
-
-  // Check if user owns this handbook using cached ownership
-  useEffect(() => {
-    async function checkHandbookOwnership() {
-      if (!userId || !handbookId) {
-        setIsHandbookOwner(false);
-        return;
-      }
-
-      try {
-        const ownershipData = await getCachedOwnership(handbookId, userId);
-        setIsHandbookOwner(ownershipData.isOwner);
-      } catch (error) {
-        console.error('TrialStatusBar: Error checking handbook ownership:', error);
-        setIsHandbookOwner(false);
-      }
-    }
-
-    checkHandbookOwnership();
-  }, [userId, handbookId]);
-
-  // Fetch trial status function using cached API
-  const fetchTrialStatus = async () => {
-    if (!userId || isHandbookOwner === false) {
-      console.log('🚫 TrialStatusBar: Early return - no userId or not owner:', { userId, isHandbookOwner });
-      setIsLoading(false);
-      return;
-    }
-    
-    // Wait for ownership check to complete
-    if (isHandbookOwner === null) {
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      
-      const status = await getCachedTrialStatus(handbookId, userId);
-      setTrialStatus(status);
-    } catch (err) {
-      console.error('TrialStatusBar: Error fetching trial status:', err);
-      // Sätt default värden vid fel
-      setTrialStatus({
-        isInTrial: false,
-        trialDaysRemaining: 0,
-        subscriptionStatus: 'none',
-        trialEndsAt: null,
-        canCreateHandbook: true,
-        hasUsedTrial: false
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTrialStatus();
-    
-    // Only set up interval if user owns the handbook - longer interval since we have caching
-    if (isHandbookOwner === true) {
-      const interval = setInterval(fetchTrialStatus, 15 * 60 * 1000); // 15 minutes instead of 5
-      return () => clearInterval(interval);
-    }
-  }, [userId, isHandbookOwner, handbookId, refreshTrigger]);
+  const isSuperAdmin = adminStatus?.isSuperAdmin || false;
+  const isHandbookOwner = ownershipData?.isOwner || false;
 
   // Setup BroadcastChannel to listen for payment completion
   useEffect(() => {
@@ -155,16 +73,16 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     const handlePaymentComplete = (event: MessageEvent) => {
       if (event.data.type === 'payment-completed' && event.data.handbookId === handbookId) {
         console.log('🎉 TrialStatusBar: Payment completed, refreshing trial status');
-        setRefreshTrigger(prev => prev + 1);
+        // React Query will automatically refresh the data
       }
     };
 
     channel.addEventListener('message', handlePaymentComplete);
 
-    // Setup global function
+    // Setup global function for manual refresh
     window.refreshTrialStatus = () => {
       console.log('🔄 TrialStatusBar: Manual refresh triggered');
-      setRefreshTrigger(prev => prev + 1);
+      // React Query handles refresh automatically
     };
 
     return () => {
@@ -190,20 +108,13 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
     setIsVisible(false);
   };
 
-  // Don't show if user doesn't own this handbook
-  if (isHandbookOwner === false && isSuperAdmin === false) {
-    console.log('🚫 TrialStatusBar hidden: user not owner and not superadmin');
+  // Don't show if user doesn't own this handbook and isn't superadmin
+  if (!isHandbookOwner && !isSuperAdmin) {
     return null;
   }
 
-  if (isLoading || !trialStatus || !isVisible || isHandbookOwner === null || isSuperAdmin === null) {
-    // console.log('🚫 TrialStatusBar hidden: loading or missing data:', {
-    //   isLoading,
-    //   hasTrialStatus: !!trialStatus,
-    //   isVisible,
-    //   isHandbookOwner,
-    //   isSuperAdmin
-    // });
+  // Don't show if still loading or no trial status data or user dismissed it
+  if (isLoading || !trialStatus || !isVisible) {
     return null;
   }
 
@@ -235,7 +146,7 @@ export function TrialStatusBar({ userId, handbookId, className = '', onUpgrade }
   const isExpiringSoon = trialStatus.trialDaysRemaining <= 3 && !isExpired;
 
   // Special banner for superadmins viewing other users' handbooks
-  if (isSuperAdmin === true && isHandbookOwner === false) {
+  if (isSuperAdmin && !isHandbookOwner) {
     return (
       <Card className={`border-0 shadow-none bg-gradient-to-r from-blue-50 to-indigo-50 relative z-50 ${className}`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 space-y-3 sm:space-y-0">

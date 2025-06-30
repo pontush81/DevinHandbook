@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { showToast } from '@/components/ui/use-toast';
 import { safeLocalStorage } from '@/lib/safe-storage';
-import { clearUserCache } from '@/lib/api-helpers';
 
 type AuthContextType = {
   user: User | null;
@@ -240,7 +239,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('📡 [AuthContext] Getting current session from Supabase...');
         
         try {
-          // Use getUser() for security instead of getSession()
+          // First check if we have a session to avoid AuthSessionMissingError
+          const { data: { session: existingSession } } = await supabase.auth.getSession();
+          
+          if (!existingSession) {
+            console.log('ℹ️ [AuthContext] No existing session found');
+            setSession(null);
+            setUser(null);
+            return;
+          }
+          
+          // Use getUser() for security validation of the session
           const { data: { user }, error } = await supabase.auth.getUser();
           
           console.log('📡 [AuthContext] getUser() result:', {
@@ -249,15 +258,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             error: error?.message || 'none'
           });
           
-          // If we have a user, get the session for compatibility
-          let currentSession = null;
-          if (user && !error) {
-            const { data: { session } } = await supabase.auth.getSession();
-            currentSession = session;
-          }
+          // We already have the session from the check above
+          let currentSession = existingSession;
           
           if (error) {
-            console.error('❌ [AuthContext] Error getting user:', error);
+            // AuthSessionMissingError is normal when user is not logged in
+            if (error.message?.includes('Auth session missing')) {
+              console.log('ℹ️ [AuthContext] No active session (user not logged in)');
+            } else {
+              console.error('❌ [AuthContext] Error getting user:', error);
+            }
             
             // Om det är en auth error, rensa korrupt session data
             if (error.message?.includes('Invalid') || error.message?.includes('expired') || error.message?.includes('jwt')) {
@@ -325,7 +335,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('ℹ️ [AuthContext] Set user and session to null (no user)');
           }
         } catch (userError) {
-          console.error('❌ [AuthContext] Exception during getUser:', userError);
+          // This should be very rare now since we check for session first
+          console.error('❌ [AuthContext] Unexpected error during auth check:', userError);
           setSession(null);
           setUser(null);
         }
@@ -393,8 +404,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (event === 'SIGNED_OUT') {
         console.log('🚪 [AuthContext] User signed out');
-        // Clear API cache when user signs out
-        clearUserCache();
         setSession(null);
         setUser(null);
         setIsLoading(false); // Viktigt: Sätt isLoading till false även när utloggad
@@ -499,10 +508,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('🚪 AuthContext: Starting logout process...');
     
     try {
-      // 1. Clear API cache before clearing state
-      clearUserCache(user?.id);
-      
-      // 2. Rensa state först
+      // 1. Rensa state först
       setSession(null);
       setUser(null);
       setIsLoading(true);

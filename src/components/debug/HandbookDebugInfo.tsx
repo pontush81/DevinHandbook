@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCachedTrialStatus, getCachedOwnership } from '@/lib/api-helpers';
+import { useHandbookTrialStatus, useHandbookOwnership } from '@/hooks/useApi';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,10 +34,7 @@ interface HandbookData {
 
 export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
   const { user } = useAuth();
-  const [ownershipStatus, setOwnershipStatus] = useState<boolean | null>(null);
-  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [handbookData, setHandbookData] = useState<HandbookData | null>(null);
-  const [shouldShowPaywall, setShouldShowPaywall] = useState<boolean | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,62 +42,32 @@ export function HandbookDebugInfo({ handbookId }: HandbookDebugInfoProps) {
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   const [isExecutingWebhook, setIsExecutingWebhook] = useState(false);
 
+  // Professional React Query hooks
+  const { data: ownershipData } = useHandbookOwnership(handbookId, user?.id);
+  const { data: trialStatus } = useHandbookTrialStatus(handbookId, user?.id);
+  
+  const ownershipStatus = ownershipData?.isOwner || false;
+  const shouldShowPaywall = !trialStatus?.isInTrial && trialStatus?.subscriptionStatus !== 'active';
+
   // Only show for specific emails
   const debugEmails = ['pontus.hberg@gmail.com', 'pontusaiagent@gmail.com'];
   const isDeveloper = user?.email && debugEmails.includes(user.email);
 
+  // Get handbook data (only thing not covered by React Query hooks)
   useEffect(() => {
     if (!user || !isDeveloper) return;
 
-    const fetchDebugData = async () => {
+    const fetchHandbookData = async () => {
       try {
-        // Check ownership using cached API
-        const ownershipData = await getCachedOwnership(handbookId, user.id);
-        setOwnershipStatus(ownershipData.isOwner);
-
-        // Initialize trial status data
-        let trialStatusData = {
-          isInTrial: false,
-          trialDaysRemaining: 0,
-          subscriptionStatus: 'unknown',
-          trialEndsAt: null,
-          canCreateHandbook: false,
-          hasUsedTrial: false
-        };
-
-        // Get trial status with error handling using cached API
-        try {
-          trialStatusData = await getCachedTrialStatus(handbookId, user.id);
-          setTrialStatus(trialStatusData);
-        } catch (trialError) {
-          console.warn('Could not fetch trial status (user may not have access):', trialError);
-          // Use fallback trial status for non-privileged users
-          setTrialStatus(trialStatusData);
-        }
-
-        // Get handbook data
         const handbookResponse = await fetch(`/api/debug/handbook-data?handbookId=${handbookId}&userId=${user.id}`);
         const handbookDebugData = await handbookResponse.json();
         setHandbookData(handbookDebugData.handbook);
-
-        // Calculate paywall visibility
-        const shouldShow = !trialStatusData.isInTrial && trialStatusData.subscriptionStatus !== 'active';
-        setShouldShowPaywall(shouldShow);
-
-        // console.log('🐛 Debug Info Details:', {
-        //   user,
-        //   authLoading: undefined,
-        //   ownershipStatus: ownershipData.isOwner,
-        //   trialStatus: trialStatusData,
-        //   shouldShowPaywall: shouldShow,
-        //   handbookData: handbookDebugData.handbook
-        // });
       } catch (error) {
-        console.error('Debug info error:', error);
+        console.error('Debug handbook data error:', error);
       }
     };
 
-    fetchDebugData();
+    fetchHandbookData();
   }, [user, handbookId, isDeveloper]);
 
   const handleFixTrial = async () => {

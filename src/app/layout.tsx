@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import Script from 'next/script';
 // Import dev utils to make forceLogout available globally
 import "@/lib/dev-utils";
@@ -297,9 +298,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://staging.handbok.org" />
       </head>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </QueryProvider>
         
         {/* PWA Service Worker Registration */}
         <Script id="pwa-register" strategy="afterInteractive">

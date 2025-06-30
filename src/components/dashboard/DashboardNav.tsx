@@ -1,59 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Book, Settings, Users } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { checkIsSuperAdminClient, clearAdminStatusCache } from "@/lib/user-utils";
+import { useAdminStatus } from "@/hooks/useApi";
+import { LogOut, Book, Users } from "lucide-react";
 
 export function DashboardNav() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [lastUserId, setLastUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user?.id) {
-        // Ingen användare - rensa admin status och cache
-        setIsSuperAdmin(false);
-        clearAdminStatusCache();
-        setLastUserId(null);
-        return;
-      }
-      
-      // Undvik dubbelkontroll för samma användare
-      if (lastUserId === user.id) {
-        return;
-      }
-      
-      // Kontrollera om det är en ny användare
-      if (lastUserId && lastUserId !== user.id) {
-        // Ny användare - rensa cache
-        clearAdminStatusCache();
-      }
-      
-      // Sätt lastUserId INNAN vi gör API-anropet för att undvika race conditions
-      setLastUserId(user.id);
-      
-      try {
-        const isAdmin = await checkIsSuperAdminClient(user.id);
-        setIsSuperAdmin(isAdmin);
-      } catch (error) {
-        console.error("Fel vid kontroll av admin-status:", error);
-        setIsSuperAdmin(false);
-      }
-    };
-
-    checkAdminStatus();
-  }, [user?.id]); // Tog bort lastUserId från dependency array för att undvika loops
+  
+  // Professional React Query hook - handles caching, deduplication, and errors automatically
+  const { data: adminStatus } = useAdminStatus(user?.id);
+  const isSuperAdmin = adminStatus?.isSuperAdmin || false;
 
   const handleSignOut = async () => {
-    // Rensa admin-cache vid utloggning
-    clearAdminStatusCache();
-    setIsSuperAdmin(false);
     await signOut();
   };
 
