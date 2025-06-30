@@ -1,35 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getHybridAuth } from '@/lib/standard-auth';
-import { checkIsSuperAdmin } from '@/lib/user-utils';
+import { adminAuth } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Autentisera användaren
-    const authResult = await getHybridAuth(request);
-    if (!authResult.userId) {
-      return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
-        { status: 401 }
-      );
+    // 1. Standardiserad admin-autentisering
+    const authResult = await adminAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
     }
 
-    // 2. Kontrollera superadmin-behörighet
+    // 2. Hämta handböcker (nu säkert)
     const supabase = getServiceSupabase();
-    const isSuperAdmin = await checkIsSuperAdmin(
-      supabase,
-      authResult.userId,
-      authResult.userEmail || ''
-    );
-
-    if (!isSuperAdmin) {
-      return NextResponse.json(
-        { success: false, message: "Du har inte superadmin-behörighet" },
-        { status: 403 }
-      );
-    }
-
-    // 3. Hämta handböcker (nu säkert)
     const { data: handbooks, error: handbooksError } = await supabase
       .from('handbooks')
       .select('id, title, slug, created_at, published, owner_id, organization_name')

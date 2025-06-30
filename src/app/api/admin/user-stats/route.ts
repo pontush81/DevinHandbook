@@ -1,43 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase';
-import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
-import { checkIsSuperAdmin } from '@/lib/user-utils';
-import { supabase } from '@/lib/supabase';
+import { adminAuth } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    // Kontrollera autentisering och admin-status
-    console.log('🔐 [Admin User Stats] Authenticating user with hybrid auth...');
-    const authResult = await getHybridAuth(request);
-    
-    if (!authResult.userId) {
-      console.log('❌ [Admin User Stats] Authentication failed - no userId found');
-      return NextResponse.json(
-        { error: "Ej autentiserad" },
-        { status: 401 }
-      );
+    // Standardiserad admin-autentisering
+    console.log('🔐 [Admin User Stats] Authenticating user with admin auth...');
+    const authResult = await adminAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
     }
 
-    console.log('✅ [Admin User Stats] Successfully authenticated user:', {
-      userId: authResult.userId,
-      method: authResult.authMethod
-    });
-
-    const isSuperAdmin = await checkIsSuperAdmin(
-      supabase,
-      authResult.userId,
-      authResult.userEmail || ''
-    );
-
-    if (!isSuperAdmin) {
-      console.log('❌ [Admin User Stats] User is not super admin');
-      return NextResponse.json(
-        { error: "Ej behörig" },
-        { status: 403 }
-      );
-    }
-    
-    console.log('✅ [Admin User Stats] Super admin access confirmed');
+    console.log('✅ [Admin User Stats] Successfully authenticated admin user:', authResult.userId);
 
     const adminClient = getAdminClient();
     

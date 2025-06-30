@@ -3,32 +3,61 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const glob = require('glob');
 
 console.log('🔒 Säkerhetsskanning av projekt...\n');
 
 // 1. Kontrollera att admin-endpoints har säkerhetskontroller
-console.log('1. Kontrollerar admin-endpoints säkerhet...');
-const adminEndpoints = [
-  'src/app/api/admin/users/route.ts',
-  'src/app/api/admin/handbooks/route.ts',
-  'src/app/api/admin/delete-handbook/route.ts',
-  'src/app/api/admin/set-admin/route.ts'
-];
+console.log('\n1. Kontrollerar admin-endpoints säkerhet...');
+const adminEndpoints = glob.sync('src/app/api/admin/**/route.ts');
+const unsafeAdminEndpoints = [];
 
-let unsecureAdminEndpoints = [];
 adminEndpoints.forEach(endpoint => {
-  if (fs.existsSync(endpoint)) {
-    const content = fs.readFileSync(endpoint, 'utf-8');
-    if (!content.includes('getHybridAuth') && !content.includes('checkIsSuperAdmin')) {
-      unsecureAdminEndpoints.push(endpoint);
+  const content = fs.readFileSync(endpoint, 'utf-8');
+  
+  // Identifiera typ av endpoint
+  const isSuperAdminEndpoint = content.includes('checkIsSuperAdmin') || 
+                               endpoint.includes('users') || 
+                               endpoint.includes('set-admin') || 
+                               endpoint.includes('delete-handbook') ||
+                               endpoint.includes('user-stats');
+  
+  const isHandbookAdminEndpoint = content.includes('handbook_members') && 
+                                 content.includes('role') && 
+                                 (content.includes('admin') || content.includes('editor'));
+  
+  if (isSuperAdminEndpoint) {
+    // Superadmin endpoints ska ha antingen gamla metoden ELLER nya adminAuth
+    const hasOldSuperAuth = content.includes('getHybridAuth') && content.includes('checkIsSuperAdmin');
+    const hasNewSuperAuth = content.includes('adminAuth');
+    const isSecure = hasOldSuperAuth || hasNewSuperAuth;
+    
+    if (!isSecure) {
+      unsafeAdminEndpoints.push(`${endpoint} (SUPERADMIN - behöver adminAuth())`);
+    }
+  } else if (isHandbookAdminEndpoint) {
+    // Handbok-admin endpoints ska ha getHybridAuth + handbok-medlemskontroll
+    const hasHandbookAuth = content.includes('getHybridAuth') && 
+                           content.includes('handbook_members') && 
+                           content.includes('role');
+    
+    if (!hasHandbookAuth) {
+      unsafeAdminEndpoints.push(`${endpoint} (HANDBOOK ADMIN - behöver handbok-validering)`);
+    }
+  } else {
+    // Okänd admin-endpoint typ - flagga för manuell granskning
+    const hasAnyAuth = content.includes('getHybridAuth') || content.includes('adminAuth');
+    if (!hasAnyAuth) {
+      unsafeAdminEndpoints.push(`${endpoint} (OKÄND TYP - behöver manuell granskning)`);
     }
   }
 });
 
-if (unsecureAdminEndpoints.length === 0) {
-  console.log('✅ Alla admin-endpoints har säkerhetskontroller');
+if (unsafeAdminEndpoints.length === 0) {
+  console.log('✅ Alla admin-endpoints har korrekta säkerhetskontroller');
 } else {
-  console.log('❌ Admin-endpoints utan säkerhet:', unsecureAdminEndpoints);
+  console.log('❌ Admin-endpoints med säkerhetsproblem:');
+  unsafeAdminEndpoints.forEach(endpoint => console.log(`   - ${endpoint}`));
 }
 
 // 2. Kontrollera att test-endpoints har miljöskydd

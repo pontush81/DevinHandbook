@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { Database } from '@/types/supabase';
 import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
+import { getUserEmail } from '@/lib/security-utils';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -631,7 +632,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Create the reply
+    // 4. Get user email safely
+    const userEmail = await getUserEmail(userId, authResult.session);
+
+    // 5. Create the reply
     const { data: reply, error: replyError } = await supabase
       .from('forum_posts')
       .insert({
@@ -640,7 +644,7 @@ export async function POST(request: NextRequest) {
         content: content.trim(),
         author_id: userId,
         author_name: author_name.trim(),
-        author_email: authResult.userEmail || null,
+        author_email: userEmail || null,
         created_at: new Date().toISOString()
       })
       .select()
@@ -654,7 +658,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Update topic reply count using direct calculation
+    // 6. Update topic reply count using direct calculation
     const newReplyCount = (topic.reply_count || 0) + 1;
     const { error: updateError } = await supabase
       .from('forum_topics')
@@ -669,7 +673,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the whole operation for this
     }
 
-    // 6. Send notification immediately (database consistency is ensured by sequential operations above)
+    // 7. Send notification immediately (database consistency is ensured by sequential operations above)
     console.log('🔔 [Replies POST] About to send notification for reply:', reply.id);
     try {
       await sendNotificationDirect('new_reply', {

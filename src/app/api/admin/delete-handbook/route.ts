@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { checkIsSuperAdmin } from '@/lib/user-utils';
-import { getHybridAuth } from '@/lib/standard-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { requireSecureContext, rateLimit, logSecurityEvent } from '@/lib/security-utils';
+import { requireSecureContext, rateLimit, logSecurityEvent, adminAuth } from '@/lib/security-utils';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -18,38 +16,16 @@ export async function DELETE(request: NextRequest) {
       return rateLimitCheck;
     }
 
-    // 2. Autentisera användaren
-    const authResult = await getHybridAuth(request);
-    if (!authResult.userId) {
+    // 2. Standardiserad admin-autentisering
+    const authResult = await adminAuth(request);
+    if (!authResult.success) {
       logSecurityEvent('unauthorized-handbook-delete-attempt', {
-        ip: request.ip || 'unknown'
+        ip: request.headers.get('x-forwarded-for') || 'unknown'
       });
-      return NextResponse.json(
-        { success: false, message: "Ej autentiserad" },
-        { status: 401 }
-      );
+      return authResult.response!;
     }
 
-    // 3. Kontrollera superadmin-behörighet
-    const supabase = getServiceSupabase();
-    const isSuperAdmin = await checkIsSuperAdmin(
-      supabase,
-      authResult.userId,
-      authResult.userEmail || ''
-    );
-
-    if (!isSuperAdmin) {
-      logSecurityEvent('unauthorized-handbook-delete-attempt', {
-        attemptedBy: authResult.userId,
-        ip: request.ip || 'unknown'
-      });
-      return NextResponse.json(
-        { success: false, message: "Du har inte superadmin-behörighet för att radera handböcker" },
-        { status: 403 }
-      );
-    }
-
-    // 4. Validera indata
+    // 3. Validera indata
     const { handbookId } = await request.json();
     
     if (!handbookId) {
@@ -62,7 +38,7 @@ export async function DELETE(request: NextRequest) {
     logSecurityEvent('handbook-deletion-initiated', {
       adminUserId: authResult.userId,
       handbookId,
-      ip: request.ip || 'unknown'
+      ip: request.headers.get('x-forwarded-for') || 'unknown'
     });
 
     // Create Supabase client with service role for admin operations
@@ -159,7 +135,7 @@ export async function DELETE(request: NextRequest) {
     logSecurityEvent('handbook-deletion-completed', {
       adminUserId: authResult.userId,
       handbookId,
-      ip: request.ip || 'unknown'
+      ip: request.headers.get('x-forwarded-for') || 'unknown'
     });
 
     return NextResponse.json({ 

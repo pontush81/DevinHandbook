@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getHybridAuth } from '@/lib/standard-auth';
-import { checkIsSuperAdmin } from '@/lib/user-utils';
-import { requireSecureContext, rateLimit, logSecurityEvent } from '@/lib/security-utils';
+import { requireSecureContext, rateLimit, logSecurityEvent, adminAuth } from '@/lib/security-utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,40 +15,17 @@ export async function POST(req: NextRequest) {
       return rateLimitCheck;
     }
 
-    // 2. Autentisera användaren
-    const authResult = await getHybridAuth(req);
-    if (!authResult.userId) {
+    // 2. Standardiserad admin-autentisering
+    const authResult = await adminAuth(req);
+    if (!authResult.success) {
       logSecurityEvent('unauthorized-admin-access-attempt', {
         endpoint: 'set-admin',
-        ip: req.ip || 'unknown'
+        ip: req.headers.get('x-forwarded-for') || 'unknown'
       });
-      return NextResponse.json(
-        { error: 'Ej autentiserad' },
-        { status: 401 }
-      );
+      return authResult.response!;
     }
 
-    // 3. Kontrollera superadmin-behörighet
-    const supabase = getServiceSupabase();
-    const isSuperAdmin = await checkIsSuperAdmin(
-      supabase,
-      authResult.userId,
-      authResult.userEmail || ''
-    );
-
-    if (!isSuperAdmin) {
-      logSecurityEvent('unauthorized-admin-privilege-escalation-attempt', {
-        attemptedBy: authResult.userId,
-        endpoint: 'set-admin',
-        ip: req.ip || 'unknown'
-      });
-      return NextResponse.json(
-        { error: 'Du har inte superadmin-behörighet' },
-        { status: 403 }
-      );
-    }
-
-    // 4. Validera indata
+    // 3. Validera indata
     const { userId, isAdmin } = await req.json();
     
     if (!userId) {
@@ -64,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (userId === authResult.userId && isAdmin === false) {
       logSecurityEvent('superadmin-self-demotion-attempt', {
         adminId: authResult.userId,
-        ip: req.ip || 'unknown'
+        ip: req.headers.get('x-forwarded-for') || 'unknown'
       });
       return NextResponse.json(
         { error: 'Du kan inte ta bort din egen superadmin-status' },
@@ -72,8 +47,9 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // 5. Uppdatera is_superadmin i profiles-tabellen
+    // 4. Uppdatera is_superadmin i profiles-tabellen
     const adminStatus = isAdmin !== false;
+    const supabase = getServiceSupabase();
     
     const { error: profileError } = await supabase
       .from('profiles')
@@ -88,12 +64,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Logga säkerhetsändring
+    // 5. Logga säkerhetsändring
     logSecurityEvent('admin-status-changed', {
       changedBy: authResult.userId,
       targetUser: userId,
       newStatus: adminStatus ? 'superadmin' : 'regular_user',
-      ip: req.ip || 'unknown'
+      ip: req.headers.get('x-forwarded-for') || 'unknown'
     });
     
     return NextResponse.json({ 
@@ -105,7 +81,7 @@ export async function POST(req: NextRequest) {
     logSecurityEvent('admin-endpoint-error', {
       endpoint: 'set-admin',
       error: error instanceof Error ? error.message : 'Unknown error',
-      ip: req.ip || 'unknown'
+      ip: req.headers.get('x-forwarded-for') || 'unknown'
     });
     return NextResponse.json(
       { error: 'Failed to update user admin status' },

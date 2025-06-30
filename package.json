@@ -74,6 +74,7 @@
     "dotenv": "^16.5.0",
     "estree-util-is-identifier-name": "^2.1.0",
     "framer-motion": "^12.12.1",
+    "glob": "^11.0.3",
     "hast-util-to-jsx-runtime": "^2.3.6",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
