@@ -1,0 +1,189 @@
+
+> devin-handbook@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.122:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1584ms
+ ○ Compiling /api/auth/check-superadmin ...
+ ✓ Compiled /api/auth/check-superadmin in 1349ms (483 modules)
+Node Environment: development
+Is Edge Runtime: false
+Vercel Deployment: inte i Vercel
+🔍 [CheckSuperAdmin] Starting standardized admin authentication...
+🔍 [AdminAuth] Starting admin authentication...
+🔍 [StandardAuth] Attempting cookie-based authentication...
+🔍 [StandardAuth] Environment: development
+🔍 [StandardAuth] Vercel Environment: undefined
+🔍 [StandardAuth] Available cookies: []
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+⚠️ [StandardAuth] Cookie auth error: Auth session missing!
+⚠️ [StandardAuth] Cookie authentication failed, trying alternatives...
+❌ [StandardAuth] All authentication methods failed
+🔍 [AdminAuth] Hybrid auth result: { userId: 'missing', authMethod: null, hasSession: false }
+🔍 [AdminAuth] Trying direct Supabase client approach...
+⚠️ [AdminAuth] Direct Supabase auth failed: Auth session missing!
+❌ [AdminAuth] All authentication methods failed
+❌ [CheckSuperAdmin] Authentication failed
+ HEAD /api/auth/check-superadmin 401 in 1779ms
+🔍 [CheckSuperAdmin] Starting standardized admin authentication...
+🔍 [AdminAuth] Starting admin authentication...
+🔍 [StandardAuth] Attempting cookie-based authentication...
+🔍 [StandardAuth] Environment: development
+🔍 [StandardAuth] Vercel Environment: undefined
+🔍 [StandardAuth] Available cookies: []
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+⚠️ [StandardAuth] Cookie auth error: Auth session missing!
+⚠️ [StandardAuth] Cookie authentication failed, trying alternatives...
+❌ [StandardAuth] All authentication methods failed
+🔍 [AdminAuth] Hybrid auth result: { userId: 'missing', authMethod: null, hasSession: false }
+🔍 [AdminAuth] Trying direct Supabase client approach...
+⚠️ [AdminAuth] Direct Supabase auth failed: Auth session missing!
+❌ [AdminAuth] All authentication methods failed
+❌ [CheckSuperAdmin] Authentication failed
+ GET /api/auth/check-superadmin 401 in 36ms
+ ○ Compiling /api/admin/handbooks ...
+ ✓ Compiled /api/admin/handbooks in 586ms (485 modules)
+Node Environment: development
+Is Edge Runtime: false
+Vercel Deployment: inte i Vercel
+🔍 [AdminAuth] Starting admin authentication...
+🔍 [StandardAuth] Attempting cookie-based authentication...
+🔍 [StandardAuth] Environment: development
+🔍 [StandardAuth] Vercel Environment: undefined
+🔍 [StandardAuth] Available cookies: []
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+⚠️ [StandardAuth] Cookie auth error: Auth session missing!
+⚠️ [StandardAuth] Cookie authentication failed, trying alternatives...
+❌ [StandardAuth] All authentication methods failed
+🔍 [AdminAuth] Hybrid auth result: { userId: 'missing', authMethod: null, hasSession: false }
+🔍 [AdminAuth] Trying direct Supabase client approach...
+⚠️ [AdminAuth] Direct Supabase auth failed: Auth session missing!
+❌ [AdminAuth] All authentication methods failed
+ GET /api/admin/handbooks 401 in 690ms
+ ✓ Compiled /api/admin/users in 121ms (487 modules)
+Node Environment: development
+Is Edge Runtime: false
+Vercel Deployment: inte i Vercel
+🔍 [AdminAuth] Starting admin authentication...
+🔍 [StandardAuth] Attempting cookie-based authentication...
+🔍 [StandardAuth] Environment: development
+🔍 [StandardAuth] Vercel Environment: undefined
+🔍 [StandardAuth] Available cookies: []
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+⚠️ [StandardAuth] Cookie auth error: Auth session missing!
+⚠️ [StandardAuth] Cookie authentication failed, trying alternatives...
+❌ [StandardAuth] All authentication methods failed
+🔍 [AdminAuth] Hybrid auth result: { userId: 'missing', authMethod: null, hasSession: false }
+🔍 [AdminAuth] Trying direct Supabase client approach...
+⚠️ [AdminAuth] Direct Supabase auth failed: Auth session missing!
+❌ [AdminAuth] All authentication methods failed
+ GET /api/admin/users 401 in 187ms
+ ✓ Compiled /api/admin/user-stats in 132ms (489 modules)
+Node Environment: development
+Is Edge Runtime: false
+Vercel Deployment: inte i Vercel
+🔐 [Admin User Stats] Authenticating user with admin auth...
+🔍 [AdminAuth] Starting admin authentication...
+🔍 [StandardAuth] Attempting cookie-based authentication...
+🔍 [StandardAuth] Environment: development
+🔍 [StandardAuth] Vercel Environment: undefined
+🔍 [StandardAuth] Available cookies: []
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.0: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.1: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.2: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.3: missing
+🔍 [StandardAuth] Cookie sb-kjsquvjzctdwgjypcjrg-auth-token.4: missing
+⚠️ [StandardAuth] Cookie auth error: Auth session missing!
+⚠️ [StandardAuth] Cookie authentication failed, trying alternatives...
+❌ [StandardAuth] All authentication methods failed
+🔍 [AdminAuth] Hybrid auth result: { userId: 'missing', authMethod: null, hasSession: false }
+🔍 [AdminAuth] Trying direct Supabase client approach...
+⚠️ [AdminAuth] Direct Supabase auth failed: Auth session missing!
+❌ [AdminAuth] All authentication methods failed
+ GET /api/admin/user-stats 401 in 183ms
