@@ -867,7 +867,7 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
       .insert({
         user_id: userId,
         subscription_id: subscription.id,
-        event_type: 'trial_upgraded',
+        event_type: 'subscription_created',
         status: 'completed',
         automated_action: 'subscription_created',
         action_completed_at: new Date().toISOString(),
@@ -881,7 +881,8 @@ export async function handleTrialUpgrade(userId: string, stripeSession: any) {
           amount_paid: stripeSession.amount_total,
           currency: stripeSession.currency,
           fallback_used: !stripeSession.metadata?.handbookId,
-          webhook_enhanced: !!stripeSession.metadata?.webhook_enhanced
+          webhook_enhanced: !!stripeSession.metadata?.webhook_enhanced,
+          event_context: 'trial_to_paid_upgrade'
         }
       });
 
