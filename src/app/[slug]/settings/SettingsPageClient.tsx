@@ -101,11 +101,27 @@ export default function SettingsPageClient({
   async function handleForumToggle(checked: boolean) {
     setForumUpdating(true);
     try {
+      // Hämta access token för robust autentisering
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Lägg till Authorization header om access token finns
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
       const response = await fetch(`/api/handbook/${handbookData.id}/settings`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           forum_enabled: checked,
           userId: userId

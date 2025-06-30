@@ -214,8 +214,6 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
     
     // Method 2: If that fails, try with Authorization header
     if (!response.ok && response.status === 401) {
-      console.log('[checkIsSuperAdminClient] Cookie auth failed, trying with access token...');
-      
       try {
         // Try to get access token from Supabase client
         const { createClient } = await import('@supabase/supabase-js');
@@ -227,8 +225,6 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.access_token) {
-          console.log('[checkIsSuperAdminClient] Found access token, retrying with Authorization header...');
-          
           response = await fetch('/api/auth/check-superadmin', {
             headers: {
               'Authorization': `Bearer ${session.access_token}`,
@@ -237,19 +233,26 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
           });
         }
       } catch (tokenError) {
-        console.log('[checkIsSuperAdminClient] Could not get access token:', tokenError);
+        // Tyst hantering - access token kanske inte finns
       }
     }
     
+    // 401 eller 403 betyder bara att användaren inte är superadmin (normalt)
+    if (response.status === 401 || response.status === 403) {
+      return false;
+    }
+    
     if (!response.ok) {
-      console.log('[checkIsSuperAdminClient] API responded with error:', response.status);
+      // Endast logga verkliga serverfel (500, etc.)
+      console.log('[checkIsSuperAdminClient] API server error:', response.status);
       return false;
     }
     
     const data = await response.json();
     return data.isSuperAdmin || false;
   } catch (error) {
-    console.error('[checkIsSuperAdminClient] Fel vid kontroll av superadmin-status:', error);
+    // Endast logga verkliga nätverksfel eller JSON-parsing fel
+    console.error('[checkIsSuperAdminClient] Network or parsing error:', error);
     return false;
   }
 } 

@@ -10,16 +10,7 @@ import { Database } from '@/types/supabase';
 export async function getStandardSession(request?: NextRequest) {
   try {
     // Method 1: Try cookies first (standard SSR approach)
-    console.log('🔍 [StandardAuth] Attempting cookie-based authentication...');
-    console.log('🔍 [StandardAuth] Environment:', process.env.NODE_ENV);
-    console.log('🔍 [StandardAuth] Vercel Environment:', process.env.VERCEL_ENV);
-    
     const cookieStore = await cookies();
-    
-    // Log available cookies (without sensitive data)
-    const allCookies = cookieStore.getAll();
-    const cookieNames = allCookies.map(c => c.name);
-    console.log('🔍 [StandardAuth] Available cookies:', cookieNames);
     
     const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,9 +18,7 @@ export async function getStandardSession(request?: NextRequest) {
       {
         cookies: {
           get(name: string) {
-            const value = cookieStore.get(name)?.value;
-            console.log(`🔍 [StandardAuth] Cookie ${name}:`, value ? 'present' : 'missing');
-            return value;
+            return cookieStore.get(name)?.value;
           },
         },
       }
@@ -37,12 +26,7 @@ export async function getStandardSession(request?: NextRequest) {
 
     const { data: { user }, error } = await supabase.auth.getUser();
     
-    if (error) {
-      console.log('⚠️ [StandardAuth] Cookie auth error:', error.message);
-    }
-    
     if (!error && user) {
-      console.log('✅ [StandardAuth] Cookie authentication successful for user:', user.id);
       // Create session-like object for compatibility
       return {
         user,
@@ -54,16 +38,12 @@ export async function getStandardSession(request?: NextRequest) {
       };
     }
     
-    console.log('⚠️ [StandardAuth] Cookie authentication failed, trying alternatives...');
-    
     // Method 2: Try query parameter fallback (for join system compatibility)
     if (request) {
       const { searchParams } = new URL(request.url);
       const queryUserId = searchParams.get('userId');
       
       if (queryUserId) {
-        console.log('🔍 [StandardAuth] Found userId in query parameters, creating mock session...');
-        
         // Create a mock session object for compatibility
         // Note: This should only be used for specific endpoints that expect this pattern
         return {
@@ -79,8 +59,6 @@ export async function getStandardSession(request?: NextRequest) {
       // Method 3: Try Bearer token
       const authHeader = request.headers.get('Authorization');
       if (authHeader?.startsWith('Bearer ')) {
-        console.log('🔍 [StandardAuth] Found Bearer token, attempting verification...');
-        
         try {
           const token = authHeader.substring(7);
           
@@ -88,7 +66,6 @@ export async function getStandardSession(request?: NextRequest) {
           const { data: { user }, error: tokenError } = await supabase.auth.getUser(token);
           
           if (!tokenError && user) {
-            console.log('✅ [StandardAuth] Bearer token authentication successful');
             return {
               user,
               access_token: token,
@@ -99,12 +76,11 @@ export async function getStandardSession(request?: NextRequest) {
             };
           }
         } catch (tokenError) {
-          console.log('⚠️ [StandardAuth] Bearer token verification failed:', tokenError);
+          // Silent fail for Bearer token verification
         }
       }
     }
     
-    console.log('❌ [StandardAuth] All authentication methods failed');
     return null;
     
   } catch (error) {
@@ -129,7 +105,6 @@ export async function getStandardUserId(request?: NextRequest): Promise<string |
       const { searchParams } = new URL(request.url);
       const queryUserId = searchParams.get('userId');
       if (queryUserId) {
-        console.log('🔍 [StandardAuth] Using userId from query parameter');
         return queryUserId;
       }
     }

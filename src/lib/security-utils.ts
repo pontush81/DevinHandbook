@@ -114,6 +114,23 @@ export function rateLimit(request: NextRequest, maxRequests: number = 10, window
 }
 
 /**
+ * Hämtar klient-IP från request (med fallbacks för olika miljöer)
+ */
+export function getClientIP(request: NextRequest): string {
+  try {
+    return (
+      request.ip ||
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      request.headers.get('cf-connecting-ip') ||
+      'unknown'
+    );
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
+/**
  * Loggar säkerhetsrelaterade händelser
  */
 export function logSecurityEvent(event: string, details: Record<string, any> = {}) {
@@ -139,23 +156,14 @@ export async function adminAuth(request: NextRequest): Promise<{
   response?: NextResponse;
 }> {
   try {
-    console.log('🔍 [AdminAuth] Starting admin authentication...');
-    
     // Method 1: Try hybrid auth first
     const authResult = await getHybridAuth(request);
-    console.log('🔍 [AdminAuth] Hybrid auth result:', {
-      userId: authResult.userId ? 'present' : 'missing',
-      authMethod: authResult.authMethod,
-      hasSession: !!authResult.session
-    });
     
     let userId: string | null = authResult.userId;
     let userEmail = '';
     
     // Method 2: If hybrid auth failed, try direct Supabase client approach
     if (!userId) {
-      console.log('🔍 [AdminAuth] Trying direct Supabase client approach...');
-      
       try {
         const cookieStore = await cookies();
         const supabase = createServerClient(
@@ -173,14 +181,11 @@ export async function adminAuth(request: NextRequest): Promise<{
         const { data: { user }, error } = await supabase.auth.getUser();
         
         if (!error && user) {
-          console.log('✅ [AdminAuth] Direct Supabase auth successful for user:', user.id);
           userId = user.id;
           userEmail = user.email || '';
-        } else {
-          console.log('⚠️ [AdminAuth] Direct Supabase auth failed:', error?.message);
         }
       } catch (directAuthError) {
-        console.log('⚠️ [AdminAuth] Direct auth error:', directAuthError);
+        // Silent fail
       }
     }
     
@@ -188,8 +193,6 @@ export async function adminAuth(request: NextRequest): Promise<{
     if (!userId) {
       const authHeader = request.headers.get('Authorization');
       if (authHeader?.startsWith('Bearer ')) {
-        console.log('🔍 [AdminAuth] Trying Authorization header auth...');
-        
         try {
           const token = authHeader.substring(7);
           const cookieStore = await cookies();
@@ -208,18 +211,16 @@ export async function adminAuth(request: NextRequest): Promise<{
           const { data: { user }, error } = await supabase.auth.getUser(token);
           
           if (!error && user) {
-            console.log('✅ [AdminAuth] Bearer token auth successful for user:', user.id);
             userId = user.id;
             userEmail = user.email || '';
           }
         } catch (tokenError) {
-          console.log('⚠️ [AdminAuth] Bearer token auth failed:', tokenError);
+          // Silent fail
         }
       }
     }
     
     if (!userId) {
-      console.log('❌ [AdminAuth] All authentication methods failed');
       return {
         success: false,
         response: NextResponse.json(
@@ -243,11 +244,6 @@ export async function adminAuth(request: NextRequest): Promise<{
       userEmail = profile?.email || '';
     }
 
-    console.log('🔍 [AdminAuth] Final user info:', {
-      userId: userId,
-      email: userEmail ? 'present' : 'missing'
-    });
-
     // Kontrollera superadmin-behörighet
     const supabase = getServiceSupabase();
     const isSuperAdmin = await checkIsSuperAdmin(
@@ -257,16 +253,18 @@ export async function adminAuth(request: NextRequest): Promise<{
     );
 
     if (!isSuperAdmin) {
-      console.log('❌ [AdminAuth] User is not superadmin:', userId);
-      
       // Log security event för otillåten admin-åtkomst
-      await logSecurityEvent('unauthorized_admin_access', {
-        userId,
-        userEmail,
-        endpoint: new URL(request.url).pathname,
-        ip: getClientIP(request),
-        userAgent: request.headers.get('user-agent')
-      });
+      try {
+        await logSecurityEvent('unauthorized_admin_access', {
+          userId,
+          userEmail,
+          endpoint: new URL(request.url).pathname,
+          ip: getClientIP(request),
+          userAgent: request.headers.get('user-agent')
+        });
+      } catch (logError) {
+        // Silent fail för logging
+      }
       
       return {
         success: false,
@@ -276,17 +274,6 @@ export async function adminAuth(request: NextRequest): Promise<{
         )
       };
     }
-
-    console.log('✅ [AdminAuth] Superadmin authentication successful:', userId);
-    
-    // Log admin access för audit
-    await logSecurityEvent('admin_access', {
-      userId,
-      userEmail,
-      endpoint: new URL(request.url).pathname,
-      ip: getClientIP(request),
-      userAgent: request.headers.get('user-agent')
-    });
 
     return {
       success: true,

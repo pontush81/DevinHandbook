@@ -16,24 +16,16 @@ export async function GET(
       );
     }
 
-    console.log('🔐 [Trial Status] Authenticating user with hybrid auth...');
     const authResult = await getHybridAuth(request);
     
     if (!authResult.userId) {
-      console.log('❌ [Trial Status] Authentication failed - no userId found');
       return NextResponse.json(
         { error: 'Authentication required - no valid session or token found' },
         { status: 401 }
       );
     }
 
-    console.log('✅ [Trial Status] Successfully authenticated user:', {
-      userId: authResult.userId,
-      method: authResult.authMethod
-    });
-    
     const userId = authResult.userId;
-    console.log('📊 [Trial Status] Checking status for:', { handbookId, userId, method: authResult.authMethod });
 
     const supabase = getServiceSupabase();
 

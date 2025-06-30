@@ -3,6 +3,8 @@ import { getUserRole } from '@/lib/auth-utils';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createDefaultForumCategories } from '@/lib/handbook-service';
 import { getHybridAuth, AUTH_RESPONSES } from '@/lib/standard-auth';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function PUT(
   request: NextRequest,
@@ -11,26 +13,89 @@ export async function PUT(
   try {
     const { id } = await params;
     
-    // Verify authentication first
-    console.log('🔐 [Handbook Settings] Authenticating user with hybrid auth...');
-    const authResult = await getHybridAuth(request);
+    // Robust authentication for handbook settings
+    console.log('🔐 [Handbook Settings] Starting robust authentication...');
     
-    if (!authResult.userId) {
-      console.log('❌ [Handbook Settings] Authentication failed - no userId found');
+    let userId: string | null = null;
+    
+    // Method 1: Try hybrid auth first
+    const authResult = await getHybridAuth(request);
+    userId = authResult.userId;
+    
+    // Method 2: If hybrid auth failed, try direct Supabase client approach
+    if (!userId) {
+      console.log('🔍 [Handbook Settings] Trying direct Supabase auth...');
+      
+      try {
+        const cookieStore = await cookies();
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              get(name: string) {
+                return cookieStore.get(name)?.value;
+              },
+            },
+          }
+        );
+
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (!error && user) {
+          console.log('✅ [Handbook Settings] Direct auth successful:', user.id);
+          userId = user.id;
+        }
+      } catch (directAuthError) {
+        console.log('⚠️ [Handbook Settings] Direct auth error:', directAuthError);
+      }
+    }
+    
+    // Method 3: Try Authorization header
+    if (!userId) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        console.log('🔍 [Handbook Settings] Trying Bearer token auth...');
+        
+        try {
+          const token = authHeader.substring(7);
+          const cookieStore = await cookies();
+          const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+              cookies: {
+                get(name: string) {
+                  return cookieStore.get(name)?.value;
+                },
+              },
+            }
+          );
+          
+          const { data: { user }, error } = await supabase.auth.getUser(token);
+          
+          if (!error && user) {
+            console.log('✅ [Handbook Settings] Bearer token auth successful:', user.id);
+            userId = user.id;
+          }
+        } catch (tokenError) {
+          console.log('⚠️ [Handbook Settings] Bearer token auth failed:', tokenError);
+        }
+      }
+    }
+    
+    if (!userId) {
+      console.log('❌ [Handbook Settings] All authentication methods failed');
       return NextResponse.json(
-        AUTH_RESPONSES.UNAUTHENTICATED,
-        { status: AUTH_RESPONSES.UNAUTHENTICATED.status }
+        { error: 'Ej autentiserad' },
+        { status: 401 }
       );
     }
 
-    console.log('✅ [Handbook Settings] Successfully authenticated user:', {
-      userId: authResult.userId,
-      method: authResult.authMethod
-    });
+    console.log('✅ [Handbook Settings] Authentication successful for user:', userId);
     
     const body = await request.json();
     const { forum_enabled } = body;
-    const userId = authResult.userId; // Use authenticated userId
 
     // Check if user is admin of this handbook
     const userRole = await getUserRole(userId, id);
