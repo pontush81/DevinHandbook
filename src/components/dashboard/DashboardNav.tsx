@@ -6,29 +6,53 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, Book, Settings, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { checkIsSuperAdminClient } from "@/lib/user-utils";
+import { checkIsSuperAdminClient, clearAdminStatusCache } from "@/lib/user-utils";
 
 export function DashboardNav() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [lastUserId, setLastUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (!user) return;
+      if (!user?.id) {
+        // Ingen användare - rensa admin status och cache
+        setIsSuperAdmin(false);
+        clearAdminStatusCache();
+        setLastUserId(null);
+        return;
+      }
+      
+      // Kontrollera om det är en ny användare
+      if (lastUserId && lastUserId !== user.id) {
+        // Ny användare - rensa cache
+        clearAdminStatusCache();
+      }
+      
+      // Undvik dubbelkontroll för samma användare
+      if (lastUserId === user.id) {
+        return;
+      }
+      
+      setLastUserId(user.id);
       
       try {
         const isAdmin = await checkIsSuperAdminClient();
         setIsSuperAdmin(isAdmin);
       } catch (error) {
         console.error("Fel vid kontroll av admin-status:", error);
+        setIsSuperAdmin(false);
       }
     };
 
     checkAdminStatus();
-  }, [user]);
+  }, [user?.id, lastUserId]); // Ändrat dependency till user.id istället för hela user objektet
 
   const handleSignOut = async () => {
+    // Rensa admin-cache vid utloggning
+    clearAdminStatusCache();
+    setIsSuperAdmin(false);
     await signOut();
   };
 

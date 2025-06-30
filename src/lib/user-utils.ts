@@ -198,15 +198,47 @@ export async function checkIsSuperAdmin(
   }
 }
 
+// Cache för admin-status för att undvika upprepade API-anrop
+let adminStatusCache: {
+  userId: string;
+  isAdmin: boolean;
+  timestamp: number;
+} | null = null;
+
+const CACHE_DURATION = 30000; // 30 sekunder cache
+
 /**
  * Klientsida-funktion för att kontrollera superadmin-status via säker API
  * Denna funktion använder vår säkra endpoint istället för direkta databasanrop
+ * Inkluderar cachning för att undvika spam-requests
  */
 export async function checkIsSuperAdminClient(): Promise<boolean> {
   try {
     if (typeof window === 'undefined') {
       // På server-sidan, använd den gamla funktionen
       return false;
+    }
+
+    // Försök hämta user ID för cache-kontroll
+    let currentUserId = null;
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUserId = user?.id || null;
+    } catch {
+      // Ignorera cache om vi inte kan hämta user ID
+    }
+
+    // Kontrollera cache först
+    const now = Date.now();
+    if (adminStatusCache && 
+        adminStatusCache.userId === currentUserId && 
+        (now - adminStatusCache.timestamp) < CACHE_DURATION) {
+      return adminStatusCache.isAdmin;
     }
 
     // Method 1: Try standard request first
@@ -239,6 +271,14 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
     
     // 401 eller 403 betyder bara att användaren inte är superadmin (normalt)
     if (response.status === 401 || response.status === 403) {
+      // Uppdatera cache med negativt resultat
+      if (currentUserId) {
+        adminStatusCache = {
+          userId: currentUserId,
+          isAdmin: false,
+          timestamp: now
+        };
+      }
       return false;
     }
     
@@ -249,10 +289,28 @@ export async function checkIsSuperAdminClient(): Promise<boolean> {
     }
     
     const data = await response.json();
-    return data.isSuperAdmin || false;
+    const isAdmin = data.isSuperAdmin || false;
+    
+    // Uppdatera cache med resultat
+    if (currentUserId) {
+      adminStatusCache = {
+        userId: currentUserId,
+        isAdmin,
+        timestamp: now
+      };
+    }
+    
+    return isAdmin;
   } catch (error) {
     // Endast logga verkliga nätverksfel eller JSON-parsing fel
     console.error('[checkIsSuperAdminClient] Network or parsing error:', error);
     return false;
   }
+}
+
+/**
+ * Rensa admin-status cache (används vid logout eller user change)
+ */
+export function clearAdminStatusCache(): void {
+  adminStatusCache = null;
 } 
