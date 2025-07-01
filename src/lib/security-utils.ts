@@ -17,8 +17,8 @@ export function isDevelopmentOnly(): boolean {
  */
 export function isDevOrStaging(): boolean {
   const nodeEnv = process.env.NODE_ENV;
-  const isStaging = process.env.VERCEL_ENV === 'preview' || 
-                   process.env.NEXT_PUBLIC_APP_URL?.includes('staging');
+  const isStaging = (process.env.VERCEL_ENV === 'preview' || 
+                   process.env.NEXT_PUBLIC_APP_URL?.includes('staging')) ?? false;
   
   return nodeEnv === 'development' || isStaging;
 }
@@ -153,7 +153,7 @@ export async function rateLimit(request: NextRequest, maxRequests: number = 10, 
 export function getClientIP(request: NextRequest): string {
   try {
     return (
-      request.ip ||
+      (request as any).ip ||
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       request.headers.get('x-real-ip') ||
       request.headers.get('cf-connecting-ip') ||
@@ -181,7 +181,7 @@ export function logSecurityEvent(event: string, details: Record<string, any> = {
 
 /**
  * Standardiserad admin-autentisering för alla admin-endpoints
- * Hanterar autentisering, email-hämtning och superadmin-kontroll
+ * Prioriterar stabilitet över flexibilitet
  */
 export async function adminAuth(request: NextRequest): Promise<{
   success: boolean;
@@ -190,71 +190,23 @@ export async function adminAuth(request: NextRequest): Promise<{
   response?: NextResponse;
 }> {
   try {
-    // Method 1: Try hybrid auth first
-    const authResult = await getHybridAuth(request);
-    
-    let userId: string | null = authResult.userId;
-    let userEmail = '';
-    
-    // Method 2: If hybrid auth failed, try direct Supabase client approach
-    if (!userId) {
-      try {
-        const cookieStore = await cookies();
-        const supabase = createServerClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            cookies: {
-              get(name: string) {
-                return cookieStore.get(name)?.value;
-              },
-            },
-          }
-        );
+    // Primary method: Standard SSR cookies (mest stabilt)
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
 
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (!error && user) {
-          userId = user.id;
-          userEmail = user.email || '';
-        }
-      } catch (directAuthError) {
-        // Silent fail
-      }
-    }
+    const { data: { user }, error } = await supabase.auth.getUser();
     
-    // Method 3: If still no user, try Authorization header
-    if (!userId) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        try {
-          const token = authHeader.substring(7);
-          const cookieStore = await cookies();
-          const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-              cookies: {
-                get(name: string) {
-                  return cookieStore.get(name)?.value;
-                },
-              },
-            }
-          );
-          
-          const { data: { user }, error } = await supabase.auth.getUser(token);
-          
-          if (!error && user) {
-            userId = user.id;
-            userEmail = user.email || '';
-          }
-        } catch (tokenError) {
-          // Silent fail
-        }
-      }
-    }
-    
-    if (!userId) {
+    if (error || !user) {
       return {
         success: false,
         response: NextResponse.json(
@@ -264,24 +216,13 @@ export async function adminAuth(request: NextRequest): Promise<{
       };
     }
 
-    // Get email if we don't have it yet
-    if (!userEmail && authResult.session?.user?.email) {
-      userEmail = authResult.session.user.email;
-    } else if (!userEmail) {
-      // Fallback: hämta email från databasen
-      const supabase = getServiceSupabase();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', userId)
-        .single();
-      userEmail = profile?.email || '';
-    }
+    const userId = user.id;
+    const userEmail = user.email || '';
 
     // Kontrollera superadmin-behörighet
-    const supabase = getServiceSupabase();
+    const serviceSupabase = getServiceSupabase();
     const isSuperAdmin = await checkIsSuperAdmin(
-      supabase,
+      serviceSupabase,
       userId,
       userEmail
     );
