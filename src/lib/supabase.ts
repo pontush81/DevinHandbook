@@ -952,21 +952,21 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     
     // Om vi fortfarande får 401/403, försök förnya token och försök igen
     if ((response.status === 401 || response.status === 403) && !url.includes('/auth/')) {
-      console.log('🔄 [fetchWithAuth] Token might be expired, trying to refresh...');
+      console.log('🔄 [fetchWithAuth] Got 401/403, token might be expired/invalid, trying to refresh...');
       
       // Försök förnya token
-      accessToken = await refreshAccessToken();
+      const newAccessToken = await refreshAccessToken();
       
-      if (accessToken) {
-        console.log('✅ [fetchWithAuth] Token refreshed, retrying request...');
-        headers.set('Authorization', `Bearer ${accessToken}`);
+      if (newAccessToken && newAccessToken !== accessToken) {
+        console.log('✅ [fetchWithAuth] Got new token, retrying request...');
+        headers.set('Authorization', `Bearer ${newAccessToken}`);
         
         return fetch(url, {
           ...options,
           headers
         });
       } else {
-        console.log('❌ [fetchWithAuth] Token refresh failed, falling back to cookie auth');
+        console.log('❌ [fetchWithAuth] Token refresh failed or same token returned, falling back to cookie auth');
         // Försök utan Authorization header (förlita sig på cookies)
         const headersWithoutAuth = new Headers(options.headers);
         headersWithoutAuth.delete('Authorization');
@@ -1055,6 +1055,20 @@ async function refreshAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   
   try {
+    console.log('🔄 [refreshAccessToken] Attempting to refresh session...');
+    
+    // Försök först med refreshSession() för att faktiskt förnya token
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    
+    if (!refreshError && refreshData.session && refreshData.session.access_token) {
+      console.log('✅ [refreshAccessToken] Successfully refreshed token via refreshSession()');
+      return refreshData.session.access_token;
+    }
+    
+    console.log('⚠️ [refreshAccessToken] refreshSession() failed, trying getSession() fallback...');
+    console.log('🔍 [refreshAccessToken] Refresh error:', refreshError?.message || 'Unknown');
+    
+    // Fallback: försök med getSession() (kan fungera om session fortfarande är giltig)
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -1063,8 +1077,14 @@ async function refreshAccessToken(): Promise<string | null> {
     }
     
     if (data.session && data.session.access_token) {
-      console.log('✅ [refreshAccessToken] Successfully refreshed token');
-      return data.session.access_token;
+      // Dubbel-kolla att token inte är expired
+      if (!isTokenExpired(data.session.access_token)) {
+        console.log('✅ [refreshAccessToken] Found valid session token via getSession()');
+        return data.session.access_token;
+      } else {
+        console.log('❌ [refreshAccessToken] Session token is expired');
+        return null;
+      }
     } else {
       console.log('❌ [refreshAccessToken] No valid session found');
       return null;
