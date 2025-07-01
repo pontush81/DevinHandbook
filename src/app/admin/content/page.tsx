@@ -32,8 +32,8 @@ import { OutputData } from "@editorjs/editorjs";
 
 interface Handbook {
   id: string;
-  name: string;
-  subdomain: string;
+  title: string;
+  slug: string;
   published: boolean;
   forum_enabled?: boolean;
   created_at: string;
@@ -91,7 +91,7 @@ export default function ContentManagementPage() {
     try {
       const { data, error } = await supabase
         .from("handbooks")
-        .select("*")
+        .select("id, title, slug, created_at, published, forum_enabled, owner_id")
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -337,7 +337,7 @@ export default function ContentManagementPage() {
         </div>
         {selectedHandbook && (
           <div className="flex space-x-3">
-            <Link href={`/${selectedHandbook.subdomain}`} target="_blank">
+                            <Link href={`/${selectedHandbook.slug}`} target="_blank">
               <Button variant="outline">
                 <Eye className="h-4 w-4 mr-2" />
                 Förhandsgranska
@@ -382,7 +382,7 @@ export default function ContentManagementPage() {
               {handbooks.map((handbook) => (
                 <SelectItem key={handbook.id} value={handbook.id}>
                   <div className="flex items-center space-x-2">
-                    <span>{handbook.name}</span>
+                    <span>{handbook.title}</span>
                     <Badge variant={handbook.published ? "default" : "secondary"}>
                       {handbook.published ? "Publicerad" : "Utkast"}
                     </Badge>
@@ -431,7 +431,7 @@ export default function ContentManagementPage() {
                   Publicerad handbok
                 </label>
                 <span className="text-xs text-gray-500">
-                  (Synlig på {selectedHandbook.subdomain}.handbok.org)
+                  (Synlig på {selectedHandbook.slug}.handbok.org)
                 </span>
               </div>
               

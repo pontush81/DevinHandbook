@@ -34,6 +34,7 @@ export interface BackupData {
     sections: any[];
     pages: any[];
     attachments: any[];
+    auth_users: any[]; // Grundläggande användar-info för foreign keys
     user_profiles?: any[];
     trial_activities?: any[];
   };
@@ -57,7 +58,10 @@ export interface BackupOptions {
  * Huvudklass för backup-hantering
  */
 export class DatabaseBackupManager {
-  constructor(private supabase: SupabaseClient) {}
+  constructor(
+    private supabase: SupabaseClient, 
+    private userSupabase?: SupabaseClient
+  ) {}
 
   /**
    * Sparar backup-historik i databasen
@@ -67,7 +71,10 @@ export class DatabaseBackupManager {
       console.log('💾 Sparar backup-historik...');
       console.log('📅 Backup-datum:', metadata.created_at);
       
-      const { error } = await this.supabase
+      // Använd service-role klient för att bypassa RLS policies
+      const client = this.supabase;
+      
+      const { error } = await client
         .from('backup_history')
         .insert({
           id: metadata.id,
@@ -96,7 +103,10 @@ export class DatabaseBackupManager {
    */
   private async getLastBackupDate(): Promise<string | undefined> {
     try {
-      const { data, error } = await this.supabase
+      // Använd service-role klient för att bypassa RLS policies
+      const client = this.supabase;
+      
+      const { data, error } = await client
         .from('backup_history')
         .select('created_at')
         .order('created_at', { ascending: false })
@@ -216,7 +226,8 @@ export class DatabaseBackupManager {
         handbooks: [],
         sections: [],
         pages: [],
-        attachments: []
+        attachments: [],
+        auth_users: [] // Grundläggande användar-info för foreign key relationships
       };
 
       // Backup av handbooks (med paginering för att hantera >1000 rader)
@@ -238,6 +249,35 @@ export class DatabaseBackupManager {
       console.log('📎 Säkerhetskopierar attachments...');
       backupData.attachments = await this.getAllRecords('attachments');
       console.log(`📎 Attachments: ${backupData.attachments.length} poster säkerhetskopierade`);
+
+      // Backup av grundläggande användar-info (för foreign key relationships)
+      console.log('👤 Säkerhetskopierar grundläggande användar-info...');
+      try {
+        // Hämta användar-info från auth.users (bara grundläggande data för FK relationships)
+        const { data: authUsers, error: authError } = await this.supabase
+          .from('auth.users')
+          .select('id, email, created_at')
+          .limit(1000);
+
+        if (authError && authError.code !== '42P01') { // 42P01 = table does not exist
+          console.warn('⚠️ Kunde inte hämta auth.users direkt, försöker genom user_profiles...');
+          
+          // Fallback: hämta från user_profiles om det finns
+          const { data: userProfiles } = await this.supabase
+            .from('user_profiles')
+            .select('id, created_at')
+            .limit(1000);
+          
+          backupData.auth_users = userProfiles || [];
+        } else {
+          backupData.auth_users = authUsers || [];
+        }
+        
+        console.log(`👤 Auth users: ${backupData.auth_users.length} poster säkerhetskopierade`);
+      } catch (error) {
+        console.warn('⚠️ Kunde inte säkerhetskopiera användar-info:', error);
+        backupData.auth_users = [];
+      }
 
       // Inkludera användardata om begärt (med paginering)
       if (config.includeUserData) {
@@ -275,6 +315,7 @@ export class DatabaseBackupManager {
           sections: backupData.sections.length,
           pages: backupData.pages.length,
           attachments: backupData.attachments.length,
+          auth_users: backupData.auth_users.length,
           user_profiles: backupData.user_profiles?.length ?? 0,
           trial_activities: backupData.trial_activities?.length ?? 0
         },
@@ -355,42 +396,69 @@ export class DatabaseBackupManager {
         throw new Error('Återställning kräver force=true för säkerhet');
       }
 
-      // Återställ data tabell för tabell (i korrekt ordning pga foreign keys)
+      // Första fasen: Rensa alla tabeller i omvänd ordning (pga foreign keys)
+      console.log('🗑️ Fas 1: Rensar befintlig data...');
       
+      const tablesToClear = [
+        { name: 'trial_activities', data: backupData.data.trial_activities },
+        { name: 'user_profiles', data: backupData.data.user_profiles },
+        { name: 'attachments', data: backupData.data.attachments },
+        { name: 'pages', data: backupData.data.pages },
+        { name: 'sections', data: backupData.data.sections },
+        { name: 'handbooks', data: backupData.data.handbooks }
+        // Hoppa över auth_users i clear-fasen då det är en systemtabell
+      ];
+
+      for (const table of tablesToClear) {
+        if (table.data && table.data.length > 0) {
+          console.log(`🗑️ Rensar ${table.name}...`);
+          await this.clearTable(table.name);
+        }
+      }
+
+      // Andra fasen: Återställ data i korrekt ordning
+      console.log('📤 Fas 2: Återställer data...');
+
+      // 0. Först användare (om backup innehåller det) - hoppa över detta för auth.users
+      if (backupData.data.auth_users && backupData.data.auth_users.length > 0) {
+        console.log('👤 Info: Auth users finns i backup men hoppas över (systemtabell)');
+        console.log(`👤 ${backupData.data.auth_users.length} användare finns i backup för referens`);
+      }
+
       // 1. Handbooks först (master table)
       if (backupData.data.handbooks.length > 0) {
         console.log('📚 Återställer handbooks...');
-        await this.clearAndRestoreTable('handbooks', backupData.data.handbooks);
+        await this.restoreTableData('handbooks', backupData.data.handbooks);
       }
 
       // 2. Sections (refererar till handbooks)
       if (backupData.data.sections.length > 0) {
         console.log('📑 Återställer sections...');
-        await this.clearAndRestoreTable('sections', backupData.data.sections);
+        await this.restoreTableData('sections', backupData.data.sections);
       }
 
       // 3. Pages (refererar till sections)
       if (backupData.data.pages.length > 0) {
         console.log('📄 Återställer pages...');
-        await this.clearAndRestoreTable('pages', backupData.data.pages);
+        await this.restoreTableData('pages', backupData.data.pages);
       }
 
       // 4. Attachments (refererar till handbooks och pages)
       if (backupData.data.attachments.length > 0) {
         console.log('📎 Återställer attachments...');
-        await this.clearAndRestoreTable('attachments', backupData.data.attachments);
+        await this.restoreTableData('attachments', backupData.data.attachments);
       }
 
       // 5. Användardata (om inkluderat)
       if (backupData.data.user_profiles && backupData.data.user_profiles.length > 0) {
         console.log('👤 Återställer user_profiles...');
-        await this.clearAndRestoreTable('user_profiles', backupData.data.user_profiles);
+        await this.restoreTableData('user_profiles', backupData.data.user_profiles);
       }
 
       // 6. Trial-data (om inkluderat)
       if (backupData.data.trial_activities && backupData.data.trial_activities.length > 0) {
         console.log('🧪 Återställer trial_activities...');
-        await this.clearAndRestoreTable('trial_activities', backupData.data.trial_activities);
+        await this.restoreTableData('trial_activities', backupData.data.trial_activities);
       }
 
       console.log('✅ Återställning slutförd framgångsrikt!');
@@ -402,25 +470,57 @@ export class DatabaseBackupManager {
   }
 
   /**
-   * Rensar och återställer en specifik tabell
+   * Rensar en specifik tabell från all data
    */
-  private async clearAndRestoreTable(tableName: string, data: any[]): Promise<void> {
+  private async clearTable(tableName: string): Promise<void> {
+    try {
+      console.log(`🗑️ Rensar befintlig data från ${tableName}...`);
+      
+      // Först, hämta alla ID:n som finns i tabellen
+      const { data: existingRecords, error: selectError } = await this.supabase
+        .from(tableName)
+        .select('id');
+
+      if (selectError) {
+        console.warn(`⚠️ Varning vid hämtning av ${tableName} ID:n:`, selectError);
+      } else if (existingRecords && existingRecords.length > 0) {
+        console.log(`🗑️ Raderar ${existingRecords.length} befintliga poster från ${tableName}`);
+        
+        // Radera i batches för att undvika timeout
+        const deleteBatches = 100;
+        for (let i = 0; i < existingRecords.length; i += deleteBatches) {
+          const batch = existingRecords.slice(i, i + deleteBatches);
+          const ids = batch.map(record => record.id);
+          
+          const { error: deleteError } = await this.supabase
+            .from(tableName)
+            .delete()
+            .in('id', ids);
+
+          if (deleteError) {
+            console.error(`❌ Fel vid radering av batch i ${tableName}:`, deleteError);
+            throw new Error(`Fel vid radering av ${tableName}: ${deleteError.message}`);
+          }
+          
+          console.log(`🗑️ ${tableName}: Raderade batch ${Math.floor(i/deleteBatches) + 1}/${Math.ceil(existingRecords.length/deleteBatches)}`);
+        }
+        console.log(`✅ ${tableName} rensad framgångsrikt (${existingRecords.length} poster raderade)`);
+      } else {
+        console.log(`✅ ${tableName} var redan tom`);
+      }
+
+    } catch (error) {
+      console.error(`💥 Kritiskt fel vid rensning av ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Återställer data till en specifik tabell
+   */
+  private async restoreTableData(tableName: string, data: any[]): Promise<void> {
     try {
       console.log(`🔄 Återställer ${tableName} med ${data.length} poster...`);
-      
-      // Rensa befintlig data först
-      console.log(`🗑️ Rensar befintlig data från ${tableName}...`);
-      const { error: deleteError } = await this.supabase
-        .from(tableName)
-        .delete()
-        .gte('created_at', '1900-01-01'); // Ta bort alla rader (mer robust än neq)
-
-      if (deleteError) {
-        console.warn(`⚠️ Varning vid rensning av ${tableName}:`, deleteError);
-        // Fortsätt ändå - kanske tabellen var tom
-      } else {
-        console.log(`✅ ${tableName} rensad framgångsrikt`);
-      }
 
       // Sätt in ny data i mindre batches för att undvika timeout
       const batchSize = 50; // Minska batch-storlek
@@ -436,10 +536,40 @@ export class DatabaseBackupManager {
 
         if (insertError) {
           console.error(`❌ Fel vid insättning i ${tableName}, batch ${Math.floor(i/batchSize) + 1}:`, insertError);
-          throw new Error(`Fel vid insättning i ${tableName}: ${insertError.message}`);
+          
+          // Hantera foreign key constraint fel gracefully
+          if (insertError.code === '23503') {
+            console.warn(`⚠️ Foreign key constraint fel i ${tableName} - försöker enskilda poster...`);
+            
+            // Försök sätta in poster en i taget och skippa de som misslyckas
+            let successCount = 0;
+            for (const record of batch) {
+              try {
+                const { error: singleError } = await this.supabase
+                  .from(tableName)
+                  .insert([record]);
+                
+                if (!singleError) {
+                  successCount++;
+                } else if (singleError.code !== '23503') {
+                  // Kasta bara icke-foreign-key fel
+                  throw new Error(`Kritiskt fel: ${singleError.message}`);
+                }
+              } catch (singleRecordError) {
+                console.warn(`⚠️ Skippade post i ${tableName}:`, singleRecordError);
+              }
+            }
+            
+            console.log(`✅ ${tableName}: ${successCount}/${batch.length} poster i batch ${Math.floor(i/batchSize) + 1} framgångsrikt insatta`);
+            insertedCount += successCount;
+          } else {
+            // Andra fel än foreign key constraints ska fortfarande kasta fel
+            throw new Error(`Fel vid insättning i ${tableName}: ${insertError.message}`);
+          }
+        } else {
+          insertedCount += batch.length;
         }
         
-        insertedCount += batch.length;
         console.log(`✅ ${tableName}: ${insertedCount}/${data.length} poster insatta`);
       }
 
@@ -475,6 +605,11 @@ export class DatabaseBackupManager {
         if (!(field in backupData.data) || !Array.isArray(backupData.data[field])) {
           return false;
         }
+      }
+
+      // Kontrollera auth_users (optional men bör vara array om det finns)
+      if ('auth_users' in backupData.data && !Array.isArray(backupData.data.auth_users)) {
+        return false;
       }
 
       return true;
@@ -546,7 +681,10 @@ export class DatabaseBackupManager {
       // Hämta senaste backup-datum från backup_history
       console.log('📅 Hämtar senaste backup-datum...');
       
-      const { data: lastBackup, error: backupError } = await this.supabase
+      // Använd service-role klient för att bypassa RLS policies
+      const client = this.supabase;
+      
+      const { data: lastBackup, error: backupError } = await client
         .from('backup_history')
         .select('created_at')
         .order('created_at', { ascending: false })

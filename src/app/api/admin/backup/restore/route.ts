@@ -3,29 +3,20 @@ import { DatabaseBackupManager, BackupData } from '@/lib/backup';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { adminAuth } from '@/lib/security-utils';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-
-    // Verify auth
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // 1. Standardiserad admin-autentisering
+    const authResult = await adminAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
     }
 
-    // Get user profile to check if superadmin
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_superadmin')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profileError || !profile?.is_superadmin) {
-      return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
-    }
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     console.log('🔄 API: Startar återställning från backup...');
 

@@ -3,6 +3,7 @@ import { DatabaseBackupManager, BackupOptions, generateBackupFilename } from '@/
 import { Resend } from 'resend';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { adminAuth } from '@/lib/security-utils';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -10,24 +11,14 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-
-    // Verify auth
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // 1. Standardiserad admin-autentisering
+    const authResult = await adminAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
     }
 
-    // Get user profile to check if superadmin
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_superadmin')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profileError || !profile?.is_superadmin) {
-      return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
-    }
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     console.log('⏰ API: Startar schemalagd backup...');
 
@@ -151,24 +142,14 @@ export async function POST(request: NextRequest) {
 // GET-endpoint för att hämta schemalagd backup-status
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-
-    // Verify auth
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // 1. Standardiserad admin-autentisering
+    const authResult = await adminAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
     }
 
-    // Get user profile to check if superadmin
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_superadmin')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profileError || !profile?.is_superadmin) {
-      return NextResponse.json({ error: 'Unauthorized - Superadmin required' }, { status: 403 });
-    }
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // Hämta information om senaste schemalagda backup
     const backupManager = new DatabaseBackupManager(supabase);

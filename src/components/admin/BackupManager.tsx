@@ -104,24 +104,34 @@ export default function BackupManager() {
 
   // Helper function to make authenticated API calls with 401 retry
   const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
-    // First attempt without auth headers
+    // For admin endpoints, always send auth headers from the start
+    const isAdminEndpoint = url.includes('/api/admin/');
+    
+    let headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+    
+    if (isAdminEndpoint) {
+      console.log('[BackupManager] Admin endpoint detected, including auth headers');
+      const authHeaders = await createAuthHeaders();
+      headers = { ...headers, ...authHeaders };
+    }
+    
     let response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      }
+      headers
     });
     
-    // If unauthorized, try with auth header
-    if (!response.ok && response.status === 401) {
+    // If unauthorized and we haven't tried auth headers yet, try with auth header
+    if (!response.ok && response.status === 401 && !isAdminEndpoint) {
       console.log('[BackupManager] Got 401, retrying with auth headers...');
-      const headers = await createAuthHeaders();
+      const authHeaders = await createAuthHeaders();
       response = await fetch(url, {
         ...options,
         headers: {
           ...headers,
-          ...(options.headers || {})
+          ...authHeaders
         }
       });
     }

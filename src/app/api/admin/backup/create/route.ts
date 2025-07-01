@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseBackupManager } from '@/lib/backup';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { adminAuth } from '@/lib/security-utils';
 
@@ -14,7 +15,14 @@ export async function POST(request: NextRequest) {
       return authResult.response!;
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Skapa service-role klient för databas-operationer
+    const serviceSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     console.log('💾 API: Startar backup-process...');
 
@@ -29,8 +37,8 @@ export async function POST(request: NextRequest) {
 
     console.log('📋 Backup-alternativ:', options);
 
-    // Skapa backup
-    const backupManager = new DatabaseBackupManager(supabase);
+    // Skapa backup med service-klient för data och autentiserad klient för historik
+    const backupManager = new DatabaseBackupManager(serviceSupabase, supabase);
     const backupData = await backupManager.createBackup(options, authResult.userId!);
 
     console.log('✅ Backup skapad framgångsrikt');
