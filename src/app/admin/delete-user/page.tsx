@@ -14,6 +14,20 @@ export default function DeleteUserPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletedInfo, setDeletedInfo] = useState<any>(null);
 
+  // Helper function to create auth headers
+  const createAuthHeaders = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        return {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        };
+      }
+    } catch {}
+    return { 'Content-Type': 'application/json' };
+  };
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -77,13 +91,24 @@ export default function DeleteUserPage() {
     setSuccess(false);
 
     try {
-      const response = await fetch('/api/admin/delete-user', {
+      let response = await fetch('/api/admin/delete-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email }),
       });
+
+      // If unauthorized, try with auth header
+      if (!response.ok && response.status === 401) {
+        console.log('[Delete User Page] Got 401, retrying with auth headers...');
+        const headers = await createAuthHeaders();
+        response = await fetch('/api/admin/delete-user', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ email }),
+        });
+      }
 
       const data = await response.json();
 

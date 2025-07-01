@@ -43,10 +43,40 @@ export default function UsersPage() {
       // Rensa användarlistan först för att tvinga re-render
       setUsers([]);
       
+      // Helper function to create auth headers
+      const createAuthHeaders = async () => {
+        try {
+          console.log('[Users Page] Getting session for auth headers...');
+          const { data: { session }, error } = await supabase.auth.getSession();
+          console.log('[Users Page] Session result:', { hasSession: !!session, hasToken: !!session?.access_token, error });
+          if (session?.access_token) {
+            return {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            };
+          }
+        } catch (error) {
+          console.log('[Users Page] Error getting session:', error);
+        }
+        return { 'Content-Type': 'application/json' };
+      };
+      
       // Lägg till cache-busting för att säkerställa att vi får färsk data
       const timestamp = new Date().getTime();
-      const response = await fetch(`/api/admin/users?t=${timestamp}`);
-      console.log('[Users Page] API response status:', response.status);
+      
+      // Since we know user is authenticated, start with Bearer token authentication
+      const headers = await createAuthHeaders();
+      let response = await fetch(`/api/admin/users?t=${timestamp}`, { headers });
+      console.log('[Users Page] First response status:', response.status);
+      
+      // If Bearer token fails, try without auth headers as fallback
+      if (!response.ok && response.status === 401) {
+        console.log('[Users Page] Bearer token failed, trying without auth headers...');
+        response = await fetch(`/api/admin/users?t=${timestamp}`, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        console.log('[Users Page] Fallback response status:', response.status);
+      }
       
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status}`);

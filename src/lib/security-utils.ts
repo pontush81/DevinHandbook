@@ -190,19 +190,32 @@ export async function adminAuth(request: NextRequest): Promise<{
   response?: NextResponse;
 }> {
   try {
+    const url = new URL(request.url);
+    console.log(`🔐 [AdminAuth] Processing request to ${url.pathname}`);
+    
     let user: any = null;
     let authMethod = '';
 
     // Method 1: Standard SSR cookies (primär metod)
     try {
+      console.log('🍪 [AdminAuth] Attempting cookie authentication...');
       const cookieStore = await cookies();
+      
+      // Debug: Check if cookies are present
+      const allCookies = cookieStore.getAll();
+      console.log(`🍪 [AdminAuth] Found ${allCookies.length} cookies`);
+      
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
             get(name: string) {
-              return cookieStore.get(name)?.value;
+              const value = cookieStore.get(name)?.value;
+              if (name.includes('supabase') && value) {
+                console.log(`🍪 [AdminAuth] Found Supabase cookie: ${name}`);
+              }
+              return value;
             },
           },
         }
@@ -210,35 +223,57 @@ export async function adminAuth(request: NextRequest): Promise<{
 
       const { data: { user: cookieUser }, error: cookieError } = await supabase.auth.getUser();
       
+      if (cookieError) {
+        console.log('🍪 [AdminAuth] Cookie auth error:', cookieError.message);
+      }
+      
       if (!cookieError && cookieUser) {
         user = cookieUser;
         authMethod = 'cookies';
+        console.log(`🍪 [AdminAuth] Cookie auth successful for user: ${cookieUser.id}`);
+      } else {
+        console.log('🍪 [AdminAuth] Cookie auth failed or no user found');
       }
     } catch (cookieError) {
+      console.log('🍪 [AdminAuth] Cookie auth exception:', cookieError);
       // Continue to fallback method
     }
 
     // Method 2: Authorization header fallback
     if (!user) {
+      console.log('🔑 [AdminAuth] Trying Authorization header fallback...');
       const authHeader = request.headers.get('authorization');
+      
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
+        console.log(`🔑 [AdminAuth] Found Bearer token (length: ${token.length})`);
         
         try {
           const serviceSupabase = getServiceSupabase();
           const { data: { user: tokenUser }, error: tokenError } = await serviceSupabase.auth.getUser(token);
           
+          if (tokenError) {
+            console.log('🔑 [AdminAuth] Bearer token auth error:', tokenError.message);
+          }
+          
           if (!tokenError && tokenUser) {
             user = tokenUser;
             authMethod = 'bearer_token';
+            console.log(`🔑 [AdminAuth] Bearer token auth successful for user: ${tokenUser.id}`);
+          } else {
+            console.log('🔑 [AdminAuth] Bearer token auth failed or no user found');
           }
         } catch (tokenError) {
+          console.log('🔑 [AdminAuth] Bearer token auth exception:', tokenError);
           // Continue to failure
         }
+      } else {
+        console.log('🔑 [AdminAuth] No Authorization header found');
       }
     }
     
     if (!user) {
+      console.log('❌ [AdminAuth] Both auth methods failed - returning 401');
       return {
         success: false,
         response: NextResponse.json(
@@ -250,8 +285,10 @@ export async function adminAuth(request: NextRequest): Promise<{
 
     const userId = user.id;
     const userEmail = user.email || '';
+    console.log(`✅ [AdminAuth] User authenticated via ${authMethod}: ${userId} (${userEmail})`);
 
     // Kontrollera superadmin-behörighet
+    console.log(`🔒 [AdminAuth] Checking superadmin status for user: ${userId}`);
     const serviceSupabase = getServiceSupabase();
     const isSuperAdmin = await checkIsSuperAdmin(
       serviceSupabase,
@@ -259,7 +296,11 @@ export async function adminAuth(request: NextRequest): Promise<{
       userEmail
     );
 
+    console.log(`🔒 [AdminAuth] Superadmin check result: ${isSuperAdmin}`);
+
     if (!isSuperAdmin) {
+      console.log(`❌ [AdminAuth] User ${userId} (${userEmail}) is not a superadmin - returning 403`);
+      
       // Log security event för otillåten admin-åtkomst
       try {
         await logSecurityEvent('unauthorized_admin_access', {
@@ -283,6 +324,7 @@ export async function adminAuth(request: NextRequest): Promise<{
       };
     }
 
+    console.log(`✅ [AdminAuth] Successfully authenticated superadmin: ${userId} (${userEmail})`);
     return {
       success: true,
       userId,

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { Trash2, Shield, ShieldCheck, UserX, Filter, X, Building2, Edit, Plus, Minus } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +73,47 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
   // Ensure users is always an array
   const safeUsers = Array.isArray(users) ? users : [];
 
+  // Helper function to create auth headers (reusable across all functions)
+  const createAuthHeaders = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        return {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        };
+      }
+    } catch {}
+    return { 'Content-Type': 'application/json' };
+  };
+
+  // Helper function to make authenticated API calls with 401 retry
+  const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+    // First attempt without auth headers
+    let response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+    
+    // If unauthorized, retry with auth headers
+    if (!response.ok && response.status === 401) {
+      console.log(`[UsersTable] Got 401 for ${url}, retrying with auth headers...`);
+      const authHeaders = await createAuthHeaders();
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...authHeaders,
+          ...options.headers
+        }
+      });
+    }
+    
+    return response;
+  };
+
   // Get all unique handbooks for filter dropdown
   const allHandbooks = useMemo(() => {
     const handbookSet = new Set<string>();
@@ -121,11 +163,8 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       setError(null);
       setSuccess(null);
       
-      const response = await fetch('/api/admin/delete-user', {
+      const response = await makeAuthenticatedRequest('/api/admin/delete-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ email: user.email }),
       });
       
@@ -162,7 +201,7 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
 
   const fetchAvailableHandbooks = async (user: User) => {
     try {
-      const response = await fetch('/api/admin/handbooks');
+      const response = await makeAuthenticatedRequest('/api/admin/handbooks');
       
       if (response.ok) {
         const result = await response.json();
@@ -191,11 +230,8 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       setIsEditingRoles(true);
       setError(null);
       
-      const response = await fetch('/api/admin/update-handbook-role', {
+      const response = await makeAuthenticatedRequest('/api/admin/update-handbook-role', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           userId: userToEditRoles.id, 
           handbookId: selectedNewHandbook, 
@@ -231,11 +267,8 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       setIsEditingRoles(true);
       setError(null);
       
-      const response = await fetch('/api/admin/update-handbook-role', {
+      const response = await makeAuthenticatedRequest('/api/admin/update-handbook-role', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ userId, handbookId, role }),
       });
       
@@ -263,11 +296,8 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       setIsEditingRoles(true);
       setError(null);
       
-      const response = await fetch('/api/admin/update-handbook-role', {
+      const response = await makeAuthenticatedRequest('/api/admin/update-handbook-role', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ userId, handbookId }),
       });
       
@@ -295,11 +325,8 @@ export function UsersTable({ users, onDataChange }: UsersTableProps) {
       setIsEditingRoles(true);
       setError(null);
       
-      const response = await fetch('/api/admin/set-admin', {
+      const response = await makeAuthenticatedRequest('/api/admin/set-admin', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ userId, isAdmin: makeAdmin }),
       });
       

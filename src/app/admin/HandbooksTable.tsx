@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from 'lucide-react';
+import { supabase } from "@/lib/supabase";
 
 interface Handbook {
   id: string;
@@ -40,16 +41,54 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
     handbook: null
   });
 
+  // Helper function to create auth headers
+  const createAuthHeaders = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        return {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        };
+      }
+    } catch {}
+    return { 'Content-Type': 'application/json' };
+  };
+
+  // Helper function to make authenticated API calls with 401 retry
+  const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+    // First attempt without auth headers
+    let response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    
+    // If unauthorized, try with auth header
+    if (!response.ok && response.status === 401) {
+      console.log('[HandbooksTable] Got 401, retrying with auth headers...');
+      const headers = await createAuthHeaders();
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...headers,
+          ...(options.headers || {})
+        }
+      });
+    }
+    
+    return response;
+  };
+
   const revalidateHandbook = async (slug: string) => {
     try {
       setIsProcessing(slug);
       setError(null);
       
-      const response = await fetch('/api/admin/revalidate-handbook', {
+      const response = await makeAuthenticatedRequest('/api/admin/revalidate-handbook', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ slug }),
       });
       
@@ -75,11 +114,8 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
       setIsProcessing(id);
       setError(null);
       
-      const response = await fetch('/api/admin/toggle-handbook-published', {
+      const response = await makeAuthenticatedRequest('/api/admin/toggle-handbook-published', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ id, published }),
       });
       
@@ -104,11 +140,8 @@ export function HandbooksTable({ handbooks, onDataChange }: HandbooksTableProps)
       setIsProcessing(handbook.id);
       setError(null);
       
-      const response = await fetch('/api/admin/delete-handbook', {
+      const response = await makeAuthenticatedRequest('/api/admin/delete-handbook', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ handbookId: handbook.id }),
       });
       

@@ -241,29 +241,41 @@ export async function checkIsSuperAdminClient(userId?: string): Promise<boolean>
       return adminStatusCache.isAdmin;
     }
 
-    // Method 1: Try standard request first
-    let response = await fetch('/api/auth/check-superadmin');
-    
-    // Method 2: If that fails, try with Authorization header
-    if (!response.ok && response.status === 401) {
+    // Helper function to create auth headers
+    const createAuthHeaders = async () => {
       try {
-        // Try to get access token from existing Supabase client
         const { getSupabaseClient } = await import('@/lib/supabase-client');
         const supabase = getSupabaseClient();
-        
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.access_token) {
-          response = await fetch('/api/auth/check-superadmin', {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          return {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          };
         }
-      } catch (tokenError) {
-        // Tyst hantering - access token kanske inte finns
+      } catch {}
+      return { 'Content-Type': 'application/json' };
+    };
+
+    // Since we know user is authenticated when this is called from admin layout,
+    // start with Bearer token to avoid unnecessary 401 errors
+    let response;
+    const headers = await createAuthHeaders();
+    
+    if (headers.Authorization) {
+      // Method 1: Try with Bearer token first (most likely to succeed)
+      response = await fetch('/api/auth/check-superadmin', { headers });
+      
+      // Method 2: If Bearer token fails, try without auth headers as fallback
+      if (!response.ok && response.status === 401) {
+        response = await fetch('/api/auth/check-superadmin');
       }
+    } else {
+      // Method 1: No token available, try standard request
+      response = await fetch('/api/auth/check-superadmin');
+      
+      // Method 2: This case is already handled above
     }
     
     // 401 eller 403 betyder bara att användaren inte är superadmin (normalt)

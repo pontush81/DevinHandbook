@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { formatBackupSize, formatBackupDate, generateBackupFilename, BackupData } from '@/lib/backup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/lib/supabase';
 
 interface BackupStats {
   totalRecords: number;
@@ -87,6 +88,47 @@ export default function BackupManager() {
     enabled: true,
   });
 
+  // Helper function to create auth headers
+  const createAuthHeaders = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        return {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        };
+      }
+    } catch {}
+    return { 'Content-Type': 'application/json' };
+  };
+
+  // Helper function to make authenticated API calls with 401 retry
+  const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+    // First attempt without auth headers
+    let response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    
+    // If unauthorized, try with auth header
+    if (!response.ok && response.status === 401) {
+      console.log('[BackupManager] Got 401, retrying with auth headers...');
+      const headers = await createAuthHeaders();
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...headers,
+          ...(options.headers || {})
+        }
+      });
+    }
+    
+    return response;
+  };
+
   useEffect(() => {
     loadBackupStats();
     loadSchedules();
@@ -95,7 +137,7 @@ export default function BackupManager() {
   const loadBackupStats = async (showMessage = false) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/backup/stats');
+      const response = await makeAuthenticatedRequest('/api/admin/backup/stats');
       const result = await response.json();
       
       if (result.success) {
@@ -123,11 +165,8 @@ export default function BackupManager() {
         setProgress(prev => Math.min(prev + 10, 90));
       }, 500);
 
-      const response = await fetch('/api/admin/backup/create', {
+      const response = await makeAuthenticatedRequest('/api/admin/backup/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(backupOptions)
       });
 
@@ -160,7 +199,7 @@ export default function BackupManager() {
             // Ladda statistik utan att visa meddelande
             setLoading(true);
             try {
-              const response = await fetch('/api/admin/backup/stats');
+              const response = await makeAuthenticatedRequest('/api/admin/backup/stats');
               const result = await response.json();
               if (result.success) {
                 setStats(result.stats);
@@ -198,11 +237,8 @@ export default function BackupManager() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/admin/backup/scheduled', {
+      const response = await makeAuthenticatedRequest('/api/admin/backup/scheduled', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           options: backupOptions,
           emailTo: emailConfig.emailTo,
@@ -302,12 +338,8 @@ export default function BackupManager() {
       console.log('✅ Backup-struktur validerad');
       setMessage({ type: 'info', text: 'Påbörjar databasåterställning...' });
       
-      const response = await fetch('/api/admin/backup/restore', {
+      const response = await makeAuthenticatedRequest('/api/admin/backup/restore', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer dummy'
-        },
         body: JSON.stringify({
           backupData,
           force: true
@@ -339,7 +371,7 @@ export default function BackupManager() {
 
   const loadSchedules = async () => {
     try {
-      const response = await fetch('/api/admin/backup/schedules');
+      const response = await makeAuthenticatedRequest('/api/admin/backup/schedules');
       const result = await response.json();
       
       if (result.success) {
@@ -357,11 +389,8 @@ export default function BackupManager() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/admin/backup/schedules', {
+      const response = await makeAuthenticatedRequest('/api/admin/backup/schedules', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(newSchedule)
       });
 
@@ -388,11 +417,8 @@ export default function BackupManager() {
 
   const toggleSchedule = async (id: string, enabled: boolean) => {
     try {
-      const response = await fetch(`/api/admin/backup/schedules/${id}`, {
+      const response = await makeAuthenticatedRequest(`/api/admin/backup/schedules/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ enabled })
       });
 
@@ -414,7 +440,7 @@ export default function BackupManager() {
     }
 
     try {
-      const response = await fetch(`/api/admin/backup/schedules/${id}`, {
+      const response = await makeAuthenticatedRequest(`/api/admin/backup/schedules/${id}`, {
         method: 'DELETE'
       });
 

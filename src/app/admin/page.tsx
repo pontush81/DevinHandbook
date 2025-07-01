@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from '@/contexts/AuthContext';
 import { HandbooksTable } from "./HandbooksTable";
 import { UsersTable } from "./UsersTable";
 import { WebhookTester } from "@/components/debug/WebhookTester";
@@ -56,6 +57,7 @@ interface RecentActivity {
 }
 
 export default function AdminDashboardPage() {
+  const { user, isLoading } = useAuth();
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -79,25 +81,60 @@ export default function AdminDashboardPage() {
       // Helper function to create auth headers
       const createAuthHeaders = async () => {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          console.log('[Admin Dashboard] Getting session for auth headers...');
+          const { data: { session }, error } = await supabase.auth.getSession();
+          console.log('[Admin Dashboard] Session result:', { hasSession: !!session, hasToken: !!session?.access_token, error });
+          
           if (session?.access_token) {
+            console.log('[Admin Dashboard] Using Bearer token for request');
             return {
               'Authorization': `Bearer ${session.access_token}`,
               'Content-Type': 'application/json'
             };
           }
-        } catch {}
+        } catch (error) {
+          console.log('[Admin Dashboard] Error getting session:', error);
+        }
+        console.log('[Admin Dashboard] No session available, using basic headers');
         return { 'Content-Type': 'application/json' };
+      };
+
+      // Helper function to make authenticated API calls with Bearer token first
+      const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+        console.log(`[Admin Dashboard] Making request to ${url}`);
+        
+        // Since we know user is authenticated, start with Bearer token
+        const headers = await createAuthHeaders();
+        console.log(`[Admin Dashboard] First attempt with headers:`, Object.keys(headers));
+        
+        let response = await fetch(url, {
+          ...options,
+          headers: {
+            ...headers,
+            ...(options.headers || {})
+          }
+        });
+        
+        console.log(`[Admin Dashboard] First response status: ${response.status}`);
+        
+        // If Bearer token fails, try without auth headers as fallback
+        if (!response.ok && response.status === 401) {
+          console.log('[Admin Dashboard] Bearer token failed, trying without auth headers...');
+          response = await fetch(url, {
+            ...options,
+            headers: {
+              'Content-Type': 'application/json',
+              ...(options.headers || {})
+            }
+          });
+          console.log(`[Admin Dashboard] Fallback response status: ${response.status}`);
+        }
+        
+        return response;
       };
       
       // Fetch handbooks with auth headers
-      let response = await fetch('/api/admin/handbooks');
-      
-      // If unauthorized, try with auth header
-      if (!response.ok && response.status === 401) {
-        const headers = await createAuthHeaders();
-        response = await fetch('/api/admin/handbooks', { headers });
-      }
+      let response = await makeAuthenticatedRequest('/api/admin/handbooks');
       
       let handbooksData: Handbook[] = [];
       
@@ -117,13 +154,7 @@ export default function AdminDashboardPage() {
       let allUsers: User[] = [];
       
       try {
-        let usersResponse = await fetch('/api/admin/users');
-        
-        // If unauthorized, try with auth header
-        if (!usersResponse.ok && usersResponse.status === 401) {
-          const headers = await createAuthHeaders();
-          usersResponse = await fetch('/api/admin/users', { headers });
-        }
+        let usersResponse = await makeAuthenticatedRequest('/api/admin/users');
         
         if (usersResponse.ok) {
           const apiResult = await usersResponse.json();
@@ -212,10 +243,22 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Only fetch data after authentication is confirmed and user is loaded
+    if (!isLoading && user) {
+      fetchData();
+    }
+  }, [isLoading, user]);
 
   const recentHandbooks = handbooks.slice(0, 5);
+
+  // Show loading while authentication is initializing
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

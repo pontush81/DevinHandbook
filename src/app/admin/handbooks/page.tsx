@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 interface Handbook {
   id: string;
@@ -27,7 +28,29 @@ export default function HandbooksPage() {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/admin/handbooks');
+      // Helper function to create auth headers
+      const createAuthHeaders = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            return {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            };
+          }
+        } catch {}
+        return { 'Content-Type': 'application/json' };
+      };
+      
+      let response = await fetch('/api/admin/handbooks');
+      
+      // If unauthorized, try with auth header
+      if (!response.ok && response.status === 401) {
+        console.log('[Handbooks Page] Got 401, retrying with auth headers...');
+        const headers = await createAuthHeaders();
+        response = await fetch('/api/admin/handbooks', { headers });
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

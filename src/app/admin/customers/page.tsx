@@ -109,7 +109,38 @@ export default function CustomersPage() {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/admin/user-stats');
+      // Helper function to create auth headers
+      const createAuthHeaders = async () => {
+        try {
+          console.log('[Customers Page] Getting session for auth headers...');
+          const { data: { session }, error } = await supabase.auth.getSession();
+          console.log('[Customers Page] Session result:', { hasSession: !!session, hasToken: !!session?.access_token, error });
+          if (session?.access_token) {
+            return {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            };
+          }
+        } catch (error) {
+          console.log('[Customers Page] Error getting session:', error);
+        }
+        return { 'Content-Type': 'application/json' };
+      };
+      
+      // Since we know user is authenticated, start with Bearer token authentication
+      const headers = await createAuthHeaders();
+      let response = await fetch('/api/admin/user-stats', { headers });
+      console.log('[Customers Page] First response status:', response.status);
+      
+      // If Bearer token fails, try without auth headers as fallback
+      if (!response.ok && response.status === 401) {
+        console.log('[Customers Page] Bearer token failed, trying without auth headers...');
+        response = await fetch('/api/admin/user-stats', {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        console.log('[Customers Page] Fallback response status:', response.status);
+      }
+      
       if (!response.ok) {
         throw new Error('Kunde inte hämta användarstatistik');
       }
