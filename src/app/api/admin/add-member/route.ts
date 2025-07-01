@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { adminAuth } from '@/lib/security-utils';
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. Standardiserad admin-autentisering
+    const authResult = await adminAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
+    }
+
+    console.log('👥 Superadmin', authResult.userId, 'adding member to handbook');
+
     const { handbookId, email, role = 'admin' } = await request.json();
     
     if (!handbookId || !email) {
