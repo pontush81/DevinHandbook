@@ -86,31 +86,65 @@ export function requireSecureContext(request: NextRequest): NextResponse | null 
 }
 
 /**
- * Rate limiting baserat på IP (enkel implementation)
+ * Enhanced rate limiting with database persistence
  */
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
-
-export function rateLimit(request: NextRequest, maxRequests: number = 10, windowMs: number = 60000): NextResponse | null {
-  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+export async function rateLimit(request: NextRequest, maxRequests: number = 10, windowMs: number = 60000): Promise<NextResponse | null> {
+  const ip = getClientIP(request);
+  const supabase = getServiceSupabase();
   const now = Date.now();
+  const windowStart = now - windowMs;
   
-  const current = requestCounts.get(ip);
-  
-  if (!current || now > current.resetTime) {
-    requestCounts.set(ip, { count: 1, resetTime: now + windowMs });
+  try {
+    // Clean up old entries
+    await supabase
+      .from('rate_limits')
+      .delete()
+      .lt('last_reset', windowStart);
+    
+    // Get current rate limit record
+    const { data: rateLimitRecord, error } = await supabase
+      .from('rate_limits')
+      .select('*')
+      .eq('identifier', ip)
+      .gte('last_reset', windowStart)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Rate limit check error:', error);
+      return null; // Allow request if database error
+    }
+    
+    if (!rateLimitRecord) {
+      // First request in window
+      await supabase
+        .from('rate_limits')
+        .upsert({
+          identifier: ip,
+          count: 1,
+          last_reset: now
+        });
+      return null;
+    }
+    
+    if (rateLimitRecord.count >= maxRequests) {
+      console.warn(`[SECURITY] Rate limit överskriden för IP: ${ip}`);
+      return NextResponse.json(
+        { error: 'För många requests. Försök igen senare.' },
+        { status: 429 }
+      );
+    }
+    
+    // Increment counter
+    await supabase
+      .from('rate_limits')
+      .update({ count: rateLimitRecord.count + 1 })
+      .eq('identifier', ip);
+    
     return null;
+  } catch (error) {
+    console.error('Rate limit error:', error);
+    return null; // Allow request if any error occurs
   }
-  
-  if (current.count >= maxRequests) {
-    console.warn(`[SECURITY] Rate limit överskriden för IP: ${ip}`);
-    return NextResponse.json(
-      { error: 'För många requests. Försök igen senare.' },
-      { status: 429 }
-    );
-  }
-  
-  current.count++;
-  return null;
 }
 
 /**

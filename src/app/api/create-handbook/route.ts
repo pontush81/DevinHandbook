@@ -3,20 +3,51 @@ import { createHandbookWithSectionsAndPages } from '@/lib/handbook-service';
 import { getServiceSupabase } from "@/lib/supabase";
 import { ensureUserProfile, checkIsSuperAdmin } from "@/lib/user-utils";
 import { completeBRFHandbook } from '@/lib/templates/complete-brf-handbook';
+import { getHybridAuth } from '@/lib/standard-auth';
+import { validateSubdomain, sanitizeText } from '@/lib/validation-utils';
 
 export async function POST(req: NextRequest) {
+  const authResult = await getHybridAuth(req);
+  if (!authResult.success) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const { name, subdomain, user_id } = await req.json();
+    const { name, subdomain } = await req.json();
+    const user_id = authResult.user.id;
 
-    console.log("[Create Handbook API] Skapar handbok med rik template:", { name, subdomain, user_id });
-
-    // Verifiera indata
-    if (!name || !subdomain || !user_id) {
+    // Validera och sanitisera indata
+    if (!name || !subdomain) {
       return NextResponse.json(
-        { error: "Namn, subdomän och användar-ID krävs" },
+        { error: "Namn och subdomän krävs" },
         { status: 400 }
       );
     }
+
+    const nameValidation = sanitizeText(name);
+    if (!nameValidation.isValid) {
+      return NextResponse.json(
+        { error: nameValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const subdomainValidation = validateSubdomain(subdomain);
+    if (!subdomainValidation.isValid) {
+      return NextResponse.json(
+        { error: subdomainValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedName = nameValidation.sanitized!;
+    const sanitizedSubdomain = subdomainValidation.sanitized!;
+
+    console.log("[Create Handbook API] Skapar handbok med rik template:", { 
+      name: sanitizedName, 
+      subdomain: sanitizedSubdomain, 
+      user_id 
+    });
 
     const supabase = getServiceSupabase();
 
@@ -24,7 +55,7 @@ export async function POST(req: NextRequest) {
     const { data: existingHandbook, error: checkError } = await supabase
       .from("handbooks")
       .select("id")
-      .eq("slug", subdomain) // Använd slug istället för subdomain
+      .eq("slug", sanitizedSubdomain)
       .maybeSingle();
 
     if (checkError) {
@@ -52,8 +83,8 @@ export async function POST(req: NextRequest) {
     // Använd den rika templaten för att skapa handboken
     // Parametrar: name, slug, userId, isTrialHandbook, customTemplate
     const handbook = await createHandbookWithSectionsAndPages(
-      name, 
-      subdomain, 
+      sanitizedName, 
+      sanitizedSubdomain, 
       user_id,
       true, // isTrialHandbook = true för nya handböcker
       completeBRFHandbook
@@ -68,8 +99,8 @@ export async function POST(req: NextRequest) {
       success: true, 
       message: 'Handbook created successfully',
       handbook_id: handbookId,
-      subdomain,
-      url: `https://www.handbok.org/${subdomain}`,
+      subdomain: sanitizedSubdomain,
+      url: `https://www.handbok.org/${sanitizedSubdomain}`,
     });
   } catch (error) {
     console.error("Oväntat fel vid skapande av handbok:", error);

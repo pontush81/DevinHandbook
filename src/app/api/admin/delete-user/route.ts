@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { adminAuth } from '@/lib/security-utils';
 
 export async function POST(request: NextRequest) {
+  const authResult = await adminAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const { email } = await request.json();
     
