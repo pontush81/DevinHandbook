@@ -181,7 +181,7 @@ export function logSecurityEvent(event: string, details: Record<string, any> = {
 
 /**
  * Standardiserad admin-autentisering för alla admin-endpoints
- * Prioriterar stabilitet över flexibilitet
+ * Stöder både cookies och Authorization header för maximal tillförlitlighet
  */
 export async function adminAuth(request: NextRequest): Promise<{
   success: boolean;
@@ -190,23 +190,55 @@ export async function adminAuth(request: NextRequest): Promise<{
   response?: NextResponse;
 }> {
   try {
-    // Primary method: Standard SSR cookies (mest stabilt)
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
+    let user: any = null;
+    let authMethod = '';
 
-    const { data: { user }, error } = await supabase.auth.getUser();
+    // Method 1: Standard SSR cookies (primär metod)
+    try {
+      const cookieStore = await cookies();
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return cookieStore.get(name)?.value;
+            },
+          },
+        }
+      );
+
+      const { data: { user: cookieUser }, error: cookieError } = await supabase.auth.getUser();
+      
+      if (!cookieError && cookieUser) {
+        user = cookieUser;
+        authMethod = 'cookies';
+      }
+    } catch (cookieError) {
+      // Continue to fallback method
+    }
+
+    // Method 2: Authorization header fallback
+    if (!user) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        
+        try {
+          const serviceSupabase = getServiceSupabase();
+          const { data: { user: tokenUser }, error: tokenError } = await serviceSupabase.auth.getUser(token);
+          
+          if (!tokenError && tokenUser) {
+            user = tokenUser;
+            authMethod = 'bearer_token';
+          }
+        } catch (tokenError) {
+          // Continue to failure
+        }
+      }
+    }
     
-    if (error || !user) {
+    if (!user) {
       return {
         success: false,
         response: NextResponse.json(
@@ -233,6 +265,7 @@ export async function adminAuth(request: NextRequest): Promise<{
         await logSecurityEvent('unauthorized_admin_access', {
           userId,
           userEmail,
+          authMethod,
           endpoint: new URL(request.url).pathname,
           ip: getClientIP(request),
           userAgent: request.headers.get('user-agent')
