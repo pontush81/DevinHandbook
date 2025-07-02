@@ -11,7 +11,10 @@ import {
   X, 
   ChevronLeft, 
   ChevronRight,
-  Trash2
+  Trash2,
+  Users,
+  Phone,
+  Edit
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +29,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { BookingResource, Booking, BookingWithDetails, BookingInsert } from '@/types/booking';
 import { SuggestedTimeSlots, ResourceTemplates, ResourceType } from '@/lib/booking-standards';
+import AdminDashboard from './AdminDashboard';
 
 interface BookingCalendarProps {
   handbookId: string;
@@ -568,10 +572,27 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="calendar" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="calendar">Kalender</TabsTrigger>
-              <TabsTrigger value="resources">Resurser ({resources.length})</TabsTrigger>
-              <TabsTrigger value="my-bookings">Mina bokningar</TabsTrigger>
+            <TabsList className={`grid w-full ${(userRole === 'owner' || userRole === 'admin') ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
+              <TabsTrigger value="calendar" className="text-xs md:text-sm">
+                <Calendar className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Kalender</span>
+              </TabsTrigger>
+              <TabsTrigger value="resources" className="text-xs md:text-sm">
+                <MapPin className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Resurser</span>
+                <span className="md:hidden">({resources.length})</span>
+                <span className="hidden md:inline">({resources.length})</span>
+              </TabsTrigger>
+              <TabsTrigger value="my-bookings" className="text-xs md:text-sm">
+                <User className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Mina bokningar</span>
+              </TabsTrigger>
+              {(userRole === 'owner' || userRole === 'admin') && (
+                <TabsTrigger value="dashboard" className="text-xs md:text-sm">
+                  <Settings className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">Dashboard</span>
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="calendar" className="space-y-4">
@@ -791,39 +812,131 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                     </Button>
                   </div>
 
-                  {/* Quick booking shortcuts */}
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h5 className="font-medium text-blue-900 mb-3">Snabbbokning idag</h5>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {SuggestedTimeSlots.map((slot) => {
-                        const resourceType = (selectedResource.type || 'other') as ResourceType;
-                        const rules = ResourceTemplates[resourceType];
-                        const [slotHour] = slot.start.split(':').map(Number);
-                        const [opStartHour] = rules.operatingHours.start.split(':').map(Number);
-                        const [opEndHour] = rules.operatingHours.end.split(':').map(Number);
-                        
-                        // Check if slot is within operating hours
-                        const isAvailable = slotHour >= opStartHour && (slotHour + slot.duration) <= opEndHour;
-                        
-                        return (
-                          <Button
-                            key={slot.label}
-                            variant={isAvailable ? "outline" : "ghost"}
-                            size="sm"
-                            disabled={!isAvailable}
-                            onClick={() => handleQuickTimeSlot(slot)}
-                            className={`text-xs ${isAvailable ? 'hover:bg-blue-100' : 'text-gray-400'}`}
-                          >
-                            <Clock className="h-3 w-3 mr-1" />
-                            {slot.label}<br/>
-                            <span className="text-xs">{slot.start}</span>
-                          </Button>
-                        );
-                      })}
+                  {/* Förbättrade quick booking-shortcuts */}
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 shadow-sm">
+                    <h5 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Snabbbokning
+                    </h5>
+                    
+                    {/* Idag - Quick slots */}
+                    <div className="mb-4">
+                      <h6 className="text-sm font-medium text-blue-800 mb-2">Idag ({new Date().toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })})</h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                        {SuggestedTimeSlots.map((slot) => {
+                          const resourceType = (selectedResource.type || 'other') as ResourceType;
+                          const rules = ResourceTemplates[resourceType];
+                          const [slotHour] = slot.start.split(':').map(Number);
+                          const [opStartHour] = rules.operatingHours.start.split(':').map(Number);
+                          const [opEndHour] = rules.operatingHours.end.split(':').map(Number);
+                          
+                          // Check if slot is within operating hours and not conflicting
+                          const isWithinHours = slotHour >= opStartHour && (slotHour + slot.duration) <= opEndHour;
+                          const today = new Date();
+                          const slotStart = new Date(today);
+                          slotStart.setHours(slotHour, 0, 0, 0);
+                          const hasConflict = bookings.some(booking => 
+                            booking.resource_id === selectedResource.id &&
+                            new Date(booking.start_time).toDateString() === today.toDateString() &&
+                            new Date(booking.start_time).getHours() === slotHour
+                          );
+                          
+                          const isAvailable = isWithinHours && !hasConflict;
+                          
+                          return (
+                            <Button
+                              key={slot.label}
+                              variant={isAvailable ? "outline" : "ghost"}
+                              size="sm"
+                              disabled={!isAvailable}
+                              onClick={() => handleQuickTimeSlot(slot)}
+                              className={`text-xs transition-all duration-200 ${
+                                isAvailable 
+                                  ? 'hover:bg-blue-100 hover:border-blue-300 hover:shadow-md border-2' 
+                                  : hasConflict 
+                                    ? 'text-red-400 border-red-200 bg-red-50' 
+                                    : 'text-gray-400'
+                              }`}
+                            >
+                              <Clock className="h-3 w-3 mr-1" />
+                              <div className="text-center">
+                                <div className="font-medium">{slot.label}</div>
+                                <div className="text-xs opacity-75">{slot.start}</div>
+                                {hasConflict && <div className="text-xs text-red-600 font-medium">Upptagen</div>}
+                              </div>
+                            </Button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <p className="text-xs text-blue-700 mt-2">
-                      Öppettider: {ResourceTemplates[selectedResource.type as ResourceType]?.operatingHours.start || '08:00'} - {ResourceTemplates[selectedResource.type as ResourceType]?.operatingHours.end || '22:00'}
-                    </p>
+
+                    {/* Imorgon - Quick slots */}
+                    <div className="mb-4">
+                      <h6 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
+                        <Calendar className="h-3 w-3" />
+                        Imorgon ({new Date(Date.now() + 24*60*60*1000).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })})
+                      </h6>
+                      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                        {['09:00', '13:00', '18:00'].map((time) => {
+                          const tomorrow = new Date(Date.now() + 24*60*60*1000);
+                          const [hour] = time.split(':').map(Number);
+                          const hasConflict = bookings.some(booking => 
+                            booking.resource_id === selectedResource.id &&
+                            new Date(booking.start_time).toDateString() === tomorrow.toDateString() &&
+                            new Date(booking.start_time).getHours() === hour
+                          );
+                          
+                          return (
+                            <Button
+                              key={time}
+                              variant={hasConflict ? "ghost" : "outline"}
+                              size="sm"
+                              disabled={hasConflict}
+                              onClick={() => {
+                                const startTime = new Date(tomorrow);
+                                startTime.setHours(hour, 0, 0, 0);
+                                const endTime = new Date(startTime);
+                                endTime.setHours(hour + 2, 0, 0, 0);
+                                
+                                setNewBooking({
+                                  resource_id: selectedResource.id,
+                                  start_time: startTime.toISOString().slice(0, 16),
+                                  end_time: endTime.toISOString().slice(0, 16),
+                                  purpose: '', attendees: 1, contact_phone: '', notes: ''
+                                });
+                                setBookingDialogOpen(true);
+                              }}
+                              className={`text-xs transition-all duration-200 ${
+                                hasConflict 
+                                  ? 'text-red-400 bg-red-50 border-red-200' 
+                                  : 'hover:bg-green-100 hover:border-green-300 border-2'
+                              }`}
+                            >
+                              <Calendar className="h-3 w-3 mr-1" />
+                              <div className="text-center">
+                                <div className="font-medium">{time}</div>
+                                {hasConflict && <div className="text-xs text-red-600 font-medium">Upptagen</div>}
+                              </div>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-blue-700">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Öppettider: {ResourceTemplates[selectedResource.type as ResourceType]?.operatingHours.start || '08:00'} - {ResourceTemplates[selectedResource.type as ResourceType]?.operatingHours.end || '22:00'}
+                      </span>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        onClick={handleNewBookingClick}
+                        className="text-blue-600 hover:text-blue-800 p-0 h-auto font-medium"
+                      >
+                        + Anpassad tid
+                      </Button>
+                    </div>
                   </div>
 
                   {viewMode === 'week' ? (
@@ -850,18 +963,41 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                               {date.getDate()}
                             </div>
                             <div className="space-y-1 mt-2">
-                              {dayBookings.slice(0, 2).map(booking => (
-                                <div 
-                                  key={booking.id} 
-                                  className="text-xs p-1 bg-emerald-100 text-emerald-800 rounded truncate"
-                                  title={`${booking.purpose || 'Bokning'} (${formatTimeSlot(new Date(booking.start_time))}-${formatTimeSlot(new Date(booking.end_time))})`}
-                                >
-                                  {formatTimeSlot(new Date(booking.start_time))} {booking.purpose || 'Bokning'}
-                                </div>
-                              ))}
+                              {dayBookings.slice(0, 2).map(booking => {
+                                const isOwn = booking.member_id === handbookId; // Simplified check for now
+                                const startTime = new Date(booking.start_time);
+                                const endTime = new Date(booking.end_time);
+                                const now = new Date();
+                                const isActive = startTime <= now && now <= endTime;
+                                const isPast = endTime < now;
+                                
+                                return (
+                                  <div 
+                                    key={booking.id} 
+                                    className={`text-xs p-1.5 rounded-md truncate transition-all duration-200 border-l-2 ${
+                                      isPast 
+                                        ? 'bg-gray-100 text-gray-600 border-gray-400 opacity-70'
+                                        : isActive
+                                          ? 'bg-green-100 text-green-800 border-green-500 shadow-sm animate-pulse'
+                                          : isOwn
+                                            ? 'bg-blue-100 text-blue-800 border-blue-500 shadow-sm'
+                                            : 'bg-orange-100 text-orange-800 border-orange-500'
+                                    }`}
+                                    title={`${booking.purpose || 'Bokning'} (${formatTimeSlot(new Date(booking.start_time))}-${formatTimeSlot(new Date(booking.end_time))}) ${isOwn ? '(Din bokning)' : ''}`}
+                                  >
+                                    <div className="flex items-center gap-1">
+                                      {isActive && <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />}
+                                      {isPast && <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />}
+                                      {!isPast && !isActive && <div className={`w-1.5 h-1.5 rounded-full ${isOwn ? 'bg-blue-500' : 'bg-orange-500'}`} />}
+                                      <span className="font-medium">{formatTimeSlot(new Date(booking.start_time))}</span>
+                                      <span className="truncate">{booking.purpose || 'Bokning'}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                               {dayBookings.length > 2 && (
-                                <div className="text-xs text-gray-500 text-center">
-                                  +{dayBookings.length - 2} fler
+                                <div className="text-xs text-gray-500 text-center bg-gray-50 rounded-md p-1">
+                                  +{dayBookings.length - 2} fler bokningar
                                 </div>
                               )}
                             </div>
@@ -901,17 +1037,39 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                               {dayIndex + 1}
                             </div>
                             <div className="space-y-1">
-                              {dayBookings.slice(0, 1).map(booking => (
-                                <div 
-                                  key={booking.id} 
-                                  className="text-xs p-1 bg-emerald-100 text-emerald-800 rounded truncate"
-                                  title={booking.purpose || 'Bokning'}
-                                >
-                                  {formatTimeSlot(new Date(booking.start_time))}
-                                </div>
-                              ))}
+                              {dayBookings.slice(0, 1).map(booking => {
+                                const isOwn = booking.member_id === handbookId; // Simplified check for now
+                                const startTime = new Date(booking.start_time);
+                                const endTime = new Date(booking.end_time);
+                                const now = new Date();
+                                const isActive = startTime <= now && now <= endTime;
+                                const isPast = endTime < now;
+                                
+                                return (
+                                  <div 
+                                    key={booking.id} 
+                                    className={`text-xs p-1 rounded border-l-2 truncate transition-all duration-200 ${
+                                      isPast 
+                                        ? 'bg-gray-50 text-gray-500 border-gray-300 opacity-70'
+                                        : isActive
+                                          ? 'bg-green-50 text-green-700 border-green-400 animate-pulse'
+                                          : isOwn
+                                            ? 'bg-blue-50 text-blue-700 border-blue-400'
+                                            : 'bg-orange-50 text-orange-700 border-orange-400'
+                                    }`}
+                                    title={`${booking.purpose || 'Bokning'} (${formatTimeSlot(new Date(booking.start_time))}-${formatTimeSlot(new Date(booking.end_time))}) ${isOwn ? '(Din bokning)' : ''}`}
+                                  >
+                                    <div className="flex items-center gap-1">
+                                      {isActive && <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />}
+                                      {isPast && <div className="w-1 h-1 bg-gray-400 rounded-full" />}
+                                      {!isPast && !isActive && <div className={`w-1 h-1 rounded-full ${isOwn ? 'bg-blue-500' : 'bg-orange-500'}`} />}
+                                      <span className="font-medium text-xs">{formatTimeSlot(new Date(booking.start_time))}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                               {dayBookings.length > 1 && (
-                                <div className="text-xs text-gray-500 text-center">
+                                <div className="text-xs text-gray-500 text-center bg-gray-50 rounded px-1">
                                   +{dayBookings.length - 1}
                                 </div>
                               )}
@@ -983,44 +1141,126 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                     <p className="text-sm mt-2">Skapa din första bokning i kalendern</p>
                   </div>
                 ) : (
-                  bookings.map(booking => (
-                    <Card key={booking.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-semibold">{booking.purpose || 'Bokning'}</h3>
-                            <p className="text-sm text-gray-600 flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              {booking.resource?.name || 'Okänd resurs'}
-                            </p>
-                            <p className="text-sm text-gray-600 flex items-center gap-2">
-                              <Clock className="h-4 w-4" />
-                              {new Date(booking.start_time).toLocaleString('sv-SE')} - 
-                              {new Date(booking.end_time).toLocaleString('sv-SE')}
-                            </p>
-                            {booking.notes && (
-                              <p className="text-sm text-gray-500 mt-1">{booking.notes}</p>
-                            )}
+                  bookings.map(booking => {
+                    const startTime = new Date(booking.start_time);
+                    const endTime = new Date(booking.end_time);
+                    const now = new Date();
+                    const isActive = startTime <= now && now <= endTime;
+                    const isPast = endTime < now;
+                    const isUpcoming = startTime > now;
+                    const hoursUntil = Math.round((startTime.getTime() - now.getTime()) / (1000 * 60 * 60));
+                    
+                    return (
+                      <Card key={booking.id} className={`transition-all duration-200 border-l-4 ${
+                        isPast 
+                          ? 'border-gray-300 bg-gray-50 opacity-80'
+                          : isActive
+                            ? 'border-green-500 bg-green-50 shadow-md animate-pulse'
+                            : isUpcoming && hoursUntil <= 24
+                              ? 'border-blue-500 bg-blue-50 shadow-md'
+                              : 'border-orange-300 bg-white hover:shadow-md'
+                      }`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  isPast 
+                                    ? 'bg-gray-400'
+                                    : isActive
+                                      ? 'bg-green-500 animate-pulse'
+                                      : isUpcoming && hoursUntil <= 24
+                                        ? 'bg-blue-500'
+                                        : 'bg-orange-400'
+                                }`} />
+                                <h3 className="font-semibold text-lg">{booking.purpose || 'Bokning'}</h3>
+                                <Badge variant={
+                                  isPast ? 'secondary' : 
+                                  isActive ? 'default' : 
+                                  isUpcoming && hoursUntil <= 24 ? 'outline' : 'secondary'
+                                } className={
+                                  isActive ? 'animate-pulse bg-green-100 text-green-800 border-green-300' : ''
+                                }>
+                                  {isPast ? 'Avslutad' : isActive ? 'Pågår nu' : isUpcoming && hoursUntil <= 24 ? `Om ${hoursUntil}h` : 'Kommande'}
+                                </Badge>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <p className="text-sm text-gray-600 flex items-center gap-2">
+                                  <MapPin className="h-4 w-4" />
+                                  {booking.resource?.name || 'Okänd resurs'}
+                                </p>
+                                <p className="text-sm text-gray-600 flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">
+                                    {startTime.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                  </span>
+                                  <span>
+                                    {formatTimeSlot(startTime)} - {formatTimeSlot(endTime)}
+                                  </span>
+                                </p>
+                                {booking.attendees && booking.attendees > 1 && (
+                                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                                    <Users className="h-4 w-4" />
+                                    {booking.attendees} deltagare
+                                  </p>
+                                )}
+                                {booking.contact_phone && (
+                                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                                    <Phone className="h-4 w-4" />
+                                    {booking.contact_phone}
+                                  </p>
+                                )}
+                                {booking.notes && (
+                                  <p className="text-sm text-gray-500 bg-gray-50 p-2 rounded mt-2">{booking.notes}</p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-2 items-end ml-4">
+                              <div className="flex gap-2">
+                                {!isPast && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => {
+                                      // Edit booking functionality could be added here
+                                      toast.info('Redigering kommer snart');
+                                    }}
+                                    className="hover:bg-blue-50"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => deleteBooking(booking.id)}
+                                  className="hover:bg-red-50 hover:border-red-300"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              {/* Duration indicator */}
+                              <div className="text-xs text-gray-500 text-right">
+                                {Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60))}h {Math.round(((endTime.getTime() - startTime.getTime()) % (1000 * 60 * 60)) / (1000 * 60))}min
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-2 items-center">
-                            <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
-                              {booking.status === 'confirmed' ? 'Bekräftad' : 'Väntande'}
-                            </Badge>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => deleteBooking(booking.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 )}
               </div>
             </TabsContent>
+
+            {(userRole === 'owner' || userRole === 'admin') && (
+              <TabsContent value="dashboard" className="space-y-4">
+                <AdminDashboard handbookId={handbookId} />
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>
