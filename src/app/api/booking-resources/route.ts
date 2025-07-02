@@ -4,13 +4,13 @@
 // =============================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getServiceSupabase } from '@/lib/supabase'
 import { BookingResourceInsert, ResourceSearchParams, BookingApiResponse } from '@/types/booking'
 
 // GET /api/booking-resources - Hämta bokningsresurser
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = getServiceSupabase()
     const { searchParams } = new URL(request.url)
     
     // Kontrollera autentisering
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
 // POST /api/booking-resources - Skapa ny resurs (endast admin/owner)
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = getServiceSupabase()
     const body = await request.json()
 
     // Kontrollera autentisering
