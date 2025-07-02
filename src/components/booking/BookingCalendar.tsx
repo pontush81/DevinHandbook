@@ -97,7 +97,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
   const fetchResources = async (signal?: AbortSignal) => {
     try {
-      const response = await fetch(`/api/booking-resources`, {
+      const response = await fetch(`/api/booking-resources?handbook_id=${handbookId}`, {
         signal
       });
       
@@ -121,7 +121,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
   const fetchBookings = async (signal?: AbortSignal) => {
     try {
-      const response = await fetch(`/api/bookings`, {
+      const response = await fetch(`/api/bookings?handbook_id=${handbookId}`, {
         signal
       });
       
@@ -422,12 +422,19 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               {(['owner', 'admin'].includes(userRole)) && (
                 <Dialog open={resourceDialogOpen} onOpenChange={setResourceDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        console.log('Ny resurs clicked');
+                        setResourceDialogOpen(true);
+                      }}
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Ny resurs
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                       <DialogTitle>Skapa ny resurs</DialogTitle>
                     </DialogHeader>
@@ -542,12 +549,22 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                   
                   <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button disabled={!selectedResource}>
+                      <Button 
+                        disabled={!selectedResource}
+                        onClick={() => {
+                          console.log('Ny bokning clicked', { selectedResource });
+                          if (selectedResource) {
+                            setBookingDialogOpen(true);
+                          } else {
+                            toast.error('Välj en resurs först');
+                          }
+                        }}
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Ny bokning
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[425px]">
                       <DialogHeader>
                         <DialogTitle>Skapa ny bokning</DialogTitle>
                       </DialogHeader>
