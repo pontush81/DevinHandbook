@@ -51,27 +51,32 @@ export default async function BookingsPage({ params }: BookingsPageProps) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.log('Auth error or no user:', authError);
       notFound();
     }
 
-    // Kontrollera att handboken finns och användarens medlemskap
+    // Steg 1: Hämta handboken
     const { data: handbook, error: handbookError } = await supabase
       .from('handbooks')
-      .select(`
-        id, 
-        title, 
-        slug,
-        handbook_members!inner(
-          role,
-          user_id
-        )
-      `)
+      .select('id, title, slug')
       .eq('slug', slug)
-      .eq('handbook_members.user_id', user.id)
       .single();
 
     if (handbookError || !handbook) {
-      console.error('Handbook not found or access denied:', handbookError);
+      console.error('Handbook not found:', handbookError);
+      notFound();
+    }
+
+    // Steg 2: Kontrollera användarens medlemskap (separat fråga)
+    const { data: membership, error: membershipError } = await supabase
+      .from('handbook_members')
+      .select('role, user_id')
+      .eq('handbook_id', handbook.id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (membershipError || !membership) {
+      console.error('Membership not found:', membershipError);
       notFound();
     }
 
@@ -86,7 +91,7 @@ export default async function BookingsPage({ params }: BookingsPageProps) {
     const isTrialExpired = userProfile?.trial_ends_at ? 
       new Date(userProfile.trial_ends_at) < new Date() : false;
 
-    const userRole = handbook.handbook_members[0]?.role as 'owner' | 'admin' | 'member' | 'moderator';
+    const userRole = membership.role as 'owner' | 'admin' | 'member' | 'moderator';
 
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
