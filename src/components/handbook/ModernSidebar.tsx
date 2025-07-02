@@ -14,7 +14,8 @@ import {
   Heart,
   BookOpen,
   Info,
-  MessageCircle
+  MessageCircle,
+  Calendar
 } from 'lucide-react';
 import { HandbookSection } from '@/types/handbook';
 import { getIconComponent } from '@/lib/icon-utils';
@@ -92,6 +93,9 @@ const menuItems = [
   { title: "Sopsortering", icon: Recycle, keywords: ["sopsortering", "återvinning", "avfall"], color: "text-purple-600", category: "practical" },
   { title: "Parkering", icon: Car, keywords: ["parkering", "garage", "bil", "fordon"], color: "text-gray-600", category: "practical" },
   { title: "Trivsel", icon: Heart, keywords: ["trivsel", "gemenskap", "grannar"], color: "text-pink-600", category: "practical" },
+  
+  // Bookings
+  { title: "Bokningar", icon: Calendar, keywords: ["bokningar", "bokning", "reserv"], color: "text-emerald-600", category: "practical" },
 ];
 
 // Funktion för att gruppera sektioner per kategori
@@ -219,6 +223,27 @@ export function ModernSidebar({
                   );
                 })}
                 
+                {/* Bokningar-länk - alltid synlig */}
+                {handbookSlug && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link 
+                        href={`/${handbookSlug}/bookings`}
+                        className="group hover:bg-emerald-50 hover:border-emerald-200 transition-colors duration-200 text-sm py-3 px-3 rounded-lg cursor-pointer touch-manipulation min-h-[48px] flex items-center gap-3 w-full border border-transparent hover:border-opacity-50 text-gray-900"
+                      >
+                        <Calendar 
+                          className="h-4 w-4 text-emerald-600 group-hover:scale-110 transition-transform duration-200" 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-gray-900 truncate block">
+                            Bokningar
+                          </span>
+                        </div>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+
                 {/* Meddelanden-länk när aktiverat */}
                 {forumEnabled && handbookSlug && (
                   <SidebarMenuItem>

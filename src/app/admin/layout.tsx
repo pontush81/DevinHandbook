@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { checkIsSuperAdminClient } from "@/lib/user-utils";
 import { supabase } from "@/lib/supabase";
@@ -211,9 +210,5 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  return (
-    <AuthProvider>
-      <AdminLayoutInner>{children}</AdminLayoutInner>
-    </AuthProvider>
-  );
+  return <AdminLayoutInner>{children}</AdminLayoutInner>;
 } 

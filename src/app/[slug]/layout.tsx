@@ -1,4 +1,3 @@
-import { AuthProvider } from "@/contexts/AuthContext";
 import { getHandbookBySlug } from '@/lib/handbook-service';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
@@ -47,5 +46,5 @@ export default async function Layout({ children, params }: LayoutProps) {
     notFound();
   }
   
-  return <AuthProvider>{children}</AuthProvider>;
+  return <>{children}</>;
 } 
