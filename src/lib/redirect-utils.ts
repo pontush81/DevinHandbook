@@ -352,9 +352,22 @@ export async function smartRedirectWithPolling(
     }
     
     // Check if user is already on a handbook page - don't redirect
+    // Define known system pages that are NOT handbooks
+    const systemPages = [
+      '/login', '/signup', '/dashboard', '/upgrade', '/create-handbook', 
+      '/contact', '/terms', '/privacy', '/cookie-policy', '/cookie-settings',
+      '/admin', '/debug', '/test', '/clear-auth', '/reset-auth', '/reset-password',
+      '/resend-confirmation', '/handbook-demo', '/handbook-settings', '/notifications',
+      '/ocr-test', '/pwa-test', '/search', '/success', '/gdpr', '/legal'
+    ];
+    
     const handbookPagePattern = /^\/[^\/]+$/;
     const handbookSubPagePattern = /^\/[^\/]+\/(members|meddelanden|notifications)/;
-    if (handbookPagePattern.test(currentPath) || handbookSubPagePattern.test(currentPath)) {
+    
+    // Only consider it a handbook page if it matches the pattern AND is not a system page
+    const isSystemPage = systemPages.some(page => currentPath.startsWith(page));
+    
+    if (!isSystemPage && (handbookPagePattern.test(currentPath) || handbookSubPagePattern.test(currentPath))) {
       console.log('[Smart Redirect Polling] User is already on a handbook page, skipping redirect');
       return;
     }
