@@ -5,7 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase'
+import { getHybridAuth } from '@/lib/standard-auth'
 import { BookingInsert, BookingSearchParams, BookingApiResponse } from '@/types/booking'
+import { validateBookingRules, detectCollisions, ResourceTemplates, FairUsageRules } from '@/lib/booking-standards'
+import { sendBookingNotification } from '@/lib/booking-notifications'
 
 // GET /api/bookings - Hämta bokningar
 export async function GET(request: NextRequest) {
@@ -21,9 +24,9 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Kontrollera autentisering
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Kontrollera autentisering med hybrid auth
+    const authResult = await getHybridAuth(request)
+    if (!authResult.userId) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
         error: 'Inte autentiserad' 
@@ -34,9 +37,8 @@ export async function GET(request: NextRequest) {
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('handbook_id, role, id, name')
-      .eq('user_id', user.id)
+      .eq('user_id', authResult.userId)
       .eq('handbook_id', handbookId)
-      .eq('status', 'active')
       .single()
 
     if (memberError || !memberData) {
@@ -85,9 +87,9 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceSupabase()
     const body = await request.json()
 
-    // Kontrollera autentisering
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Kontrollera autentisering med hybrid auth
+    const authResult = await getHybridAuth(request)
+    if (!authResult.userId) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
         error: 'Inte autentiserad' 
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('handbook_id, role, id, name')
-      .eq('user_id', user.id)
+      .eq('user_id', authResult.userId)
       .eq('status', 'active')
       .single()
 
@@ -109,10 +111,10 @@ export async function POST(request: NextRequest) {
       }, { status: 403 })
     }
 
-    // Validera att resursen tillhör samma handbook
+    // Validera att resursen tillhör samma handbook och hämta resurstyp
     const { data: resource, error: resourceError } = await supabase
       .from('booking_resources')
-      .select('handbook_id, name')
+      .select('handbook_id, name, type, max_duration_hours, booking_advance_days')
       .eq('id', body.resource_id)
       .eq('handbook_id', memberData.handbook_id)
       .single()
@@ -124,13 +126,66 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Kontrollera kollisioner
+    // Validera booking mot standardregler
+    const resourceType = resource.type || 'other';
+    const startTime = new Date(body.start_time);
+    const endTime = new Date(body.end_time);
+    
+    const validation = validateBookingRules(
+      resourceType as any,
+      startTime,
+      endTime,
+      authResult.userId,
+      []
+    );
+
+    if (!validation.valid) {
+      return NextResponse.json<BookingApiResponse>({ 
+        success: false, 
+        error: validation.errors[0],
+        validation_errors: validation.errors
+      }, { status: 400 })
+    }
+
+    // Kontrollera användarens befintliga bokningar för fair usage
+    const { data: userBookings, error: userBookingsError } = await supabase
+      .from('bookings')
+      .select('start_time, end_time')
+      .eq('member_id', memberData.id)
+      .eq('status', 'confirmed')
+      .gte('start_time', new Date().toISOString())
+
+    if (userBookingsError) {
+      console.error('Error checking user bookings:', userBookingsError)
+    } else {
+      // Kontrollera veckogräns
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Måndag
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      
+      const thisWeekBookings = userBookings?.filter(booking => {
+        const bookingDate = new Date(booking.start_time);
+        return bookingDate >= weekStart && bookingDate < weekEnd;
+      }) || [];
+
+      const rules = ResourceTemplates[resourceType as keyof typeof ResourceTemplates];
+      if (thisWeekBookings.length >= rules.maxBookingsPerUserPerWeek) {
+        return NextResponse.json<BookingApiResponse>({ 
+          success: false, 
+          error: `Maximal antal bokningar per vecka (${rules.maxBookingsPerUserPerWeek}) överskridet` 
+        }, { status: 429 })
+      }
+    }
+
+    // Kontrollera kollisioner med buffer zones
     const { data: conflicts, error: conflictError } = await supabase
       .from('bookings')
       .select('id, start_time, end_time')
       .eq('resource_id', body.resource_id)
       .eq('status', 'confirmed')
-      .or(`start_time.lt.${body.end_time},end_time.gt.${body.start_time}`)
 
     if (conflictError) {
       console.error('Error checking conflicts:', conflictError)
@@ -140,10 +195,19 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    if (conflicts && conflicts.length > 0) {
+    // Använd standardiserad kollisionsdetektion med buffer
+    const rules = ResourceTemplates[resourceType as keyof typeof ResourceTemplates];
+    const hasCollision = detectCollisions(
+      startTime,
+      endTime,
+      conflicts || [],
+      rules.cleaningBufferMinutes
+    );
+
+    if (hasCollision) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
-        error: 'Tidpunkten är redan bokad' 
+        error: `Tidpunkten kolliderar med befintlig bokning (inkl. ${rules.cleaningBufferMinutes}min städbuffer)` 
       }, { status: 409 })
     }
 
@@ -166,8 +230,9 @@ export async function POST(request: NextRequest) {
       .insert(bookingData)
       .select(`
         *,
-        resource:booking_resources(id, name, location, type),
-        member:handbook_members(id, name)
+        resource:booking_resources(id, name, location, type, booking_instructions),
+        member:handbook_members(id, name, email, phone),
+        handbook:handbooks(name)
       `)
       .single()
 
@@ -177,6 +242,29 @@ export async function POST(request: NextRequest) {
         success: false, 
         error: 'Kunde inte skapa bokning' 
       }, { status: 500 })
+    }
+
+    // Skicka bekräftelsenotifikation
+    try {
+      const resourceRules = ResourceTemplates[resourceType as keyof typeof ResourceTemplates];
+      
+      await sendBookingNotification('booking_confirmation', {
+        memberEmail: (newBooking.member as any).email,
+        memberPhone: (newBooking.member as any).phone,
+        memberName: (newBooking.member as any).name,
+        resourceName: (newBooking.resource as any).name,
+        resourceLocation: (newBooking.resource as any).location,
+        startTime: new Date(newBooking.start_time),
+        endTime: new Date(newBooking.end_time),
+        purpose: newBooking.purpose,
+        cleaningFee: resourceRules.cleaningFee,
+        handbookName: (newBooking.handbook as any)?.name || 'Handbok',
+        handbookId: newBooking.handbook_id,
+        bookingRules: (newBooking.resource as any).booking_instructions
+      });
+    } catch (notificationError) {
+      console.error('Failed to send booking confirmation:', notificationError);
+      // Don't fail the booking creation if notification fails
     }
 
     return NextResponse.json<BookingApiResponse>({ 
@@ -207,9 +295,9 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Kontrollera autentisering
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Kontrollera autentisering med hybrid auth
+    const authResult = await getHybridAuth(request)
+    if (!authResult.userId) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
         error: 'Inte autentiserad' 
@@ -220,8 +308,7 @@ export async function DELETE(request: NextRequest) {
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('handbook_id, role, id, name')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
+      .eq('user_id', authResult.userId)
       .single()
 
     if (memberError || !memberData) {
@@ -234,7 +321,12 @@ export async function DELETE(request: NextRequest) {
     // Kontrollera att bokningen existerar och tillhör användarens handbook
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, member_id, handbook_id, start_time')
+      .select(`
+        id, member_id, handbook_id, start_time, end_time, purpose,
+        resource:booking_resources(name, location),
+        member:handbook_members(name, email, phone),
+        handbook:handbooks(name)
+      `)
       .eq('id', bookingId)
       .eq('handbook_id', memberData.handbook_id)
       .single()
@@ -285,6 +377,25 @@ export async function DELETE(request: NextRequest) {
         success: false, 
         error: 'Kunde inte ta bort bokning' 
       }, { status: 500 })
+    }
+
+    // Skicka avbokningsnotifikation
+    try {
+      await sendBookingNotification('cancellation', {
+        memberEmail: (booking.member as any).email,
+        memberPhone: (booking.member as any).phone,
+        memberName: (booking.member as any).name,
+        resourceName: (booking.resource as any).name,
+        resourceLocation: (booking.resource as any).location,
+        startTime: new Date(booking.start_time),
+        endTime: new Date(booking.end_time),
+        purpose: booking.purpose,
+        handbookName: (booking.handbook as any)?.name || 'Handbok',
+        handbookId: booking.handbook_id
+      });
+    } catch (notificationError) {
+      console.error('Failed to send cancellation notification:', notificationError);
+      // Don't fail the deletion if notification fails
     }
 
     return NextResponse.json<BookingApiResponse>({ 

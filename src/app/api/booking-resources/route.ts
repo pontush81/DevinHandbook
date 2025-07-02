@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase'
+import { getHybridAuth } from '@/lib/standard-auth'
 import { BookingResourceInsert, ResourceSearchParams, BookingApiResponse } from '@/types/booking'
 
 // GET /api/booking-resources - Hämta bokningsresurser
@@ -13,9 +14,9 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceSupabase()
     const { searchParams } = new URL(request.url)
     
-    // Kontrollera autentisering
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Kontrollera autentisering med hybrid auth
+    const authResult = await getHybridAuth(request)
+    if (!authResult.userId) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
         error: 'Inte autentiserad' 
@@ -26,8 +27,7 @@ export async function GET(request: NextRequest) {
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('handbook_id, role, id')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
+      .eq('user_id', authResult.userId)
       .single()
 
     if (memberError || !memberData) {
@@ -143,9 +143,9 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceSupabase()
     const body = await request.json()
 
-    // Kontrollera autentisering
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Kontrollera autentisering med hybrid auth
+    const authResult = await getHybridAuth(request)
+    if (!authResult.userId) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
         error: 'Inte autentiserad' 
@@ -156,8 +156,7 @@ export async function POST(request: NextRequest) {
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('handbook_id, role, id, name')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
+      .eq('user_id', authResult.userId)
       .single()
 
     if (memberError || !memberData) {

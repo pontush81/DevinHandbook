@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { BookingResource, Booking, BookingWithDetails, BookingInsert } from '@/types/booking';
+import { SuggestedTimeSlots, ResourceTemplates, ResourceType } from '@/lib/booking-standards';
 
 interface BookingCalendarProps {
   handbookId: string;
@@ -241,10 +242,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     try {
       setIsLoading(true);
       
-      const response = await fetch('/api/bookings', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ booking_id: bookingId })
+      const response = await fetch(`/api/bookings?id=${bookingId}`, {
+        method: 'DELETE'
       });
 
       const result = await response.json();
@@ -313,7 +312,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     });
   };
 
-  // ✅ FIXAD: Automatisk dialogöppning och formulärdata vid datumklick
+  // ✅ ENHANCED: Smart booking med resursspecifika standarder
   const handleDateClick = (date: Date, resourceId?: string) => {
     if (!resourceId && !selectedResource) {
       toast.error('Välj en resurs först');
@@ -321,17 +320,76 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     }
 
     const workingResourceId = resourceId || selectedResource?.id;
+    const resource = resources.find(r => r.id === workingResourceId);
+    const resourceType = (resource?.type || 'other') as ResourceType;
+    const rules = ResourceTemplates[resourceType];
+
+    // Smart default times baserat på resurstyp och operationstider
     const defaultStartTime = new Date(date);
-    defaultStartTime.setHours(10, 0, 0, 0); // Default 10:00
-    
     const defaultEndTime = new Date(date);
-    defaultEndTime.setHours(12, 0, 0, 0); // Default 12:00 (2 timmar)
+    
+    // Parse operating hours
+    const [startHour, startMin] = rules.operatingHours.start.split(':').map(Number);
+    const [endHour, endMin] = rules.operatingHours.end.split(':').map(Number);
+    
+    // Set smart default start time
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      // If booking for today, start from current time or operating hours, whichever is later
+      const currentHour = now.getHours();
+      const nextHour = Math.max(currentHour + 1, startHour);
+      defaultStartTime.setHours(Math.min(nextHour, endHour - 1), 0, 0, 0);
+    } else {
+      // For future dates, use operating hours start
+      defaultStartTime.setHours(startHour, startMin, 0, 0);
+    }
+    
+    // Set end time based on resource default duration
+    const defaultDurationMs = Math.min(rules.maxBookingDurationHours, 2) * 60 * 60 * 1000;
+    defaultEndTime.setTime(defaultStartTime.getTime() + defaultDurationMs);
+    
+    // Ensure end time doesn't exceed operating hours
+    const maxEndTime = new Date(date);
+    maxEndTime.setHours(endHour, endMin, 0, 0);
+    if (defaultEndTime > maxEndTime) {
+      defaultEndTime.setTime(maxEndTime.getTime());
+      defaultStartTime.setTime(defaultEndTime.getTime() - defaultDurationMs);
+    }
 
     setSelectedDate(date);
     setNewBooking({
       resource_id: workingResourceId!,
-      start_time: defaultStartTime.toISOString().slice(0, 16), // Format för datetime-local
+      start_time: defaultStartTime.toISOString().slice(0, 16),
       end_time: defaultEndTime.toISOString().slice(0, 16),
+      purpose: '',
+      attendees: 1,
+      contact_phone: '',
+      notes: ''
+    });
+    
+    setBookingDialogOpen(true);
+  };
+
+  // Quick time slot selection
+  const handleQuickTimeSlot = (slot: { label: string; start: string; duration: number }) => {
+    if (!selectedResource) {
+      toast.error('Välj en resurs först');
+      return;
+    }
+
+    const today = new Date();
+    const [hour, minute] = slot.start.split(':').map(Number);
+    
+    const startTime = new Date(today);
+    startTime.setHours(hour, minute, 0, 0);
+    
+    const endTime = new Date(startTime);
+    endTime.setHours(startTime.getHours() + slot.duration);
+
+    setNewBooking({
+      resource_id: selectedResource.id,
+      start_time: startTime.toISOString().slice(0, 16),
+      end_time: endTime.toISOString().slice(0, 16),
       purpose: '',
       attendees: 1,
       contact_phone: '',
@@ -718,6 +776,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                     <div className="text-center flex-1">
                       <h4 className="font-semibold text-lg">{selectedResource.name}</h4>
                       <p className="text-gray-600">{selectedResource.location}</p>
+                      {selectedResource.type && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Typ: {selectedResource.type} • Max {ResourceTemplates[selectedResource.type as ResourceType]?.maxBookingDurationHours || 4}h
+                        </p>
+                      )}
                     </div>
                     <Button 
                       className="flex items-center gap-2"
@@ -726,6 +789,41 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                       <Plus className="h-4 w-4" />
                       Ny bokning
                     </Button>
+                  </div>
+
+                  {/* Quick booking shortcuts */}
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h5 className="font-medium text-blue-900 mb-3">Snabbbokning idag</h5>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {SuggestedTimeSlots.map((slot) => {
+                        const resourceType = (selectedResource.type || 'other') as ResourceType;
+                        const rules = ResourceTemplates[resourceType];
+                        const [slotHour] = slot.start.split(':').map(Number);
+                        const [opStartHour] = rules.operatingHours.start.split(':').map(Number);
+                        const [opEndHour] = rules.operatingHours.end.split(':').map(Number);
+                        
+                        // Check if slot is within operating hours
+                        const isAvailable = slotHour >= opStartHour && (slotHour + slot.duration) <= opEndHour;
+                        
+                        return (
+                          <Button
+                            key={slot.label}
+                            variant={isAvailable ? "outline" : "ghost"}
+                            size="sm"
+                            disabled={!isAvailable}
+                            onClick={() => handleQuickTimeSlot(slot)}
+                            className={`text-xs ${isAvailable ? 'hover:bg-blue-100' : 'text-gray-400'}`}
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            {slot.label}<br/>
+                            <span className="text-xs">{slot.start}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-blue-700 mt-2">
+                      Öppettider: {ResourceTemplates[selectedResource.type as ResourceType]?.operatingHours.start || '08:00'} - {ResourceTemplates[selectedResource.type as ResourceType]?.operatingHours.end || '22:00'}
+                    </p>
                   </div>
 
                   {viewMode === 'week' ? (
