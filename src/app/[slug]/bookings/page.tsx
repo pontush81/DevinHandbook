@@ -1,121 +1,129 @@
-import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import BookingCalendar from '@/components/booking/BookingCalendar';
 import { Toaster } from 'sonner';
-import { Calendar } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface BookingsPageProps {
-  params: Promise<{
-    slug: string;
-  }>;
+
+interface Handbook {
+  id: string;
+  title: string;
+  slug: string;
 }
 
-export async function generateMetadata({ params }: BookingsPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const cookieStore = await cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
-
-  try {
-    // Hämta handbooksinfo för metadata
-    const { data: handbook } = await supabase
-      .from('handbooks')
-      .select('title')
-      .eq('slug', slug)
-      .single();
-
-    const handbookName = handbook?.title || 'Handbok';
-    
-    return {
-      title: `Bokningar - ${handbookName}`,
-      description: `Boka gemensamma utrymmen och resurser i ${handbookName}`,
-      keywords: ['bokningar', 'handbok', 'bostadsrättsförening', 'resurser'],
-    };
-  } catch (error) {
-    return {
-      title: 'Bokningar - Handbok',
-      description: 'Boka gemensamma utrymmen och resurser',
-      keywords: ['bokningar', 'handbok', 'bostadsrättsförening', 'resurser'],
-    };
-  }
+interface Membership {
+  role: string;
+  user_id: string;
 }
 
-export default async function BookingsPage({ params }: BookingsPageProps) {
-  const { slug } = await params;
-  const cookieStore = await cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+export default function BookingsPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+  const { user, isLoading: authLoading } = useAuth();
+  const [handbook, setHandbook] = useState<Handbook | null>(null);
+  const [membership, setMembership] = useState<Membership | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  try {
-    // Kontrollera autentisering först
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.log('Auth error or no user:', authError);
-      notFound();
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    async function loadBookingsPage() {
+      if (authLoading || !user) return;
+
+      try {
+        console.log('📚 [BookingsPage] Loading handbook and membership for slug:', slug);
+        console.log('👤 [BookingsPage] Current user:', user.id);
+
+        // Steg 1: Hämta handbok
+        const { data: handbookData, error: handbookError } = await supabase
+          .from('handbooks')
+          .select('id, title, slug')
+          .eq('slug', slug)
+          .single();
+
+        if (handbookError || !handbookData) {
+          console.error('❌ [BookingsPage] Handbook not found:', handbookError);
+          setError('Handboken hittades inte');
+          return;
+        }
+
+        console.log('✅ [BookingsPage] Handbook found:', handbookData);
+        setHandbook(handbookData);
+
+        // Steg 2: Kontrollera medlemskap
+        const { data: membershipData, error: membershipError } = await supabase
+          .from('handbook_members')
+          .select('role, user_id')
+          .eq('handbook_id', handbookData.id)
+          .eq('user_id', user.id)
+          .single();
+
+        if (membershipError || !membershipData) {
+          console.error('❌ [BookingsPage] User is not a member:', membershipError);
+          setError('Du har inte behörighet att komma åt denna handbok');
+          return;
+        }
+
+        console.log('✅ [BookingsPage] Membership confirmed:', membershipData);
+        setMembership(membershipData);
+
+      } catch (err) {
+        console.error('❌ [BookingsPage] Error loading page:', err);
+        setError('Ett fel uppstod när sidan laddades');
+      } finally {
+        setIsLoading(false);
+      }
     }
 
-    // Steg 1: Hämta handboken
-    const { data: handbook, error: handbookError } = await supabase
-      .from('handbooks')
-      .select('id, title, slug')
-      .eq('slug', slug)
-      .single();
+    loadBookingsPage();
+  }, [slug, user, authLoading, supabase]);
 
-    if (handbookError || !handbook) {
-      console.error('Handbook not found:', handbookError);
-      notFound();
-    }
-
-    // Steg 2: Kontrollera användarens medlemskap (separat fråga)
-    const { data: membership, error: membershipError } = await supabase
-      .from('handbook_members')
-      .select('role, user_id')
-      .eq('handbook_id', handbook.id)
-      .eq('user_id', user.id)
-      .single();
-
-    if (membershipError || !membership) {
-      console.error('Membership not found:', membershipError);
-      notFound();
-    }
-
-    // Hämta trial status från user_profiles
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('trial_ends_at')
-      .eq('user_id', user.id)
-      .single();
-
-    // Räkna ut trial status
-    const isTrialExpired = userProfile?.trial_ends_at ? 
-      new Date(userProfile.trial_ends_at) < new Date() : false;
-
-    const userRole = membership.role as 'owner' | 'admin' | 'member' | 'moderator';
-
+  // Loading state
+  if (authLoading || isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Calendar className="h-8 w-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Bokningar</h1>
-          </div>
-          <p className="text-gray-600">
-            Boka gemensamma utrymmen och resurser i {handbook.title}
-          </p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <p className="text-gray-600">Laddar bokningar...</p>
         </div>
-
-        <BookingCalendar 
-          handbookId={handbook.id}
-          userRole={userRole}
-          isTrialExpired={isTrialExpired}
-        />
       </div>
     );
-    
-  } catch (error) {
-    console.error('Error loading bookings page:', error);
-    notFound();
   }
+
+  // Error state
+  if (error || !handbook || !membership) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Calendar className="h-12 w-12 mx-auto text-gray-400" />
+          <h1 className="text-2xl font-bold text-gray-800">Bokningar</h1>
+          <p className="text-red-600">{error || 'Ett fel uppstod'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Success state
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Calendar className="h-6 w-6 text-blue-600" />
+            <h1 className="text-2xl font-bold text-gray-900">
+              Bokningar - {handbook.title}
+            </h1>
+          </div>
+          
+          <BookingCalendar handbookId={handbook.id} userRole={membership.role} />
+          <Toaster position="top-right" richColors />
+        </div>
+      </div>
+    </div>
+  );
 } 
