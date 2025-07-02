@@ -21,11 +21,11 @@ export async function generateMetadata({ params }: BookingsPageProps): Promise<M
     // Hämta handbooksinfo för metadata
     const { data: handbook } = await supabase
       .from('handbooks')
-      .select('name')
+      .select('title')
       .eq('slug', slug)
       .single();
 
-    const handbookName = handbook?.name || 'Handbok';
+    const handbookName = handbook?.title || 'Handbok';
     
     return {
       title: `Bokningar - ${handbookName}`,
@@ -59,17 +59,15 @@ export default async function BookingsPage({ params }: BookingsPageProps) {
       .from('handbooks')
       .select(`
         id, 
-        name, 
+        title, 
         slug,
         handbook_members!inner(
           role,
-          user_id,
-          status
+          user_id
         )
       `)
       .eq('slug', slug)
       .eq('handbook_members.user_id', user.id)
-      .eq('handbook_members.status', 'active')
       .single();
 
     if (handbookError || !handbook) {
@@ -99,7 +97,7 @@ export default async function BookingsPage({ params }: BookingsPageProps) {
             <h1 className="text-3xl font-bold text-gray-900">Bokningar</h1>
           </div>
           <p className="text-gray-600">
-            Boka gemensamma utrymmen och resurser i {handbook.name}
+            Boka gemensamma utrymmen och resurser i {handbook.title}
           </p>
         </div>
 
