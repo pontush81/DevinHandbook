@@ -12,49 +12,67 @@
  * Hanterar automatiskt sommartid/vintertid
  */
 export const toSwedishTime = (date: Date): Date => {
-  return new Date(date.toLocaleString('en-US', { 
-    timeZone: 'Europe/Stockholm' 
-  }));
-};
-
-/**
- * Konverterar från svensk tid till UTC för databas-lagring
- */
-export const fromSwedishTime = (date: Date): Date => {
-  // Skapa ett datum som representerar svensk tid
-  const swedishString = date.toLocaleString('sv-SE', { 
+  // Korrekt sätt att konvertera UTC till svensk tid
+  const utcTime = date.getTime();
+  const utcOffset = date.getTimezoneOffset() * 60000;
+  const utcDate = new Date(utcTime + utcOffset);
+  
+  // Använd Intl.DateTimeFormat för korrekt timezone-hantering
+  const swedishTime = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Stockholm',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
-  });
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(date);
   
-  // Parsa som lokal tid och konvertera till UTC
-  const [datePart, timePart] = swedishString.split(' ');
-  const [year, month, day] = datePart.split('-');
-  const [hour, minute, second] = timePart.split(':');
+  const year = parseInt(swedishTime.find(part => part.type === 'year')?.value || '0');
+  const month = parseInt(swedishTime.find(part => part.type === 'month')?.value || '0');
+  const day = parseInt(swedishTime.find(part => part.type === 'day')?.value || '0');
+  const hour = parseInt(swedishTime.find(part => part.type === 'hour')?.value || '0');
+  const minute = parseInt(swedishTime.find(part => part.type === 'minute')?.value || '0');
+  const second = parseInt(swedishTime.find(part => part.type === 'second')?.value || '0');
   
-  const localDate = new Date(
-    parseInt(year), 
-    parseInt(month) - 1, 
-    parseInt(day), 
-    parseInt(hour), 
-    parseInt(minute), 
-    parseInt(second)
+  return new Date(year, month - 1, day, hour, minute, second);
+};
+
+/**
+ * Konverterar från svensk tid till UTC för databas-lagring
+ */
+export const fromSwedishTime = (date: Date): Date => {
+  // Skapa ett datum som representerar svensk tid utan timezone-information
+  const swedishDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds()
   );
   
-  return new Date(localDate.getTime() + localDate.getTimezoneOffset() * 60000);
+  // Beräkna skillnaden mellan svensk tid och UTC
+  const tempDate = new Date();
+  const utcTime = tempDate.getTime();
+  const utcOffset = tempDate.getTimezoneOffset() * 60000;
+  const utcDate = new Date(utcTime + utcOffset);
+  
+  // Skapa ett datum i Europe/Stockholm och få skillnaden
+  const stockholmTime = new Date(utcDate.toLocaleString('en-US', { timeZone: 'Europe/Stockholm' }));
+  const timezoneOffset = stockholmTime.getTime() - utcDate.getTime();
+  
+  // Applicera offseten på vårt datum
+  return new Date(swedishDate.getTime() - timezoneOffset);
 };
 
 /**
  * Kontrollerar om ett datum är i framtiden (svensk tid)
  */
 export const isInFuture = (date: Date): boolean => {
-  const now = toSwedishTime(new Date());
-  const target = toSwedishTime(date);
+  const now = new Date();
+  const target = date;
   return target > now;
 };
 
@@ -62,7 +80,7 @@ export const isInFuture = (date: Date): boolean => {
  * Formaterar datum för visning i svensk tid
  */
 export const formatSwedishDateTime = (date: Date): string => {
-  return toSwedishTime(date).toLocaleString('sv-SE', {
+  return date.toLocaleString('sv-SE', {
     timeZone: 'Europe/Stockholm',
     year: 'numeric',
     month: '2-digit',
@@ -70,6 +88,81 @@ export const formatSwedishDateTime = (date: Date): string => {
     hour: '2-digit',
     minute: '2-digit'
   });
+};
+
+/**
+ * ENHANCED: Säker timezone-konvertering med robust DST-hantering
+ */
+export const convertToSwedishTime = (utcDate: Date): Date => {
+  // Använd den nya Temporal API när det blir tillgängligt
+  // För nu, använd Intl.DateTimeFormat för säker timezone-konvertering
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Stockholm',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const parts = formatter.formatToParts(utcDate);
+  const partsObj = parts.reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {} as Record<string, string>);
+  
+  return new Date(
+    parseInt(partsObj.year),
+    parseInt(partsObj.month) - 1,
+    parseInt(partsObj.day),
+    parseInt(partsObj.hour),
+    parseInt(partsObj.minute),
+    parseInt(partsObj.second)
+  );
+};
+
+/**
+ * ENHANCED: Konvertera svensk tid till UTC med robust DST-hantering
+ */
+export const convertFromSwedishTime = (swedishDate: Date): Date => {
+  // Skapa en string som representerar svensk tid
+  const swedishString = swedishDate.toISOString().slice(0, 19); // Remove Z
+  
+  // Skapa ett datum som Intl.DateTimeFormat kan tolka som Stockholm-tid
+  const tempDate = new Date(swedishString + 'Z'); // Add Z for UTC
+  
+  // Beräkna offset mellan Stockholm och UTC vid detta datum
+  const stockholmFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Stockholm',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const utcFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const stockholmTime = new Date(stockholmFormatter.format(tempDate).replace(/(\d{4})-(\d{2})-(\d{2}), (\d{2}):(\d{2}):(\d{2})/, '$1-$2-$3T$4:$5:$6'));
+  const utcTime = new Date(utcFormatter.format(tempDate).replace(/(\d{4})-(\d{2})-(\d{2}), (\d{2}):(\d{2}):(\d{2})/, '$1-$2-$3T$4:$5:$6'));
+  
+  const offset = stockholmTime.getTime() - utcTime.getTime();
+  
+  // Applicera offseten på det ursprungliga datumet
+  return new Date(swedishDate.getTime() - offset);
 };
 
 export interface StandardBookingRules {

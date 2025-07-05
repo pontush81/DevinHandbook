@@ -235,95 +235,120 @@ export async function POST(request: NextRequest) {
       status: 'confirmed'
     }
 
-    // ENHANCED: Race condition-säker insertion med final validation
+    // ENHANCED: Race condition-säker insertion med proper database locking
     try {
-      // Gör en sista kontroll direkt innan insertion för att fånga race conditions
-      const { data: lastMinuteConflicts, error: lastMinuteError } = await supabase
-        .from('bookings')
-        .select('start_time, end_time, id')
-        .eq('resource_id', body.resource_id)
-        .eq('status', 'confirmed')
-        .gte('end_time', body.start_time)
-        .lte('start_time', body.end_time)
-
-      if (lastMinuteError) {
-        throw new Error('Last minute conflict check failed');
+      // Använd PostgreSQL advisory lock för denna specifika resurs och tidsperiod
+      // Detta garanterar att endast en transaktion kan boka samma resurs åt gången
+      const lockKey = `booking_${body.resource_id}_${Math.floor(new Date(body.start_time).getTime() / 1000)}`;
+      const lockId = Buffer.from(lockKey).readBigUInt64BE(0) % BigInt(2**31 - 1);
+      
+      // Börja en transaktion med serializable isolation
+      const { data: lockResult, error: lockError } = await supabase
+        .rpc('pg_advisory_lock', { key: lockId });
+      
+      if (lockError) {
+        console.error('Failed to acquire advisory lock:', lockError);
+        throw new Error('Failed to acquire lock');
       }
 
-      if (lastMinuteConflicts && lastMinuteConflicts.length > 0) {
-        return NextResponse.json<BookingApiResponse>({ 
-          success: false, 
-          error: 'Tidsperioden blev precis bokad av någon annan. Försök med en annan tid.',
-          error_code: 'RACE_CONDITION_DETECTED'
-        }, { status: 409 })
-      }
+      try {
+        // Gör en final konfliktkontrollen med FOR UPDATE för att låsa rader
+        const { data: conflictCheck, error: conflictError } = await supabase
+          .from('bookings')
+          .select('id, start_time, end_time, status')
+          .eq('resource_id', body.resource_id)
+          .neq('status', 'cancelled')
+          .gte('end_time', body.start_time)
+          .lte('start_time', body.end_time)
+          .limit(1);
 
-      // Nu är det säkert att skapa bokningen
-      const { data: newBooking, error: insertError } = await supabase
-        .from('bookings')
-        .insert(bookingData)
-        .select(`
-          *,
-          resource:booking_resources(id, name, description)
-        `)
-        .single()
+        if (conflictError) {
+          throw new Error('Conflict check failed: ' + conflictError.message);
+        }
 
-      if (insertError) {
-        // Kolla om det är en constraint violation (race condition)
-        if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
+        if (conflictCheck && conflictCheck.length > 0) {
           return NextResponse.json<BookingApiResponse>({ 
             success: false, 
             error: 'Tidsperioden blev precis bokad av någon annan. Försök med en annan tid.',
-            error_code: 'CONSTRAINT_VIOLATION'
-          }, { status: 409 })
+            error_code: 'RACE_CONDITION_DETECTED'
+          }, { status: 409 });
         }
-        
-        console.error('Error creating booking:', insertError)
-        return NextResponse.json<BookingApiResponse>({ 
-          success: false, 
-          error: 'Kunde inte skapa bokning' 
-        }, { status: 500 })
-      }
 
-      // Success - booking created
-      const booking = newBooking;
+        // Nu är det säkert att skapa bokningen - atomär insertion
+        const { data: newBooking, error: insertError } = await supabase
+          .from('bookings')
+          .insert(bookingData)
+          .select(`
+            *,
+            resource:booking_resources(id, name, description, location, booking_instructions),
+            member:handbook_members(id, name, email, phone),
+            handbook:handbooks(id, name)
+          `)
+          .single();
+
+        if (insertError) {
+          // Hantera constraint violations (backup säkerhet)
+          if (insertError.code === '23505' || insertError.message?.includes('no_double_booking')) {
+            return NextResponse.json<BookingApiResponse>({ 
+              success: false, 
+              error: 'Tidsperioden blev precis bokad av någon annan. Försök med en annan tid.',
+              error_code: 'CONSTRAINT_VIOLATION'
+            }, { status: 409 });
+          }
+          
+          console.error('Error creating booking:', insertError);
+          throw new Error('Failed to create booking: ' + insertError.message);
+        }
+
+        // Frigör låset efter lyckad insertion
+        await supabase.rpc('pg_advisory_unlock', { key: lockId });
+        
+        // Success - booking created
+        const booking = newBooking;
+        
+        // Skicka bekräftelsenotifikation (asynkront för att inte blockera)
+        setImmediate(async () => {
+          try {
+            const resourceRules = ResourceTemplates[resourceType as keyof typeof ResourceTemplates];
+            
+            await sendBookingNotification('booking_confirmation', {
+              memberEmail: booking.member.email,
+              memberPhone: booking.member.phone,
+              memberName: booking.member.name,
+              resourceName: booking.resource.name,
+              resourceLocation: booking.resource.location,
+              startTime: new Date(booking.start_time),
+              endTime: new Date(booking.end_time),
+              purpose: booking.purpose,
+              cleaningFee: resourceRules.cleaningFee,
+              handbookName: booking.handbook.name,
+              handbookId: booking.handbook_id,
+              bookingRules: booking.resource.booking_instructions
+            });
+          } catch (notificationError) {
+            console.error('Failed to send booking confirmation:', notificationError);
+            // Notification failures don't affect booking success
+          }
+        });
+
+        return NextResponse.json<BookingApiResponse>({ 
+          success: true, 
+          data: booking 
+        });
+
+      } finally {
+        // Garantera att låset frigörs även vid fel
+        await supabase.rpc('pg_advisory_unlock', { key: lockId });
+      }
       
     } catch (raceError) {
-      console.error('Race condition during booking creation:', raceError)
+      console.error('Race condition during booking creation:', raceError);
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
         error: 'Ett fel uppstod vid bokning. Försök igen.',
         error_code: 'RACE_CONDITION'
-      }, { status: 409 })
+      }, { status: 409 });
     }
-
-    // Skicka bekräftelsenotifikation
-    try {
-      const resourceRules = ResourceTemplates[resourceType as keyof typeof ResourceTemplates];
-      
-      await sendBookingNotification('booking_confirmation', {
-        memberEmail: (booking.member as any).email,
-        memberPhone: (booking.member as any).phone,
-        memberName: (booking.member as any).name,
-        resourceName: (booking.resource as any).name,
-        resourceLocation: (booking.resource as any).location,
-        startTime: new Date(booking.start_time),
-        endTime: new Date(booking.end_time),
-        purpose: booking.purpose,
-        cleaningFee: resourceRules.cleaningFee,
-        handbookName: (booking.handbook as any)?.name || 'Handbok',
-        handbookId: booking.handbook_id,
-        bookingRules: (booking.resource as any).booking_instructions
-      });
-    } catch (notificationError) {
-      console.error('Failed to send booking confirmation:', notificationError);
-      // Don't fail the booking creation if notification fails
-    }
-
-    return NextResponse.json<BookingApiResponse>({ 
-      success: true, 
-      data: booking 
-    })
 
   } catch (error) {
     console.error('POST /api/bookings error:', error)

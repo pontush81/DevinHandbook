@@ -4,6 +4,7 @@
 // =============================================
 
 import { createClient } from '@supabase/supabase-js'
+import { toSwedishTime, fromSwedishTime } from './booking-standards'
 
 export interface NotificationTemplate {
   type: 'booking_confirmation' | 'reminder_24h' | 'reminder_2h' | 'cancellation' | 'no_show_warning';
@@ -197,10 +198,11 @@ export const sendSMS = async (
   }
 };
 
-// Main notification sending function
+// ENHANCED: Main notification sending function med deduplication
 export const sendBookingNotification = async (
   notificationType: keyof typeof NotificationTemplates,
   bookingData: {
+    bookingId?: string;
     memberEmail: string;
     memberPhone?: string;
     memberName: string;
@@ -222,49 +224,140 @@ export const sendBookingNotification = async (
     throw new Error(`Unknown notification type: ${notificationType}`);
   }
 
-  // Prepare template data
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // ENHANCED: Deduplication check via database function
+  if (bookingData.bookingId) {
+    try {
+      const { data: shouldSend, error } = await supabase
+        .rpc('should_send_notification', {
+          p_booking_id: bookingData.bookingId,
+          p_notification_type: notificationType,
+          p_recipient_email: bookingData.memberEmail,
+          p_recipient_phone: bookingData.memberPhone || null
+        });
+
+      if (error) {
+        console.error('Deduplication check failed:', error);
+        // Continue anyway, don't block notifications due to deduplication failures
+      } else if (!shouldSend) {
+        console.log(`Notification ${notificationType} already sent for booking ${bookingData.bookingId}`);
+        return { emailSent: false, smsSent: false };
+      }
+    } catch (error) {
+      console.error('Error checking notification deduplication:', error);
+      // Continue anyway
+    }
+  }
+
+  // ENHANCED: Prepare template data with Swedish timezone handling
+  const startTimeSwedish = toSwedishTime(bookingData.startTime);
+  const endTimeSwedish = toSwedishTime(bookingData.endTime);
+  const cancellationDeadlineSwedish = toSwedishTime(new Date(bookingData.startTime.getTime() - 24 * 60 * 60 * 1000));
+
   const templateData = {
     memberName: bookingData.memberName,
     resourceName: bookingData.resourceName,
     location: bookingData.resourceLocation,
-    date: bookingData.startTime.toLocaleDateString('sv-SE'),
-    startTime: bookingData.startTime.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
-    endTime: bookingData.endTime.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
+    date: startTimeSwedish.toLocaleDateString('sv-SE', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }),
+    startTime: startTimeSwedish.toLocaleTimeString('sv-SE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    endTime: endTimeSwedish.toLocaleTimeString('sv-SE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
     purpose: bookingData.purpose,
     cleaningFee: bookingData.cleaningFee,
     handbookName: bookingData.handbookName,
     accessCode: bookingData.accessCode,
     noShowCount: bookingData.noShowCount,
     bookingRules: bookingData.bookingRules,
-    cancellationDeadline: new Date(bookingData.startTime.getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('sv-SE'),
+    cancellationDeadline: cancellationDeadlineSwedish.toLocaleDateString('sv-SE', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
     suspended: bookingData.noShowCount && bookingData.noShowCount >= 3
   };
 
-  // Send email
-  const emailSubject = renderTemplate(template.subject, templateData);
-  const emailBody = renderTemplate(template.emailBody, templateData);
-  const emailSent = await sendEmail(
-    bookingData.memberEmail,
-    emailSubject,
-    emailBody,
-    bookingData.handbookId
-  );
-
-  // Send SMS if template and phone number available
+  let emailSent = false;
   let smsSent = false;
-  if (template.smsBody && bookingData.memberPhone) {
-    const smsBody = renderTemplate(template.smsBody, templateData);
-    smsSent = await sendSMS(
-      bookingData.memberPhone,
-      smsBody,
+
+  try {
+    // Send email
+    const emailSubject = renderTemplate(template.subject, templateData);
+    const emailBody = renderTemplate(template.emailBody, templateData);
+    emailSent = await sendEmail(
+      bookingData.memberEmail,
+      emailSubject,
+      emailBody,
       bookingData.handbookId
     );
+
+    // Send SMS if template and phone number available
+    if (template.smsBody && bookingData.memberPhone) {
+      const smsBody = renderTemplate(template.smsBody, templateData);
+      smsSent = await sendSMS(
+        bookingData.memberPhone,
+        smsBody,
+        bookingData.handbookId
+      );
+    }
+
+    // ENHANCED: Update notification log with results
+    if (bookingData.bookingId) {
+      try {
+        await supabase
+          .from('notification_log')
+          .update({
+            status: (emailSent || smsSent) ? 'sent' : 'failed',
+            sent_at: new Date().toISOString(),
+            last_error: (emailSent || smsSent) ? null : 'Both email and SMS failed'
+          })
+          .eq('booking_id', bookingData.bookingId)
+          .eq('notification_type', notificationType);
+      } catch (error) {
+        console.error('Failed to update notification log:', error);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    
+    // ENHANCED: Log failure in notification_log
+    if (bookingData.bookingId) {
+      try {
+        await supabase
+          .from('notification_log')
+          .update({
+            status: 'failed',
+            attempt_count: 1,
+            last_error: error instanceof Error ? error.message : 'Unknown error'
+          })
+          .eq('booking_id', bookingData.bookingId)
+          .eq('notification_type', notificationType);
+      } catch (logError) {
+        console.error('Failed to log notification failure:', logError);
+      }
+    }
   }
 
   return { emailSent, smsSent };
 };
 
-// Scheduled notification checker (run via cron job)
+// ENHANCED: Scheduled notification checker med timezone-säkerhet
 export const processScheduledNotifications = async (): Promise<void> => {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -272,11 +365,15 @@ export const processScheduledNotifications = async (): Promise<void> => {
   );
 
   try {
-    const now = new Date();
+    // ENHANCED: Use Swedish timezone for all calculations
+    const nowSwedish = new Date();
+    const nowUTC = fromSwedishTime(nowSwedish);
     
-    // 24h reminders
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const { data: upcomingBookings } = await supabase
+    // 24h reminders - Check for bookings starting tomorrow
+    const tomorrow = new Date(nowUTC.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowWindow = new Date(tomorrow.getTime() + 2 * 60 * 60 * 1000); // 2-hour window
+    
+    const { data: upcomingBookings, error: upcomingError } = await supabase
       .from('bookings')
       .select(`
         *,
@@ -286,34 +383,45 @@ export const processScheduledNotifications = async (): Promise<void> => {
       `)
       .eq('status', 'confirmed')
       .gte('start_time', tomorrow.toISOString())
-      .lte('start_time', new Date(tomorrow.getTime() + 60 * 60 * 1000).toISOString()) // 1-hour window
+      .lte('start_time', tomorrowWindow.toISOString())
       .is('reminder_24h_sent', null);
 
-    for (const booking of upcomingBookings || []) {
-      await sendBookingNotification('reminder_24h', {
-        memberEmail: booking.handbook_members.email,
-        memberPhone: booking.handbook_members.phone,
-        memberName: booking.handbook_members.name,
-        resourceName: booking.booking_resources.name,
-        resourceLocation: booking.booking_resources.location,
-        startTime: new Date(booking.start_time),
-        endTime: new Date(booking.end_time),
-        purpose: booking.purpose,
-        handbookName: booking.handbooks.name,
-        handbookId: booking.handbook_id,
-        bookingRules: booking.booking_resources.booking_instructions
-      });
+    if (upcomingError) {
+      console.error('Error fetching upcoming bookings:', upcomingError);
+    } else {
+      for (const booking of upcomingBookings || []) {
+        try {
+          await sendBookingNotification('reminder_24h', {
+            bookingId: booking.id,
+            memberEmail: booking.handbook_members.email,
+            memberPhone: booking.handbook_members.phone,
+            memberName: booking.handbook_members.name,
+            resourceName: booking.booking_resources.name,
+            resourceLocation: booking.booking_resources.location,
+            startTime: new Date(booking.start_time),
+            endTime: new Date(booking.end_time),
+            purpose: booking.purpose,
+            handbookName: booking.handbooks.name,
+            handbookId: booking.handbook_id,
+            bookingRules: booking.booking_resources.booking_instructions
+          });
 
-      // Mark as sent
-      await supabase
-        .from('bookings')
-        .update({ reminder_24h_sent: now.toISOString() })
-        .eq('id', booking.id);
+          // Mark as sent
+          await supabase
+            .from('bookings')
+            .update({ reminder_24h_sent: nowUTC.toISOString() })
+            .eq('id', booking.id);
+        } catch (error) {
+          console.error(`Failed to send 24h reminder for booking ${booking.id}:`, error);
+        }
+      }
     }
 
-    // 2h reminders
-    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    const { data: soonBookings } = await supabase
+    // 2h reminders - Check for bookings starting in 2 hours
+    const twoHoursFromNow = new Date(nowUTC.getTime() + 2 * 60 * 60 * 1000);
+    const twoHourWindow = new Date(twoHoursFromNow.getTime() + 30 * 60 * 1000); // 30-min window
+    
+    const { data: soonBookings, error: soonError } = await supabase
       .from('bookings')
       .select(`
         *,
@@ -323,31 +431,47 @@ export const processScheduledNotifications = async (): Promise<void> => {
       `)
       .eq('status', 'confirmed')
       .gte('start_time', twoHoursFromNow.toISOString())
-      .lte('start_time', new Date(twoHoursFromNow.getTime() + 30 * 60 * 1000).toISOString()) // 30-min window
+      .lte('start_time', twoHourWindow.toISOString())
       .is('reminder_2h_sent', null);
 
-    for (const booking of soonBookings || []) {
-      await sendBookingNotification('reminder_2h', {
-        memberEmail: booking.handbook_members.email,
-        memberPhone: booking.handbook_members.phone,
-        memberName: booking.handbook_members.name,
-        resourceName: booking.booking_resources.name,
-        resourceLocation: booking.booking_resources.location,
-        startTime: new Date(booking.start_time),
-        endTime: new Date(booking.end_time),
-        handbookName: booking.handbooks.name,
-        handbookId: booking.handbook_id,
-        accessCode: booking.access_code
-      });
+    if (soonError) {
+      console.error('Error fetching soon bookings:', soonError);
+    } else {
+      for (const booking of soonBookings || []) {
+        try {
+          await sendBookingNotification('reminder_2h', {
+            bookingId: booking.id,
+            memberEmail: booking.handbook_members.email,
+            memberPhone: booking.handbook_members.phone,
+            memberName: booking.handbook_members.name,
+            resourceName: booking.booking_resources.name,
+            resourceLocation: booking.booking_resources.location,
+            startTime: new Date(booking.start_time),
+            endTime: new Date(booking.end_time),
+            handbookName: booking.handbooks.name,
+            handbookId: booking.handbook_id,
+            accessCode: booking.access_code
+          });
 
-      // Mark as sent
-      await supabase
-        .from('bookings')
-        .update({ reminder_2h_sent: now.toISOString() })
-        .eq('id', booking.id);
+          // Mark as sent
+          await supabase
+            .from('bookings')
+            .update({ reminder_2h_sent: nowUTC.toISOString() })
+            .eq('id', booking.id);
+        } catch (error) {
+          console.error(`Failed to send 2h reminder for booking ${booking.id}:`, error);
+        }
+      }
     }
 
-    console.log(`Processed ${(upcomingBookings?.length || 0) + (soonBookings?.length || 0)} notification(s)`);
+    // ENHANCED: Cleanup old notifications
+    try {
+      await supabase.rpc('cleanup_old_notifications');
+    } catch (error) {
+      console.error('Failed to cleanup old notifications:', error);
+    }
+
+    console.log(`Processed ${(upcomingBookings?.length || 0)} 24h reminders and ${(soonBookings?.length || 0)} 2h reminders`);
 
   } catch (error) {
     console.error('Error processing scheduled notifications:', error);
