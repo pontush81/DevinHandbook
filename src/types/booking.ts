@@ -79,6 +79,7 @@ export interface BookingResource {
   is_active: boolean
   created_at: string
   updated_at: string
+  time_restrictions?: TimeRestrictions // Lägg till som optional för bakåtkompatibilitet
 }
 
 export interface BookingResourceInsert {
@@ -93,6 +94,7 @@ export interface BookingResourceInsert {
   is_active?: boolean
   created_at?: string
   updated_at?: string
+  time_restrictions?: TimeRestrictions
 }
 
 export interface BookingResourceUpdate {
@@ -107,6 +109,7 @@ export interface BookingResourceUpdate {
   is_active?: boolean
   created_at?: string
   updated_at?: string
+  time_restrictions?: TimeRestrictions
 }
 
 // Bokning från databasen

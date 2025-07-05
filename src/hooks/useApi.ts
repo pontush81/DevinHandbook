@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-client';
 import { fetchWithAuth } from '@/lib/supabase';
+import { useContext } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
 
 /**
  * Custom fetcher function with authentication
@@ -18,22 +20,20 @@ async function fetchAPI(url: string) {
 }
 
 /**
- * Hook for checking if user is superadmin
- * Uses intelligent caching and automatic deduplication
- * Smart: Only checks if user seems likely to be admin
+ * Hook for checking superadmin status
+ * Only runs for likely admin users to avoid unnecessary API calls
  */
 export function useAdminStatus(userId?: string, userEmail?: string) {
-  // Smart check: Only make API calls for likely admin users
-  const shouldCheck = userId && (
-    userEmail?.includes('pontus') || 
-    userEmail?.includes('admin') ||
-    userEmail?.endsWith('@handbok.org') ||
+  // Only check for users that are likely to be admins
+  const shouldCheck = !!(
+    userId && 
+    userEmail &&
+    (userEmail.endsWith('@handbok.org') ||
     // Always check in development
-    process.env.NODE_ENV === 'development'
+    process.env.NODE_ENV === 'development')
   );
 
-  try {
-    return useQuery({
+  return useQuery({
     queryKey: queryKeys.user.adminStatus(userId || 'anonymous'),
     queryFn: async () => {
       console.log('🔐 [useAdminStatus] Checking admin status for user:', { userId, userEmail });
@@ -63,15 +63,6 @@ export function useAdminStatus(userId?: string, userEmail?: string) {
       return failureCount < 2;
     },
   });
-  } catch (error) {
-    // Fallback if QueryClient is not available
-    console.warn('🔧 [useAdminStatus] QueryClient not available, using fallback');
-    return {
-      data: { isSuperAdmin: false },
-      isLoading: false,
-      error: null
-    };
-  }
 }
 
 /**

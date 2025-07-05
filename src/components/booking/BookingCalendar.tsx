@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,7 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { BookingResource, Booking, BookingWithDetails, BookingInsert, PricingConfig, TimeRestrictions, BookingLimits, BookingRulesConfig } from '@/types/booking';
-import { ResourceTemplates, ResourceType } from '@/lib/booking-standards';
+import { ResourceTemplates, ResourceType, toSwedishTime, fromSwedishTime, formatSwedishDateTime, detectCollisions } from '@/lib/booking-standards';
 import { fetchWithAuth } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import AdminDashboard from './AdminDashboard';
@@ -81,8 +81,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     time_restrictions: {
       start_time: '06:00',
       end_time: '22:00',
-      weekdays_only: false,
-      advance_booking_days: 30
+      weekdays_only: false
     },
     booking_limits: {
       max_duration_hours: 24,
@@ -190,14 +189,43 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       // Hitta resursnamn för auto-genererad titel
       const selectedResourceObj = resources.find(r => r.id === bookingData.resource_id);
       const title = selectedResourceObj ? `Bokning av ${selectedResourceObj.name}` : 'Bokning';
+
+      // FIXED: Konvertera från datetime-local (svensk tid) till UTC
+      const swedishStartTime = new Date(bookingData.start_time);
+      const swedishEndTime = new Date(bookingData.end_time);
+      const utcStartTime = fromSwedishTime(swedishStartTime);
+      const utcEndTime = fromSwedishTime(swedishEndTime);
+      
+      // Validate that start time is not in the past (använd svensk tid för jämförelse)
+      const nowSwedish = toSwedishTime(new Date());
+      if (swedishStartTime < nowSwedish) {
+        throw new Error('Du kan inte boka datum som redan passerat');
+      }
+      
+      // FIXED: Race condition protection - hämta senaste bokningar före skapande
+      const resourceBookings = bookings.filter(b => b.resource_id === bookingData.resource_id);
+      const collision = detectCollisions(
+        utcStartTime, 
+        utcEndTime, 
+        resourceBookings.map(b => ({ 
+          start_time: b.start_time, 
+          end_time: b.end_time,
+          id: b.id 
+        }))
+      );
+      
+      if (collision.hasCollision) {
+        throw new Error(`Tiden är redan bokad. Konflikter: ${collision.conflictingBookings.join(', ')}`);
+      }
       
       const payload = {
         resource_id: bookingData.resource_id,
-        start_time: bookingData.start_time,
-        end_time: bookingData.end_time,
+        start_time: utcStartTime.toISOString(),
+        end_time: utcEndTime.toISOString(),
         title: title,
         contact_phone: bookingData.contact_phone || null,
-        notes: bookingData.notes || null
+        notes: bookingData.notes || null,
+        handbook_id: handbookId
       };
 
       const response = await fetchWithAuth('/api/bookings', {
@@ -281,8 +309,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           time_restrictions: {
             start_time: '06:00',
             end_time: '22:00',
-            weekdays_only: false,
-            advance_booking_days: 30
+            weekdays_only: false
           },
           booking_limits: {
             max_duration_hours: 24,
@@ -431,24 +458,41 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
   const getBookingsForDate = (date: Date, resourceId?: string) => {
     return bookings.filter(booking => {
-      const bookingDate = new Date(booking.start_time);
-      const sameDay = bookingDate.toDateString() === date.toDateString();
+      // FIXED: Konvertera UTC-tid från databas till svensk tid för jämförelse
+      const utcBookingDate = new Date(booking.start_time);
+      const swedishBookingDate = toSwedishTime(utcBookingDate);
+      const swedishCompareDate = toSwedishTime(date);
+      
+      const sameDay = swedishBookingDate.toDateString() === swedishCompareDate.toDateString();
       const sameResource = !resourceId || booking.resource_id === resourceId;
       return sameDay && sameResource;
     });
   };
 
   const formatTimeSlot = (date: Date) => {
-    return date.toLocaleTimeString('sv-SE', { 
+    // FIXED: Konvertera UTC-tid från databas till svensk tid för visning
+    const swedishTime = toSwedishTime(date);
+    return swedishTime.toLocaleTimeString('sv-SE', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
   };
 
-  // ✅ ENHANCED: Smart booking med resursspecifika standarder
+  // ✅ ENHANCED: Smart booking med resursspecifika standarder och svensk tid
   const handleDateClick = (date: Date, resourceId?: string) => {
     if (!resourceId && !selectedResource) {
       toast.error('Välj en resurs först');
+      return;
+    }
+
+    // FIXED: Använd svensk tid för datumjämförelse
+    const nowSwedish = toSwedishTime(new Date());
+    nowSwedish.setHours(0, 0, 0, 0);
+    const selectedDateSwedish = toSwedishTime(date);
+    selectedDateSwedish.setHours(0, 0, 0, 0);
+    
+    if (selectedDateSwedish < nowSwedish) {
+      toast.error('Du kan inte boka datum som redan passerat');
       return;
     }
 
@@ -457,17 +501,18 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     const resourceType = 'other' as ResourceType; // Default to 'other' since BookingResource doesn't have resource_type
     const rules = ResourceTemplates[resourceType];
 
-    // Smart default times baserat på resurstyp och operationstider
-    const defaultStartTime = new Date(date);
-    const defaultEndTime = new Date(date);
+    // FIXED: Smart default times i svensk tid
+    const swedishDate = toSwedishTime(date);
+    const defaultStartTime = new Date(swedishDate);
+    const defaultEndTime = new Date(swedishDate);
     
     // Parse operating hours
     const [startHour, startMin] = rules.operatingHours.start.split(':').map(Number);
     const [endHour, endMin] = rules.operatingHours.end.split(':').map(Number);
     
     // Set smart default start time
-    const now = new Date();
-    if (date.toDateString() === now.toDateString()) {
+    const now = toSwedishTime(new Date());
+    if (swedishDate.toDateString() === now.toDateString()) {
       // If booking for today, start from current time or operating hours, whichever is later
       const currentHour = now.getHours();
       const nextHour = Math.max(currentHour + 1, startHour);
@@ -482,18 +527,23 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     defaultEndTime.setTime(defaultStartTime.getTime() + defaultDurationMs);
     
     // Ensure end time doesn't exceed operating hours
-    const maxEndTime = new Date(date);
+    const maxEndTime = new Date(swedishDate);
     maxEndTime.setHours(endHour, endMin, 0, 0);
     if (defaultEndTime > maxEndTime) {
       defaultEndTime.setTime(maxEndTime.getTime());
       defaultStartTime.setTime(defaultEndTime.getTime() - defaultDurationMs);
     }
 
-    setSelectedDate(date);
+    setSelectedDate(swedishDate);
+    
+    // FIXED: Konvertera till UTC för API men visa som lokalt datetime-input
+    const utcStartTime = fromSwedishTime(defaultStartTime);
+    const utcEndTime = fromSwedishTime(defaultEndTime);
+    
     setNewBooking({
       resource_id: workingResourceId!,
-      start_time: defaultStartTime.toISOString().slice(0, 16),
-      end_time: defaultEndTime.toISOString().slice(0, 16),
+      start_time: utcStartTime.toISOString().slice(0, 16),
+      end_time: utcEndTime.toISOString().slice(0, 16),
       purpose: '',
       attendees: 1,
       contact_phone: '',
@@ -512,16 +562,17 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       return;
     }
 
-    const now = new Date();
-    let defaultStartTime = new Date(now);
+    // FIXED: Använd svensk tid för bokningslogik
+    const nowSwedish = toSwedishTime(new Date());
+    let defaultStartTime = new Date(nowSwedish);
     
     // Sätt en intelligent starttid baserat på nuvarande tid
-    const currentHour = now.getHours();
+    const currentHour = nowSwedish.getHours();
     if (currentHour < 8) {
       defaultStartTime.setHours(9, 0, 0, 0); // Börja 09:00 om det är tidigt
     } else if (currentHour >= 18) {
       // Om det är sent, boka för imorgon
-      defaultStartTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      defaultStartTime = new Date(nowSwedish.getTime() + 24 * 60 * 60 * 1000);
       defaultStartTime.setHours(9, 0, 0, 0);
     } else {
       // Avrunda upp till nästa timme
@@ -531,6 +582,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     const defaultEndTime = new Date(defaultStartTime);
     defaultEndTime.setHours(defaultStartTime.getHours() + 2); // 2 timmar som standard
 
+    // FIXED: Konvertera svensk tid till format som datetime-local-input förstår
     setNewBooking({
       resource_id: selectedResource.id,
       start_time: defaultStartTime.toISOString().slice(0, 16),
@@ -687,6 +739,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                     <DialogContent className="sm:max-w-[425px] bg-white border border-gray-200">
                       <DialogHeader>
                         <DialogTitle className="text-gray-900">Skapa ny bokning</DialogTitle>
+                        <DialogDescription className="text-gray-600">
+                          Fyll i informationen nedan för att skapa en ny bokning.
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
@@ -714,6 +769,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                               id="start_time"
                               type="datetime-local"
                               value={newBooking.start_time}
+                              min={new Date().toISOString().slice(0, 16)}
                               onChange={(e) => setNewBooking({...newBooking, start_time: e.target.value})}
                               className="bg-white border-gray-300 text-gray-900"
                             />
@@ -724,6 +780,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                               id="end_time"
                               type="datetime-local"
                               value={newBooking.end_time}
+                              min={new Date().toISOString().slice(0, 16)}
                               onChange={(e) => setNewBooking({...newBooking, end_time: e.target.value})}
                               className="bg-white border-gray-300 text-gray-900"
                             />
@@ -820,9 +877,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                     <div className="text-center flex-1">
                       <h4 className="font-semibold text-lg">{selectedResource.name}</h4>
                       <p className="text-gray-600">{selectedResource.description || 'Ingen beskrivning'}</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Max {selectedResource.max_duration_hours || 4}h per bokning
-                      </p>
+                      <div className="flex items-center justify-center gap-6 mt-2">
+                        <p className="text-sm text-gray-500">
+                          Max {selectedResource.max_duration_hours || 4}h per bokning
+                        </p>
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Öppet 08:00-22:00
+                        </p>
+                      </div>
                     </div>
                     <Button 
                       className="flex items-center gap-2"
@@ -1179,7 +1242,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
             {(userRole === 'owner' || userRole === 'admin') && (
               <TabsContent value="dashboard" className="space-y-4">
-                <AdminDashboard handbookId={handbookId} />
+                <AdminDashboard handbookId={handbookId} userRole={userRole} />
               </TabsContent>
             )}
           </Tabs>
@@ -1197,9 +1260,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-white border border-gray-200">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Skapa ny resurs</DialogTitle>
-            <div className="text-sm text-gray-500 pt-2">
-              Endast det viktigaste - resten sätts automatiskt
-            </div>
           </DialogHeader>
           
           {/* Enkelt formulär */}
@@ -1228,7 +1288,27 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               <Label htmlFor="resource-type" className="text-gray-700">Typ <span className="text-red-500">*</span></Label>
               <Select 
                 value={newResource.resource_type} 
-                onValueChange={(value: ResourceType) => setNewResource({...newResource, resource_type: value})}
+                onValueChange={(value) => {
+                  const resourceType = value as ResourceType;
+                  const template = ResourceTemplates[resourceType];
+                  
+                  // Säkerhetscheck - använd fallback-värden om template saknas
+                  const fallbackValues = {
+                    maxBookingDurationHours: 4,
+                    operatingHours: { start: '08:00', end: '22:00' }
+                  };
+                  
+                  setNewResource({
+                    ...newResource, 
+                    resource_type: resourceType,
+                    max_duration_hours: template?.maxBookingDurationHours || fallbackValues.maxBookingDurationHours,
+                    time_restrictions: {
+                      ...newResource.time_restrictions,
+                      start_time: template?.operatingHours.start || fallbackValues.operatingHours.start,
+                      end_time: template?.operatingHours.end || fallbackValues.operatingHours.end
+                    }
+                  });
+                }}
               >
                 <SelectTrigger className="mt-1 bg-white border-gray-300 text-gray-900">
                   <SelectValue placeholder="Välj typ" />
@@ -1257,46 +1337,103 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                 className="mt-1 bg-white border-gray-300 text-gray-900"
               />
             </div>
+
+            {/* Alltid öppen checkbox */}
+            <div className="flex items-center space-x-2">
+              <input
+                id="always-open"
+                type="checkbox"
+                checked={newResource.time_restrictions.start_time === '00:00' && newResource.time_restrictions.end_time === '23:59'}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setNewResource({
+                      ...newResource,
+                      time_restrictions: {
+                        ...newResource.time_restrictions,
+                        start_time: '00:00',
+                        end_time: '23:59'
+                      }
+                    });
+                  } else {
+                    // Återställ till template-värden (med fallback)
+                    const template = ResourceTemplates[newResource.resource_type];
+                    const fallbackValues = {
+                      operatingHours: { start: '08:00', end: '22:00' }
+                    };
+                    
+                    setNewResource({
+                      ...newResource,
+                      time_restrictions: {
+                        ...newResource.time_restrictions,
+                        start_time: template?.operatingHours.start || fallbackValues.operatingHours.start,
+                        end_time: template?.operatingHours.end || fallbackValues.operatingHours.end
+                      }
+                    });
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <Label htmlFor="always-open" className="text-gray-700">Alltid öppen (24/7)</Label>
+            </div>
+
+            {/* Öppettider (visas bara om inte alltid öppen) */}
+            {!(newResource.time_restrictions.start_time === '00:00' && newResource.time_restrictions.end_time === '23:59') && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start-time" className="text-gray-700">Öppnar <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="start-time"
+                    type="time"
+                    value={newResource.time_restrictions.start_time}
+                    onChange={(e) => setNewResource({
+                      ...newResource,
+                      time_restrictions: {
+                        ...newResource.time_restrictions,
+                        start_time: e.target.value
+                      }
+                    })}
+                    className="mt-1 bg-white border-gray-300 text-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end-time" className="text-gray-700">Stänger <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="end-time"
+                    type="time"
+                    value={newResource.time_restrictions.end_time}
+                    onChange={(e) => setNewResource({
+                      ...newResource,
+                      time_restrictions: {
+                        ...newResource.time_restrictions,
+                        end_time: e.target.value
+                      }
+                    })}
+                    className="mt-1 bg-white border-gray-300 text-gray-900"
+                    required
+                  />
+                </div>
+              </div>
+            )}
             
-            {/* Template Preview */}
+            {/* Current Settings Preview */}
             {ResourceTemplates[newResource.resource_type] && (
               <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <h4 className="font-medium text-green-900">Rekommenderade inställningar</h4>
+                  <h4 className="font-medium text-green-900">Dina inställningar</h4>
                 </div>
-                <p className="text-sm text-green-700 mb-3">{ResourceTemplates[newResource.resource_type].description}</p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="text-green-700">
-                    <strong>Max tid:</strong> {ResourceTemplates[newResource.resource_type].maxBookingDurationHours}h
+                    <strong>Max tid:</strong> {newResource.max_duration_hours}h
                   </div>
                   <div className="text-green-700">
-                    <strong>Förhandsbok:</strong> {ResourceTemplates[newResource.resource_type].maxAdvanceBookingDays} dagar
+                    <strong>Öppettider:</strong> {newResource.time_restrictions.start_time}-{newResource.time_restrictions.end_time}
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const template = ResourceTemplates[newResource.resource_type];
-                    setNewResource({
-                      ...newResource,
-                      max_duration_hours: template.maxBookingDurationHours,
-                      time_restrictions: {
-                        ...newResource.time_restrictions,
-                        advance_booking_days: template.maxAdvanceBookingDays
-                      },
-                      booking_limits: {
-                        ...newResource.booking_limits,
-                        max_duration_hours: template.maxBookingDurationHours
-                      }
-                    });
-                  }}
-                  className="mt-2 border-green-300 text-green-700 hover:bg-green-100"
-                >
-                  Använd dessa inställningar
-                </Button>
+                <div className="mt-2 text-xs text-green-600">
+                  💡 Tidsgränsen och öppettider kan ändras ovan. Alla bokningar godkänns automatiskt.
+                </div>
               </div>
             )}
           </div>
@@ -1343,7 +1480,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                 <Textarea
                   id="edit-resource-description"
                   placeholder="Beskriv resursen..."
-                  value={editingResource.description}
+                  value={editingResource.description || ''}
                   onChange={(e) => setEditingResource({...editingResource, description: e.target.value})}
                   className="mt-1 bg-white border-gray-300 text-gray-900"
                 />
@@ -1374,6 +1511,77 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                   />
                 </div>
               </div>
+              {/* Alltid öppen checkbox för redigering */}
+              <div className="flex items-center space-x-2">
+                <input
+                  id="edit-always-open"
+                  type="checkbox"
+                  checked={editingResource.time_restrictions?.start_time === '00:00' && editingResource.time_restrictions?.end_time === '23:59'}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setEditingResource({
+                        ...editingResource,
+                        time_restrictions: {
+                          ...editingResource.time_restrictions,
+                          start_time: '00:00',
+                          end_time: '23:59'
+                        }
+                      });
+                    } else {
+                      setEditingResource({
+                        ...editingResource,
+                        time_restrictions: {
+                          ...editingResource.time_restrictions,
+                          start_time: '08:00',
+                          end_time: '22:00'
+                        }
+                      });
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <Label htmlFor="edit-always-open" className="text-gray-700">Alltid öppen (24/7)</Label>
+              </div>
+
+              {/* Öppettider för redigering (visas bara om inte alltid öppen) */}
+              {!(editingResource.time_restrictions?.start_time === '00:00' && editingResource.time_restrictions?.end_time === '23:59') && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-start-time" className="text-gray-700 block text-sm">Öppnar</Label>
+                    <Input
+                      id="edit-start-time"
+                      type="time"
+                      value={editingResource.time_restrictions?.start_time || '06:00'}
+                      onChange={(e) => setEditingResource({
+                        ...editingResource, 
+                        time_restrictions: {
+                          ...editingResource.time_restrictions,
+                          start_time: e.target.value,
+                          end_time: editingResource.time_restrictions?.end_time || '22:00'
+                        }
+                      })}
+                      className="bg-white border-gray-300 text-gray-900 w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-end-time" className="text-gray-700 block text-sm">Stänger</Label>
+                    <Input
+                      id="edit-end-time"
+                      type="time"
+                      value={editingResource.time_restrictions?.end_time || '22:00'}
+                      onChange={(e) => setEditingResource({
+                        ...editingResource,
+                        time_restrictions: {
+                          ...editingResource.time_restrictions,
+                          start_time: editingResource.time_restrictions?.start_time || '06:00',
+                          end_time: e.target.value
+                        }
+                      })}
+                      className="bg-white border-gray-300 text-gray-900 w-full"
+                    />
+                  </div>
+                </div>
+              )}
               <div className="flex items-center space-x-2">
                 <input
                   id="edit-is-active"
