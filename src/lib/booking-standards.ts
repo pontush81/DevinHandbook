@@ -1,7 +1,146 @@
 // =============================================
-// STANDARDIZED BOOKING SYSTEM RULES
-// Based on industry best practices for BRF
+// FÖRENKLAT BOKNINGSSYSTEM - ENDAST 5 KÄRNREGLER
 // =============================================
+
+import { supabase } from '@/lib/supabase'
+
+// FÖRENKLAT: Endast 5 kärnregler istället för 14
+export interface SimplifiedBookingRules {
+  maxAdvanceBookingDays: number;       // Hur långt i förväg man kan boka
+  maxBookingDurationHours: number;     // Max tid per bokning
+  maxBookingsPerUserPerWeek: number;   // Begränsning per användare
+  operatingHours: { start: string; end: string }; // Öppettider
+  cleaningBufferMinutes: number;       // Städbuffer mellan bokningar
+}
+
+// FÖRENKLAT: Endast 4 resurstyper istället för 9
+export const SIMPLIFIED_RESOURCE_TYPES = {
+  laundry: 'Tvättstuga',
+  guest_apartment: 'Gästlägenhet', 
+  common_room: 'Allmänna lokaler',
+  other: 'Övrigt'
+} as const;
+
+// FÖRENKLAT: Endast 4 resurstemplates med rimliga standardvärden
+export const SIMPLIFIED_RESOURCE_TEMPLATES: Record<keyof typeof SIMPLIFIED_RESOURCE_TYPES, SimplifiedBookingRules> = {
+  laundry: {
+    maxAdvanceBookingDays: 7,         // 1 vecka i förväg
+    maxBookingDurationHours: 4,       // 4 timmar max
+    maxBookingsPerUserPerWeek: 2,     // 2 tvätttider per vecka
+    operatingHours: { start: '06:00', end: '22:00' },
+    cleaningBufferMinutes: 15         // 15 min städ
+  },
+  guest_apartment: {
+    maxAdvanceBookingDays: 30,        // 1 månad i förväg
+    maxBookingDurationHours: 72,      // 3 dagar max
+    maxBookingsPerUserPerWeek: 1,     // 1 bokning per vecka
+    operatingHours: { start: '00:00', end: '23:59' },
+    cleaningBufferMinutes: 120        // 2 timmar städ
+  },
+  common_room: {
+    maxAdvanceBookingDays: 14,        // 2 veckor i förväg
+    maxBookingDurationHours: 6,       // 6 timmar max
+    maxBookingsPerUserPerWeek: 1,     // 1 bokning per vecka
+    operatingHours: { start: '08:00', end: '22:00' },
+    cleaningBufferMinutes: 30         // 30 min städ
+  },
+  other: {
+    maxAdvanceBookingDays: 7,         // 1 vecka i förväg
+    maxBookingDurationHours: 2,       // 2 timmar max
+    maxBookingsPerUserPerWeek: 2,     // 2 bokningar per vecka
+    operatingHours: { start: '08:00', end: '18:00' },
+    cleaningBufferMinutes: 15         // 15 min städ
+  }
+};
+
+// =============================================
+// FÖRENKLAD VALIDERING - ENDAST 5 REGLER
+// =============================================
+
+export interface SimplifiedValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export function validateSimplifiedBooking(
+  booking: {
+    resource_id: string;
+    start_time: string;
+    end_time: string;
+    user_id: string;
+  },
+  resource: { type: keyof typeof SIMPLIFIED_RESOURCE_TYPES },
+  existingBookings: Array<{ start_time: string; end_time: string; user_id: string }>
+): SimplifiedValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  const rules = SIMPLIFIED_RESOURCE_TEMPLATES[resource.type];
+  const startTime = new Date(booking.start_time);
+  const endTime = new Date(booking.end_time);
+  const now = new Date();
+  
+  // 1. Kontrollera maxAdvanceBookingDays
+  const daysAhead = Math.ceil((startTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysAhead > rules.maxAdvanceBookingDays) {
+    errors.push(`Kan inte boka mer än ${rules.maxAdvanceBookingDays} dagar i förväg`);
+  }
+  
+  // 2. Kontrollera maxBookingDurationHours
+  const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+  if (durationHours > rules.maxBookingDurationHours) {
+    errors.push(`Bokningen kan inte vara längre än ${rules.maxBookingDurationHours} timmar`);
+  }
+  
+  // 3. Kontrollera maxBookingsPerUserPerWeek
+  const weekStart = new Date(startTime);
+  weekStart.setDate(startTime.getDate() - startTime.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+  
+  const userBookingsThisWeek = existingBookings.filter(b => 
+    b.user_id === booking.user_id &&
+    new Date(b.start_time) >= weekStart &&
+    new Date(b.start_time) < weekEnd
+  ).length;
+  
+  if (userBookingsThisWeek >= rules.maxBookingsPerUserPerWeek) {
+    errors.push(`Du kan bara boka ${rules.maxBookingsPerUserPerWeek} gång(er) per vecka`);
+  }
+  
+  // 4. Kontrollera operatingHours
+  const startHour = startTime.getHours() + startTime.getMinutes() / 60;
+  const endHour = endTime.getHours() + endTime.getMinutes() / 60;
+  const operatingStart = parseFloat(rules.operatingHours.start.replace(':', '.'));
+  const operatingEnd = parseFloat(rules.operatingHours.end.replace(':', '.'));
+  
+  if (startHour < operatingStart || endHour > operatingEnd) {
+    errors.push(`Bokningar endast tillåtna ${rules.operatingHours.start}-${rules.operatingHours.end}`);
+  }
+  
+  // 5. Kontrollera cleaningBufferMinutes (endast varning)
+  const hasConflictingBooking = existingBookings.some(b => {
+    const existingStart = new Date(b.start_time);
+    const existingEnd = new Date(b.end_time);
+    const bufferMs = rules.cleaningBufferMinutes * 60 * 1000;
+    
+    return (
+      (startTime.getTime() < existingEnd.getTime() + bufferMs && 
+       endTime.getTime() > existingStart.getTime() - bufferMs)
+    );
+  });
+  
+  if (hasConflictingBooking) {
+    warnings.push(`Rekommenderat: ${rules.cleaningBufferMinutes} min städtid mellan bokningar`);
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
 
 // =============================================
 // TIMEZONE UTILITIES - SVENSK TID
@@ -11,91 +150,8 @@
  * Konverterar datum till svensk tid (Europe/Stockholm)
  * Hanterar automatiskt sommartid/vintertid
  */
-export const toSwedishTime = (date: Date): Date => {
-  // Korrekt sätt att konvertera UTC till svensk tid
-  const utcTime = date.getTime();
-  const utcOffset = date.getTimezoneOffset() * 60000;
-  const utcDate = new Date(utcTime + utcOffset);
-  
+export const convertToSwedishTime = (date: Date): Date => {
   // Använd Intl.DateTimeFormat för korrekt timezone-hantering
-  const swedishTime = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Europe/Stockholm',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).formatToParts(date);
-  
-  const year = parseInt(swedishTime.find(part => part.type === 'year')?.value || '0');
-  const month = parseInt(swedishTime.find(part => part.type === 'month')?.value || '0');
-  const day = parseInt(swedishTime.find(part => part.type === 'day')?.value || '0');
-  const hour = parseInt(swedishTime.find(part => part.type === 'hour')?.value || '0');
-  const minute = parseInt(swedishTime.find(part => part.type === 'minute')?.value || '0');
-  const second = parseInt(swedishTime.find(part => part.type === 'second')?.value || '0');
-  
-  return new Date(year, month - 1, day, hour, minute, second);
-};
-
-/**
- * Konverterar från svensk tid till UTC för databas-lagring
- */
-export const fromSwedishTime = (date: Date): Date => {
-  // Skapa ett datum som representerar svensk tid utan timezone-information
-  const swedishDate = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    date.getHours(),
-    date.getMinutes(),
-    date.getSeconds()
-  );
-  
-  // Beräkna skillnaden mellan svensk tid och UTC
-  const tempDate = new Date();
-  const utcTime = tempDate.getTime();
-  const utcOffset = tempDate.getTimezoneOffset() * 60000;
-  const utcDate = new Date(utcTime + utcOffset);
-  
-  // Skapa ett datum i Europe/Stockholm och få skillnaden
-  const stockholmTime = new Date(utcDate.toLocaleString('en-US', { timeZone: 'Europe/Stockholm' }));
-  const timezoneOffset = stockholmTime.getTime() - utcDate.getTime();
-  
-  // Applicera offseten på vårt datum
-  return new Date(swedishDate.getTime() - timezoneOffset);
-};
-
-/**
- * Kontrollerar om ett datum är i framtiden (svensk tid)
- */
-export const isInFuture = (date: Date): boolean => {
-  const now = new Date();
-  const target = date;
-  return target > now;
-};
-
-/**
- * Formaterar datum för visning i svensk tid
- */
-export const formatSwedishDateTime = (date: Date): string => {
-  return date.toLocaleString('sv-SE', {
-    timeZone: 'Europe/Stockholm',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
-/**
- * ENHANCED: Säker timezone-konvertering med robust DST-hantering
- */
-export const convertToSwedishTime = (utcDate: Date): Date => {
-  // Använd den nya Temporal API när det blir tillgängligt
-  // För nu, använd Intl.DateTimeFormat för säker timezone-konvertering
   const formatter = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Stockholm',
     year: 'numeric',
@@ -107,428 +163,95 @@ export const convertToSwedishTime = (utcDate: Date): Date => {
     hour12: false
   });
   
-  const parts = formatter.formatToParts(utcDate);
-  const partsObj = parts.reduce((acc, part) => {
-    acc[part.type] = part.value;
-    return acc;
-  }, {} as Record<string, string>);
+  const parts = formatter.formatToParts(date);
+  const swedishTimeString = `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}-${parts.find(p => p.type === 'day')?.value}T${parts.find(p => p.type === 'hour')?.value}:${parts.find(p => p.type === 'minute')?.value}:${parts.find(p => p.type === 'second')?.value}`;
   
-  return new Date(
-    parseInt(partsObj.year),
-    parseInt(partsObj.month) - 1,
-    parseInt(partsObj.day),
-    parseInt(partsObj.hour),
-    parseInt(partsObj.minute),
-    parseInt(partsObj.second)
-  );
+  return new Date(swedishTimeString);
 };
 
 /**
- * ENHANCED: Konvertera svensk tid till UTC med robust DST-hantering
+ * Konverterar svensk tid till UTC för databas-lagring
  */
 export const convertFromSwedishTime = (swedishDate: Date): Date => {
-  // Skapa en string som representerar svensk tid
-  const swedishString = swedishDate.toISOString().slice(0, 19); // Remove Z
+  // Skapa ett datum som representerar svensk tid
+  const year = swedishDate.getFullYear();
+  const month = swedishDate.getMonth();
+  const day = swedishDate.getDate();
+  const hours = swedishDate.getHours();
+  const minutes = swedishDate.getMinutes();
+  const seconds = swedishDate.getSeconds();
   
-  // Skapa ett datum som Intl.DateTimeFormat kan tolka som Stockholm-tid
-  const tempDate = new Date(swedishString + 'Z'); // Add Z for UTC
+  // Använd explicit timezone-konvertering
+  const timeString = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   
-  // Beräkna offset mellan Stockholm och UTC vid detta datum
-  const stockholmFormatter = new Intl.DateTimeFormat('en-CA', {
+  // Tolka som Europe/Stockholm tid och konvertera till UTC
+  const tempDate = new Date(timeString);
+  const utcDate = new Date(tempDate.toLocaleString('sv-SE', { timeZone: 'UTC' }));
+  
+  return utcDate;
+};
+
+/**
+ * Formaterar datum för svensk visning
+ */
+export const formatSwedishDateTime = (date: Date): string => {
+  return new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Stockholm',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-  
-  const utcFormatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'UTC',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-  
-  const stockholmTime = new Date(stockholmFormatter.format(tempDate).replace(/(\d{4})-(\d{2})-(\d{2}), (\d{2}):(\d{2}):(\d{2})/, '$1-$2-$3T$4:$5:$6'));
-  const utcTime = new Date(utcFormatter.format(tempDate).replace(/(\d{4})-(\d{2})-(\d{2}), (\d{2}):(\d{2}):(\d{2})/, '$1-$2-$3T$4:$5:$6'));
-  
-  const offset = stockholmTime.getTime() - utcTime.getTime();
-  
-  // Applicera offseten på det ursprungliga datumet
-  return new Date(swedishDate.getTime() - offset);
+    weekday: 'short'
+  }).format(date);
 };
 
-export interface StandardBookingRules {
-  // Time Management
-  maxAdvanceBookingDays: number;        // How far ahead can users book
-  minAdvanceBookingHours: number;       // Minimum notice required
-  maxBookingDurationHours: number;      // Maximum booking length
-  minBookingDurationMinutes: number;    // Minimum booking length
-  
-  // Cancellation Policies
-  cancellationGracePeriodHours: number; // How early can users cancel
-  noShowPenaltyHours: number;           // Mark as no-show after X hours
-  
-  // Usage Limits
-  maxBookingsPerUserPerWeek: number;    // Weekly limit per user
-  maxBookingsPerUserPerMonth: number;   // Monthly limit per user
-  
-  // Operational
-  operatingHours: {
-    start: string;  // "06:00"
-    end: string;    // "23:00"
-  };
-  cleaningBufferMinutes: number;        // Buffer between bookings
-  setupBufferMinutes: number;           // Setup time before booking
-  requiresApproval: boolean;            // Board approval needed
-  cleaningFee: number | null;           // Additional cleaning fee
+// Legacy-kompatibilitet (behålls för befintlig kod)
+export const toSwedishTime = convertToSwedishTime;
+export const fromSwedishTime = convertFromSwedishTime;
+
+// =============================================
+// FÖRENKLAD KOLLISIONSKONTROLL
+// =============================================
+
+export async function detectSimplifiedCollisions(
+  resourceId: string,
+  startTime: string,
+  endTime: string,
+  excludeBookingId?: string
+): Promise<boolean> {
+  try {
+    let query = supabase
+      .from('bookings')
+      .select('id')
+      .eq('resource_id', resourceId)
+      .neq('status', 'cancelled')
+      .or(`and(start_time.lte.${endTime},end_time.gte.${startTime})`);
+    
+    if (excludeBookingId) {
+      query = query.neq('id', excludeBookingId);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error detecting collisions:', error);
+      return true; // Anta kollision vid fel för säkerhets skull
+    }
+    
+    return data && data.length > 0;
+  } catch (error) {
+    console.error('Error in detectSimplifiedCollisions:', error);
+    return true;
+  }
 }
 
-export type ResourceType = 'laundry' | 'guest_apartment' | 'sauna' | 'hobby_room' | 'party_room' | 'gym' | 'parking' | 'storage' | 'other';
+// =============================================
+// EXPORT LEGACY FUNCTIONS (för kompatibilitet)
+// =============================================
 
-export const ResourceTemplates: Record<ResourceType, StandardBookingRules> = {
-  laundry: {
-    maxAdvanceBookingDays: 14,
-    minAdvanceBookingHours: 2,
-    maxBookingDurationHours: 3,
-    minBookingDurationMinutes: 60,
-    cancellationGracePeriodHours: 4,
-    noShowPenaltyHours: 2,
-    maxBookingsPerUserPerWeek: 3,
-    maxBookingsPerUserPerMonth: 12,
-    operatingHours: { start: "06:00", end: "23:00" },
-    cleaningBufferMinutes: 15,
-    setupBufferMinutes: 15,
-    requiresApproval: false,
-    cleaningFee: null
-  },
-
-  guest_apartment: {
-    maxAdvanceBookingDays: 90,
-    minAdvanceBookingHours: 72,
-    maxBookingDurationHours: 168, // 7 days
-    minBookingDurationMinutes: 1440, // 24 hours
-    cancellationGracePeriodHours: 72,
-    noShowPenaltyHours: 4,
-    maxBookingsPerUserPerWeek: 1,
-    maxBookingsPerUserPerMonth: 2,
-    operatingHours: { start: "00:00", end: "23:59" },
-    cleaningBufferMinutes: 120, // 2 hours cleaning
-    setupBufferMinutes: 60,
-    requiresApproval: false,
-    cleaningFee: 500 // SEK
-  },
-
-  party_room: {
-    maxAdvanceBookingDays: 60,
-    minAdvanceBookingHours: 48,
-    maxBookingDurationHours: 6,
-    minBookingDurationMinutes: 120,
-    cancellationGracePeriodHours: 48,
-    noShowPenaltyHours: 2,
-    maxBookingsPerUserPerWeek: 1,
-    maxBookingsPerUserPerMonth: 2,
-    operatingHours: { start: "10:00", end: "23:00" },
-    cleaningBufferMinutes: 60,
-    setupBufferMinutes: 30,
-    requiresApproval: false,
-    cleaningFee: 300
-  },
-
-  sauna: {
-    maxAdvanceBookingDays: 30,
-    minAdvanceBookingHours: 4,
-    maxBookingDurationHours: 2,
-    minBookingDurationMinutes: 60,
-    cancellationGracePeriodHours: 24,
-    noShowPenaltyHours: 1,
-    maxBookingsPerUserPerWeek: 2,
-    maxBookingsPerUserPerMonth: 8,
-    operatingHours: { start: "16:00", end: "22:00" },
-    cleaningBufferMinutes: 30,
-    setupBufferMinutes: 15,
-    requiresApproval: false,
-    cleaningFee: null
-  },
-
-  hobby_room: {
-    maxAdvanceBookingDays: 30,
-    minAdvanceBookingHours: 4,
-    maxBookingDurationHours: 4,
-    minBookingDurationMinutes: 60,
-    cancellationGracePeriodHours: 12,
-    noShowPenaltyHours: 1,
-    maxBookingsPerUserPerWeek: 3,
-    maxBookingsPerUserPerMonth: 10,
-    operatingHours: { start: "08:00", end: "22:00" },
-    cleaningBufferMinutes: 15,
-    setupBufferMinutes: 15,
-    requiresApproval: false,
-    cleaningFee: null
-  },
-
-  gym: {
-    maxAdvanceBookingDays: 14,
-    minAdvanceBookingHours: 1,
-    maxBookingDurationHours: 2,
-    minBookingDurationMinutes: 60,
-    cancellationGracePeriodHours: 2,
-    noShowPenaltyHours: 1,
-    maxBookingsPerUserPerWeek: 5,
-    maxBookingsPerUserPerMonth: 20,
-    operatingHours: { start: "06:00", end: "22:00" },
-    cleaningBufferMinutes: 15,
-    setupBufferMinutes: 10,
-    requiresApproval: false,
-    cleaningFee: null
-  },
-
-  parking: {
-    maxAdvanceBookingDays: 7,
-    minAdvanceBookingHours: 1,
-    maxBookingDurationHours: 24,
-    minBookingDurationMinutes: 60,
-    cancellationGracePeriodHours: 1,
-    noShowPenaltyHours: 1,
-    maxBookingsPerUserPerWeek: 7,
-    maxBookingsPerUserPerMonth: 30,
-    operatingHours: { start: "00:00", end: "23:59" },
-    cleaningBufferMinutes: 0,
-    setupBufferMinutes: 0,
-    requiresApproval: false,
-    cleaningFee: null
-  },
-
-  storage: {
-    maxAdvanceBookingDays: 30,
-    minAdvanceBookingHours: 4,
-    maxBookingDurationHours: 4,
-    minBookingDurationMinutes: 60,
-    cancellationGracePeriodHours: 12,
-    noShowPenaltyHours: 2,
-    maxBookingsPerUserPerWeek: 3,
-    maxBookingsPerUserPerMonth: 10,
-    operatingHours: { start: "08:00", end: "18:00" },
-    cleaningBufferMinutes: 15,
-    setupBufferMinutes: 10,
-    requiresApproval: false,
-    cleaningFee: null
-  },
-
-  other: {
-    maxAdvanceBookingDays: 30,
-    minAdvanceBookingHours: 24,
-    maxBookingDurationHours: 4,
-    minBookingDurationMinutes: 60,
-    cancellationGracePeriodHours: 24,
-    noShowPenaltyHours: 2,
-    maxBookingsPerUserPerWeek: 2,
-    maxBookingsPerUserPerMonth: 6,
-    operatingHours: { start: "08:00", end: "22:00" },
-    cleaningBufferMinutes: 30,
-    setupBufferMinutes: 15,
-    requiresApproval: false,
-    cleaningFee: null
-  }
-};
-
-// Quick booking time slots
-export const SuggestedTimeSlots = [
-  { label: "08:00", start: "08:00", duration: 2 },
-  { label: "10:00", start: "10:00", duration: 2 },
-  { label: "14:00", start: "14:00", duration: 2 },
-  { label: "18:00", start: "18:00", duration: 2 }
-];
-
-// Fair usage patterns
-export const FairUsageRules = {
-  // Prevent abuse
-  maxBookingsPerHour: 3,
-  cooldownBetweenBookingsMinutes: 5,
-  maxBookingPercentagePerUser: 30, // Max 30% of available slots
-  
-  // Priority systems
-  enablePriorityQueue: true,
-  enableRandomSelection: true, // For high-demand periods
-  
-  // Monitoring
-  trackNoShowRate: true,
-  noShowThreshold: 3, // Suspend after 3 no-shows
-  noShowSuspensionDays: 14
-};
-
-// Validation helpers - FIXED: Använder svensk tid och bättre validering
-export const validateBookingRules = (
-  resourceType: ResourceType,
-  startTime: Date,
-  endTime: Date,
-  userId: string,
-  existingBookings: { start_time: string; end_time: string; id?: string; user_id?: string }[] = []
-): { valid: boolean; errors: string[] } => {
-  const rules = ResourceTemplates[resourceType];
-  const errors: string[] = [];
-  
-  // FIXED: Använd svensk tid för alla beräkningar
-  const swedishNow = toSwedishTime(new Date());
-  const swedishStart = toSwedishTime(startTime);
-  const swedishEnd = toSwedishTime(endTime);
-  
-  // Check that start is before end
-  if (swedishStart >= swedishEnd) {
-    errors.push('Starttid måste vara innan sluttid');
-    return { valid: false, errors };
-  }
-  
-  // Check that booking is not in the past
-  if (swedishStart <= swedishNow) {
-    errors.push('Du kan inte boka datum som redan passerat');
-  }
-  
-  // Check advance booking window
-  const advanceHours = (swedishStart.getTime() - swedishNow.getTime()) / (1000 * 60 * 60);
-  if (advanceHours < rules.minAdvanceBookingHours) {
-    errors.push(`Måste bokas minst ${rules.minAdvanceBookingHours} timmar i förväg`);
-  }
-  
-  const advanceDays = advanceHours / 24;
-  if (advanceDays > rules.maxAdvanceBookingDays) {
-    errors.push(`Kan inte bokas mer än ${rules.maxAdvanceBookingDays} dagar i förväg`);
-  }
-  
-  // Check duration
-  const durationHours = (swedishEnd.getTime() - swedishStart.getTime()) / (1000 * 60 * 60);
-  if (durationHours > rules.maxBookingDurationHours) {
-    errors.push(`Maximal bokningstid är ${rules.maxBookingDurationHours} timmar`);
-  }
-  
-  const durationMinutes = (swedishEnd.getTime() - swedishStart.getTime()) / (1000 * 60);
-  if (durationMinutes < rules.minBookingDurationMinutes) {
-    errors.push(`Minimal bokningstid är ${rules.minBookingDurationMinutes} minuter`);
-  }
-  
-  // Check operating hours - FIXED: Korrekt hantering av midnatt-övergångar
-  const startHour = swedishStart.getHours() + swedishStart.getMinutes() / 60;
-  const endHour = swedishEnd.getHours() + swedishEnd.getMinutes() / 60;
-  
-  // Parse operating hours properly
-  const [opStartHours, opStartMinutes] = rules.operatingHours.start.split(':').map(Number);
-  const [opEndHours, opEndMinutes] = rules.operatingHours.end.split(':').map(Number);
-  const opStart = opStartHours + opStartMinutes / 60;
-  const opEnd = opEndHours + opEndMinutes / 60;
-  
-  // Handle midnight crossover (like 22:00 to 02:00)
-  if (opEnd < opStart) {
-    // Overnight hours (e.g., 22:00-02:00)
-    const isValidStart = startHour >= opStart || startHour <= opEnd;
-    const isValidEnd = endHour >= opStart || endHour <= opEnd;
-    
-    if (!isValidStart || !isValidEnd) {
-      errors.push(`Resursen är endast tillgänglig mellan ${rules.operatingHours.start} och ${rules.operatingHours.end}. Välj en tid inom dessa öppettider.`);
-    }
-  } else {
-    // Normal hours (e.g., 08:00-22:00)
-    if (startHour < opStart || endHour > opEnd) {
-      errors.push(`Resursen är endast tillgänglig mellan ${rules.operatingHours.start} och ${rules.operatingHours.end}. Välj en tid inom dessa öppettider.`);
-    }
-  }
-  
-  // Check weekly limits - FIXED: Korrekt veckoräkning
-  const weekStart = new Date(swedishNow);
-  weekStart.setDate(swedishNow.getDate() - swedishNow.getDay() + 1); // Måndag
-  weekStart.setHours(0, 0, 0, 0);
-  
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-  
-  const thisWeekBookings = existingBookings.filter(booking => {
-    const bookingDate = toSwedishTime(new Date(booking.start_time));
-    return booking.user_id === userId && 
-           bookingDate >= weekStart && 
-           bookingDate < weekEnd;
-  });
-  
-  if (thisWeekBookings.length >= rules.maxBookingsPerUserPerWeek) {
-    errors.push(`Maximal antal bokningar per vecka (${rules.maxBookingsPerUserPerWeek}) överskridet`);
-  }
-  
-  return {
-    valid: errors.length === 0,
-    errors
-  };
-};
-
-// Collision detection with buffers - FIXED: Använder svensk tid och bättre race condition-hantering
-export const detectCollisions = (
-  newStart: Date,
-  newEnd: Date,
-  existingBookings: { start_time: string; end_time: string; id?: string; user_id?: string }[],
-  bufferMinutes: number = 0,
-  excludeBookingId?: string
-): { hasCollision: boolean; conflictingBookings: string[]; details: string[] } => {
-  const buffer = bufferMinutes * 60 * 1000; // Convert to milliseconds
-  
-  // FIXED: Använd svensk tid för alla jämförelser
-  const swedishNewStart = toSwedishTime(newStart);
-  const swedishNewEnd = toSwedishTime(newEnd);
-  
-  // Validate dates
-  if (swedishNewStart >= swedishNewEnd) {
-    return { 
-      hasCollision: true, 
-      conflictingBookings: ['Invalid time range: start must be before end'],
-      details: ['Starttid måste vara innan sluttid'] 
-    };
-  }
-  
-  const adjustedStart = new Date(swedishNewStart.getTime() - buffer);
-  const adjustedEnd = new Date(swedishNewEnd.getTime() + buffer);
-  
-  const conflictingBookings: string[] = [];
-  const details: string[] = [];
-  
-  existingBookings.forEach(booking => {
-    // Skip if this is the same booking (for updates)
-    if (excludeBookingId && booking.id === excludeBookingId) {
-      return;
-    }
-    
-    // FIXED: Konvertera befintliga bokningar till svensk tid
-    const bookingStart = toSwedishTime(new Date(booking.start_time));
-    const bookingEnd = toSwedishTime(new Date(booking.end_time));
-    
-    // Validate existing booking dates
-    if (isNaN(bookingStart.getTime()) || isNaN(bookingEnd.getTime())) {
-      console.warn('Invalid booking date detected:', booking);
-      return;
-    }
-    
-    // Check for overlap (handles all edge cases)
-    const hasOverlap = adjustedStart < bookingEnd && adjustedEnd > bookingStart;
-    
-    if (hasOverlap) {
-      conflictingBookings.push(booking.id || 'unknown');
-      details.push(`Konflikt: ${formatSwedishDateTime(bookingStart)} - ${formatSwedishDateTime(bookingEnd)}`);
-    }
-  });
-  
-  return {
-    hasCollision: conflictingBookings.length > 0,
-    conflictingBookings,
-    details
-  };
-};
-
-export default {
-  ResourceTemplates,
-  SuggestedTimeSlots,
-  FairUsageRules,
-  validateBookingRules,
-  detectCollisions
-};
+// Dessa funktioner behålls för att inte krasha befintlig kod
+export const ResourceTemplates = SIMPLIFIED_RESOURCE_TEMPLATES;
+export const validateBookingRules = validateSimplifiedBooking;
+export const detectCollisions = detectSimplifiedCollisions;
+export const FairUsageRules = SIMPLIFIED_RESOURCE_TEMPLATES;

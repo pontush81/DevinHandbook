@@ -6,7 +6,6 @@ import {
   Clock, 
   MapPin, 
   User, 
-  Settings, 
   Plus, 
   X, 
   ChevronLeft, 
@@ -25,19 +24,50 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { BookingResource, Booking, BookingWithDetails, BookingInsert, PricingConfig, TimeRestrictions, BookingLimits, BookingRulesConfig } from '@/types/booking';
-import { ResourceTemplates, ResourceType, toSwedishTime, fromSwedishTime, formatSwedishDateTime, detectCollisions } from '@/lib/booking-standards';
+import { BookingResource, Booking, BookingWithDetails, BookingInsert } from '@/types/booking';
+import { 
+  SIMPLIFIED_RESOURCE_TYPES, 
+  SIMPLIFIED_RESOURCE_TEMPLATES, 
+  SimplifiedBookingRules,
+  validateSimplifiedBooking,
+  convertToSwedishTime, 
+  convertFromSwedishTime, 
+  formatSwedishDateTime,
+  detectSimplifiedCollisions
+} from '@/lib/booking-standards';
 import { fetchWithAuth } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import AdminDashboard from './AdminDashboard';
 
 interface BookingCalendarProps {
   handbookId: string;
   userRole: 'owner' | 'admin' | 'member' | 'moderator';
   isTrialExpired?: boolean;
+}
+
+// FÖRENKLAD RESURS-TYP
+interface SimplifiedResource {
+  id: string;
+  name: string;
+  description: string;
+  resource_type: keyof typeof SIMPLIFIED_RESOURCE_TYPES;
+  capacity: number;
+  is_active: boolean;
+  handbook_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// FÖRENKLAD BOKNING-TYP
+interface SimplifiedBookingInsert {
+  resource_id: string;
+  start_time: string;
+  end_time: string;
+  purpose: string;
+  attendees: number;
+  contact_phone: string;
+  notes: string;
 }
 
 const BookingCalendar: React.FC<BookingCalendarProps> = ({
@@ -46,9 +76,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   isTrialExpired = false
 }) => {
   const { user } = useAuth();
-  const [resources, setResources] = useState<BookingResource[]>([]);
+  const [resources, setResources] = useState<SimplifiedResource[]>([]);
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
-  const [selectedResource, setSelectedResource] = useState<BookingResource | null>(null);
+  const [selectedResource, setSelectedResource] = useState<SimplifiedResource | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
@@ -56,7 +86,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
-  const [newBooking, setNewBooking] = useState({
+  const [newBooking, setNewBooking] = useState<SimplifiedBookingInsert>({
     resource_id: '',
     start_time: '',
     end_time: '',
@@ -68,43 +98,16 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [newResource, setNewResource] = useState({
     name: '',
     description: '',
-    max_duration_hours: 4,
+    type: 'other' as keyof typeof SIMPLIFIED_RESOURCE_TYPES,
     capacity: 1,
-    requires_approval: false,
-    is_active: true,
-    resource_type: 'other' as ResourceType,
-    pricing_config: {
-      base_fee: 0,
-      hourly_rate: 0,
-      cleaning_fee: 0
-    },
-    time_restrictions: {
-      start_time: '06:00',
-      end_time: '22:00',
-      weekdays_only: false
-    },
-    booking_limits: {
-      max_duration_hours: 24,
-      max_bookings_per_user_per_month: 5,
-      min_booking_duration_hours: 1
-    },
-    booking_rules: {
-      cancellation_deadline_hours: 24,
-      auto_approve: true,
-      requires_approval_over_hours: null,
-      special_instructions: '',
-      deposit_required: false
-    }
+    is_active: true
   });
-  const [editingResource, setEditingResource] = useState<BookingResource | null>(null);
+  const [editingResource, setEditingResource] = useState<SimplifiedResource | null>(null);
   const [editResourceDialogOpen, setEditResourceDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-
-  // Ref för att spåra om komponenten är mounted
   const isMountedRef = useRef(true);
 
-  // Hämta resurser och bokningar med proper cleanup
   useEffect(() => {
     const abortController = new AbortController();
     isMountedRef.current = true;
@@ -124,7 +127,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
     fetchData();
 
-    // Cleanup function
     return () => {
       isMountedRef.current = false;
       abortController.abort();
@@ -142,10 +144,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       
       if (data.success && isMountedRef.current) {
         setResources(data.data);
-        // Set first resource as selected if none selected
-        if (data.data.length > 0 && !selectedResource) {
-          setSelectedResource(data.data[0]);
-        }
+        // Ingen automatisk val av första resursen - användaren måste välja själv
       }
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError' && isMountedRef.current) {
@@ -165,7 +164,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       const data = await response.json();
       
       if (data.success && isMountedRef.current) {
-        // API returnerar paginerad data: { data: [...], count, page, etc }
         setBookings(data.data.data || data.data || []);
       }
     } catch (err) {
@@ -180,7 +178,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     }
   };
 
-  const createBooking = async (bookingData: Omit<BookingInsert, 'handbook_id' | 'member_id' | 'user_id'>) => {
+  const createBooking = async (bookingData: SimplifiedBookingInsert) => {
     if (!isMountedRef.current) return;
     
     try {
@@ -190,84 +188,106 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       const selectedResourceObj = resources.find(r => r.id === bookingData.resource_id);
       const title = selectedResourceObj ? `Bokning av ${selectedResourceObj.name}` : 'Bokning';
 
-      // FIXED: Konvertera från datetime-local (svensk tid) till UTC
+      // FÖRENKLAD: Använd förenklad validering
+      if (selectedResourceObj) {
+        const existingBookings = bookings
+          .filter(b => b.resource_id === bookingData.resource_id)
+          .map(b => ({
+            start_time: b.start_time,
+            end_time: b.end_time,
+            user_id: b.user_id || ''
+          }));
+
+        const validation = validateSimplifiedBooking({
+          ...bookingData,
+          user_id: user?.id || ''
+        }, { type: selectedResourceObj.resource_type }, existingBookings);
+
+        if (!validation.isValid) {
+          validation.errors.forEach(error => toast.error(error));
+          return;
+        }
+
+        // Visa varningar om det finns
+        validation.warnings.forEach(warning => toast.warning(warning));
+      }
+
+      // Konvertera från datetime-local (svensk tid) till UTC
       const swedishStartTime = new Date(bookingData.start_time);
       const swedishEndTime = new Date(bookingData.end_time);
-      const utcStartTime = fromSwedishTime(swedishStartTime);
-      const utcEndTime = fromSwedishTime(swedishEndTime);
+      const utcStartTime = convertFromSwedishTime(swedishStartTime);
+      const utcEndTime = convertFromSwedishTime(swedishEndTime);
       
-      // Validate that start time is not in the past (använd svensk tid för jämförelse)
-      const nowSwedish = toSwedishTime(new Date());
+      // Validate that start time is not in the past
+      const nowSwedish = convertToSwedishTime(new Date());
       if (swedishStartTime < nowSwedish) {
-        throw new Error('Du kan inte boka datum som redan passerat');
+        toast.error('Starttid kan inte vara i det förflutna');
+        return;
       }
-      
-      // FIXED: Race condition protection - hämta senaste bokningar före skapande
-      const resourceBookings = bookings.filter(b => b.resource_id === bookingData.resource_id);
-      const collision = detectCollisions(
-        utcStartTime, 
-        utcEndTime, 
-        resourceBookings.map(b => ({ 
-          start_time: b.start_time, 
-          end_time: b.end_time,
-          id: b.id 
-        }))
+
+      // Check for conflicts with race condition protection
+      const hasConflict = await detectSimplifiedCollisions(
+        bookingData.resource_id,
+        utcStartTime.toISOString(),
+        utcEndTime.toISOString()
       );
-      
-      if (collision.hasCollision) {
-        throw new Error(`Tiden är redan bokad. Konflikter: ${collision.conflictingBookings.join(', ')}`);
+
+      if (hasConflict) {
+        toast.error('Tidskonflik upptäckt - någon annan kan ha bokat denna tid');
+        return;
       }
-      
-      const payload = {
-        resource_id: bookingData.resource_id,
-        start_time: utcStartTime.toISOString(),
-        end_time: utcEndTime.toISOString(),
-        title: title,
-        contact_phone: bookingData.contact_phone || null,
-        notes: bookingData.notes || null,
-        handbook_id: handbookId
-      };
 
       const response = await fetchWithAuth('/api/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          handbook_id: handbookId,
+          resource_id: bookingData.resource_id,
+          start_time: utcStartTime.toISOString(),
+          end_time: utcEndTime.toISOString(),
+          title,
+          purpose: bookingData.purpose,
+          attendees: bookingData.attendees,
+          contact_phone: bookingData.contact_phone,
+          notes: bookingData.notes,
+          status: 'confirmed'
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Kunde inte skapa bokning');
+      }
 
       const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Kunde inte skapa bokningen');
+      
+      if (result.success) {
+        toast.success('Bokning skapad!');
+        setBookingDialogOpen(false);
+        setNewBooking({
+          resource_id: '',
+          start_time: '',
+          end_time: '',
+          purpose: '',
+          attendees: 1,
+          contact_phone: '',
+          notes: ''
+        });
+        await fetchBookings();
+      } else {
+        throw new Error(result.error || 'Kunde inte skapa bokning');
       }
-
-      if (!isMountedRef.current) return;
-
-      toast.success('Bokning skapad!');
-      await fetchBookings();
-      await fetchResources();
-      setSelectedDate(null);
-      setBookingDialogOpen(false);
-      
-      setNewBooking({
-        resource_id: '',
-        start_time: '',
-        end_time: '',
-        purpose: '',
-        attendees: 1,
-        contact_phone: '',
-        notes: ''
-      });
-
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      
-      console.error('Error creating booking:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Kunde inte skapa bokningen';
-      toast.error(errorMessage);
+    } catch (err) {
+      console.error('Booking error:', err);
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error('Ett oväntat fel inträffade');
+      }
     } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
@@ -275,12 +295,20 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     if (!isMountedRef.current) return;
     
     try {
+      setIsLoading(true);
+      
       const response = await fetchWithAuth('/api/booking-resources', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          ...newResource,
-          handbook_id: handbookId
+          handbook_id: handbookId,
+          name: newResource.name,
+          description: newResource.description,
+          resource_type: newResource.type,
+          capacity: newResource.capacity,
+          is_active: newResource.is_active
         })
       });
 
@@ -288,1333 +316,898 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         const errorData = await response.json();
         throw new Error(errorData.error || 'Kunde inte skapa resurs');
       }
+
+      const result = await response.json();
       
-      const data = await response.json();
-      if (data.success && isMountedRef.current) {
-        setResources(prev => [...prev, data.data]);
-        setResourceDialogOpen(false);
-        setNewResource({ 
-          name: '', 
-          description: '', 
-          max_duration_hours: 4, 
-          capacity: 1,
-          requires_approval: false,
-          is_active: true,
-          resource_type: 'other' as ResourceType,
-          pricing_config: {
-            base_fee: 0,
-            hourly_rate: 0,
-            cleaning_fee: 0
-          },
-          time_restrictions: {
-            start_time: '06:00',
-            end_time: '22:00',
-            weekdays_only: false
-          },
-          booking_limits: {
-            max_duration_hours: 24,
-            max_bookings_per_user_per_month: 5,
-            min_booking_duration_hours: 1
-          },
-          booking_rules: {
-            cancellation_deadline_hours: 24,
-            auto_approve: true,
-            requires_approval_over_hours: null,
-            special_instructions: '',
-            deposit_required: false
-          }
-        });
+      if (result.success) {
         toast.success('Resurs skapad!');
+        setResourceDialogOpen(false);
+        setNewResource({
+          name: '',
+          description: '',
+          type: 'other',
+          capacity: 1,
+          is_active: true
+        });
+        await fetchResources();
+      } else {
+        throw new Error(result.error || 'Kunde inte skapa resurs');
       }
-    } catch (err: any) {
-      if (isMountedRef.current) {
-        toast.error(err.message || 'Kunde inte skapa resurs');
+    } catch (err) {
+      console.error('Resource creation error:', err);
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error('Ett oväntat fel inträffade');
       }
-    }
-  };
-
-  const updateResource = async () => {
-    if (!editingResource || !isMountedRef.current) return;
-    
-    try {
-      const response = await fetchWithAuth(`/api/booking-resources/${editingResource.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editingResource.name,
-          description: editingResource.description,
-          max_duration_hours: editingResource.max_duration_hours,
-          capacity: editingResource.capacity,
-          handbook_id: handbookId
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Kunde inte uppdatera resurs');
-      }
-      
-      const data = await response.json();
-      if (data.success && isMountedRef.current) {
-        setResources(prev => prev.map(r => r.id === editingResource.id ? data.data : r));
-        setEditResourceDialogOpen(false);
-        setEditingResource(null);
-        toast.success('Resurs uppdaterad!');
-      }
-    } catch (err: any) {
-      if (isMountedRef.current) {
-        toast.error(err.message || 'Kunde inte uppdatera resurs');
-      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteResource = async (resourceId: string) => {
-    if (!isMountedRef.current) return;
+    if (!confirm('Är du säker på att du vill ta bort denna resurs?')) return;
     
     try {
-      const response = await fetchWithAuth(`/api/booking-resources/${resourceId}?handbook_id=${handbookId}`, {
+      setIsLoading(true);
+      
+      const response = await fetchWithAuth(`/api/booking-resources/${resourceId}`, {
         method: 'DELETE'
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Kunde inte radera resurs');
+        throw new Error(errorData.error || 'Kunde inte ta bort resurs');
       }
+
+      const result = await response.json();
       
-      const data = await response.json();
-      if (data.success && isMountedRef.current) {
-        setResources(prev => prev.filter(r => r.id !== resourceId));
+      if (result.success) {
+        toast.success('Resurs borttagen!');
+        await fetchResources();
         if (selectedResource?.id === resourceId) {
-          setSelectedResource(resources.find(r => r.id !== resourceId) || null);
+          setSelectedResource(null);
         }
-        toast.success('Resurs raderad!');
+      } else {
+        throw new Error(result.error || 'Kunde inte ta bort resurs');
       }
-    } catch (err: any) {
-      if (isMountedRef.current) {
-        toast.error(err.message || 'Kunde inte radera resurs');
+    } catch (err) {
+      console.error('Resource deletion error:', err);
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error('Ett oväntat fel inträffade');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteBooking = async (bookingId: string) => {
-    if (!isMountedRef.current) return;
+    if (!confirm('Är du säker på att du vill ta bort denna bokning?')) return;
     
     try {
       setIsLoading(true);
       
-      const response = await fetchWithAuth(`/api/bookings?id=${bookingId}`, {
+      const response = await fetchWithAuth(`/api/bookings/${bookingId}`, {
         method: 'DELETE'
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Kunde inte ta bort bokning');
+      }
+
       const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Kunde inte ta bort bokningen');
-      }
-
-      if (!isMountedRef.current) return;
-
-      toast.success('Bokning borttagen!');
-      await fetchBookings();
-      await fetchResources();
-
-    } catch (error) {
-      if (!isMountedRef.current) return;
       
-      console.error('Error deleting booking:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Kunde inte ta bort bokningen';
-      toast.error(errorMessage);
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
+      if (result.success) {
+        toast.success('Bokning borttagen!');
+        await fetchBookings();
+      } else {
+        throw new Error(result.error || 'Kunde inte ta bort bokning');
       }
+    } catch (err) {
+      console.error('Booking deletion error:', err);
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error('Ett oväntat fel inträffade');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Kalender-hjälpfunktioner
-  const getDaysInMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (date: Date) => {
-    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-    return firstDay === 0 ? 6 : firstDay - 1; // Måndag = 0
-  };
-
+  // FÖRENKLAD: Endast grundläggande kalender-funktioner
   const getWeekDays = (date: Date) => {
     const startOfWeek = new Date(date);
-    const dayOfWeek = date.getDay();
-    const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Justerar för måndag
-    startOfWeek.setDate(diff);
+    startOfWeek.setDate(date.getDate() - date.getDay() + 1); // Måndag
     
-    const weekDays = [];
+    const days = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
-      weekDays.push(day);
+      days.push(day);
     }
-    return weekDays;
+    return days;
+  };
+
+  // Ny funktion för månadsvy
+  const getMonthDays = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    // Första dagen i månaden
+    const firstDay = new Date(year, month, 1);
+    // Sista dagen i månaden
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Hitta första måndag att visa (kan vara från föregående månad)
+    const startDate = new Date(firstDay);
+    startDate.setDate(firstDay.getDate() - firstDay.getDay() + 1);
+    if (startDate > firstDay) {
+      startDate.setDate(startDate.getDate() - 7);
+    }
+    
+    const days = [];
+    const currentDate = new Date(startDate);
+    
+    // Hämta 6 veckor (42 dagar) för att täcka hela månaden
+    for (let i = 0; i < 42; i++) {
+      days.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return days;
+  };
+
+  // Funktion för att få korrekt veckonummer
+  const getWeekNumber = (date: Date) => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
+  };
+
+  // Funktion för att navigera till idag
+  const goToToday = () => {
+    setCurrentDate(new Date());
   };
 
   const getBookingsForDate = (date: Date, resourceId?: string) => {
+    const targetDate = date.toISOString().split('T')[0];
     return bookings.filter(booking => {
-      // FIXED: Konvertera UTC-tid från databas till svensk tid för jämförelse
-      const utcBookingDate = new Date(booking.start_time);
-      const swedishBookingDate = toSwedishTime(utcBookingDate);
-      const swedishCompareDate = toSwedishTime(date);
-      
-      const sameDay = swedishBookingDate.toDateString() === swedishCompareDate.toDateString();
-      const sameResource = !resourceId || booking.resource_id === resourceId;
-      return sameDay && sameResource;
+      const bookingDate = convertToSwedishTime(new Date(booking.start_time)).toISOString().split('T')[0];
+      return bookingDate === targetDate && (!resourceId || booking.resource_id === resourceId);
     });
   };
 
   const formatTimeSlot = (date: Date) => {
-    // FIXED: Konvertera UTC-tid från databas till svensk tid för visning
-    const swedishTime = toSwedishTime(date);
-    return swedishTime.toLocaleTimeString('sv-SE', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    const options: Intl.DateTimeFormatOptions = {
+      timeZone: 'Europe/Stockholm',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    };
+    return new Intl.DateTimeFormat('sv-SE', options).format(date);
   };
 
-  // ✅ ENHANCED: Smart booking med resursspecifika standarder och svensk tid
   const handleDateClick = (date: Date, resourceId?: string) => {
-    if (!resourceId && !selectedResource) {
-      toast.error('Välj en resurs först');
-      return;
-    }
-
-    // FIXED: Använd svensk tid för datumjämförelse
-    const nowSwedish = toSwedishTime(new Date());
-    nowSwedish.setHours(0, 0, 0, 0);
-    const selectedDateSwedish = toSwedishTime(date);
-    selectedDateSwedish.setHours(0, 0, 0, 0);
-    
-    if (selectedDateSwedish < nowSwedish) {
-      toast.error('Du kan inte boka datum som redan passerat');
-      return;
-    }
-
-    const workingResourceId = resourceId || selectedResource?.id;
-    const resource = resources.find(r => r.id === workingResourceId);
-    const resourceType = 'other' as ResourceType; // Default to 'other' since BookingResource doesn't have resource_type
-    const rules = ResourceTemplates[resourceType];
-
-    // FIXED: Smart default times i svensk tid
-    const swedishDate = toSwedishTime(date);
-    const defaultStartTime = new Date(swedishDate);
-    const defaultEndTime = new Date(swedishDate);
-    
-    // Parse operating hours
-    const [startHour, startMin] = rules.operatingHours.start.split(':').map(Number);
-    const [endHour, endMin] = rules.operatingHours.end.split(':').map(Number);
-    
-    // Set smart default start time
-    const now = toSwedishTime(new Date());
-    if (swedishDate.toDateString() === now.toDateString()) {
-      // If booking for today, start from current time or operating hours, whichever is later
-      const currentHour = now.getHours();
-      const nextHour = Math.max(currentHour + 1, startHour);
-      defaultStartTime.setHours(Math.min(nextHour, endHour - 1), 0, 0, 0);
-    } else {
-      // For future dates, use operating hours start
-      defaultStartTime.setHours(startHour, startMin, 0, 0);
+    setSelectedDate(date);
+    if (resourceId) {
+      const resource = resources.find(r => r.id === resourceId);
+      if (resource) {
+        setSelectedResource(resource);
+      }
     }
     
-    // Set end time based on resource default duration
-    const defaultDurationMs = Math.min(rules.maxBookingDurationHours, 2) * 60 * 60 * 1000;
-    defaultEndTime.setTime(defaultStartTime.getTime() + defaultDurationMs);
-    
-    // Ensure end time doesn't exceed operating hours
-    const maxEndTime = new Date(swedishDate);
-    maxEndTime.setHours(endHour, endMin, 0, 0);
-    if (defaultEndTime > maxEndTime) {
-      defaultEndTime.setTime(maxEndTime.getTime());
-      defaultStartTime.setTime(defaultEndTime.getTime() - defaultDurationMs);
-    }
+    // Öppna bokningsdialogen om en resurs är vald
+    if (selectedResource || resourceId) {
+      const targetResource = selectedResource || resources.find(r => r.id === resourceId);
+      if (targetResource) {
+        // Sätt standardtid till klickad dag kl 9:00
+        const defaultStart = new Date(date);
+        defaultStart.setHours(9, 0, 0, 0);
+        const defaultEnd = new Date(defaultStart.getTime() + 2 * 60 * 60 * 1000); // 2 timmar senare
 
-    setSelectedDate(swedishDate);
-    
-    // FIXED: Konvertera till UTC för API men visa som lokalt datetime-input
-    const utcStartTime = fromSwedishTime(defaultStartTime);
-    const utcEndTime = fromSwedishTime(defaultEndTime);
-    
-    setNewBooking({
-      resource_id: workingResourceId!,
-      start_time: utcStartTime.toISOString().slice(0, 16),
-      end_time: utcEndTime.toISOString().slice(0, 16),
-      purpose: '',
-      attendees: 1,
-      contact_phone: '',
-      notes: ''
-    });
-    
-    setBookingDialogOpen(true);
+        // Konvertera till lokal tid för datetime-local input
+        const startTimeLocal = new Date(defaultStart.getTime() - defaultStart.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        const endTimeLocal = new Date(defaultEnd.getTime() - defaultEnd.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+        setNewBooking({
+          resource_id: targetResource.id,
+          start_time: startTimeLocal,
+          end_time: endTimeLocal,
+          purpose: '',
+          attendees: 1,
+          contact_phone: '',
+          notes: ''
+        });
+        setBookingDialogOpen(true);
+      }
+    }
   };
 
-
-
-  // Hantera manuell "Ny bokning" knapp-klick
   const handleNewBookingClick = () => {
     if (!selectedResource) {
       toast.error('Välj en resurs först');
       return;
     }
 
-    // FIXED: Använd svensk tid för bokningslogik
-    const nowSwedish = toSwedishTime(new Date());
-    let defaultStartTime = new Date(nowSwedish);
-    
-    // Sätt en intelligent starttid baserat på nuvarande tid
-    const currentHour = nowSwedish.getHours();
-    if (currentHour < 8) {
-      defaultStartTime.setHours(9, 0, 0, 0); // Börja 09:00 om det är tidigt
-    } else if (currentHour >= 18) {
-      // Om det är sent, boka för imorgon
-      defaultStartTime = new Date(nowSwedish.getTime() + 24 * 60 * 60 * 1000);
-      defaultStartTime.setHours(9, 0, 0, 0);
-    } else {
-      // Avrunda upp till nästa timme
-      defaultStartTime.setHours(currentHour + 1, 0, 0, 0);
-    }
-    
-    const defaultEndTime = new Date(defaultStartTime);
-    defaultEndTime.setHours(defaultStartTime.getHours() + 2); // 2 timmar som standard
+    const now = new Date();
+    const defaultStart = new Date(now.getTime() + 60 * 60 * 1000); // 1 timme från nu
+    const defaultEnd = new Date(defaultStart.getTime() + 2 * 60 * 60 * 1000); // 2 timmar senare
 
-    // FIXED: Konvertera svensk tid till format som datetime-local-input förstår
+    // Konvertera till lokal tid för datetime-local input
+    const startTimeLocal = new Date(defaultStart.getTime() - defaultStart.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const endTimeLocal = new Date(defaultEnd.getTime() - defaultEnd.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
     setNewBooking({
       resource_id: selectedResource.id,
-      start_time: defaultStartTime.toISOString().slice(0, 16),
-      end_time: defaultEndTime.toISOString().slice(0, 16),
+      start_time: startTimeLocal,
+      end_time: endTimeLocal,
       purpose: '',
       attendees: 1,
       contact_phone: '',
       notes: ''
     });
-    
     setBookingDialogOpen(true);
   };
 
-  // Trial-spärr
-  if (isTrialExpired) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Bokningssystem
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertDescription>
-              Bokningssystemet är en premium-funktion. Uppgradera din prenumeration för att få tillgång till bokningar.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleStartTimeChange = (newStartTime: string) => {
+    setNewBooking(prev => {
+      const start = new Date(newStartTime);
+      const currentEnd = new Date(prev.end_time);
+      const currentDuration = currentEnd.getTime() - new Date(prev.start_time).getTime();
+      const newEnd = new Date(start.getTime() + currentDuration);
+      
+      return {
+        ...prev,
+        start_time: newStartTime,
+        end_time: new Date(newEnd.getTime() - newEnd.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+      };
+    });
+  };
 
   if (loading) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Bokningssystem
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="h-8 bg-gray-200 rounded animate-pulse" />
-            <div className="h-32 bg-gray-200 rounded animate-pulse" />
-            <div className="h-32 bg-gray-200 rounded animate-pulse" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert className="m-4">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Bokningssystem
-            </div>
-            <div className="flex gap-2">
-              {(['owner', 'admin'].includes(userRole)) && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    console.log('Ny resurs clicked');
-                    setResourceDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ny resurs
-                </Button>
-              )}
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="calendar" className="w-full">
-            <TabsList className={`grid w-full ${(userRole === 'owner' || userRole === 'admin') ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
-              <TabsTrigger value="calendar" className="text-xs md:text-sm">
-                <Calendar className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Kalender</span>
-              </TabsTrigger>
-              <TabsTrigger value="resources" className="text-xs md:text-sm">
-                <MapPin className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Resurser</span>
-                <span className="md:hidden">({resources.length})</span>
-                <span className="hidden md:inline">({resources.length})</span>
-              </TabsTrigger>
-              <TabsTrigger value="my-bookings" className="text-xs md:text-sm">
-                <User className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Mina bokningar</span>
-              </TabsTrigger>
-              {(userRole === 'owner' || userRole === 'admin') && (
-                <TabsTrigger value="dashboard" className="text-xs md:text-sm">
-                  <Settings className="h-4 w-4 md:mr-2" />
-                  <span className="hidden md:inline">Dashboard</span>
-                </TabsTrigger>
-              )}
-            </TabsList>
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Bokningssystem</h1>
+        <p className="text-gray-600">Förenklade bokningsregler - endast 5 kärnregler per resurs</p>
+      </div>
 
-            <TabsContent value="calendar" className="space-y-4">
-              {/* Resursväljare och kontroller */}
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <Select value={selectedResource?.id || ''} onValueChange={(value) => {
-                  const resource = resources.find(r => r.id === value);
-                  setSelectedResource(resource || null);
-                }}>
-                  <SelectTrigger className="w-60">
-                    <SelectValue placeholder="Välj resurs att boka" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {resources.map(resource => (
-                      <SelectItem key={resource.id} value={resource.id}>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          {resource.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* Resursväljare */}
+      <div className="mb-6">
+        {/* Desktop layout */}
+        <div className="hidden md:flex items-center gap-4 mb-4">
+          <Select value={selectedResource?.id || ''} onValueChange={(value) => {
+            const resource = resources.find(r => r.id === value);
+            setSelectedResource(resource || null);
+          }}>
+            <SelectTrigger className="w-64 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
+              <SelectValue placeholder="Välj resurs" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              {resources.map(resource => (
+                <SelectItem key={resource.id} value={resource.id} className="text-gray-900 dark:text-gray-100">
+                  {resource.name} ({SIMPLIFIED_RESOURCE_TYPES[resource.resource_type]})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewMode(viewMode === 'week' ? 'month' : 'week')}
-                  >
-                    {viewMode === 'week' ? 'Månadsvy' : 'Veckovy'}
-                  </Button>
-                  
-                  <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        disabled={!selectedResource}
-                        onClick={() => {
-                          console.log('Ny bokning clicked', { selectedResource });
-                          if (selectedResource) {
-                            setBookingDialogOpen(true);
-                          } else {
-                            toast.error('Välj en resurs först');
-                          }
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Ny bokning
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
-                      <DialogHeader>
-                        <DialogTitle className="text-gray-900">Skapa ny bokning</DialogTitle>
-                        <DialogDescription className="text-gray-600">
-                          Fyll i informationen nedan för att skapa en ny bokning.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="resource" className="text-gray-700">Resurs</Label>
-                          <Select value={newBooking.resource_id} onValueChange={(value) => 
-                            setNewBooking({...newBooking, resource_id: value})
-                          }>
-                            <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                              <SelectValue placeholder="Välj resurs" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white border-gray-200">
-                              {resources.map(resource => (
-                                <SelectItem key={resource.id} value={resource.id} className="text-gray-900">
-                                  {resource.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        {/* Förbättrad layout för tid-fält */}
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="start_time" className="text-gray-700">Starttid</Label>
-                            <Input
-                              id="start_time"
-                              type="datetime-local"
-                              value={newBooking.start_time}
-                              min={new Date().toISOString().slice(0, 16)}
-                              onChange={(e) => setNewBooking({...newBooking, start_time: e.target.value})}
-                              className="bg-white border-gray-300 text-gray-900 w-full"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="end_time" className="text-gray-700">Sluttid</Label>
-                            <Input
-                              id="end_time"
-                              type="datetime-local"
-                              value={newBooking.end_time}
-                              min={new Date().toISOString().slice(0, 16)}
-                              onChange={(e) => setNewBooking({...newBooking, end_time: e.target.value})}
-                              className="bg-white border-gray-300 text-gray-900 w-full"
-                            />
-                          </div>
-                        </div>
+          <Button onClick={handleNewBookingClick} disabled={!selectedResource}>
+            <Plus className="w-4 h-4 mr-2" />
+            Ny bokning
+          </Button>
 
-                        <div>
-                          <Label htmlFor="contact_phone" className="text-gray-700">Telefon (valfritt)</Label>
-                          <Input
-                            id="contact_phone"
-                            type="tel"
-                            placeholder="070-123 45 67"
-                            value={newBooking.contact_phone}
-                            onChange={(e) => setNewBooking({...newBooking, contact_phone: e.target.value})}
-                            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
-                          />
-                        </div>
+          {(userRole === 'admin' || userRole === 'owner') && (
+            <Button variant="outline" onClick={() => setResourceDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Ny resurs
+            </Button>
+          )}
+        </div>
 
-                        <div>
-                          <Label htmlFor="notes" className="text-gray-700">Beskrivning (valfritt)</Label>
-                          <Textarea
-                            id="notes"
-                            placeholder="Tilläggsinformation..."
-                            value={newBooking.notes}
-                            onChange={(e) => setNewBooking({...newBooking, notes: e.target.value})}
-                            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
-                            rows={3}
-                          />
-                        </div>
+        {/* Mobile layout - stacked */}
+        <div className="md:hidden space-y-3 mb-4">
+          <Select value={selectedResource?.id || ''} onValueChange={(value) => {
+            const resource = resources.find(r => r.id === value);
+            setSelectedResource(resource || null);
+          }}>
+            <SelectTrigger className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
+              <SelectValue placeholder="Välj resurs" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              {resources.map(resource => (
+                <SelectItem key={resource.id} value={resource.id} className="text-gray-900 dark:text-gray-100">
+                  {resource.name} ({SIMPLIFIED_RESOURCE_TYPES[resource.resource_type]})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button 
-                            onClick={() => createBooking(newBooking)} 
-                            disabled={isLoading || !newBooking.resource_id || !newBooking.start_time || !newBooking.end_time}
-                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-                          >
-                            {isLoading ? 'Skapar...' : 'Skapa bokning'}
-                          </Button>
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            onClick={() => {
-                              setBookingDialogOpen(false);
-                              setSelectedDate(null);
-                            }}
-                            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                          >
-                            Avbryt
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleNewBookingClick} 
+              disabled={!selectedResource}
+              className="flex-1"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Ny bokning
+            </Button>
 
-              {/* Navigering för datum */}
-              <div className="flex items-center justify-center gap-4 py-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newDate = new Date(currentDate);
-                    newDate.setMonth(newDate.getMonth() - 1);
-                    setCurrentDate(newDate);
-                  }}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <h3 className="text-lg font-semibold min-w-[200px] text-center">
-                  {currentDate.toLocaleDateString('sv-SE', { 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })}
-                </h3>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newDate = new Date(currentDate);
-                    newDate.setMonth(newDate.getMonth() + 1);
-                    setCurrentDate(newDate);
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Kalendervy */}
-              {selectedResource ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="text-center flex-1">
-                      <h4 className="font-semibold text-lg">{selectedResource.name}</h4>
-                      <p className="text-gray-600">{selectedResource.description || 'Ingen beskrivning'}</p>
-                      <div className="flex items-center justify-center gap-6 mt-2">
-                        <p className="text-sm text-gray-500">
-                          Max {selectedResource.max_duration_hours || 4}h per bokning
-                        </p>
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Öppet 08:00-22:00
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      className="flex items-center gap-2"
-                      onClick={handleNewBookingClick}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Ny bokning
-                    </Button>
-                  </div>
-
-
-
-                  {viewMode === 'week' ? (
-                    // Veckovy
-                    <div className="grid grid-cols-7 gap-2">
-                      {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
-                        <div key={day} className="p-2 text-center font-semibold text-sm bg-gray-100 rounded">
-                          {day}
-                        </div>
-                      ))}
-                      {getWeekDays(currentDate).map(date => {
-                        const dayBookings = getBookingsForDate(date, selectedResource.id);
-                        const isToday = date.toDateString() === new Date().toDateString();
-                        
-                        return (
-                          <div 
-                            key={date.toISOString()} 
-                            className={`p-2 min-h-[100px] border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                              isToday ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
-                            }`}
-                            onClick={() => handleDateClick(date, selectedResource.id)}
-                          >
-                            <div className={`text-center font-medium ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
-                              {date.getDate()}
-                            </div>
-                            <div className="space-y-1 mt-2">
-                              {dayBookings.slice(0, 2).map(booking => {
-                                const isOwn = booking.user_id === user?.id; // Check if booking belongs to current user
-                                const startTime = new Date(booking.start_time);
-                                const endTime = new Date(booking.end_time);
-                                const now = new Date();
-                                const isActive = startTime <= now && now <= endTime;
-                                const isPast = endTime < now;
-                                
-                                return (
-                                  <div 
-                                    key={booking.id} 
-                                    className={`text-xs p-1.5 rounded-md truncate transition-all duration-200 border-l-2 ${
-                                      isPast 
-                                        ? 'bg-gray-100 text-gray-600 border-gray-400 opacity-70'
-                                        : isActive
-                                          ? 'bg-green-100 text-green-800 border-green-500 shadow-sm animate-pulse'
-                                          : isOwn
-                                            ? 'bg-blue-100 text-blue-800 border-blue-500 shadow-sm'
-                                            : 'bg-orange-100 text-orange-800 border-orange-500'
-                                    }`}
-                                    title={`${booking.purpose || 'Bokning'} (${formatTimeSlot(new Date(booking.start_time))}-${formatTimeSlot(new Date(booking.end_time))}) ${isOwn ? '(Din bokning)' : ''}`}
-                                  >
-                                    <div className="flex items-center gap-1">
-                                      {isActive && <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />}
-                                      {isPast && <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />}
-                                      {!isPast && !isActive && <div className={`w-1.5 h-1.5 rounded-full ${isOwn ? 'bg-blue-500' : 'bg-orange-500'}`} />}
-                                      <span className="font-medium">{formatTimeSlot(new Date(booking.start_time))}</span>
-                                      <span className="truncate">{booking.purpose || 'Bokning'}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                              {dayBookings.length > 2 && (
-                                <div className="text-xs text-gray-500 text-center bg-gray-50 rounded-md p-1">
-                                  +{dayBookings.length - 2} fler bokningar
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    // Månadsvy
-                    <div className="grid grid-cols-7 gap-1">
-                      {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
-                        <div key={day} className="p-2 text-center font-semibold text-sm bg-gray-100 rounded">
-                          {day}
-                        </div>
-                      ))}
-                      
-                      {/* Tomma celler för månaden */}
-                      {Array.from({ length: getFirstDayOfMonth(currentDate) }).map((_, index) => (
-                        <div key={`empty-${index}`} className="p-2 h-20"></div>
-                      ))}
-                      
-                      {/* Månadsens dagar */}
-                      {Array.from({ length: getDaysInMonth(currentDate) }).map((_, dayIndex) => {
-                        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayIndex + 1);
-                        const dayBookings = getBookingsForDate(date, selectedResource.id);
-                        const isToday = date.toDateString() === new Date().toDateString();
-                        
-                        return (
-                          <div 
-                            key={dayIndex} 
-                            className={`p-1 h-20 border rounded cursor-pointer hover:bg-gray-50 ${
-                              isToday ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
-                            }`}
-                            onClick={() => handleDateClick(date, selectedResource.id)}
-                          >
-                            <div className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
-                              {dayIndex + 1}
-                            </div>
-                            <div className="space-y-1">
-                              {dayBookings.slice(0, 1).map(booking => {
-                                const isOwn = booking.user_id === user?.id; // Check if booking belongs to current user  
-                                const startTime = new Date(booking.start_time);
-                                const endTime = new Date(booking.end_time);
-                                const now = new Date();
-                                const isActive = startTime <= now && now <= endTime;
-                                const isPast = endTime < now;
-                                
-                                return (
-                                  <div 
-                                    key={booking.id} 
-                                    className={`text-xs p-1 rounded border-l-2 truncate transition-all duration-200 ${
-                                      isPast 
-                                        ? 'bg-gray-50 text-gray-500 border-gray-300 opacity-70'
-                                        : isActive
-                                          ? 'bg-green-50 text-green-700 border-green-400 animate-pulse'
-                                          : isOwn
-                                            ? 'bg-blue-50 text-blue-700 border-blue-400'
-                                            : 'bg-orange-50 text-orange-700 border-orange-400'
-                                    }`}
-                                    title={`${booking.purpose || 'Bokning'} (${formatTimeSlot(new Date(booking.start_time))}-${formatTimeSlot(new Date(booking.end_time))}) ${isOwn ? '(Din bokning)' : ''}`}
-                                  >
-                                    <div className="flex items-center gap-1">
-                                      {isActive && <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />}
-                                      {isPast && <div className="w-1 h-1 bg-gray-400 rounded-full" />}
-                                      {!isPast && !isActive && <div className={`w-1 h-1 rounded-full ${isOwn ? 'bg-blue-500' : 'bg-orange-500'}`} />}
-                                      <span className="font-medium text-xs">{formatTimeSlot(new Date(booking.start_time))}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                              {dayBookings.length > 1 && (
-                                <div className="text-xs text-gray-500 text-center bg-gray-50 rounded px-1">
-                                  +{dayBookings.length - 1}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Välj en resurs för att se kalender och skapa bokningar</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="resources" className="space-y-4">
-              <div className="grid gap-4">
-                {resources.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>Inga resurser skapade ännu</p>
-                    {(['owner', 'admin'].includes(userRole)) && (
-                      <p className="text-sm mt-2">Skapa din första resurs för att komma igång med bokningar</p>
-                    )}
-                  </div>
-                ) : (
-                  resources.map(resource => (
-                    <Card key={resource.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold">{resource.name}</h3>
-                            <p className="text-sm text-gray-600 flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              Kapacitet: {resource.capacity} personer
-                            </p>
-                            {resource.description && (
-                              <p className="text-sm text-gray-500 mt-1">{resource.description}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <Badge variant={resource.is_active ? 'default' : 'outline'}>
-                                {resource.is_active ? 'Aktiv' : 'Inaktiv'}
-                              </Badge>
-                              <div className="text-sm text-gray-600 mt-1">
-                                Max {resource.max_duration_hours}h per bokning
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                Kapacitet: {resource.capacity}
-                              </div>
-                            </div>
-                            {(['owner', 'admin'].includes(userRole)) && (
-                              <div className="flex flex-col gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingResource(resource);
-                                    setEditResourceDialogOpen(true);
-                                  }}
-                                  className="hover:bg-blue-50"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => deleteResource(resource.id)}
-                                  className="hover:bg-red-50 hover:border-red-300"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="my-bookings" className="space-y-4">
-              <div className="grid gap-4">
-                {bookings.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>Inga bokningar ännu</p>
-                    <p className="text-sm mt-2">Skapa din första bokning i kalendern</p>
-                  </div>
-                ) : (
-                  bookings.map(booking => {
-                    const startTime = new Date(booking.start_time);
-                    const endTime = new Date(booking.end_time);
-                    const now = new Date();
-                    const isActive = startTime <= now && now <= endTime;
-                    const isPast = endTime < now;
-                    const isUpcoming = startTime > now;
-                    const hoursUntil = Math.round((startTime.getTime() - now.getTime()) / (1000 * 60 * 60));
-                    
-                    return (
-                      <Card key={booking.id} className={`transition-all duration-200 border-l-4 ${
-                        isPast 
-                          ? 'border-gray-300 bg-gray-50 opacity-80'
-                          : isActive
-                            ? 'border-green-500 bg-green-50 shadow-md animate-pulse'
-                            : isUpcoming && hoursUntil <= 24
-                              ? 'border-blue-500 bg-blue-50 shadow-md'
-                              : 'border-orange-300 bg-white hover:shadow-md'
-                      }`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className={`w-3 h-3 rounded-full ${
-                                  isPast 
-                                    ? 'bg-gray-400'
-                                    : isActive
-                                      ? 'bg-green-500 animate-pulse'
-                                      : isUpcoming && hoursUntil <= 24
-                                        ? 'bg-blue-500'
-                                        : 'bg-orange-400'
-                                }`} />
-                                <h3 className="font-semibold text-lg">{booking.purpose || 'Bokning'}</h3>
-                                <Badge variant={
-                                  isPast ? 'outline' : 
-                                  isActive ? 'default' : 
-                                  isUpcoming && hoursUntil <= 24 ? 'outline' : 'outline'
-                                } className={
-                                  isActive ? 'animate-pulse bg-green-100 text-green-800 border-green-300' : ''
-                                }>
-                                  {isPast ? 'Avslutad' : isActive ? 'Pågår nu' : isUpcoming && hoursUntil <= 24 ? `Om ${hoursUntil}h` : 'Kommande'}
-                                </Badge>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <p className="text-sm text-gray-600 flex items-center gap-2">
-                                  <MapPin className="h-4 w-4" />
-                                  {booking.resource?.name || 'Okänd resurs'}
-                                </p>
-                                <p className="text-sm text-gray-600 flex items-center gap-2">
-                                  <Clock className="h-4 w-4" />
-                                  <span className="font-medium">
-                                    {startTime.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                  </span>
-                                  <span>
-                                    {formatTimeSlot(startTime)} - {formatTimeSlot(endTime)}
-                                  </span>
-                                </p>
-                                {booking.attendees && booking.attendees > 1 && (
-                                  <p className="text-sm text-gray-600 flex items-center gap-2">
-                                    <Users className="h-4 w-4" />
-                                    {booking.attendees} deltagare
-                                  </p>
-                                )}
-                                {booking.contact_phone && (
-                                  <p className="text-sm text-gray-600 flex items-center gap-2">
-                                    <Phone className="h-4 w-4" />
-                                    {booking.contact_phone}
-                                  </p>
-                                )}
-                                {booking.notes && (
-                                  <p className="text-sm text-gray-500 bg-gray-50 p-2 rounded mt-2">{booking.notes}</p>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="flex flex-col gap-2 items-end ml-4">
-                              <div className="flex gap-2">
-                                {!isPast && (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => {
-                                      // Edit booking functionality could be added here
-                                      toast.info('Redigering kommer snart');
-                                    }}
-                                    className="hover:bg-blue-50"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => deleteBooking(booking.id)}
-                                  className="hover:bg-red-50 hover:border-red-300"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              
-                              {/* Duration indicator */}
-                              <div className="text-xs text-gray-500 text-right">
-                                {Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60))}h {Math.round(((endTime.getTime() - startTime.getTime()) % (1000 * 60 * 60)) / (1000 * 60))}min
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            </TabsContent>
-
-            {(userRole === 'owner' || userRole === 'admin') && (
-              <TabsContent value="dashboard" className="space-y-4">
-                <AdminDashboard handbookId={handbookId} userRole={userRole} />
-              </TabsContent>
+            {(userRole === 'admin' || userRole === 'owner') && (
+              <Button 
+                variant="outline" 
+                onClick={() => setResourceDialogOpen(true)}
+                className="flex-1"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Ny resurs
+              </Button>
             )}
-          </Tabs>
+          </div>
+        </div>
+
+        {/* Visa resursregler */}
+        {selectedResource && (
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                {selectedResource.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(() => {
+                  // Säkerhetskontroll för selectedResource
+                  if (!selectedResource) {
+                    return (
+                      <div className="text-sm text-gray-500 col-span-full">
+                        Välj en resurs för att se bokningsregler
+                      </div>
+                    );
+                  }
+                  
+                  // Debug: logga resurstyp och tillgängliga templates
+                  console.log('Selected resource type:', selectedResource.resource_type);
+                  console.log('Available templates:', Object.keys(SIMPLIFIED_RESOURCE_TEMPLATES));
+                  console.log('Selected resource:', selectedResource);
+                  
+                  const rules = SIMPLIFIED_RESOURCE_TEMPLATES[selectedResource.resource_type];
+                  
+                  // Säkerhetskontroll för rules
+                  if (!rules) {
+                    return (
+                      <div className="text-sm text-red-500 col-span-full">
+                        Bokningsregler saknas för resurstyp: "{selectedResource.resource_type}"
+                        <br />
+                        <span className="text-xs">Tillgängliga: {Object.keys(SIMPLIFIED_RESOURCE_TEMPLATES).join(', ')}</span>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm">Max {rules.maxAdvanceBookingDays} dagar i förväg</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">Max {rules.maxBookingDurationHours} timmar</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm">Max {rules.maxBookingsPerUserPerWeek} bokningar/vecka</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-orange-600" />
+                        <span className="text-sm">Öppet {rules.operatingHours.start}-{rules.operatingHours.end}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-red-600" />
+                        <span className="text-sm">{rules.cleaningBufferMinutes} min städbuffer</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Kalender */}
+      <Card className="shadow-lg rounded-xl border-0">
+        <CardHeader className="pb-4 border-b border-gray-100 dark:border-gray-800">
+          {/* Desktop Header */}
+          <div className="hidden md:flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                <Calendar className="w-6 h-6 text-blue-600" />
+                {viewMode === 'week' ? 'Veckokalender' : 'Månadskalender'}
+              </CardTitle>
+              
+              {/* Vyväljare */}
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shadow-sm">
+                <Button 
+                  variant={viewMode === 'week' ? 'default' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setViewMode('week')}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    viewMode === 'week' 
+                      ? 'bg-white shadow-md text-gray-900 border-0' 
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  Vecka
+                </Button>
+                <Button 
+                  variant={viewMode === 'month' ? 'default' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setViewMode('month')}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    viewMode === 'month' 
+                      ? 'bg-white shadow-md text-gray-900 border-0' 
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  Månad
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToToday}
+                className="rounded-lg border-gray-200 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-300 dark:hover:border-blue-600 text-gray-700 dark:text-gray-300 font-medium px-4 py-2 shadow-sm transition-all duration-200"
+              >
+                Idag
+              </Button>
+              
+              <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    if (viewMode === 'week') {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7));
+                    } else {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, currentDate.getDate()));
+                    }
+                  }}
+                  className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <span className="text-sm font-semibold min-w-[140px] text-center text-gray-900 dark:text-gray-100">
+                  {viewMode === 'week' 
+                    ? `Vecka ${getWeekNumber(currentDate)} - ${currentDate.getFullYear()}`
+                    : `${currentDate.toLocaleString('sv-SE', { month: 'long', year: 'numeric' })}`
+                  }
+                </span>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    if (viewMode === 'week') {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7));
+                    } else {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, currentDate.getDate()));
+                    }
+                  }}
+                  className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Header - Ultra kompakt */}
+          <div className="md:hidden space-y-2 px-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                  {viewMode === 'week' 
+                    ? `Vecka ${getWeekNumber(currentDate)}`
+                    : `${currentDate.toLocaleString('sv-SE', { month: 'short', year: 'numeric' })}`
+                  }
+                </span>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToToday}
+                className="rounded text-xs px-2 py-1 h-6"
+              >
+                Idag
+              </Button>
+            </div>
+            
+            {/* Mobile Navigation - Ultra kompakt */}
+            <div className="flex items-center justify-between">
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded p-0.5">
+                <Button 
+                  variant={viewMode === 'week' ? 'default' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setViewMode('week')}
+                  className={`rounded px-2 py-1 text-xs h-6 transition-all duration-200 ${
+                    viewMode === 'week' 
+                      ? 'bg-white shadow-sm text-gray-900 border-0' 
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  V
+                </Button>
+                <Button 
+                  variant={viewMode === 'month' ? 'default' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setViewMode('month')}
+                  className={`rounded px-2 py-1 text-xs h-6 transition-all duration-200 ${
+                    viewMode === 'month' 
+                      ? 'bg-white shadow-sm text-gray-900 border-0' 
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  M
+                </Button>
+              </div>
+              
+              <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 rounded px-1 py-0.5">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    if (viewMode === 'week') {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7));
+                    } else {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, currentDate.getDate()));
+                    }
+                  }}
+                  className="p-1 rounded h-6 w-6"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </Button>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    if (viewMode === 'week') {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7));
+                    } else {
+                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, currentDate.getDate()));
+                    }
+                  }}
+                  className="p-1 rounded h-6 w-6"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-1 sm:p-2 md:p-6">
+          {viewMode === 'week' ? (
+            // Veckokalender - Extra responsiv
+            <div className="grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-4">
+              {/* Veckodagsrubriker */}
+              {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map((day, index) => (
+                <div key={day} className="text-center font-semibold text-xs md:text-sm text-gray-700 dark:text-gray-300 py-1 sm:py-2 md:py-3 border-b border-gray-100 dark:border-gray-700">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden text-xs">{['M', 'T', 'O', 'T', 'F', 'L', 'S'][index]}</span>
+                </div>
+              ))}
+              
+              {/* Veckodagar */}
+              {getWeekDays(currentDate).map(day => {
+                const dayBookings = getBookingsForDate(day, selectedResource?.id);
+                const isToday = day.toDateString() === new Date().toDateString();
+                
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={`p-1 sm:p-2 md:p-4 rounded sm:rounded-lg md:rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md min-h-[60px] sm:min-h-[80px] md:min-h-[120px] ${
+                      isToday 
+                        ? 'bg-blue-50 border border-blue-300 shadow-sm dark:bg-blue-900 dark:border-blue-600' 
+                        : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    } ${selectedDate?.toDateString() === day.toDateString() ? 'bg-blue-100 border border-blue-400 shadow-sm dark:bg-blue-800 dark:border-blue-500' : ''}`}
+                    onClick={() => handleDateClick(day, selectedResource?.id)}
+                  >
+                    <div className={`text-xs sm:text-sm md:text-lg font-semibold mb-1 md:mb-2 ${isToday ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                      {day.getDate()}
+                    </div>
+                    
+                    {/* Bokningar */}
+                    <div className="space-y-0.5 sm:space-y-1 md:space-y-2">
+                      {dayBookings.slice(0, 2).map(booking => (
+                        <div key={booking.id} className="text-xs px-1 py-0.5 sm:py-1 bg-blue-100 dark:bg-blue-800 rounded truncate font-medium text-blue-900 dark:text-blue-100">
+                          <span className="hidden lg:inline">{formatTimeSlot(convertToSwedishTime(new Date(booking.start_time)))} - </span>
+                          <span className="truncate">{booking.purpose}</span>
+                        </div>
+                      ))}
+                      {dayBookings.length > 2 && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                          +{dayBookings.length - 2}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            // Månadskalender - Extra responsiv för mobil
+            <div className="grid grid-cols-7 md:grid-cols-8 gap-0.5 sm:gap-1 md:gap-3">
+              {/* Tom cell för veckonummer-kolumnen (endast desktop) */}
+              <div className="hidden md:block text-center font-semibold text-sm text-gray-700 dark:text-gray-300 py-3 border-b-2 border-gray-100 dark:border-gray-700">
+                V
+              </div>
+              {/* Veckodagsrubriker */}
+              {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map((day, index) => (
+                <div key={day} className="text-center font-semibold text-xs md:text-sm text-gray-700 dark:text-gray-300 py-1 sm:py-2 md:py-3 border-b border-gray-100 dark:border-gray-700">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden text-xs">{['M', 'T', 'O', 'T', 'F', 'L', 'S'][index]}</span>
+                </div>
+              ))}
+              
+              {/* Månadsinnehåll med veckonummer */}
+              {(() => {
+                const monthDays = getMonthDays(currentDate);
+                const weeks = [];
+                
+                // Gruppera dagar i veckor (7 dagar per vecka)
+                for (let i = 0; i < monthDays.length; i += 7) {
+                  weeks.push(monthDays.slice(i, i + 7));
+                }
+                
+                return weeks.map((week, weekIndex) => (
+                  <React.Fragment key={weekIndex}>
+                    {/* Veckonummer (endast desktop) */}
+                    <div className="hidden md:flex items-center justify-center text-sm font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg min-h-[60px] md:min-h-[100px]">
+                      {getWeekNumber(week[0])}
+                    </div>
+                    
+                    {/* Dagar i veckan */}
+                    {week.map(day => {
+                      const dayBookings = getBookingsForDate(day, selectedResource?.id);
+                      const isToday = day.toDateString() === new Date().toDateString();
+                      const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                      
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className={`p-0.5 sm:p-1 md:p-3 rounded sm:rounded-lg md:rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md min-h-[30px] xs:min-h-[40px] sm:min-h-[60px] md:min-h-[100px] ${
+                            isToday 
+                              ? 'bg-blue-50 border border-blue-300 shadow-sm dark:bg-blue-900 dark:border-blue-600' 
+                              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          } ${selectedDate?.toDateString() === day.toDateString() ? 'bg-blue-100 border border-blue-400 shadow-sm dark:bg-blue-800 dark:border-blue-500' : ''} ${
+                            !isCurrentMonth ? 'opacity-50' : ''
+                          }`}
+                          onClick={() => handleDateClick(day, selectedResource?.id)}
+                        >
+                          <div className={`text-xs sm:text-sm md:text-base font-semibold mb-0.5 sm:mb-1 md:mb-2 ${
+                            isToday 
+                              ? 'text-blue-700 dark:text-blue-300' 
+                              : isCurrentMonth 
+                                ? 'text-gray-900 dark:text-gray-100' 
+                                : 'text-gray-400 dark:text-gray-500'
+                          }`}>
+                            {day.getDate()}
+                          </div>
+                          
+                          {/* Bokningar - Färre på mobil */}
+                          <div className="space-y-0.5 sm:space-y-1">
+                            {dayBookings.slice(0, 1).map(booking => (
+                              <div key={booking.id} className="text-xs p-0.5 sm:p-1 bg-blue-100 dark:bg-blue-800 rounded truncate font-medium text-blue-900 dark:text-blue-100">
+                                <span className="hidden sm:inline">{booking.purpose}</span>
+                                <span className="sm:hidden">•</span>
+                              </div>
+                            ))}
+                            {dayBookings.length > 1 && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                <span className="hidden sm:inline">+{dayBookings.length - 1} mer</span>
+                                <span className="sm:hidden">+{dayBookings.length - 1}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                ));
+              })()}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Skapa ny resurs modal - på root-nivå för korrekt styling */}
-      <Dialog open={resourceDialogOpen} onOpenChange={setResourceDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-white border border-gray-200">
+      {/* Bokningsdialog - FÖRENKLAD OCH KOMPAKT */}
+      <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md sm:w-full bg-white dark:bg-gray-800 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-gray-900">Skapa ny resurs</DialogTitle>
+            <DialogTitle className="text-gray-900 dark:text-gray-100">Ny bokning</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-400">
+              Skapa en ny bokning för {selectedResource?.name}
+            </DialogDescription>
           </DialogHeader>
-          
-          {/* Enkelt formulär */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="resource-name" className="text-gray-700">Namn <span className="text-red-500">*</span></Label>
-              <Input
-                id="resource-name"
-                placeholder="T.ex. Föreningslokal"
-                value={newResource.name}
-                onChange={(e) => setNewResource({...newResource, name: e.target.value})}
-                className="mt-1 bg-white border-gray-300 text-gray-900"
-              />
-            </div>
-            <div>
-              <Label htmlFor="resource-description" className="text-gray-700">Beskrivning <span className="text-red-500">*</span></Label>
-              <Textarea
-                id="resource-description"
-                placeholder="Beskriv resursen..."
-                value={newResource.description}
-                onChange={(e) => setNewResource({...newResource, description: e.target.value})}
-                className="mt-1 bg-white border-gray-300 text-gray-900"
-              />
-            </div>
-            <div>
-              <Label htmlFor="resource-type" className="text-gray-700">Typ <span className="text-red-500">*</span></Label>
-              <Select 
-                value={newResource.resource_type} 
-                onValueChange={(value) => {
-                  const resourceType = value as ResourceType;
-                  const template = ResourceTemplates[resourceType];
-                  
-                  // Säkerhetscheck - använd fallback-värden om template saknas
-                  const fallbackValues = {
-                    maxBookingDurationHours: 4,
-                    operatingHours: { start: '08:00', end: '22:00' }
-                  };
-                  
-                  setNewResource({
-                    ...newResource, 
-                    resource_type: resourceType,
-                    max_duration_hours: template?.maxBookingDurationHours || fallbackValues.maxBookingDurationHours,
-                    time_restrictions: {
-                      ...newResource.time_restrictions,
-                      start_time: template?.operatingHours.start || fallbackValues.operatingHours.start,
-                      end_time: template?.operatingHours.end || fallbackValues.operatingHours.end
-                    }
-                  });
-                }}
-              >
-                <SelectTrigger className="mt-1 bg-white border-gray-300 text-gray-900">
-                  <SelectValue placeholder="Välj typ" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border border-gray-200">
-                  <SelectItem value="laundry">Tvättstuga</SelectItem>
-                  <SelectItem value="party_room">Festlokal</SelectItem>
-                  <SelectItem value="guest_apartment">Gästlägenhet</SelectItem>
-                  <SelectItem value="sauna">Bastu</SelectItem>
-                  <SelectItem value="gym">Gym</SelectItem>
-                  <SelectItem value="parking">Parkering</SelectItem>
-                  <SelectItem value="storage">Förråd</SelectItem>
-                  <SelectItem value="other">Övrigt</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="standard-duration" className="text-gray-700">Standardlängd per bokning (timmar)</Label>
-              <Input
-                id="standard-duration"
-                type="number"
-                min="1"
-                max="24"
-                value={newResource.max_duration_hours}
-                onChange={(e) => setNewResource({...newResource, max_duration_hours: parseInt(e.target.value)})}
-                className="mt-1 bg-white border-gray-300 text-gray-900"
-              />
-            </div>
-
-            {/* Alltid öppen checkbox */}
-            <div className="flex items-center space-x-2">
-              <input
-                id="always-open"
-                type="checkbox"
-                checked={newResource.time_restrictions.start_time === '00:00' && newResource.time_restrictions.end_time === '23:59'}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setNewResource({
-                      ...newResource,
-                      time_restrictions: {
-                        ...newResource.time_restrictions,
-                        start_time: '00:00',
-                        end_time: '23:59'
-                      }
-                    });
-                  } else {
-                    // Återställ till template-värden (med fallback)
-                    const template = ResourceTemplates[newResource.resource_type];
-                    const fallbackValues = {
-                      operatingHours: { start: '08:00', end: '22:00' }
-                    };
-                    
-                    setNewResource({
-                      ...newResource,
-                      time_restrictions: {
-                        ...newResource.time_restrictions,
-                        start_time: template?.operatingHours.start || fallbackValues.operatingHours.start,
-                        end_time: template?.operatingHours.end || fallbackValues.operatingHours.end
-                      }
-                    });
-                  }
-                }}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <Label htmlFor="always-open" className="text-gray-700">Alltid öppen (24/7)</Label>
-            </div>
-
-            {/* Öppettider (visas bara om inte alltid öppen) */}
-            {!(newResource.time_restrictions.start_time === '00:00' && newResource.time_restrictions.end_time === '23:59') && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start-time" className="text-gray-700">Öppnar <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="start-time"
-                    type="time"
-                    value={newResource.time_restrictions.start_time}
-                    onChange={(e) => setNewResource({
-                      ...newResource,
-                      time_restrictions: {
-                        ...newResource.time_restrictions,
-                        start_time: e.target.value
-                      }
-                    })}
-                    className="mt-1 bg-white border-gray-300 text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="end-time" className="text-gray-700">Stänger <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="end-time"
-                    type="time"
-                    value={newResource.time_restrictions.end_time}
-                    onChange={(e) => setNewResource({
-                      ...newResource,
-                      time_restrictions: {
-                        ...newResource.time_restrictions,
-                        end_time: e.target.value
-                      }
-                    })}
-                    className="mt-1 bg-white border-gray-300 text-gray-900"
-                    required
-                  />
-                </div>
+          <div className="space-y-3 px-1 sm:px-0">
+            {/* Tid - Kompakt layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="start-time" className="text-sm text-gray-900 dark:text-gray-100">Starttid</Label>
+                <Input
+                  id="start-time"
+                  type="datetime-local"
+                  value={newBooking.start_time}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
+                  className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                />
               </div>
-            )}
-            
-            {/* Current Settings Preview */}
-            {ResourceTemplates[newResource.resource_type] && (
-              <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <h4 className="font-medium text-green-900">Dina inställningar</h4>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-green-700">
-                    <strong>Max tid:</strong> {newResource.max_duration_hours}h
-                  </div>
-                  <div className="text-green-700">
-                    <strong>Öppettider:</strong> {newResource.time_restrictions.start_time}-{newResource.time_restrictions.end_time}
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-green-600">
-                  💡 Tidsgränsen och öppettider kan ändras ovan. Alla bokningar godkänns automatiskt.
-                </div>
+              <div className="space-y-1">
+                <Label htmlFor="end-time" className="text-sm text-gray-900 dark:text-gray-100">Sluttid</Label>
+                <Input
+                  id="end-time"
+                  type="datetime-local"
+                  value={newBooking.end_time}
+                  onChange={(e) => setNewBooking(prev => ({ ...prev, end_time: e.target.value }))}
+                  className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                />
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="flex gap-2 pt-4 border-t">
-            <Button 
-              onClick={createResource} 
-              disabled={!newResource.name || !newResource.description || isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isLoading ? 'Skapar...' : 'Skapa resurs'}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setResourceDialogOpen(false)}
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              Avbryt
-            </Button>
+            {/* Syfte - Viktigaste fältet */}
+            <div className="space-y-1">
+              <Label htmlFor="purpose" className="text-sm text-gray-900 dark:text-gray-100">Syfte</Label>
+              <Input
+                id="purpose"
+                placeholder="Vad ska resursen användas till?"
+                value={newBooking.purpose}
+                onChange={(e) => setNewBooking(prev => ({ ...prev, purpose: e.target.value }))}
+                className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+              />
+            </div>
+
+            {/* Antal deltagare och telefon - Kompakt */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="attendees" className="text-sm text-gray-900 dark:text-gray-100">Deltagare</Label>
+                <Input
+                  id="attendees"
+                  type="number"
+                  min="1"
+                  max={selectedResource?.capacity || 1}
+                  value={newBooking.attendees}
+                  onChange={(e) => setNewBooking(prev => ({ ...prev, attendees: parseInt(e.target.value) || 1 }))}
+                  className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="contact-phone" className="text-sm text-gray-900 dark:text-gray-100">Telefon</Label>
+                <Input
+                  id="contact-phone"
+                  type="tel"
+                  placeholder="070-123 45 67"
+                  value={newBooking.contact_phone}
+                  onChange={(e) => setNewBooking(prev => ({ ...prev, contact_phone: e.target.value }))}
+                  className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+            </div>
+
+            {/* Knappar */}
+            <div className="flex gap-2 pt-2">
+              <Button onClick={() => createBooking(newBooking)} disabled={isLoading} className="flex-1">
+                {isLoading ? 'Skapar...' : 'Skapa bokning'}
+              </Button>
+              <Button variant="outline" onClick={() => setBookingDialogOpen(false)}>
+                Avbryt
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Redigera resurs modal */}
-      <Dialog open={editResourceDialogOpen} onOpenChange={setEditResourceDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-white border border-gray-200">
+      {/* Resursdialog - FÖRENKLAD OCH KOMPAKT */}
+      <Dialog open={resourceDialogOpen} onOpenChange={setResourceDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md sm:w-full bg-white dark:bg-gray-800 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-gray-900">Redigera resurs</DialogTitle>
+            <DialogTitle className="text-gray-900 dark:text-gray-100">Ny resurs</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-400">
+              Skapa en ny bokningsbar resurs
+            </DialogDescription>
           </DialogHeader>
-          {editingResource && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-resource-name" className="text-gray-700">Namn</Label>
-                <Input
-                  id="edit-resource-name"
-                  placeholder="T.ex. Föreningslokal"
-                  value={editingResource.name}
-                  onChange={(e) => setEditingResource({...editingResource, name: e.target.value})}
-                  className="mt-1 bg-white border-gray-300 text-gray-900"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-resource-description" className="text-gray-700">Beskrivning</Label>
-                <Textarea
-                  id="edit-resource-description"
-                  placeholder="Beskriv resursen..."
-                  value={editingResource.description || ''}
-                  onChange={(e) => setEditingResource({...editingResource, description: e.target.value})}
-                  className="mt-1 bg-white border-gray-300 text-gray-900"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-max-duration" className="text-gray-700 block text-sm">Max bokningstid (timmar)</Label>
-                  <Input
-                    id="edit-max-duration"
-                    type="number"
-                    min="1"
-                    max="24"
-                    value={editingResource.max_duration_hours}
-                    onChange={(e) => setEditingResource({...editingResource, max_duration_hours: parseInt(e.target.value)})}
-                    className="bg-white border-gray-300 text-gray-900 w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-capacity" className="text-gray-700 block text-sm">Kapacitet</Label>
-                  <Input
-                    id="edit-capacity"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={editingResource.capacity}
-                    onChange={(e) => setEditingResource({...editingResource, capacity: parseInt(e.target.value) || 1})}
-                    className="bg-white border-gray-300 text-gray-900 w-full"
-                  />
-                </div>
-              </div>
-              {/* Alltid öppen checkbox för redigering */}
-              <div className="flex items-center space-x-2">
-                <input
-                  id="edit-always-open"
-                  type="checkbox"
-                  checked={editingResource.time_restrictions?.start_time === '00:00' && editingResource.time_restrictions?.end_time === '23:59'}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setEditingResource({
-                        ...editingResource,
-                        time_restrictions: {
-                          ...editingResource.time_restrictions,
-                          start_time: '00:00',
-                          end_time: '23:59'
-                        }
-                      });
-                    } else {
-                      setEditingResource({
-                        ...editingResource,
-                        time_restrictions: {
-                          ...editingResource.time_restrictions,
-                          start_time: '08:00',
-                          end_time: '22:00'
-                        }
-                      });
-                    }
-                  }}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <Label htmlFor="edit-always-open" className="text-gray-700">Alltid öppen (24/7)</Label>
-              </div>
+          <div className="space-y-3 px-1 sm:px-0">
+            {/* Namn och typ - Viktigaste fälten */}
+            <div className="space-y-1">
+              <Label htmlFor="resource-name" className="text-sm text-gray-900 dark:text-gray-100">Namn</Label>
+              <Input
+                id="resource-name"
+                placeholder="t.ex. Tvättstuga 1"
+                value={newResource.name}
+                onChange={(e) => setNewResource(prev => ({ ...prev, name: e.target.value }))}
+                className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <Label htmlFor="resource-type" className="text-sm text-gray-900 dark:text-gray-100">Typ</Label>
+              <Select value={newResource.type} onValueChange={(value) => setNewResource(prev => ({ ...prev, type: value as keyof typeof SIMPLIFIED_RESOURCE_TYPES }))}>
+                <SelectTrigger className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                  {Object.entries(SIMPLIFIED_RESOURCE_TYPES).map(([key, label]) => (
+                    <SelectItem key={key} value={key} className="text-gray-900 dark:text-gray-100">
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Öppettider för redigering (visas bara om inte alltid öppen) */}
-              {!(editingResource.time_restrictions?.start_time === '00:00' && editingResource.time_restrictions?.end_time === '23:59') && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-start-time" className="text-gray-700 block text-sm">Öppnar</Label>
-                    <Input
-                      id="edit-start-time"
-                      type="time"
-                      value={editingResource.time_restrictions?.start_time || '06:00'}
-                      onChange={(e) => setEditingResource({
-                        ...editingResource, 
-                        time_restrictions: {
-                          ...editingResource.time_restrictions,
-                          start_time: e.target.value,
-                          end_time: editingResource.time_restrictions?.end_time || '22:00'
-                        }
-                      })}
-                      className="bg-white border-gray-300 text-gray-900 w-full"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-end-time" className="text-gray-700 block text-sm">Stänger</Label>
-                    <Input
-                      id="edit-end-time"
-                      type="time"
-                      value={editingResource.time_restrictions?.end_time || '22:00'}
-                      onChange={(e) => setEditingResource({
-                        ...editingResource,
-                        time_restrictions: {
-                          ...editingResource.time_restrictions,
-                          start_time: editingResource.time_restrictions?.start_time || '06:00',
-                          end_time: e.target.value
-                        }
-                      })}
-                      className="bg-white border-gray-300 text-gray-900 w-full"
-                    />
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center space-x-2">
-                <input
-                  id="edit-is-active"
-                  type="checkbox"
-                  checked={editingResource.is_active}
-                  onChange={(e) => setEditingResource({...editingResource, is_active: e.target.checked})}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            {/* Beskrivning och kapacitet - Kompakt layout */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="resource-description" className="text-sm text-gray-900 dark:text-gray-100">Beskrivning</Label>
+                <Input
+                  id="resource-description"
+                  placeholder="Kort beskrivning..."
+                  value={newResource.description}
+                  onChange={(e) => setNewResource(prev => ({ ...prev, description: e.target.value }))}
+                  className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                 />
-                <Label htmlFor="edit-is-active" className="text-gray-700">Aktiv resurs</Label>
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={updateResource} 
-                  disabled={!editingResource.name || !editingResource.description}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Uppdatera resurs
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setEditResourceDialogOpen(false);
-                    setEditingResource(null);
-                  }}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  Avbryt
-                </Button>
+              <div className="space-y-1">
+                <Label htmlFor="resource-capacity" className="text-sm text-gray-900 dark:text-gray-100">Kapacitet</Label>
+                <Input
+                  id="resource-capacity"
+                  type="number"
+                  min="1"
+                  value={newResource.capacity}
+                  onChange={(e) => setNewResource(prev => ({ ...prev, capacity: parseInt(e.target.value) || 1 }))}
+                  className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                />
               </div>
             </div>
-          )}
+
+            {/* Knappar */}
+            <div className="flex gap-2 pt-2">
+              <Button onClick={createResource} disabled={isLoading} className="flex-1">
+                {isLoading ? 'Skapar...' : 'Skapa resurs'}
+              </Button>
+              <Button variant="outline" onClick={() => setResourceDialogOpen(false)}>
+                Avbryt
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
