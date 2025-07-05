@@ -736,7 +736,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                         Ny bokning
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px] bg-white border border-gray-200">
+                    <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
                       <DialogHeader>
                         <DialogTitle className="text-gray-900">Skapa ny bokning</DialogTitle>
                         <DialogDescription className="text-gray-600">
@@ -762,7 +762,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                           </Select>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Förbättrad layout för tid-fält */}
+                        <div className="space-y-4">
                           <div>
                             <Label htmlFor="start_time" className="text-gray-700">Starttid</Label>
                             <Input
@@ -771,7 +772,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                               value={newBooking.start_time}
                               min={new Date().toISOString().slice(0, 16)}
                               onChange={(e) => setNewBooking({...newBooking, start_time: e.target.value})}
-                              className="bg-white border-gray-300 text-gray-900"
+                              className="bg-white border-gray-300 text-gray-900 w-full"
                             />
                           </div>
                           <div>
@@ -782,7 +783,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                               value={newBooking.end_time}
                               min={new Date().toISOString().slice(0, 16)}
                               onChange={(e) => setNewBooking({...newBooking, end_time: e.target.value})}
-                              className="bg-white border-gray-300 text-gray-900"
+                              className="bg-white border-gray-300 text-gray-900 w-full"
                             />
                           </div>
                         </div>
@@ -807,14 +808,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                             value={newBooking.notes}
                             onChange={(e) => setNewBooking({...newBooking, notes: e.target.value})}
                             className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+                            rows={3}
                           />
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <Button 
                             onClick={() => createBooking(newBooking)} 
                             disabled={isLoading || !newBooking.resource_id || !newBooking.start_time || !newBooking.end_time}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
                           >
                             {isLoading ? 'Skapar...' : 'Skapa bokning'}
                           </Button>
