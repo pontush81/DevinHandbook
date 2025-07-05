@@ -131,10 +131,10 @@ export const ResourceTemplates: Record<ResourceType, StandardBookingRules> = {
 
 // Quick booking time slots
 export const SuggestedTimeSlots = [
-  { label: "Morgon", start: "08:00", duration: 2 },
-  { label: "Förmiddag", start: "10:00", duration: 2 },
-  { label: "Eftermiddag", start: "14:00", duration: 2 },
-  { label: "Kväll", start: "18:00", duration: 2 }
+  { label: "08:00", start: "08:00", duration: 2 },
+  { label: "10:00", start: "10:00", duration: 2 },
+  { label: "14:00", start: "14:00", duration: 2 },
+  { label: "18:00", start: "18:00", duration: 2 }
 ];
 
 // Fair usage patterns

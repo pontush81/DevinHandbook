@@ -32,7 +32,8 @@ export function useAdminStatus(userId?: string, userEmail?: string) {
     process.env.NODE_ENV === 'development'
   );
 
-  return useQuery({
+  try {
+    return useQuery({
     queryKey: queryKeys.user.adminStatus(userId || 'anonymous'),
     queryFn: async () => {
       console.log('🔐 [useAdminStatus] Checking admin status for user:', { userId, userEmail });
@@ -62,6 +63,15 @@ export function useAdminStatus(userId?: string, userEmail?: string) {
       return failureCount < 2;
     },
   });
+  } catch (error) {
+    // Fallback if QueryClient is not available
+    console.warn('🔧 [useAdminStatus] QueryClient not available, using fallback');
+    return {
+      data: { isSuperAdmin: false },
+      isLoading: false,
+      error: null
+    };
+  }
 }
 
 /**

@@ -9,7 +9,10 @@ import { Database } from '@/types/supabase';
  */
 export async function getStandardSession(request?: NextRequest) {
   try {
+    console.log('🔍 [StandardAuth] getStandardSession called');
+    
     // Method 1: Try cookies first (standard SSR approach)
+    console.log('🔍 [StandardAuth] Trying cookies authentication...');
     const cookieStore = await cookies();
     
     const supabase = createServerClient<Database>(
@@ -27,6 +30,7 @@ export async function getStandardSession(request?: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (!error && user) {
+      console.log('✅ [StandardAuth] Cookie authentication successful for user:', user.id);
       // Create session-like object for compatibility
       return {
         user,
@@ -36,6 +40,8 @@ export async function getStandardSession(request?: NextRequest) {
         expires_in: 3600,
         refresh_token: null
       };
+    } else {
+      console.log('⚠️ [StandardAuth] Cookie authentication failed:', error?.message || 'no user found');
     }
     
     // Method 2: Try query parameter fallback (for join system compatibility)
@@ -55,9 +61,13 @@ export async function getStandardSession(request?: NextRequest) {
           refresh_token: null
         };
       }
-      
-      // Method 3: Try Bearer token
+    }
+    
+    // Method 3: Try Bearer token
+    if (request) {
       const authHeader = request.headers.get('Authorization');
+      console.log('🔍 [StandardAuth] Authorization header:', authHeader ? `Bearer ${authHeader.substring(7, 20)}...` : 'not found');
+      
       if (authHeader?.startsWith('Bearer ')) {
         try {
           const token = authHeader.substring(7);
@@ -76,7 +86,7 @@ export async function getStandardSession(request?: NextRequest) {
             };
           }
         } catch (tokenError) {
-          // Silent fail for Bearer token verification
+          // Token verification failed, continue to other auth methods
         }
       }
     }
@@ -84,7 +94,6 @@ export async function getStandardSession(request?: NextRequest) {
     return null;
     
   } catch (error) {
-    console.error('❌ [StandardAuth] Unexpected error:', error);
     return null;
   }
 }

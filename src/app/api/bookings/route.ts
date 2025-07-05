@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Kontrollera medlemskap i handbook
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
-      .select('handbook_id, role, id, name')
+      .select('handbook_id, role, id')
       .eq('user_id', authResult.userId)
       .eq('handbook_id', handbookId)
       .single()
@@ -48,13 +48,14 @@ export async function GET(request: NextRequest) {
       }, { status: 403 })
     }
 
+    console.log('✅ [Bookings] Membership confirmed for user:', memberData)
+
     // Hämta bokningar med resursinfo
     const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select(`
         *,
-        resource:booking_resources(id, name, location, type),
-        member:handbook_members!inner(id, name)
+        resource:booking_resources(id, name, description)
       `)
       .eq('handbook_id', handbookId)
       .order('start_time', { ascending: true })
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
     // Hämta member-info
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
-      .select('handbook_id, role, id, name')
+      .select('handbook_id, role, id')
       .eq('user_id', authResult.userId)
       .eq('status', 'active')
       .single()
@@ -111,10 +112,10 @@ export async function POST(request: NextRequest) {
       }, { status: 403 })
     }
 
-    // Validera att resursen tillhör samma handbook och hämta resurstyp
+    // Validera att resursen tillhör samma handbook och hämta resursinfo
     const { data: resource, error: resourceError } = await supabase
       .from('booking_resources')
-      .select('handbook_id, name, type, max_duration_hours, booking_advance_days')
+      .select('handbook_id, name, max_duration_hours, advance_booking_days')
       .eq('id', body.resource_id)
       .eq('handbook_id', memberData.handbook_id)
       .single()
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validera booking mot standardregler
-    const resourceType = resource.type || 'other';
+    const resourceType = 'other'; // Default type since type column doesn't exist
     const startTime = new Date(body.start_time);
     const endTime = new Date(body.end_time);
     
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
     const { data: userBookings, error: userBookingsError } = await supabase
       .from('bookings')
       .select('start_time, end_time')
-      .eq('member_id', memberData.id)
+      .eq('user_id', authResult.userId) // Changed from member_id to user_id
       .eq('status', 'confirmed')
       .gte('start_time', new Date().toISOString())
 
@@ -215,10 +216,11 @@ export async function POST(request: NextRequest) {
     const bookingData: BookingInsert = {
       handbook_id: memberData.handbook_id,
       resource_id: body.resource_id,
-      member_id: memberData.id,
+      user_id: authResult.userId, // Använd user_id från auth, inte member_id
       start_time: body.start_time,
       end_time: body.end_time,
-      purpose: body.title, // Frontend skickar 'title', databas vill ha 'purpose'
+      title: body.title,
+      purpose: body.purpose || body.title,
       attendees: body.attendees || 1,
       contact_phone: body.contact_phone,
       notes: body.notes,
@@ -230,9 +232,7 @@ export async function POST(request: NextRequest) {
       .insert(bookingData)
       .select(`
         *,
-        resource:booking_resources(id, name, location, type, booking_instructions),
-        member:handbook_members(id, name, email, phone),
-        handbook:handbooks(name)
+        resource:booking_resources(id, name, description)
       `)
       .single()
 
@@ -307,7 +307,7 @@ export async function DELETE(request: NextRequest) {
     // Hämta member-info
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
-      .select('handbook_id, role, id, name')
+      .select('handbook_id, role, id')
       .eq('user_id', authResult.userId)
       .single()
 
@@ -322,10 +322,8 @@ export async function DELETE(request: NextRequest) {
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select(`
-        id, member_id, handbook_id, start_time, end_time, purpose,
-        resource:booking_resources(name, location),
-        member:handbook_members(name, email, phone),
-        handbook:handbooks(name)
+        id, user_id, handbook_id, start_time, end_time, purpose,
+        resource:booking_resources(name)
       `)
       .eq('id', bookingId)
       .eq('handbook_id', memberData.handbook_id)
@@ -340,7 +338,7 @@ export async function DELETE(request: NextRequest) {
 
     // Kontrollera behörighet - användaren kan bara ta bort sina egna bokningar, eller om de är admin/owner
     const canDelete = 
-      booking.member_id === memberData.id || 
+      booking.user_id === authResult.userId || 
       memberData.role === 'owner' || 
       memberData.role === 'admin'
 

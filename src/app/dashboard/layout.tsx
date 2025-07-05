@@ -1,3 +1,5 @@
+'use client';
+
 import { MainLayout } from '@/components/layout/MainLayout';
 import SessionResetNotice from '@/components/SessionResetNotice';
 import { DashboardNav } from '@/components/dashboard/DashboardNav';

@@ -13,6 +13,14 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getServiceSupabase()
     const { searchParams } = new URL(request.url)
+    const handbookId = searchParams.get('handbook_id')
+
+    if (!handbookId) {
+      return NextResponse.json<BookingApiResponse>({ 
+        success: false, 
+        error: 'handbook_id saknas' 
+      }, { status: 400 })
+    }
     
     // Kontrollera autentisering med hybrid auth
     const authResult = await getHybridAuth(request)
@@ -23,17 +31,18 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Hämta member-info för att få handbook_id
+    // Kontrollera medlemskap i handbook
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
       .select('handbook_id, role, id')
       .eq('user_id', authResult.userId)
+      .eq('handbook_id', handbookId)
       .single()
 
     if (memberError || !memberData) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
-        error: 'Medlem ej hittad' 
+        error: 'Inte medlem i denna handbook' 
       }, { status: 403 })
     }
 
@@ -64,7 +73,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (params.search_term) {
-      query = query.or(`name.ilike.%${params.search_term}%,description.ilike.%${params.search_term}%,location.ilike.%${params.search_term}%`)
+              query = query.or(`name.ilike.%${params.search_term}%,description.ilike.%${params.search_term}%`)
     }
 
     // Sortering
@@ -145,6 +154,7 @@ export async function POST(request: NextRequest) {
 
     // Kontrollera autentisering med hybrid auth
     const authResult = await getHybridAuth(request)
+    
     if (!authResult.userId) {
       return NextResponse.json<BookingApiResponse>({ 
         success: false, 
@@ -155,8 +165,9 @@ export async function POST(request: NextRequest) {
     // Hämta member-info och kontrollera roller
     const { data: memberData, error: memberError } = await supabase
       .from('handbook_members')
-      .select('handbook_id, role, id, name')
+      .select('handbook_id, role, id')
       .eq('user_id', authResult.userId)
+      .eq('handbook_id', body.handbook_id)
       .single()
 
     if (memberError || !memberData) {
@@ -173,6 +184,8 @@ export async function POST(request: NextRequest) {
         error: 'Endast ägare och administratörer kan skapa resurser' 
       }, { status: 403 })
     }
+
+    console.log('✅ [booking-resources POST] User has sufficient role:', memberData.role)
 
     // Validera required fields
     const { name } = body
@@ -194,24 +207,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Skapa resursdata med defaults
-    const resourceData: BookingResourceInsert = {
+    // Skapa resursdata med de nya flexibla fälten
+    const resourceData = {
       handbook_id: memberData.handbook_id,
       name: body.name,
       description: body.description || null,
-      location: body.location || null,
       max_duration_hours: body.max_duration_hours || 2,
-      max_advance_days: body.max_advance_days || 30,
-      max_bookings_per_member: body.max_bookings_per_member || 3,
-      available_from: body.available_from || '08:00',
-      available_to: body.available_to || '22:00',
-      available_days: body.available_days || [1, 2, 3, 4, 5, 6, 7], // Alla dagar som default
+      capacity: body.capacity || 1,
       requires_approval: body.requires_approval || false,
-      booking_instructions: body.booking_instructions || null,
-      rules: body.rules || null,
-      cost_per_hour: body.cost_per_hour || null,
-      cleaning_fee: body.cleaning_fee || null,
-      is_active: true
+      is_active: body.is_active !== undefined ? body.is_active : true,
+      
+      // Nya flexibla fält
+      resource_type: body.resource_type || 'general',
+      pricing_config: body.pricing_config || {},
+      time_restrictions: body.time_restrictions || {},
+      booking_limits: body.booking_limits || {},
+      booking_rules: body.booking_rules || {}
     }
 
     // Spara resursen

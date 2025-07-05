@@ -5,35 +5,211 @@
 
 import { Database } from './supabase'
 
-// Typer från Supabase schema
-export type BookingResource = Database['public']['Tables']['booking_resources']['Row']
-export type BookingResourceInsert = Database['public']['Tables']['booking_resources']['Insert']
-export type BookingResourceUpdate = Database['public']['Tables']['booking_resources']['Update']
+// =============================================
+// FLEXIBLA RESURSKONFIGURATIONER
+// =============================================
 
-export type Booking = Database['public']['Tables']['bookings']['Row'] 
-export type BookingInsert = Database['public']['Tables']['bookings']['Insert']
-export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
+export type ResourceType = 
+  | 'general'
+  | 'laundry' 
+  | 'party_room'
+  | 'guest_apartment'
+  | 'sauna'
+  | 'hobby_room'
+  | 'gym'
+  | 'parking'
+  | 'storage'
+  | 'bike_storage'
 
-export type BookingRule = Database['public']['Tables']['booking_rules']['Row']
-export type BookingRuleInsert = Database['public']['Tables']['booking_rules']['Insert']
+export interface PricingConfig {
+  base_fee?: number           // Grundavgift per bokning
+  hourly_rate?: number        // Kr per timme
+  daily_rate?: number         // Kr per dag (för gästlägenheter)
+  cleaning_fee?: number       // Städavgift
+  deposit?: number            // Deposition som återbetalas
+  late_cancellation_fee?: number  // Avgift för sen avbokning
+  damage_fee?: number         // Avgift vid skador
+  member_discount?: number    // Rabatt för medlemmar (%)
+}
 
-export type BookingComment = Database['public']['Tables']['booking_comments']['Row']
-export type BookingCommentInsert = Database['public']['Tables']['booking_comments']['Insert']
+export interface TimeRestrictions {
+  start_time?: string         // "06:00" - Tidigaste tid
+  end_time?: string           // "23:00" - Senaste tid  
+  allowed_days?: number[]     // [1,2,3,4,5] = Mån-Fre
+  blocked_dates?: string[]    // ["2025-12-24", "2025-12-25"]
+  advance_booking_hours?: number  // Min 2h i förväg
+  max_advance_days?: number   // Max 30 dagar i förväg
+}
+
+export interface BookingLimits {
+  max_duration_hours?: number     // Max 3h per bokning
+  max_bookings_per_week?: number  // Max 2 bokningar/vecka
+  max_bookings_per_month?: number // Max 4 bokningar/månad
+  max_total_hours_per_month?: number // Max 8h/månad
+  cooldown_hours?: number         // 24h mellan bokningar
+  concurrent_bookings?: number    // Max 1 samtidig bokning
+}
+
+export interface BookingRulesConfig {
+  requires_approval?: boolean
+  auto_approval_for_roles?: string[]  // ["admin", "board"]
+  cancellation_deadline_hours?: number  // 24h före start
+  no_show_penalty?: number       // Avgift vid uteblivande
+  requires_phone?: boolean       // Telefonnummer obligatoriskt
+  requires_purpose?: boolean     // Syfte obligatoriskt
+  min_age?: number              // Minimiålder 18
+  max_attendees?: number        // Max antal deltagare
+  special_instructions?: string  // Särskilda instruktioner
+}
+
+// =============================================
+// GRUNDLÄGGANDE DATABAS-TYPER
+// =============================================
+
+// Bokningsresurs från databasen
+export interface BookingResource {
+  id: string
+  handbook_id: string
+  name: string
+  description: string | null
+  capacity: number
+  advance_booking_days: number
+  max_duration_hours: number
+  requires_approval: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface BookingResourceInsert {
+  id?: string
+  handbook_id: string
+  name: string
+  description?: string | null
+  capacity?: number
+  advance_booking_days?: number
+  max_duration_hours?: number
+  requires_approval?: boolean
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface BookingResourceUpdate {
+  id?: string
+  handbook_id?: string
+  name?: string
+  description?: string | null
+  capacity?: number
+  advance_booking_days?: number
+  max_duration_hours?: number
+  requires_approval?: boolean
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+// Bokning från databasen
+export interface Booking {
+  id: string
+  resource_id: string
+  user_id: string
+  handbook_id: string
+  start_time: string
+  end_time: string
+  purpose: string
+  attendees: number
+  contact_phone: string | null
+  status: 'active' | 'cancelled' | 'pending'
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BookingInsert {
+  id?: string
+  resource_id: string
+  user_id: string
+  handbook_id: string
+  start_time: string
+  end_time: string
+  purpose: string
+  attendees?: number
+  contact_phone?: string | null
+  status?: 'active' | 'cancelled' | 'pending'
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface BookingUpdate {
+  id?: string
+  resource_id?: string
+  user_id?: string
+  handbook_id?: string
+  start_time?: string
+  end_time?: string
+  purpose?: string
+  attendees?: number
+  contact_phone?: string | null
+  status?: 'active' | 'cancelled' | 'pending'
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+// Bokningsregel från databasen
+export interface BookingRule {
+  id: string
+  resource_id: string
+  rule_type: string
+  rule_value: any // JSONB
+  is_active: boolean
+  created_at: string
+}
+
+export interface BookingRuleInsert {
+  id?: string
+  resource_id: string
+  rule_type: string
+  rule_value: any
+  is_active?: boolean
+  created_at?: string
+}
+
+// Bokningskommentar från databasen (future feature)
+export interface BookingComment {
+  id: string
+  booking_id: string
+  user_id: string
+  comment: string
+  created_at: string
+}
+
+export interface BookingCommentInsert {
+  id?: string
+  booking_id: string
+  user_id: string
+  comment: string
+  created_at?: string
+}
+
+// =============================================
+// API RESPONSE TYPER - Matchar vad API:et faktiskt returnerar
+// =============================================
+
+// Detta är vad GET /api/bookings faktiskt returnerar
+export interface BookingWithDetails extends Booking {
+  resource: {
+    id: string
+    name: string
+    description: string | null
+  }
+}
 
 // =============================================
 // EXTENDED TYPES med joins och beräkningar
 // =============================================
-
-export interface BookingWithDetails extends Booking {
-  resource: BookingResource
-  member: {
-    id: string
-    name: string
-    email: string
-    role: string
-  }
-  comments?: BookingComment[]
-}
 
 export interface ResourceWithStats extends BookingResource {
   total_bookings: number
@@ -110,18 +286,27 @@ export interface BookingFormData {
 export interface ResourceFormData {
   name: string
   description?: string
-  location?: string
+  capacity: number
   max_duration_hours: number
-  max_advance_days: number
-  max_bookings_per_member: number
-  available_from: string // HH:MM format
-  available_to: string   // HH:MM format
-  available_days: number[] // [1,2,3,4,5,6,7] för Mon-Sun
   requires_approval: boolean
-  booking_instructions?: string
-  rules?: string
-  cost_per_hour?: number
-  cleaning_fee?: number
+  is_active: boolean
+  handbook_id: string
+  
+  // Nya flexibla fält
+  resource_type: ResourceType
+  pricing_config: PricingConfig
+  time_restrictions: TimeRestrictions
+  booking_limits: BookingLimits
+  booking_rules: BookingRulesConfig
+}
+
+// Utökad resursdefinition med flexibla regler
+export interface FlexibleBookingResource extends BookingResource {
+  resource_type: ResourceType
+  pricing_config: PricingConfig
+  time_restrictions: TimeRestrictions
+  booking_limits: BookingLimits
+  booking_rules: BookingRulesConfig
 }
 
 // =============================================
@@ -284,4 +469,15 @@ export interface ResourceSearchParams {
   available_at?: string // HH:MM
   order_by?: 'name' | 'created_at' | 'total_bookings'
   order_direction?: 'asc' | 'desc'
+} 
+
+// Template för snabb setup av vanliga resurstyper
+export interface ResourceTemplate {
+  name: string
+  resource_type: ResourceType
+  description: string
+  default_pricing: PricingConfig
+  default_time_restrictions: TimeRestrictions
+  default_booking_limits: BookingLimits
+  default_booking_rules: BookingRulesConfig
 } 

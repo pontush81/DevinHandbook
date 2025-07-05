@@ -991,6 +991,28 @@ function getStoredAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   
   try {
+    // Try the specific Supabase auth token key first
+    const projectId = 'kjsquvjzctdwgjypcjrg'; // från NEXT_PUBLIC_SUPABASE_URL
+    const primaryKey = `sb-${projectId}-auth-token`;
+    
+    let authData = localStorage.getItem(primaryKey);
+    if (!authData) {
+      authData = sessionStorage.getItem(primaryKey);
+    }
+    
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        if (parsed.access_token) {
+          console.log('✅ [getStoredAccessToken] Found access token in primary key:', primaryKey);
+          return parsed.access_token;
+        }
+      } catch (e) {
+        console.error('❌ [getStoredAccessToken] Error parsing auth data from primary key:', e);
+      }
+    }
+    
+    // Fallback: search for any Supabase auth token
     const storages = [localStorage, sessionStorage];
     
     for (let storage of storages) {
@@ -1005,6 +1027,7 @@ function getStoredAccessToken(): string | null {
             if (value) {
               const parsed = JSON.parse(value);
               if (parsed.access_token) {
+                console.log('✅ [getStoredAccessToken] Found access token in fallback key:', key);
                 return parsed.access_token;
               }
             }
@@ -1015,9 +1038,10 @@ function getStoredAccessToken(): string | null {
       }
     }
   } catch (e) {
-    console.error('Error getting stored access token:', e);
+    console.error('❌ [getStoredAccessToken] Error getting stored access token:', e);
   }
   
+  console.log('❌ [getStoredAccessToken] No access token found in storage');
   return null;
 }
 
@@ -1026,9 +1050,16 @@ function isTokenExpired(token: string): boolean {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const now = Math.floor(Date.now() / 1000);
-    return payload.exp <= now;
+    const expiresAt = new Date(payload.exp * 1000);
+    const expired = payload.exp <= now;
+    
+    console.log('🔍 [isTokenExpired] Token expires at:', expiresAt);
+    console.log('🔍 [isTokenExpired] Current time:', new Date());
+    console.log('🔍 [isTokenExpired] Token expired:', expired);
+    
+    return expired;
   } catch (e) {
-    console.error('Error checking token expiration:', e);
+    console.error('❌ [isTokenExpired] Error checking token expiration:', e);
     return true; // Anta att den är expired om vi inte kan validera
   }
 }
@@ -1040,9 +1071,16 @@ async function getValidAccessToken(): Promise<string | null> {
   // Först, försök hämta från storage
   let accessToken = getStoredAccessToken();
   
-  if (accessToken && !isTokenExpired(accessToken)) {
-    // Token finns och är inte expired
-    return accessToken;
+  if (accessToken) {
+    const expired = isTokenExpired(accessToken);
+    console.log('🔍 [getValidAccessToken] Found stored token, expired:', expired);
+    
+    if (!expired) {
+      console.log('✅ [getValidAccessToken] Using valid stored token');
+      return accessToken;
+    }
+  } else {
+    console.log('❌ [getValidAccessToken] No stored token found');
   }
   
   // Token är expired eller finns inte, försök förnya
@@ -1062,6 +1100,7 @@ async function refreshAccessToken(): Promise<string | null> {
     
     if (!refreshError && refreshData.session && refreshData.session.access_token) {
       console.log('✅ [refreshAccessToken] Successfully refreshed token via refreshSession()');
+      console.log('🔍 [refreshAccessToken] New token expires at:', new Date(refreshData.session.expires_at * 1000));
       return refreshData.session.access_token;
     }
     
@@ -1072,13 +1111,17 @@ async function refreshAccessToken(): Promise<string | null> {
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('❌ [refreshAccessToken] Error getting session:', error);
+      console.error('❌ [refreshAccessToken] Error getting session:', error.message);
       return null;
     }
     
     if (data.session && data.session.access_token) {
       // Dubbel-kolla att token inte är expired
-      if (!isTokenExpired(data.session.access_token)) {
+      const expired = isTokenExpired(data.session.access_token);
+      console.log('🔍 [refreshAccessToken] Found session token, expired:', expired);
+      console.log('🔍 [refreshAccessToken] Session expires at:', new Date(data.session.expires_at * 1000));
+      
+      if (!expired) {
         console.log('✅ [refreshAccessToken] Found valid session token via getSession()');
         return data.session.access_token;
       } else {
