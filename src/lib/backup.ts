@@ -37,6 +37,13 @@ export interface BackupData {
     auth_users: any[]; // Grundläggande användar-info för foreign keys
     user_profiles?: any[];
     trial_activities?: any[];
+    // NYTT: Bokningsdata
+    booking_resources?: any[];
+    bookings?: any[];
+    booking_rules?: any[];
+    booking_conflicts?: any[];
+    performance_metrics?: any[];
+    query_performance?: any[];
   };
   schema: {
     version: string;
@@ -48,6 +55,8 @@ export interface BackupData {
 export interface BackupOptions {
   includeUserData?: boolean;
   includeTrialData?: boolean;
+  includeBookingData?: boolean;
+  includePerformanceData?: boolean;
   excludeTables?: string[];
   compression?: boolean;
   incremental?: boolean;
@@ -216,6 +225,8 @@ export class DatabaseBackupManager {
       const config = {
         includeUserData: options.includeUserData ?? false,
         includeTrialData: options.includeTrialData ?? false,
+        includeBookingData: options.includeBookingData ?? true,
+        includePerformanceData: options.includePerformanceData ?? false,
         excludeTables: options.excludeTables ?? [],
         compression: options.compression ?? true,
         ...options
@@ -227,7 +238,14 @@ export class DatabaseBackupManager {
         sections: [],
         pages: [],
         attachments: [],
-        auth_users: [] // Grundläggande användar-info för foreign key relationships
+        auth_users: [], // Grundläggande användar-info för foreign key relationships
+        // NYTT: Bokningsdata
+        booking_resources: [],
+        bookings: [],
+        booking_rules: [],
+        booking_conflicts: [],
+        performance_metrics: [],
+        query_performance: []
       };
 
       // Backup av handbooks (med paginering för att hantera >1000 rader)
@@ -303,6 +321,46 @@ export class DatabaseBackupManager {
         }
       }
 
+      // Inkludera bokningsdata om begärt (standard: ja)
+      if (config.includeBookingData) {
+        console.log('📅 Säkerhetskopierar bokningsdata...');
+        try {
+          backupData.booking_resources = await this.getAllRecords('booking_resources');
+          console.log(`📅 Booking resources: ${backupData.booking_resources.length} poster säkerhetskopierade`);
+          
+          backupData.bookings = await this.getAllRecords('bookings');
+          console.log(`📅 Bookings: ${backupData.bookings.length} poster säkerhetskopierade`);
+          
+          backupData.booking_rules = await this.getAllRecords('booking_rules');
+          console.log(`📅 Booking rules: ${backupData.booking_rules.length} poster säkerhetskopierade`);
+          
+          backupData.booking_conflicts = await this.getAllRecords('booking_conflicts');
+          console.log(`📅 Booking conflicts: ${backupData.booking_conflicts.length} poster säkerhetskopierade`);
+        } catch (error) {
+          console.warn(`Varning vid backup av bokningsdata: ${error}`);
+          backupData.booking_resources = [];
+          backupData.bookings = [];
+          backupData.booking_rules = [];
+          backupData.booking_conflicts = [];
+        }
+      }
+
+      // Inkludera prestandadata om begärt (standard: nej)
+      if (config.includePerformanceData) {
+        console.log('⚡ Säkerhetskopierar prestandadata...');
+        try {
+          backupData.performance_metrics = await this.getAllRecords('performance_metrics');
+          console.log(`⚡ Performance metrics: ${backupData.performance_metrics.length} poster säkerhetskopierade`);
+          
+          backupData.query_performance = await this.getAllRecords('query_performance');
+          console.log(`⚡ Query performance: ${backupData.query_performance.length} poster säkerhetskopierade`);
+        } catch (error) {
+          console.warn(`Varning vid backup av prestandadata: ${error}`);
+          backupData.performance_metrics = [];
+          backupData.query_performance = [];
+        }
+      }
+
       // Skapa metadata
       const metadata: BackupMetadata = {
         id: this.generateBackupId(),
@@ -317,7 +375,13 @@ export class DatabaseBackupManager {
           attachments: backupData.attachments.length,
           auth_users: backupData.auth_users.length,
           user_profiles: backupData.user_profiles?.length ?? 0,
-          trial_activities: backupData.trial_activities?.length ?? 0
+          trial_activities: backupData.trial_activities?.length ?? 0,
+          booking_resources: backupData.booking_resources?.length ?? 0,
+          bookings: backupData.bookings?.length ?? 0,
+          booking_rules: backupData.booking_rules?.length ?? 0,
+          booking_conflicts: backupData.booking_conflicts?.length ?? 0,
+          performance_metrics: backupData.performance_metrics?.length ?? 0,
+          query_performance: backupData.query_performance?.length ?? 0
         },
         schema_version: '1.0.0',
         checksum: ''
@@ -402,6 +466,12 @@ export class DatabaseBackupManager {
       const tablesToClear = [
         { name: 'trial_activities', data: backupData.data.trial_activities },
         { name: 'user_profiles', data: backupData.data.user_profiles },
+        { name: 'performance_metrics', data: backupData.data.performance_metrics },
+        { name: 'query_performance', data: backupData.data.query_performance },
+        { name: 'booking_conflicts', data: backupData.data.booking_conflicts },
+        { name: 'bookings', data: backupData.data.bookings },
+        { name: 'booking_rules', data: backupData.data.booking_rules },
+        { name: 'booking_resources', data: backupData.data.booking_resources },
         { name: 'attachments', data: backupData.data.attachments },
         { name: 'pages', data: backupData.data.pages },
         { name: 'sections', data: backupData.data.sections },
@@ -459,6 +529,38 @@ export class DatabaseBackupManager {
       if (backupData.data.trial_activities && backupData.data.trial_activities.length > 0) {
         console.log('🧪 Återställer trial_activities...');
         await this.restoreTableData('trial_activities', backupData.data.trial_activities);
+      }
+
+      // 7. Bokningsdata (om inkluderat)
+      if (backupData.data.booking_resources && backupData.data.booking_resources.length > 0) {
+        console.log('📅 Återställer booking_resources...');
+        await this.restoreTableData('booking_resources', backupData.data.booking_resources);
+      }
+      
+      if (backupData.data.booking_rules && backupData.data.booking_rules.length > 0) {
+        console.log('📅 Återställer booking_rules...');
+        await this.restoreTableData('booking_rules', backupData.data.booking_rules);
+      }
+      
+      if (backupData.data.bookings && backupData.data.bookings.length > 0) {
+        console.log('📅 Återställer bookings...');
+        await this.restoreTableData('bookings', backupData.data.bookings);
+      }
+      
+      if (backupData.data.booking_conflicts && backupData.data.booking_conflicts.length > 0) {
+        console.log('📅 Återställer booking_conflicts...');
+        await this.restoreTableData('booking_conflicts', backupData.data.booking_conflicts);
+      }
+
+      // 8. Prestandadata (om inkluderat)
+      if (backupData.data.performance_metrics && backupData.data.performance_metrics.length > 0) {
+        console.log('⚡ Återställer performance_metrics...');
+        await this.restoreTableData('performance_metrics', backupData.data.performance_metrics);
+      }
+      
+      if (backupData.data.query_performance && backupData.data.query_performance.length > 0) {
+        console.log('⚡ Återställer query_performance...');
+        await this.restoreTableData('query_performance', backupData.data.query_performance);
       }
 
       console.log('✅ Återställning slutförd framgångsrikt!');

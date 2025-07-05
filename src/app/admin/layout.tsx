@@ -20,7 +20,8 @@ import {
   X,
   Database,
   UserCheck,
-  ExternalLink
+  ExternalLink,
+  Activity
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -47,6 +48,7 @@ const adminNavItems = [
   { href: '/admin/customers', label: 'Kunder', icon: Users },
   { href: '/admin/content', label: 'Innehåll', icon: FileText },
   { href: '/admin/analytics', label: 'Statistik', icon: BarChart3 },
+  { href: '/admin/performance', label: 'Prestanda', icon: Activity },
   { 
     href: getStripeProductsUrl(), 
     label: `Priser (Stripe ${process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production' && process.env.FORCE_STRIPE_TEST_MODE !== 'true' ? 'Live' : 'Test'})`, 

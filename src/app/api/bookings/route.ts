@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
         end_time: endTime.toISOString(),
         user_id: authResult.userId
       },
-      { type: resourceType as keyof typeof SIMPLIFIED_RESOURCE_TYPES },
+      { resource_type: resourceType as keyof typeof SIMPLIFIED_RESOURCE_TYPES },
       userBookings || []
     );
 
@@ -277,6 +277,38 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: 'Kunde inte skapa bokning' 
         }, { status: 500 })
+      }
+
+      // NYTT: Skicka bekräftelsemail
+      try {
+        // Hämta användarens email och handbokens detaljer
+        const { data: userProfile } = await supabase
+          .from('handbook_members')
+          .select(`
+            name,
+            auth_users:user_id(email),
+            handbooks:handbook_id(name, slug)
+          `)
+          .eq('user_id', authResult.userId)
+          .eq('handbook_id', body.handbook_id)
+          .single()
+
+        if (userProfile?.auth_users?.email) {
+          const { sendBookingConfirmation } = await import('@/lib/booking-notifications')
+          
+          await sendBookingConfirmation({
+            booking: booking as any,
+            userEmail: userProfile.auth_users.email,
+            handbookName: userProfile.handbooks?.name || 'Handbok',
+            resourceName: resource.name,
+            handbookSlug: userProfile.handbooks?.slug || 'handbok'
+          })
+          
+          console.log('✅ Booking confirmation email sent to:', userProfile.auth_users.email)
+        }
+      } catch (emailError) {
+        console.warn('⚠️ Failed to send booking confirmation email:', emailError)
+        // Fortsätt ändå - email-fel ska inte stoppa bokningen
       }
 
       return NextResponse.json<BookingApiResponse>({ 

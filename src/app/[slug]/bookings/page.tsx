@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { getSupabaseClient } from '@/lib/supabase-client';
 import BookingCalendar from '@/components/booking/BookingCalendar';
 import { Toaster } from 'sonner';
 import { Calendar, Loader2 } from 'lucide-react';
@@ -29,7 +29,7 @@ export default function BookingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClientComponentClient();
+  const supabase = getSupabaseClient();
 
   useEffect(() => {
     async function loadBookingsPage() {

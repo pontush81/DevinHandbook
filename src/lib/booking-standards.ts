@@ -70,13 +70,13 @@ export function validateSimplifiedBooking(
     end_time: string;
     user_id: string;
   },
-  resource: { type: keyof typeof SIMPLIFIED_RESOURCE_TYPES },
+  resource: { resource_type: keyof typeof SIMPLIFIED_RESOURCE_TYPES },
   existingBookings: Array<{ start_time: string; end_time: string; user_id: string }>
 ): SimplifiedValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   
-  const rules = SIMPLIFIED_RESOURCE_TEMPLATES[resource.type];
+  const rules = SIMPLIFIED_RESOURCE_TEMPLATES[resource.resource_type];
   const startTime = new Date(booking.start_time);
   const endTime = new Date(booking.end_time);
   const now = new Date();

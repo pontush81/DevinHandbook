@@ -27,7 +27,7 @@ export interface BookingResource {
   handbook_id: string
   name: string
   description: string | null
-  type: SimplifiedResourceType
+  resource_type: SimplifiedResourceType // FIXAT: Använd resource_type istället för type
   capacity: number
   is_active: boolean
   created_at: string
@@ -39,9 +39,25 @@ export interface BookingResourceInsert {
   handbook_id: string
   name: string
   description?: string | null
-  type: SimplifiedResourceType
+  resource_type: SimplifiedResourceType // FIXAT: Använd resource_type istället för type
   capacity?: number
   is_active?: boolean
+}
+
+// =============================================
+// FÖRENKLAD RESURS-INTERFACE (för UI)
+// =============================================
+
+export interface SimplifiedResource {
+  id: string
+  handbook_id: string
+  name: string
+  description: string | null
+  resource_type: SimplifiedResourceType // FIXAT: Använd resource_type istället för type
+  capacity: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface Booking {

@@ -98,7 +98,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [newResource, setNewResource] = useState({
     name: '',
     description: '',
-    type: 'other' as keyof typeof SIMPLIFIED_RESOURCE_TYPES,
+    resource_type: 'other' as keyof typeof SIMPLIFIED_RESOURCE_TYPES,
     capacity: 1,
     is_active: true
   });
@@ -201,7 +201,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         const validation = validateSimplifiedBooking({
           ...bookingData,
           user_id: user?.id || ''
-        }, { type: selectedResourceObj.resource_type }, existingBookings);
+        }, { resource_type: selectedResourceObj.resource_type }, existingBookings);
 
         if (!validation.isValid) {
           validation.errors.forEach(error => toast.error(error));
@@ -306,7 +306,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           handbook_id: handbookId,
           name: newResource.name,
           description: newResource.description,
-          resource_type: newResource.type,
+          resource_type: newResource.resource_type,
           capacity: newResource.capacity,
           is_active: newResource.is_active
         })
@@ -325,7 +325,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         setNewResource({
           name: '',
           description: '',
-          type: 'other',
+          resource_type: 'other',
           capacity: 1,
           is_active: true
         });
@@ -1159,7 +1159,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
             
             <div className="space-y-1">
               <Label htmlFor="resource-type" className="text-sm text-gray-900 dark:text-gray-100">Typ</Label>
-              <Select value={newResource.type} onValueChange={(value) => setNewResource(prev => ({ ...prev, type: value as keyof typeof SIMPLIFIED_RESOURCE_TYPES }))}>
+              <Select value={newResource.resource_type} onValueChange={(value) => setNewResource(prev => ({ ...prev, resource_type: value as keyof typeof SIMPLIFIED_RESOURCE_TYPES }))}>
                 <SelectTrigger className="text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
                   <SelectValue />
                 </SelectTrigger>
